@@ -11,6 +11,7 @@ import Chat from "./pages/Chat";
 import References from "./pages/References";
 import History from "./pages/History";
 import Database from "./pages/Database";
+import Documents from "./pages/Documents";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/references" element={<References />} />
           <Route path="/history" element={<History />} />
           <Route path="/database" element={<Database />} />
+          <Route path="/documents" element={<Documents />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
