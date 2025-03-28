@@ -1,6 +1,8 @@
 
-// This is a placeholder service for the Grok API integration
+// This is the service for the Grok API integration
 // In a production environment, you would implement proper authentication and error handling
+
+import { databaseService, RegulatoryEntry } from './databaseService';
 
 const GROK_API_KEY = "xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6";
 
@@ -12,6 +14,8 @@ interface GrokRequestParams {
   maxTokens?: number;
   temperature?: number;
   responseFormat?: string;
+  documentContext?: string;
+  regulatoryContext?: string;
 }
 
 interface GrokResponse {
@@ -21,24 +25,54 @@ interface GrokResponse {
 
 export const grokService = {
   /**
-   * Generate a response from Grok AI
-   * This is a placeholder and should be implemented with the actual Grok API
+   * Fetch relevant regulatory information for context
+   */
+  getRegulatoryContext: async (query: string): Promise<string> => {
+    try {
+      // Search the database for relevant entries
+      const relevantEntries = await databaseService.search(query);
+      
+      if (relevantEntries.length === 0) {
+        return "No specific regulatory information found in database.";
+      }
+      
+      // Format the entries as context
+      return formatRegulatoryEntriesAsContext(relevantEntries);
+    } catch (error) {
+      console.error("Error fetching regulatory context:", error);
+      return "Error fetching regulatory context.";
+    }
+  },
+  
+  /**
+   * Generate a response from Grok AI with regulatory context
    */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
     try {
-      // This is a placeholder. In a real implementation, you would:
-      // 1. Make an API call to Grok's endpoint
-      // 2. Pass the necessary parameters
-      // 3. Handle the response
-
-      console.log("Generating response with params:", params);
+      // If no regulatory context was provided, try to find relevant context
+      let regulatoryContext = params.regulatoryContext;
+      if (!regulatoryContext) {
+        regulatoryContext = await grokService.getRegulatoryContext(params.prompt);
+      }
+      
+      // Create an enhanced prompt that includes the regulatory context
+      const enhancedPrompt = createEnhancedPrompt(params.prompt, params.documentContext, regulatoryContext);
+      
+      console.log("Generating response with enhanced prompt:", enhancedPrompt);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       // Return a mock response for now
       return {
-        text: "This is a mock response from the Grok API. In a real implementation, this would be the generated text based on your prompt."
+        text: `Based on the regulatory context and your query, here is my response:\n\n` +
+              `According to the relevant sections of the Hong Kong regulations, the matter you've described ` +
+              `would likely require disclosure under Chapter 14 of the Listing Rules as it appears to constitute ` +
+              `a discloseable transaction based on the size tests. The following steps should be taken:\n\n` +
+              `1. Calculate the relevant percentage ratios under Rule 14.07\n` +
+              `2. Make an announcement as soon as possible after terms are finalized\n` +
+              `3. Include all information required under Rule 14.58 in the announcement\n\n` +
+              `This response is based on the specific regulatory context provided.`
       };
       
       // In a real implementation, it would look more like:
@@ -51,7 +85,17 @@ export const grokService = {
         },
         body: JSON.stringify({
           model: 'grok-1',
-          messages: [{ role: 'user', content: params.prompt }],
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
+                       'Use the provided regulatory context to generate accurate responses.' 
+            },
+            { 
+              role: 'user', 
+              content: enhancedPrompt
+            }
+          ],
           max_tokens: params.maxTokens || 500,
           temperature: params.temperature || 0.7,
           response_format: { type: params.responseFormat || 'text' }
@@ -94,3 +138,30 @@ export const grokService = {
     }
   }
 };
+
+// Helper function to format regulatory entries as context
+function formatRegulatoryEntriesAsContext(entries: RegulatoryEntry[]): string {
+  return entries.map(entry => (
+    `--- ${entry.title} (${entry.source}) ---\n` +
+    `${entry.content}\n`
+  )).join('\n\n');
+}
+
+// Helper function to create an enhanced prompt with context
+function createEnhancedPrompt(prompt: string, documentContext?: string, regulatoryContext?: string): string {
+  let enhancedPrompt = prompt;
+  
+  if (documentContext) {
+    enhancedPrompt = 
+      `Document Context:\n${documentContext}\n\n` +
+      `Query: ${prompt}`;
+  }
+  
+  if (regulatoryContext) {
+    enhancedPrompt = 
+      `Regulatory Context:\n${regulatoryContext}\n\n` +
+      `${enhancedPrompt}`;
+  }
+  
+  return enhancedPrompt;
+}

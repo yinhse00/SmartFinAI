@@ -5,14 +5,52 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { Download, FileText, Loader2 } from 'lucide-react';
+import { Download, FileText, Loader2, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { grokService } from '@/services/grokService';
+import { databaseService } from '@/services/databaseService';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const ResponseGenerator = () => {
   const [responseType, setResponseType] = useState('');
   const [promptText, setPromptText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isSearchingRegulations, setIsSearchingRegulations] = useState(false);
   const [generatedResponse, setGeneratedResponse] = useState<string | null>(null);
+  const [useAutoRegSearch, setUseAutoRegSearch] = useState(true);
+  const [regulatoryContext, setRegulatoryContext] = useState<string | null>(null);
+
+  const handleSearchRegulations = async () => {
+    if (!promptText.trim()) {
+      toast({
+        title: "Prompt required",
+        description: "Please provide details about what you're looking for in regulations.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSearchingRegulations(true);
+    setRegulatoryContext(null);
+
+    try {
+      const context = await grokService.getRegulatoryContext(promptText);
+      setRegulatoryContext(context);
+      
+      toast({
+        title: "Regulations found",
+        description: "Relevant regulatory content has been identified for your query.",
+      });
+    } catch (error) {
+      toast({
+        title: "Search failed",
+        description: "There was an error searching for relevant regulations. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSearchingRegulations(false);
+    }
+  };
 
   const handleGenerateResponse = async () => {
     if (!responseType) {
@@ -37,38 +75,25 @@ const ResponseGenerator = () => {
     setGeneratedResponse(null);
 
     try {
-      // Here we would call the Grok API
-      // For demo purposes, we'll simulate a response
+      // If auto-search is enabled but we haven't searched yet, get the regulatory context
+      if (useAutoRegSearch && !regulatoryContext) {
+        try {
+          const context = await grokService.getRegulatoryContext(promptText);
+          setRegulatoryContext(context);
+        } catch (error) {
+          console.error("Error auto-searching regulations:", error);
+          // Continue without regulatory context if search fails
+        }
+      }
+
+      // Generate response using Grok
+      const response = await grokService.generateResponse({
+        prompt: promptText,
+        regulatoryContext: regulatoryContext || undefined,
+        responseFormat: 'text'
+      });
       
-      // In a real implementation, this would be:
-      // const response = await fetch('your-api-endpoint', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'Authorization': 'Bearer xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6'
-      //   },
-      //   body: JSON.stringify({
-      //     prompt: promptText,
-      //     responseType: responseType,
-      //   })
-      // });
-      // const data = await response.json();
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-      // Sample response 
-      const sampleResponse = 
-        "Based on the Hong Kong Listing Rules Chapter 14, specifically Rule 14.34, " +
-        "the transaction described constitutes a Discloseable Transaction as the applicable percentage " +
-        "ratios exceed 5% but are less than 25%.\n\n" +
-        "The issuer must follow these steps:\n\n" +
-        "1. Make an announcement as soon as possible after terms have been finalized\n" +
-        "2. Include all required disclosure items outlined in Rule 14.58\n" +
-        "3. Provide the Stock Exchange with a draft announcement for review\n\n" +
-        "No circular or shareholders' approval is required for this transaction level.";
-      
-      setGeneratedResponse(sampleResponse);
+      setGeneratedResponse(response.text);
       
       toast({
         title: "Response generated",
@@ -85,15 +110,35 @@ const ResponseGenerator = () => {
     }
   };
 
-  const handleDownloadWord = () => {
+  const handleDownloadWord = async () => {
     if (!generatedResponse) return;
     
-    // In a real implementation, this would call a backend endpoint to generate a Word doc
-    // For this demo, we'll just show a success message
-    toast({
-      title: "Word document generated",
-      description: "Your response has been downloaded as a Word document.",
-    });
+    try {
+      const blob = await grokService.generateWordDocument(generatedResponse);
+      
+      // Create a download link
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Clean up
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Word document generated",
+        description: "Your response has been downloaded as a Word document.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "There was an error generating the Word document. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -134,7 +179,49 @@ const ResponseGenerator = () => {
               rows={5}
             />
           </div>
+          
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div className="flex items-center space-x-2">
+              <Checkbox 
+                id="auto-search" 
+                checked={useAutoRegSearch} 
+                onCheckedChange={(checked) => setUseAutoRegSearch(checked as boolean)}
+              />
+              <Label htmlFor="auto-search" className="text-sm cursor-pointer">
+                Automatically search regulatory database
+              </Label>
+            </div>
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSearchRegulations}
+              disabled={isSearchingRegulations || !promptText.trim()}
+              className="flex items-center gap-1 ml-auto"
+            >
+              {isSearchingRegulations ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <span>Searching...</span>
+                </>
+              ) : (
+                <>
+                  <BookOpen className="h-3.5 w-3.5" />
+                  <span>Search Regulations</span>
+                </>
+              )}
+            </Button>
+          </div>
         </div>
+
+        {regulatoryContext && (
+          <div className="space-y-2 mt-4">
+            <h4 className="text-sm font-medium">Relevant Regulatory Context</h4>
+            <div className="p-3 rounded-md text-xs bg-gray-50 dark:bg-finance-dark-blue/20 max-h-32 overflow-y-auto">
+              <pre className="whitespace-pre-wrap font-mono">{regulatoryContext}</pre>
+            </div>
+          </div>
+        )}
 
         {generatedResponse && (
           <div className="space-y-2 mt-4">

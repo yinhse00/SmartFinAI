@@ -6,14 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { Upload, File, X } from 'lucide-react';
+import { Upload, File, X, Database } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { databaseService } from '@/services/databaseService';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const DocumentUploader = () => {
   const [files, setFiles] = useState<File[]>([]);
   const [documentType, setDocumentType] = useState('');
   const [notes, setNotes] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [addToDatabase, setAddToDatabase] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -47,21 +50,40 @@ const DocumentUploader = () => {
 
     setIsUploading(true);
 
-    // Here we would normally make an actual API call to process the documents
-    // For now, we'll simulate the process
     try {
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // In a real implementation, you would upload the files to a server
+      // For now, we'll simulate the upload process
+      await new Promise(resolve => setTimeout(resolve, 1500));
       
+      // If the user wants to add to the database, process them
+      if (addToDatabase) {
+        try {
+          const importCount = await databaseService.importFromFiles(files);
+          toast({
+            title: "Files added to regulatory database",
+            description: `${importCount} entries were successfully added to the database.`,
+          });
+        } catch (error) {
+          console.error("Error adding to database:", error);
+          toast({
+            title: "Database import failed",
+            description: "There was an error adding the files to the database, but the upload was successful.",
+            variant: "destructive",
+          });
+        }
+      }
+      
+      // Success message
       toast({
         title: "Documents uploaded successfully",
         description: `${files.length} document(s) have been uploaded and are being processed.`,
       });
       
-      // Reset form after successful upload
+      // Reset form
       setFiles([]);
       setDocumentType('');
       setNotes('');
+      setAddToDatabase(false);
     } catch (error) {
       toast({
         title: "Upload failed",
@@ -100,7 +122,7 @@ const DocumentUploader = () => {
             className="hidden"
             multiple
             onChange={handleFileChange}
-            accept=".pdf,.docx,.doc"
+            accept=".pdf,.docx,.doc,.txt"
           />
         </div>
 
@@ -164,6 +186,22 @@ const DocumentUploader = () => {
               className="resize-none"
               rows={3}
             />
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="add-to-database" 
+              checked={addToDatabase} 
+              onCheckedChange={(checked) => setAddToDatabase(checked as boolean)}
+            />
+            <div className="grid gap-1.5 leading-none">
+              <Label htmlFor="add-to-database" className="text-sm cursor-pointer">
+                Also add to regulatory database
+              </Label>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                The document will be processed and its content added to the knowledge base
+              </p>
+            </div>
           </div>
         </div>
       </CardContent>
