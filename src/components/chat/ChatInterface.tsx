@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Send, Info, File, Link as LinkIcon, User, Bot } from 'lucide-react';
+import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
+import { grokService } from '@/services/grokService';
+import { useToast } from '@/hooks/use-toast';
 
 interface Message {
   id: string;
@@ -28,8 +30,9 @@ const ChatInterface = () => {
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!input.trim()) return;
 
     // Add user message
@@ -44,25 +47,68 @@ const ChatInterface = () => {
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      // Get regulatory context for the query
+      const regulatoryContext = await grokService.getRegulatoryContext(input);
+      
+      // Generate response from Grok
+      const response = await grokService.generateResponse({
+        prompt: input,
+        regulatoryContext: regulatoryContext,
+        temperature: 0.7,
+        maxTokens: 500
+      });
+      
+      // Find references from the regulatory context
+      const references = extractReferences(regulatoryContext);
+      
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: 'Based on the Hong Kong Listing Rules Chapter 14A, related party transactions require disclosure in annual reports and may require shareholder approval depending on the size of the transaction. The key thresholds are 0.1%, 1%, and 5% of various financial ratios.',
+        content: response.text,
         sender: 'bot',
         timestamp: new Date(),
-        references: ['HKEx Listing Rules Ch. 14A', 'SFC Takeovers Code Rule 26']
+        references: references
       };
       
       setMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Error generating response:", error);
+      toast({
+        title: "Error",
+        description: "Failed to generate a response. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
       setIsLoading(false);
-    }, 2000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSend();
     }
+  };
+
+  // Helper function to extract references from the regulatory context
+  const extractReferences = (context: string): string[] => {
+    if (!context) return [];
+    
+    const references: string[] = [];
+    const lines = context.split('\n');
+    
+    for (const line of lines) {
+      // Look for lines that start with "--- " which indicates a reference title
+      if (line.startsWith('--- ')) {
+        // Extract the reference name between "--- " and " ---"
+        const match = line.match(/--- (.*?) \(.*?\) ---/);
+        if (match && match[1]) {
+          references.push(match[1]);
+        }
+      }
+    }
+    
+    // Return unique references
+    return [...new Set(references)];
   };
 
   return (
@@ -130,10 +176,9 @@ const ChatInterface = () => {
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="max-w-[80%] rounded-lg p-4 bg-gray-100 dark:bg-finance-dark-blue/50">
-                    <div className="flex space-x-2">
-                      <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse"></div>
-                      <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse delay-150"></div>
-                      <div className="h-2 w-2 rounded-full bg-gray-400 dark:bg-gray-500 animate-pulse delay-300"></div>
+                    <div className="flex items-center space-x-2">
+                      <Loader2 size={18} className="animate-spin text-finance-medium-blue" />
+                      <span className="text-sm">Generating response...</span>
                     </div>
                   </div>
                 </div>
@@ -147,13 +192,14 @@ const ChatInterface = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyDown}
+                  disabled={isLoading}
                 />
                 <Button 
                   onClick={handleSend} 
                   className="bg-finance-medium-blue hover:bg-finance-dark-blue"
                   disabled={!input.trim() || isLoading}
                 >
-                  <Send size={18} />
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
                 </Button>
               </div>
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
