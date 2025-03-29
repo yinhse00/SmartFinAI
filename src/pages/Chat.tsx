@@ -1,7 +1,6 @@
 
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
-import { Link } from 'react-router-dom';
 import { ExternalLink } from 'lucide-react';
 
 const Chat = () => {
