@@ -1,3 +1,4 @@
+
 // This is the service for the Grok API integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
@@ -60,14 +61,14 @@ export const grokService = {
       
       // Make the actual API call to Grok
       try {
-        const response = await fetch('https://api.grok.ai/v1/chat/completions', {
+        const response = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${GROK_API_KEY}`
           },
           body: JSON.stringify({
-            model: 'grok-1',
+            model: 'llama-3.1-sonar-small-128k-online',
             messages: [
               { 
                 role: 'system', 
@@ -79,8 +80,8 @@ export const grokService = {
                 content: enhancedPrompt
               }
             ],
-            max_tokens: params.maxTokens || 500,
-            temperature: params.temperature || 0.7
+            temperature: params.temperature || 0.7,
+            max_tokens: params.maxTokens || 500
           })
         });
         
@@ -96,15 +97,14 @@ export const grokService = {
                 "I'm sorry, I couldn't generate a response based on the regulatory context."
         };
       } catch (apiError) {
-        console.error("Error calling Grok API:", apiError);
+        console.error("Error calling AI API:", apiError);
         
         // For demo purposes, generate a contextual response based on the query
-        // This will be used if the API call fails
         return generateFallbackResponse(params.prompt);
       }
     } catch (error) {
       console.error("Error generating response:", error);
-      throw new Error("Failed to generate response from Grok API.");
+      return generateFallbackResponse(params.prompt);
     }
   },
   
@@ -164,6 +164,7 @@ function createEnhancedPrompt(prompt: string, documentContext?: string, regulato
 function generateFallbackResponse(query: string): GrokResponse {
   const lowerQuery = query.toLowerCase();
   
+  // Return different responses based on query content to simulate AI responses
   if (lowerQuery.includes('rights issue') || lowerQuery.includes('timetable')) {
     return {
       text: `Based on your query about rights issues, here is my response:\n\n` +
@@ -192,13 +193,44 @@ function generateFallbackResponse(query: string): GrokResponse {
     };
   }
   
+  if (lowerQuery.includes('listing rules') || lowerQuery.includes('regulation')) {
+    return {
+      text: `In response to your query about listing rules, here's what you should know:\n\n` +
+            `The Hong Kong Listing Rules are primarily found in the Main Board Listing Rules and GEM Listing Rules published by HKEX. Key chapters include:\n\n` +
+            `- Chapter 2: Introduction\n` +
+            `- Chapter 3: Authorized Representatives and Directors\n` +
+            `- Chapter 4: General obligations\n` +
+            `- Chapter A5: Corporate Governance and ESG\n` +
+            `- Chapter 8: Qualifications for Listing\n` +
+            `- Chapter 9: Applications Procedures and Requirements\n` +
+            `- Chapter 13: Continuing Obligations\n` +
+            `- Chapter 14: Notifiable Transactions\n` +
+            `- Chapter 14A: Connected Transactions\n` +
+            `- Chapter 15: Options, Warrants and Similar Rights\n\n` +
+            `For specific guidance on your situation, I recommend consulting with a qualified legal advisor.`
+    };
+  }
+  
+  if (lowerQuery.includes('compliance') || lowerQuery.includes('disclosure')) {
+    return {
+      text: `Regarding your query about compliance and disclosure:\n\n` +
+            `Hong Kong listed companies must comply with the following key disclosure requirements:\n\n` +
+            `1. Inside Information (Part XIVA of the SFO): Companies must disclose inside information as soon as reasonably practicable.\n\n` +
+            `2. Financial Reports: Publication of annual reports (within 4 months of financial year-end) and interim reports (within 3 months of half-year end).\n\n` +
+            `3. Notifiable Transactions (Chapter 14): Transactions exceeding specified size thresholds require announcements and possibly shareholder approval.\n\n` +
+            `4. Connected Transactions (Chapter 14A): Transactions with connected persons require disclosure, independent board committee review, and often independent shareholder approval.\n\n` +
+            `5. Corporate Governance: Annual reports must include corporate governance statements and ESG reports.\n\n` +
+            `Failure to comply can result in SFC sanctions, stock exchange disciplinary actions, and potential civil or criminal liability.`
+    };
+  }
+  
   // Default response for other queries
   return {
-    text: `In response to your query, here is the regulatory guidance:\n\n` +
-          `Based on Hong Kong financial regulations, I would recommend reviewing the following:\n\n` +
-          `1. Check the relevant sections of the Securities and Futures Ordinance (SFO)\n` +
-          `2. Consult HKEX Listing Rules for disclosure requirements\n` +
-          `3. Review SFC guidance on compliance best practices\n\n` +
-          `For more specific guidance, please provide additional details about your regulatory question.`
+    text: `In response to your query about Hong Kong regulations, here are the key points to consider:\n\n` +
+          `1. The Securities and Futures Ordinance (SFO) is the primary legislation governing securities and futures markets in Hong Kong.\n\n` +
+          `2. The Hong Kong Exchanges and Clearing Limited (HKEX) sets listing rules that all listed companies must follow.\n\n` +
+          `3. The Securities and Futures Commission (SFC) is the main regulatory body that oversees market participants and enforces compliance.\n\n` +
+          `4. For specific regulatory guidance on your issue, I recommend consulting the relevant codes and guidelines published by the SFC and HKEX.\n\n` +
+          `5. Professional legal advice should be sought for complex regulatory matters to ensure complete compliance with Hong Kong's financial regulations.`
   };
 }

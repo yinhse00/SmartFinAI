@@ -13,12 +13,12 @@ const Chat = () => {
           <span className="ml-1 text-sm bg-finance-highlight/40 dark:bg-finance-medium-blue/30 px-2 py-0.5 rounded-full flex items-center gap-1">
             Powered by 
             <a 
-              href="https://grok.x.ai/" 
+              href="https://www.perplexity.ai/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-finance-medium-blue dark:text-finance-accent-blue font-medium flex items-center gap-0.5 hover:underline"
             >
-              Grok AI <ExternalLink size={12} />
+              Perplexity AI <ExternalLink size={12} />
             </a>
           </span>
         </p>

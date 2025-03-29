@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2, ExternalLink } from 'lucide-react';
+import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -17,6 +17,7 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   references?: string[];
+  isUsingFallback?: boolean;
 }
 
 const ChatInterface = () => {
@@ -51,31 +52,49 @@ const ChatInterface = () => {
       // Get regulatory context for the query
       const regulatoryContext = await grokService.getRegulatoryContext(input);
       
-      // Generate response from Grok
-      const response = await grokService.generateResponse({
-        prompt: input,
-        regulatoryContext: regulatoryContext,
-        temperature: 0.7,
-        maxTokens: 500
-      });
+      let isUsingFallback = false;
       
-      // Find references from the regulatory context
-      const references = extractReferences(regulatoryContext);
-      
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.text,
-        sender: 'bot',
-        timestamp: new Date(),
-        references: references
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
+      try {
+        // Generate response from Grok
+        const response = await grokService.generateResponse({
+          prompt: input,
+          regulatoryContext: regulatoryContext,
+          temperature: 0.7,
+          maxTokens: 500
+        });
+        
+        // Check if we're using a fallback response (API call failed)
+        // This is a simplistic check - in reality, you'd want to get this info from the service
+        isUsingFallback = response.text.includes("Based on your query about") || 
+                          response.text.includes("Regarding your query about") ||
+                          response.text.includes("In response to your query");
+        
+        // Find references from the regulatory context
+        const references = extractReferences(regulatoryContext);
+        
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: response.text,
+          sender: 'bot',
+          timestamp: new Date(),
+          references: references,
+          isUsingFallback: isUsingFallback
+        };
+        
+        setMessages(prev => [...prev, botMessage]);
+      } catch (error) {
+        console.error("Error generating response:", error);
+        toast({
+          title: "Error",
+          description: "Failed to generate a response. Please try again.",
+          variant: "destructive"
+        });
+      }
     } catch (error) {
-      console.error("Error generating response:", error);
+      console.error("Error in chat process:", error);
       toast({
         title: "Error",
-        description: "Failed to generate a response. Please try again.",
+        description: "An unexpected error occurred. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -160,6 +179,15 @@ const ChatInterface = () => {
                           minute: "2-digit",
                         })}
                       </span>
+                      
+                      {message.isUsingFallback && (
+                        <Badge 
+                          variant="outline" 
+                          className="ml-auto text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 flex items-center gap-1"
+                        >
+                          <AlertTriangle size={10} /> Simulated Response
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm whitespace-pre-wrap">{message.content}</p>
                     {message.references && message.references.length > 0 && (
@@ -213,15 +241,14 @@ const ChatInterface = () => {
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <Info size={12} />
                 <span>
-                  Analysis based on Grok AI. Responses include regulatory context from our database.
-                  <a 
-                    href="https://grok.x.ai/" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="ml-1 text-finance-medium-blue dark:text-finance-accent-blue hover:underline"
+                  Using Perplexity AI for accurate regulatory assistance. Responses include context from our database.
+                  {/* Informational note on the API integration status */}
+                  <Badge 
+                    variant="outline" 
+                    className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
                   >
-                    Learn more
-                  </a>
+                    Demo Mode - See varied responses based on your query
+                  </Badge>
                 </span>
               </div>
             </div>
@@ -245,7 +272,7 @@ const ChatInterface = () => {
                   <div>
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       Listing Rules
-                      <Badge variant="outline" className="ml-auto text-xs font-normal">Grok Analysis</Badge>
+                      <Badge variant="outline" className="ml-auto text-xs font-normal">AI Analysis</Badge>
                     </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-gray-50 dark:bg-finance-medium-blue/10">
@@ -264,7 +291,7 @@ const ChatInterface = () => {
                   <div>
                     <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
                       Takeovers Code
-                      <Badge variant="outline" className="ml-auto text-xs font-normal">Grok Analysis</Badge>
+                      <Badge variant="outline" className="ml-auto text-xs font-normal">AI Analysis</Badge>
                     </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-gray-50 dark:bg-finance-medium-blue/10">
