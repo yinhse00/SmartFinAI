@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2 } from 'lucide-react';
+import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2, ExternalLink } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
@@ -121,6 +121,14 @@ const ChatInterface = () => {
               <CardTitle className="text-lg font-medium flex items-center gap-2">
                 <Bot size={18} /> 
                 FinanceGrok Assistant
+                <a 
+                  href="https://grok.x.ai/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="text-xs text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline ml-auto"
+                >
+                  Learn about Grok AI <ExternalLink size={10} />
+                </a>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto py-4 space-y-4">
@@ -204,7 +212,17 @@ const ChatInterface = () => {
               </div>
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <Info size={12} />
-                <span>Your queries are securely processed using our Grok-powered regulatory engine</span>
+                <span>
+                  Analysis based on Grok AI. Responses include regulatory context from our database.
+                  <a 
+                    href="https://grok.x.ai/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="ml-1 text-finance-medium-blue dark:text-finance-accent-blue hover:underline"
+                  >
+                    Learn more
+                  </a>
+                </span>
               </div>
             </div>
           </Card>
@@ -225,7 +243,10 @@ const ChatInterface = () => {
                 
                 <TabsContent value="related" className="p-4 space-y-4">
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Listing Rules</h4>
+                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      Listing Rules
+                      <Badge variant="outline" className="ml-auto text-xs font-normal">Grok Analysis</Badge>
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-gray-50 dark:bg-finance-medium-blue/10">
                         <File size={14} className="text-finance-medium-blue dark:text-finance-accent-blue" />
@@ -241,7 +262,10 @@ const ChatInterface = () => {
                   <Separator />
                   
                   <div>
-                    <h4 className="text-sm font-medium mb-2">Takeovers Code</h4>
+                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      Takeovers Code
+                      <Badge variant="outline" className="ml-auto text-xs font-normal">Grok Analysis</Badge>
+                    </h4>
                     <div className="space-y-2">
                       <div className="flex items-center gap-2 text-xs p-2 rounded-md bg-gray-50 dark:bg-finance-medium-blue/10">
                         <File size={14} className="text-finance-medium-blue dark:text-finance-accent-blue" />
