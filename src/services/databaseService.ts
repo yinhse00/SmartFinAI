@@ -161,7 +161,7 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
-    console.log('Added sample regulatory data');
+    console.log("Added sample regulatory data");
   }
 };
 
