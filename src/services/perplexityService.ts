@@ -1,14 +1,19 @@
-
-// This is the service for the Grok API integration
+// This is the service for the Perplexity AI integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
 
-const GROK_API_KEY = "xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6";
-
 // Note: In a real application, the API key should be stored securely on the backend 
 // and not exposed in the frontend code
+// We're storing it in localStorage for this demo
+const getApiKey = () => {
+  return localStorage.getItem('PERPLEXITY_API_KEY') || '';
+};
 
-interface GrokRequestParams {
+const setApiKey = (key: string) => {
+  localStorage.setItem('PERPLEXITY_API_KEY', key);
+};
+
+interface PerplexityRequestParams {
   prompt: string;
   maxTokens?: number;
   temperature?: number;
@@ -17,12 +22,29 @@ interface GrokRequestParams {
   regulatoryContext?: string;
 }
 
-interface GrokResponse {
+interface PerplexityResponse {
   text: string;
   // Add other response fields as needed based on the actual API
 }
 
-export const grokService = {
+export const perplexityService = {
+  /**
+   * Set the API key for Perplexity AI
+   */
+  setApiKey,
+  
+  /**
+   * Get the stored API key
+   */
+  getApiKey,
+  
+  /**
+   * Check if an API key is set
+   */
+  hasApiKey: (): boolean => {
+    return !!getApiKey();
+  },
+  
   /**
    * Fetch relevant regulatory information for context
    */
@@ -44,14 +66,14 @@ export const grokService = {
   },
   
   /**
-   * Generate a response from Grok AI with regulatory context
+   * Generate a response from Perplexity AI with regulatory context
    */
-  generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
+  generateResponse: async (params: PerplexityRequestParams): Promise<PerplexityResponse> => {
     try {
       // If no regulatory context was provided, try to find relevant context
       let regulatoryContext = params.regulatoryContext;
       if (!regulatoryContext) {
-        regulatoryContext = await grokService.getRegulatoryContext(params.prompt);
+        regulatoryContext = await perplexityService.getRegulatoryContext(params.prompt);
       }
       
       // Create an enhanced prompt that includes the regulatory context
@@ -59,13 +81,20 @@ export const grokService = {
       
       console.log("Generating response with enhanced prompt:", enhancedPrompt);
       
-      // Make the actual API call to Grok
+      const apiKey = getApiKey();
+      
+      // Check if API key is available
+      if (!apiKey) {
+        return generateFallbackResponse(params.prompt, "No API key provided");
+      }
+      
+      // Make the actual API call to Perplexity
       try {
         const response = await fetch('https://api.perplexity.ai/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${GROK_API_KEY}`
+            'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify({
             model: 'llama-3.1-sonar-small-128k-online',
@@ -97,14 +126,14 @@ export const grokService = {
                 "I'm sorry, I couldn't generate a response based on the regulatory context."
         };
       } catch (apiError) {
-        console.error("Error calling AI API:", apiError);
+        console.error("Error calling Perplexity API:", apiError);
         
         // For demo purposes, generate a contextual response based on the query
-        return generateFallbackResponse(params.prompt);
+        return generateFallbackResponse(params.prompt, "API error");
       }
     } catch (error) {
       console.error("Error generating response:", error);
-      return generateFallbackResponse(params.prompt);
+      return generateFallbackResponse(params.prompt, "Error generating response");
     }
   },
   
@@ -161,7 +190,7 @@ function createEnhancedPrompt(prompt: string, documentContext?: string, regulato
 }
 
 // Generate a fallback response if the API call fails
-function generateFallbackResponse(query: string): GrokResponse {
+function generateFallbackResponse(query: string, reason: string = "API unavailable"): PerplexityResponse {
   const lowerQuery = query.toLowerCase();
   
   // Return different responses based on query content to simulate AI responses

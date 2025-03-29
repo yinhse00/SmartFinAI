@@ -1,15 +1,17 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Send, Info, File, Link as LinkIcon, User, Bot, Loader2, ExternalLink, AlertTriangle, Key } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import { grokService } from '@/services/grokService';
+import { perplexityService } from '@/services/perplexityService';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 
 interface Message {
   id: string;
@@ -22,19 +24,54 @@ interface Message {
 
 const ChatInterface = () => {
   const [input, setInput] = useState('');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [isApiKeySet, setIsApiKeySet] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m FinanceGrok, your Hong Kong regulatory assistant. How can I help you today?',
+      content: 'Hello! I\'m your Hong Kong regulatory assistant. How can I help you today?',
       sender: 'bot',
       timestamp: new Date(),
     }
   ]);
   const [isLoading, setIsLoading] = useState(false);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Check if API key is set on component mount
+  useEffect(() => {
+    const hasKey = perplexityService.hasApiKey();
+    setIsApiKeySet(hasKey);
+    if (!hasKey) {
+      setApiKeyDialogOpen(true);
+    }
+  }, []);
+
+  const handleSaveApiKey = () => {
+    if (apiKeyInput.trim()) {
+      perplexityService.setApiKey(apiKeyInput.trim());
+      setIsApiKeySet(true);
+      setApiKeyDialogOpen(false);
+      toast({
+        title: "API Key Saved",
+        description: "Your API key has been saved in the browser's local storage.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "Please enter a valid API key.",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleSend = async () => {
     if (!input.trim()) return;
+    
+    if (!isApiKeySet) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
 
     // Add user message
     const userMessage: Message = {
@@ -50,13 +87,11 @@ const ChatInterface = () => {
 
     try {
       // Get regulatory context for the query
-      const regulatoryContext = await grokService.getRegulatoryContext(input);
-      
-      let isUsingFallback = false;
+      const regulatoryContext = await perplexityService.getRegulatoryContext(input);
       
       try {
-        // Generate response from Grok
-        const response = await grokService.generateResponse({
+        // Generate response from Perplexity
+        const response = await perplexityService.generateResponse({
           prompt: input,
           regulatoryContext: regulatoryContext,
           temperature: 0.7,
@@ -64,10 +99,9 @@ const ChatInterface = () => {
         });
         
         // Check if we're using a fallback response (API call failed)
-        // This is a simplistic check - in reality, you'd want to get this info from the service
-        isUsingFallback = response.text.includes("Based on your query about") || 
-                          response.text.includes("Regarding your query about") ||
-                          response.text.includes("In response to your query");
+        const isUsingFallback = response.text.includes("Based on your query about") || 
+                                response.text.includes("Regarding your query about") ||
+                                response.text.includes("In response to your query");
         
         // Find references from the regulatory context
         const references = extractReferences(regulatoryContext);
@@ -139,15 +173,27 @@ const ChatInterface = () => {
             <CardHeader className="pb-3 border-b">
               <CardTitle className="text-lg font-medium flex items-center gap-2">
                 <Bot size={18} /> 
-                FinanceGrok Assistant
-                <a 
-                  href="https://grok.x.ai/" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="text-xs text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline ml-auto"
-                >
-                  Learn about Grok AI <ExternalLink size={10} />
-                </a>
+                Regulatory Assistant
+                <div className="ml-auto flex items-center gap-2">
+                  {!isApiKeySet && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setApiKeyDialogOpen(true)}
+                      className="text-xs flex items-center gap-1 border-amber-500 text-amber-600 hover:text-amber-700"
+                    >
+                      <Key size={14} /> Set API Key
+                    </Button>
+                  )}
+                  <a 
+                    href="https://www.perplexity.ai/" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-xs text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
+                  >
+                    About Perplexity AI <ExternalLink size={10} />
+                  </a>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto py-4 space-y-4">
@@ -242,13 +288,14 @@ const ChatInterface = () => {
                 <Info size={12} />
                 <span>
                   Using Perplexity AI for accurate regulatory assistance. Responses include context from our database.
-                  {/* Informational note on the API integration status */}
-                  <Badge 
-                    variant="outline" 
-                    className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-                  >
-                    Demo Mode - See varied responses based on your query
-                  </Badge>
+                  {!isApiKeySet && (
+                    <Badge 
+                      variant="outline" 
+                      className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+                    >
+                      API Key Required
+                    </Badge>
+                  )}
                 </span>
               </div>
             </div>
@@ -334,6 +381,41 @@ const ChatInterface = () => {
           </Card>
         </div>
       </div>
+
+      {/* API Key Dialog */}
+      <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Enter Perplexity API Key</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="apikey">
+                API Key
+                <span className="text-xs text-gray-500 ml-2">
+                  (Stored in your browser)
+                </span>
+              </Label>
+              <Input
+                id="apikey"
+                type="password"
+                placeholder="Enter your Perplexity API key"
+                value={apiKeyInput}
+                onChange={(e) => setApiKeyInput(e.target.value)}
+              />
+              <p className="text-xs text-gray-500">
+                Your API key is stored only in your browser's local storage. We do not store it on our servers.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveApiKey}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
