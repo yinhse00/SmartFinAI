@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { Download, FileText, Loader2, BookOpen } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { grokService } from '@/services/grokService';
+import { perplexityService } from '@/services/perplexityService';
 import { databaseService } from '@/services/databaseService';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -34,7 +34,7 @@ const ResponseGenerator = () => {
     setRegulatoryContext(null);
 
     try {
-      const context = await grokService.getRegulatoryContext(promptText);
+      const context = await perplexityService.getRegulatoryContext(promptText);
       setRegulatoryContext(context);
       
       toast({
@@ -78,7 +78,7 @@ const ResponseGenerator = () => {
       // If auto-search is enabled but we haven't searched yet, get the regulatory context
       if (useAutoRegSearch && !regulatoryContext) {
         try {
-          const context = await grokService.getRegulatoryContext(promptText);
+          const context = await perplexityService.getRegulatoryContext(promptText);
           setRegulatoryContext(context);
         } catch (error) {
           console.error("Error auto-searching regulations:", error);
@@ -86,8 +86,8 @@ const ResponseGenerator = () => {
         }
       }
 
-      // Generate response using Grok
-      const response = await grokService.generateResponse({
+      // Generate response using Perplexity
+      const response = await perplexityService.generateResponse({
         prompt: promptText,
         regulatoryContext: regulatoryContext || undefined,
         responseFormat: 'text'
@@ -114,7 +114,7 @@ const ResponseGenerator = () => {
     if (!generatedResponse) return;
     
     try {
-      const blob = await grokService.generateWordDocument(generatedResponse);
+      const blob = await perplexityService.generateWordDocument(generatedResponse);
       
       // Create a download link
       const url = URL.createObjectURL(blob);
