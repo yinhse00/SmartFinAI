@@ -9,9 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { perplexityService } from '@/services/perplexityService';
+import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface Message {
   id: string;
@@ -24,8 +26,10 @@ interface Message {
 
 const ChatInterface = () => {
   const [input, setInput] = useState('');
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [isApiKeySet, setIsApiKeySet] = useState(false);
+  const [perplexityApiKeyInput, setPerplexityApiKeyInput] = useState('');
+  const [grokApiKeyInput, setGrokApiKeyInput] = useState('');
+  const [isPerplexityApiKeySet, setIsPerplexityApiKeySet] = useState(false);
+  const [isGrokApiKeySet, setIsGrokApiKeySet] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -36,38 +40,46 @@ const ChatInterface = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
+  const [activeAiProvider, setActiveAiProvider] = useState<'perplexity' | 'grok'>('perplexity');
   const { toast } = useToast();
 
-  // Check if API key is set on component mount
+  // Check if API keys are set on component mount
   useEffect(() => {
-    const hasKey = perplexityService.hasApiKey();
-    setIsApiKeySet(hasKey);
-    if (!hasKey) {
+    const hasPerplexityKey = perplexityService.hasApiKey();
+    const hasGrokKey = grokService.hasApiKey();
+    setIsPerplexityApiKeySet(hasPerplexityKey);
+    setIsGrokApiKeySet(hasGrokKey);
+    
+    // Open dialog if the active provider doesn't have an API key
+    if ((activeAiProvider === 'perplexity' && !hasPerplexityKey) || 
+        (activeAiProvider === 'grok' && !hasGrokKey)) {
       setApiKeyDialogOpen(true);
     }
-  }, []);
+  }, [activeAiProvider]);
 
-  const handleSaveApiKey = () => {
-    if (apiKeyInput.trim()) {
-      perplexityService.setApiKey(apiKeyInput.trim());
-      setIsApiKeySet(true);
-      setApiKeyDialogOpen(false);
-      toast({
-        title: "API Key Saved",
-        description: "Your API key has been saved in the browser's local storage.",
-      });
-    } else {
-      toast({
-        title: "Error",
-        description: "Please enter a valid API key.",
-        variant: "destructive"
-      });
+  const handleSaveApiKeys = () => {
+    if (perplexityApiKeyInput.trim()) {
+      perplexityService.setApiKey(perplexityApiKeyInput.trim());
+      setIsPerplexityApiKeySet(true);
     }
+    
+    if (grokApiKeyInput.trim()) {
+      grokService.setApiKey(grokApiKeyInput.trim());
+      setIsGrokApiKeySet(true);
+    }
+    
+    setApiKeyDialogOpen(false);
+    toast({
+      title: "API Keys Saved",
+      description: "Your API keys have been saved in the browser's local storage.",
+    });
   };
 
   const handleSend = async () => {
     if (!input.trim()) return;
     
+    // Check if the active service has an API key
+    const isApiKeySet = activeAiProvider === 'perplexity' ? isPerplexityApiKeySet : isGrokApiKeySet;
     if (!isApiKeySet) {
       setApiKeyDialogOpen(true);
       return;
@@ -86,12 +98,15 @@ const ChatInterface = () => {
     setIsLoading(true);
 
     try {
+      // Use the selected AI service
+      const service = activeAiProvider === 'grok' ? grokService : perplexityService;
+      
       // Get regulatory context for the query
-      const regulatoryContext = await perplexityService.getRegulatoryContext(input);
+      const regulatoryContext = await service.getRegulatoryContext(input);
       
       try {
-        // Generate response from Perplexity
-        const response = await perplexityService.generateResponse({
+        // Generate response using the selected AI service
+        const response = await service.generateResponse({
           prompt: input,
           regulatoryContext: regulatoryContext,
           temperature: 0.7,
@@ -175,7 +190,26 @@ const ChatInterface = () => {
                 <Bot size={18} /> 
                 Regulatory Assistant
                 <div className="ml-auto flex items-center gap-2">
-                  {!isApiKeySet && (
+                  <div className="flex items-center space-x-2">
+                    <label className="text-xs">AI Provider:</label>
+                    <RadioGroup 
+                      value={activeAiProvider} 
+                      onValueChange={(value) => setActiveAiProvider(value as 'perplexity' | 'grok')}
+                      className="flex space-x-4"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="perplexity" id="chat-perplexity" />
+                        <Label htmlFor="chat-perplexity" className="text-xs cursor-pointer">Perplexity</Label>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        <RadioGroupItem value="grok" id="chat-grok" />
+                        <Label htmlFor="chat-grok" className="text-xs cursor-pointer">Grok</Label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  
+                  {((activeAiProvider === 'perplexity' && !isPerplexityApiKeySet) || 
+                    (activeAiProvider === 'grok' && !isGrokApiKeySet)) && (
                     <Button 
                       variant="outline" 
                       size="sm" 
@@ -186,12 +220,12 @@ const ChatInterface = () => {
                     </Button>
                   )}
                   <a 
-                    href="https://www.perplexity.ai/" 
+                    href={activeAiProvider === 'perplexity' ? "https://www.perplexity.ai/" : "https://www.grok.com/"}
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="text-xs text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
                   >
-                    About Perplexity AI <ExternalLink size={10} />
+                    About {activeAiProvider === 'perplexity' ? 'Perplexity' : 'Grok'} AI <ExternalLink size={10} />
                   </a>
                 </div>
               </CardTitle>
@@ -287,8 +321,9 @@ const ChatInterface = () => {
               <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
                 <Info size={12} />
                 <span>
-                  Using Perplexity AI for accurate regulatory assistance. Responses include context from our database.
-                  {!isApiKeySet && (
+                  Using {activeAiProvider === 'perplexity' ? 'Perplexity' : 'Grok'} AI for accurate regulatory assistance. Responses include context from our database.
+                  {((activeAiProvider === 'perplexity' && !isPerplexityApiKeySet) || 
+                    (activeAiProvider === 'grok' && !isGrokApiKeySet)) && (
                     <Badge 
                       variant="outline" 
                       className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
@@ -386,33 +421,50 @@ const ChatInterface = () => {
       <Dialog open={apiKeyDialogOpen} onOpenChange={setApiKeyDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Enter Perplexity API Key</DialogTitle>
+            <DialogTitle>Enter API Keys</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="apikey">
-                API Key
+              <Label htmlFor="perplexity-apikey">
+                Perplexity API Key
                 <span className="text-xs text-gray-500 ml-2">
                   (Stored in your browser)
                 </span>
               </Label>
               <Input
-                id="apikey"
+                id="perplexity-apikey"
                 type="password"
                 placeholder="Enter your Perplexity API key"
-                value={apiKeyInput}
-                onChange={(e) => setApiKeyInput(e.target.value)}
+                value={perplexityApiKeyInput}
+                onChange={(e) => setPerplexityApiKeyInput(e.target.value)}
               />
-              <p className="text-xs text-gray-500">
-                Your API key is stored only in your browser's local storage. We do not store it on our servers.
-              </p>
             </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="grok-apikey">
+                Grok API Key
+                <span className="text-xs text-gray-500 ml-2">
+                  (Stored in your browser)
+                </span>
+              </Label>
+              <Input
+                id="grok-apikey"
+                type="password"
+                placeholder="Enter your Grok API key"
+                value={grokApiKeyInput}
+                onChange={(e) => setGrokApiKeyInput(e.target.value)}
+              />
+            </div>
+            
+            <p className="text-xs text-gray-500">
+              Your API keys are stored only in your browser's local storage. We do not store them on our servers.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setApiKeyDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSaveApiKey}>Save</Button>
+            <Button onClick={handleSaveApiKeys}>Save</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
