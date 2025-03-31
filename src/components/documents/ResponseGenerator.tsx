@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,8 +20,7 @@ const ResponseGenerator = () => {
   const [generatedResponse, setGeneratedResponse] = useState<string | null>(null);
   const [useAutoRegSearch, setUseAutoRegSearch] = useState(true);
   const [regulatoryContext, setRegulatoryContext] = useState<string | null>(null);
-  // Add AI provider selection state
-  const [aiProvider, setAiProvider] = useState<'perplexity' | 'grok'>('perplexity');
+  const [aiProvider, setAiProvider] = useState<'perplexity' | 'grok'>('grok');
 
   const handleSearchRegulations = async () => {
     if (!promptText.trim()) {
@@ -38,7 +36,6 @@ const ResponseGenerator = () => {
     setRegulatoryContext(null);
 
     try {
-      // Use the selected AI service for searching regulations
       const service = aiProvider === 'grok' ? grokService : perplexityService;
       const context = await service.getRegulatoryContext(promptText);
       setRegulatoryContext(context);
@@ -77,7 +74,6 @@ const ResponseGenerator = () => {
       return;
     }
 
-    // Check if API key is set for the selected service
     const service = aiProvider === 'grok' ? grokService : perplexityService;
     if (!service.hasApiKey()) {
       toast({
@@ -92,18 +88,15 @@ const ResponseGenerator = () => {
     setGeneratedResponse(null);
 
     try {
-      // If auto-search is enabled but we haven't searched yet, get the regulatory context
       if (useAutoRegSearch && !regulatoryContext) {
         try {
           const context = await service.getRegulatoryContext(promptText);
           setRegulatoryContext(context);
         } catch (error) {
           console.error("Error auto-searching regulations:", error);
-          // Continue without regulatory context if search fails
         }
       }
 
-      // Generate response using the selected AI service
       const response = await service.generateResponse({
         prompt: promptText,
         regulatoryContext: regulatoryContext || undefined,
@@ -131,11 +124,9 @@ const ResponseGenerator = () => {
     if (!generatedResponse) return;
     
     try {
-      // Use the selected AI service for document generation
       const service = aiProvider === 'grok' ? grokService : perplexityService;
       const blob = await service.generateWordDocument(generatedResponse);
       
-      // Create a download link
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -143,7 +134,6 @@ const ResponseGenerator = () => {
       document.body.appendChild(a);
       a.click();
       
-      // Clean up
       URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
@@ -169,7 +159,6 @@ const ResponseGenerator = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* AI Provider Selection */}
         <div className="space-y-2">
           <Label className="text-sm font-medium">Select AI Provider</Label>
           <RadioGroup 

@@ -24,7 +24,11 @@ interface Message {
   isUsingFallback?: boolean;
 }
 
-const ChatInterface = () => {
+interface ChatInterfaceProps {
+  defaultProvider?: 'perplexity' | 'grok';
+}
+
+const ChatInterface = ({ defaultProvider = 'perplexity' }: ChatInterfaceProps) => {
   const [input, setInput] = useState('');
   const [perplexityApiKeyInput, setPerplexityApiKeyInput] = useState('');
   const [grokApiKeyInput, setGrokApiKeyInput] = useState('');
@@ -40,7 +44,7 @@ const ChatInterface = () => {
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
-  const [activeAiProvider, setActiveAiProvider] = useState<'perplexity' | 'grok'>('perplexity');
+  const [activeAiProvider, setActiveAiProvider] = useState<'perplexity' | 'grok'>(defaultProvider);
   const { toast } = useToast();
 
   // Check if API keys are set on component mount

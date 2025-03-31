@@ -2,8 +2,16 @@
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
+import { grokService } from '@/services/grokService';
 
 const Chat = () => {
+  // Set the Grok API key when the component mounts
+  useEffect(() => {
+    const apiKey = 'xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6';
+    grokService.setApiKey(apiKey);
+  }, []);
+
   return (
     <MainLayout>
       <div className="mb-4">
@@ -13,18 +21,18 @@ const Chat = () => {
           <span className="ml-1 text-sm bg-finance-highlight/40 dark:bg-finance-medium-blue/30 px-2 py-0.5 rounded-full flex items-center gap-1">
             Powered by 
             <a 
-              href="https://www.perplexity.ai/" 
+              href="https://www.grok.x.ai/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-finance-medium-blue dark:text-finance-accent-blue font-medium flex items-center gap-0.5 hover:underline"
             >
-              Perplexity AI <ExternalLink size={12} />
+              Grok AI <ExternalLink size={12} />
             </a>
           </span>
         </p>
       </div>
       
-      <ChatInterface />
+      <ChatInterface defaultProvider="grok" />
     </MainLayout>
   );
 };
