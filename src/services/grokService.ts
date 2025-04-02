@@ -108,7 +108,8 @@ export const grokService = {
         toast({
           title: "API Connection Issue",
           description: "Could not connect to Grok API. Using simulated response instead.",
-          variant: "warning",
+          // Fix: Changed "warning" to "default" since "warning" is not a valid variant
+          variant: "default",
           duration: 5000,
         });
         
