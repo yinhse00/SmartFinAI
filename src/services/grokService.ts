@@ -1,3 +1,4 @@
+
 // This is the service for the Grok AI integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
@@ -123,12 +124,13 @@ export const grokService = {
         });
         
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error("Grok API error:", errorText);
-          throw new Error(`API error: ${response.status} - ${errorText}`);
+          const errorData = await response.text();
+          console.error("Grok API error:", errorData);
+          throw new Error(`API error: ${response.status} - ${errorData}`);
         }
         
         const data = await response.json();
+        console.log("Grok API response:", data);
         
         return {
           text: data.choices?.[0]?.message?.content || 
