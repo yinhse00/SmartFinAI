@@ -1,4 +1,3 @@
-
 // This is the service for the Grok AI integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
@@ -95,50 +94,29 @@ export const grokService = {
         return generateFallbackResponse(params.prompt, "No API key provided");
       }
       
-      // Try to make the API call to Grok, with fallback to simulated responses if it fails
+      // Make API call through our proxy endpoint
       try {
-        console.log("Attempting to connect to Grok API with key:", apiKey.substring(0, 5) + "...");
+        console.log("Attempting to connect to Grok API through proxy with key:", apiKey.substring(0, 5) + "...");
         
-        // Currently we're facing CORS or network issues with the Grok API
-        // Let's try to use a proxy or fallback to simulated responses
-        
-        // Due to CORS issues, we'll use a fallback approach for now
-        // In a production environment, you would set up a backend proxy
-        
-        toast({
-          title: "API Connection Issue",
-          description: "Could not connect to Grok API. Using simulated response instead.",
-          // Fix: Changed "warning" to "default" since "warning" is not a valid variant
-          variant: "default",
-          duration: 5000,
-        });
-        
-        // Add a small delay to simulate network latency
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        // Use fallback response based on the query content
-        return generateFallbackResponse(params.prompt);
-        
-        /* 
-        // The code below is what we'd use with a proper backend proxy for the Grok API
-        const response = await fetch('/api/grok', { // Use a backend proxy endpoint
+        const response = await fetch('/api/grok/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
           },
           body: JSON.stringify({
-            apiKey: apiKey,
             messages: [
               { 
                 role: 'system', 
                 content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-                        'Use the provided regulatory context to generate accurate responses.' 
+                         'Use the provided regulatory context to generate accurate responses.' 
               },
               { 
                 role: 'user', 
                 content: enhancedPrompt
               }
             ],
+            model: "grok-2",
             temperature: params.temperature || 0.7,
             max_tokens: params.maxTokens || 500
           })
@@ -156,7 +134,6 @@ export const grokService = {
           text: data.choices?.[0]?.message?.content || 
                 "I'm sorry, I couldn't generate a response based on the regulatory context."
         };
-        */
       } catch (apiError) {
         console.error("Error calling Grok API:", apiError);
         

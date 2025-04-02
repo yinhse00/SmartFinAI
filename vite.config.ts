@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -8,6 +9,18 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: {
+      // Add proxy for Grok API
+      '/api/grok': {
+        target: 'https://api.grok.x.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/grok/, ''),
+        secure: true,
+        headers: {
+          'Connection': 'keep-alive',
+        },
+      },
+    },
   },
   plugins: [
     react(),

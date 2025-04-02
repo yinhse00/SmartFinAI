@@ -1,15 +1,13 @@
 
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
-import { ExternalLink, AlertTriangle } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ExternalLink } from 'lucide-react';
+import { useEffect } from 'react';
 import { grokService } from '@/services/grokService';
 import { useToast } from '@/components/ui/use-toast';
-import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 
 const Chat = () => {
   const { toast } = useToast();
-  const [showApiWarning, setShowApiWarning] = useState(false);
   
   // Set the Grok API key when the component mounts
   useEffect(() => {
@@ -22,10 +20,6 @@ const Chat = () => {
       description: "The Grok AI API key has been configured.",
       duration: 3000,
     });
-    
-    // Check if we can actually connect to the API
-    // For now we know there are CORS issues, so we'll show a warning
-    setShowApiWarning(true);
   }, [toast]);
 
   return (
@@ -47,17 +41,6 @@ const Chat = () => {
           </span>
         </p>
       </div>
-      
-      {showApiWarning && (
-        <Alert variant="destructive" className="mb-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800/50">
-          <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-500" />
-          <AlertTitle className="text-amber-800 dark:text-amber-500">API Connection Issue</AlertTitle>
-          <AlertDescription className="text-amber-700 dark:text-amber-400">
-            Currently unable to connect directly to Grok API due to browser security restrictions (CORS).
-            The chat will use simulated responses. In a production environment, a server-side proxy would be used.
-          </AlertDescription>
-        </Alert>
-      )}
       
       <ChatInterface defaultProvider="grok" />
     </MainLayout>
