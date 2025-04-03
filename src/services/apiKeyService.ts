@@ -26,3 +26,24 @@ export const setGrokApiKey = (key: string): void => {
 export const hasGrokApiKey = (): boolean => {
   return !!getGrokApiKey();
 };
+
+/**
+ * Get the Perplexity API key from local storage
+ */
+export const getPerplexityApiKey = (): string => {
+  return localStorage.getItem('PERPLEXITY_API_KEY') || '';
+};
+
+/**
+ * Set the Perplexity API key in local storage
+ */
+export const setPerplexityApiKey = (key: string): void => {
+  localStorage.setItem('PERPLEXITY_API_KEY', key);
+};
+
+/**
+ * Check if a Perplexity API key is set
+ */
+export const hasPerplexityApiKey = (): boolean => {
+  return !!getPerplexityApiKey();
+};

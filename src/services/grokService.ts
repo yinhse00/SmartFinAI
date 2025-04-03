@@ -23,6 +23,13 @@ interface GrokResponse {
 
 export const grokService = {
   /**
+   * Check if a Grok API key is set
+   */
+  hasApiKey: (): boolean => {
+    return hasGrokApiKey();
+  },
+
+  /**
    * Fetch relevant regulatory information for context
    */
   getRegulatoryContext: async (query: string): Promise<string> => {
