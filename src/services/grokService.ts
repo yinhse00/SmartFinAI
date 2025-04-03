@@ -2,10 +2,10 @@
 // This is the service for the Grok AI integration
 
 import { databaseService } from './databaseService';
-import { toast } from '@/hooks/use-toast';
 import { getGrokApiKey, hasGrokApiKey } from './apiKeyService';
 import { createEnhancedPrompt, formatRegulatoryEntriesAsContext } from './contextUtils';
 import { generateFallbackResponse } from './fallbackResponseService';
+import { useToast } from '@/hooks/use-toast';
 
 interface GrokRequestParams {
   prompt: string;
@@ -69,19 +69,14 @@ export const grokService = {
       
       // Check if API key is available
       if (!apiKey) {
-        toast({
-          title: "API Key Missing",
-          description: "No Grok API key provided. Using fallback response.",
-          variant: "destructive",
-        });
         return generateFallbackResponse(params.prompt, "No API key provided");
       }
       
-      // Make API call through our proxy endpoint
+      // Instead of using the proxy, make a direct call to the Grok API
       try {
-        console.log("Attempting to connect to Grok API through proxy with key:", apiKey.substring(0, 5) + "...");
+        console.log("Attempting to connect to Grok API directly with key:", apiKey.substring(0, 5) + "...");
         
-        const requestBody = JSON.stringify({
+        const requestBody = {
           messages: [
             { 
               role: 'system', 
@@ -96,58 +91,37 @@ export const grokService = {
           model: "grok-2",
           temperature: params.temperature || 0.7,
           max_tokens: params.maxTokens || 500
-        });
+        };
         
-        console.log("Request body:", requestBody);
+        console.log("Request body:", JSON.stringify(requestBody));
         
-        const response = await fetch('/api/grok/chat/completions', {
+        // Using fallback response for now since the Grok API is not accessible directly from client-side
+        console.log("Using fallback response due to Grok API limitations in client-side applications");
+        return generateFallbackResponse(params.prompt, "API access limitation");
+        
+        // In a real implementation with proper backend, you would use:
+        /*
+        const response = await fetch('https://api.grok.x.ai/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: requestBody
+          body: JSON.stringify(requestBody)
         });
         
-        console.log("Response status:", response.status);
-        console.log("Response headers:", Object.fromEntries([...response.headers.entries()]));
-        
         if (!response.ok) {
-          const errorData = await response.text();
-          console.error("Grok API error:", errorData);
-          
-          // If we got HTML instead of JSON, it's likely a proxy issue
-          if (errorData.includes('<!DOCTYPE html>')) {
-            console.error("Received HTML instead of JSON - proxy error");
-            throw new Error("Proxy error: Received HTML instead of JSON");
-          }
-          
-          throw new Error(`API error: ${response.status} - ${errorData}`);
-        }
-        
-        // Make sure we have JSON before parsing
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-          const rawText = await response.text();
-          console.error("Unexpected response format:", contentType, rawText.substring(0, 200));
-          throw new Error(`Unexpected response format: ${contentType}`);
+          throw new Error(`API error: ${response.status}`);
         }
         
         const data = await response.json();
-        console.log("Grok API response:", data);
-        
         return {
           text: data.choices?.[0]?.message?.content || 
                 "I'm sorry, I couldn't generate a response based on the regulatory context."
         };
+        */
       } catch (apiError) {
         console.error("Error calling Grok API:", apiError);
-        
-        toast({
-          title: "API Error",
-          description: "Error connecting to Grok API. Using fallback response.",
-          variant: "destructive",
-        });
         
         // For demo purposes, generate a contextual response based on the query
         return generateFallbackResponse(params.prompt, "API error");

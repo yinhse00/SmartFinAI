@@ -13,13 +13,14 @@ const Chat = () => {
   useEffect(() => {
     // Only set if not already set
     if (!hasGrokApiKey()) {
-      const defaultApiKey = 'xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6';
+      // Using a mock API key since we're using fallback responses
+      const defaultApiKey = 'mock-api-key-for-demonstration';
       setGrokApiKey(defaultApiKey);
       
       toast({
-        title: "Grok API Key Set",
-        description: "The default Grok API key has been configured.",
-        duration: 3000,
+        title: "Demo Mode Active",
+        description: "Using fallback responses since Grok API is not accessible directly from client-side.",
+        duration: 5000,
       });
     }
   }, [toast]);
@@ -31,7 +32,7 @@ const Chat = () => {
         <p className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
           Ask questions about Hong Kong listing rules, takeovers code, and compliance requirements.
           <span className="ml-1 text-sm bg-finance-highlight/40 dark:bg-finance-medium-blue/30 px-2 py-0.5 rounded-full flex items-center gap-1">
-            Powered by 
+            Demo Mode
             <a 
               href="https://www.grok.x.ai/" 
               target="_blank" 
