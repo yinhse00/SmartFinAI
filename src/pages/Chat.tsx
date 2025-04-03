@@ -3,24 +3,22 @@ import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { ExternalLink } from 'lucide-react';
 import { useEffect } from 'react';
-import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
+import { setGrokApiKey, hasGrokApiKey } from '@/services/apiKeyService';
 
 const Chat = () => {
   const { toast } = useToast();
   
   // Set the Grok API key when the component mounts
   useEffect(() => {
-    const apiKey = localStorage.getItem('GROK_API_KEY');
-    
     // Only set if not already set
-    if (!apiKey) {
+    if (!hasGrokApiKey()) {
       const defaultApiKey = 'xai-d5jFAjxz2xujjhKYObAGbLFFGrxrM6DSUmOgQCoobSYJe6PWWgjJbgwZYJ190bAH9gniRNcMjezY4qi6';
-      grokService.setApiKey(defaultApiKey);
+      setGrokApiKey(defaultApiKey);
       
       toast({
         title: "Grok API Key Set",
-        description: "The default Grok AI API key has been configured.",
+        description: "The default Grok API key has been configured.",
         duration: 3000,
       });
     }
