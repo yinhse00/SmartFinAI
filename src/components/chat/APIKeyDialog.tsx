@@ -4,6 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { ExternalLink } from 'lucide-react';
 
 interface APIKeyDialogProps {
   open: boolean;
@@ -40,18 +41,40 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
               placeholder="Enter your Grok API key"
               value={grokApiKeyInput}
               onChange={(e) => setGrokApiKeyInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && grokApiKeyInput.trim()) {
+                  onSave();
+                }
+              }}
             />
           </div>
           
           <p className="text-xs text-gray-500">
             Your API key is stored only in your browser's local storage. We do not store it on our servers.
           </p>
+          
+          <div className="text-xs flex items-center gap-1 mt-2">
+            <span>Get your API key from</span>
+            <a 
+              href="https://www.grok.x.ai/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
+            >
+              Grok AI <ExternalLink size={10} />
+            </a>
+          </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-          <Button onClick={onSave}>Save</Button>
+          <Button 
+            onClick={onSave}
+            disabled={!grokApiKeyInput.trim()}
+          >
+            Save
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

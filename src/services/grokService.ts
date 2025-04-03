@@ -72,7 +72,7 @@ export const grokService = {
       }
       
       try {
-        console.log("Connecting to Grok API with key:", apiKey.substring(0, 5) + "...");
+        console.log("Connecting to Grok API");
         
         const requestBody = {
           messages: [
