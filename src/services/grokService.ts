@@ -1,8 +1,7 @@
-
 // This is the service for the Grok AI integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 // Note: In a real application, the API key should be stored securely on the backend 
 // and not exposed in the frontend code
@@ -99,34 +98,56 @@ export const grokService = {
       try {
         console.log("Attempting to connect to Grok API through proxy with key:", apiKey.substring(0, 5) + "...");
         
+        const requestBody = JSON.stringify({
+          messages: [
+            { 
+              role: 'system', 
+              content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
+                       'Use the provided regulatory context to generate accurate responses.' 
+            },
+            { 
+              role: 'user', 
+              content: enhancedPrompt
+            }
+          ],
+          model: "grok-2",
+          temperature: params.temperature || 0.7,
+          max_tokens: params.maxTokens || 500
+        });
+        
+        console.log("Request body:", requestBody);
+        
         const response = await fetch('/api/grok/chat/completions', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
           },
-          body: JSON.stringify({
-            messages: [
-              { 
-                role: 'system', 
-                content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-                         'Use the provided regulatory context to generate accurate responses.' 
-              },
-              { 
-                role: 'user', 
-                content: enhancedPrompt
-              }
-            ],
-            model: "grok-2",
-            temperature: params.temperature || 0.7,
-            max_tokens: params.maxTokens || 500
-          })
+          body: requestBody
         });
+        
+        console.log("Response status:", response.status);
+        console.log("Response headers:", Object.fromEntries([...response.headers.entries()]));
         
         if (!response.ok) {
           const errorData = await response.text();
           console.error("Grok API error:", errorData);
+          
+          // If we got HTML instead of JSON, it's likely a proxy issue
+          if (errorData.includes('<!DOCTYPE html>')) {
+            console.error("Received HTML instead of JSON - proxy error");
+            throw new Error("Proxy error: Received HTML instead of JSON");
+          }
+          
           throw new Error(`API error: ${response.status} - ${errorData}`);
+        }
+        
+        // Make sure we have JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const rawText = await response.text();
+          console.error("Unexpected response format:", contentType, rawText.substring(0, 200));
+          throw new Error(`Unexpected response format: ${contentType}`);
         }
         
         const data = await response.json();

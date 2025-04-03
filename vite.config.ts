@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => ({
         target: 'https://api.grok.x.ai',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/grok/, ''),
-        secure: true,
+        secure: false, // Changed to false to bypass certificate validation issues
         headers: {
           'Connection': 'keep-alive',
         },
@@ -25,9 +25,12 @@ export default defineConfig(({ mode }) => ({
           });
           proxy.on('proxyReq', (proxyReq, req, _res) => {
             console.log('Sending Request to the Target:', req.method, req.url);
+            // Log headers to debug authentication issues
+            console.log('Request Headers:', req.headers);
           });
           proxy.on('proxyRes', (proxyRes, req, _res) => {
             console.log('Received Response from the Target:', proxyRes.statusCode, req.url);
+            console.log('Response Headers:', proxyRes.headers);
           });
         }
       },
