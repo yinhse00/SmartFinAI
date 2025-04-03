@@ -11,6 +11,7 @@ export interface Message {
   timestamp: Date;
   references?: string[];
   isUsingFallback?: boolean;
+  isError?: boolean;
 }
 
 interface ChatMessageProps {
@@ -30,7 +31,9 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
           "max-w-[80%] rounded-lg p-3",
           message.sender === "user"
             ? "bg-finance-medium-blue text-white"
-            : "bg-gray-100 dark:bg-finance-dark-blue/50 text-finance-dark-blue dark:text-white"
+            : message.isError 
+              ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
+              : "bg-gray-100 dark:bg-finance-dark-blue/50 text-finance-dark-blue dark:text-white"
         )}
       >
         <div className="flex items-center gap-2 mb-1">
@@ -52,6 +55,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
               className="ml-auto text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 flex items-center gap-1"
             >
               <AlertTriangle size={10} /> Simulated Response
+            </Badge>
+          )}
+          
+          {message.isError && (
+            <Badge 
+              variant="outline" 
+              className="ml-auto text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 flex items-center gap-1"
+            >
+              <AlertTriangle size={10} /> Error
             </Badge>
           )}
         </div>
