@@ -9,7 +9,14 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
-    // Removing proxy configuration as we're switching to fallback responses
+    proxy: {
+      '/api/grok': {
+        target: 'https://api.grok.x.ai',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/grok/, ''),
+        secure: true,
+      }
+    }
   },
   plugins: [
     react(),

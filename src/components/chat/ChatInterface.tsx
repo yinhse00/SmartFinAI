@@ -49,13 +49,20 @@ const ChatInterface = ({ defaultProvider = 'grok' }: ChatInterfaceProps) => {
     if (grokApiKeyInput.trim()) {
       setGrokApiKey(grokApiKeyInput.trim());
       setIsGrokApiKeySet(true);
+      toast({
+        title: "API Key Saved",
+        description: "Your Grok API key has been saved. You can now use the full Grok AI service.",
+      });
+    } else {
+      toast({
+        title: "API Key Required",
+        description: "Please enter a valid Grok API key to proceed.",
+        variant: "destructive"
+      });
+      return;
     }
     
     setApiKeyDialogOpen(false);
-    toast({
-      title: "API Key Saved",
-      description: "Your Grok API key has been saved in the browser's local storage.",
-    });
   };
 
   const handleSend = async () => {
@@ -97,6 +104,14 @@ const ChatInterface = ({ defaultProvider = 'grok' }: ChatInterfaceProps) => {
                                response.text.includes("Regarding your query about") ||
                                response.text.includes("In response to your query");
         
+        if (isUsingFallback && isGrokApiKeySet) {
+          toast({
+            title: "API Connection Issue",
+            description: "Could not connect to Grok API. Using fallback response instead.",
+            variant: "destructive"
+          });
+        }
+        
         // Find references from the regulatory context
         const references = extractReferences(regulatoryContext);
         
@@ -114,9 +129,20 @@ const ChatInterface = ({ defaultProvider = 'grok' }: ChatInterfaceProps) => {
         console.error("Error generating response:", error);
         toast({
           title: "Error",
-          description: "Failed to generate a response. Please try again.",
+          description: "Failed to generate a response. Please check your API key and try again.",
           variant: "destructive"
         });
+        
+        // Add error message
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          content: "I'm sorry, I encountered an error while trying to generate a response. Please check your API key and try again.",
+          sender: 'bot',
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        setMessages(prev => [...prev, errorMessage]);
       }
     } catch (error) {
       console.error("Error in chat process:", error);

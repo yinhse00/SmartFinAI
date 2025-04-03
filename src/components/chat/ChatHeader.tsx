@@ -16,12 +16,14 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isGrokApiKeySet, onOpenApiKeyDi
         <Bot size={18} /> 
         Regulatory Assistant
         <div className="ml-auto flex items-center gap-2">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs flex items-center gap-1">
-              <AlertTriangle size={12} className="text-amber-500" />
-              Demo Mode
-            </span>
-          </div>
+          {!isGrokApiKeySet && (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs flex items-center gap-1">
+                <AlertTriangle size={12} className="text-amber-500" />
+                Demo Mode
+              </span>
+            </div>
+          )}
           
           {!isGrokApiKeySet && (
             <Button 
