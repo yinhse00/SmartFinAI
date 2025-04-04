@@ -1,16 +1,18 @@
+
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
-import { Download, FileText, Loader2, BookOpen } from 'lucide-react';
+import { Download, FileText, Loader2, BookOpen, FileSpreadsheet } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { perplexityService } from '@/services/perplexityService';
 import { grokService } from '@/services/grokService';
 import { databaseService } from '@/services/databaseService';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const ResponseGenerator = () => {
   const [responseType, setResponseType] = useState('');
@@ -21,6 +23,7 @@ const ResponseGenerator = () => {
   const [useAutoRegSearch, setUseAutoRegSearch] = useState(true);
   const [regulatoryContext, setRegulatoryContext] = useState<string | null>(null);
   const [aiProvider, setAiProvider] = useState<'perplexity' | 'grok'>('grok');
+  const [isExporting, setIsExporting] = useState<boolean>(false);
 
   const handleSearchRegulations = async () => {
     if (!promptText.trim()) {
@@ -122,6 +125,7 @@ const ResponseGenerator = () => {
 
   const handleDownloadWord = async () => {
     if (!generatedResponse) return;
+    setIsExporting(true);
     
     try {
       const service = aiProvider === 'grok' ? grokService : perplexityService;
@@ -147,6 +151,41 @@ const ResponseGenerator = () => {
         description: "There was an error generating the Word document. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleDownloadExcel = async () => {
+    if (!generatedResponse) return;
+    setIsExporting(true);
+    
+    try {
+      const service = aiProvider === 'grok' ? grokService : perplexityService;
+      const blob = await service.generateExcelDocument(generatedResponse);
+      
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      
+      URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Excel document generated",
+        description: "Your response has been downloaded as an Excel spreadsheet.",
+      });
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "There was an error generating the Excel document. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -254,15 +293,38 @@ const ResponseGenerator = () => {
           <div className="space-y-2 mt-4">
             <div className="flex items-center justify-between">
               <h4 className="text-sm font-medium">Generated Response</h4>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="flex items-center gap-1"
-                onClick={handleDownloadWord}
-              >
-                <Download className="h-3.5 w-3.5" />
-                <span>Download as Word</span>
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="flex items-center gap-1"
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        <span>Exporting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-3.5 w-3.5" />
+                        <span>Export As</span>
+                      </>
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadWord} className="flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    <span>Word Document</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={handleDownloadExcel} className="flex items-center gap-2">
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Excel Spreadsheet</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm whitespace-pre-line">
               {generatedResponse}

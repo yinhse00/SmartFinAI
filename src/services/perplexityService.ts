@@ -1,3 +1,4 @@
+
 // This is the service for the Perplexity AI integration
 
 import { databaseService, RegulatoryEntry } from './databaseService';
@@ -140,6 +141,30 @@ export const perplexityService = {
     } catch (error) {
       console.error("Error generating Word document:", error);
       throw new Error("Failed to generate Word document.");
+    }
+  },
+  
+  /**
+   * Generate an Excel document from text
+   * In a real implementation, this would call a backend service that creates an Excel document
+   */
+  generateExcelDocument: async (content: string): Promise<Blob> => {
+    try {
+      // This is a placeholder. In a real implementation, you would:
+      // 1. Call a backend endpoint that generates an Excel document
+      // 2. Return the document as a Blob
+      
+      console.log("Generating Excel document with content:", content);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Return a mock blob
+      // In a real implementation, this would be an actual Excel document
+      return new Blob(['Mock Excel document content'], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    } catch (error) {
+      console.error("Error generating Excel document:", error);
+      throw new Error("Failed to generate Excel document.");
     }
   }
 };
