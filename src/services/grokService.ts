@@ -93,7 +93,7 @@ export const grokService = {
               content: enhancedPrompt
             }
           ],
-          model: "grok-1",  // Changed from grok-2 to grok-1
+          model: "grok-2",  // Using grok-2 model as per Grok API docs
           temperature: params.temperature || 0.7,
           max_tokens: params.maxTokens || 500
         };
@@ -122,7 +122,12 @@ export const grokService = {
           } else if (response.status >= 500) {
             throw new Error("Grok service is currently unavailable. Please try again later.");
           } else if (response.status === 404) {
-            throw new Error(`API endpoint not found. Please check the API documentation.`);
+            // Check for specific model-related errors in the response
+            if (errorData.includes("model") && errorData.includes("does not exist")) {
+              throw new Error("The specified model is not available. Please use a different model or check API documentation.");
+            } else {
+              throw new Error("API endpoint not found. Please check the API documentation.");
+            }
           } else {
             throw new Error(`API error: ${response.status}`);
           }
