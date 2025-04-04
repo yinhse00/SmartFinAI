@@ -11,7 +11,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api/grok': {
-        target: 'https://api.grok.x',
+        target: 'https://api.x.ai', // Updated to correct domain
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/grok/, ''),
         secure: true,

@@ -72,6 +72,12 @@ export const grokService = {
         return generateFallbackResponse(params.prompt, "No API key provided");
       }
       
+      // Validate API key format (basic validation)
+      if (!apiKey.startsWith('xai-')) {
+        console.error("Invalid API key format");
+        return generateFallbackResponse(params.prompt, "Invalid API key format");
+      }
+      
       try {
         console.log("Connecting to Grok API");
         
@@ -107,7 +113,17 @@ export const grokService = {
         if (!response.ok) {
           const errorData = await response.text();
           console.error(`API error ${response.status}:`, errorData);
-          throw new Error(`API error: ${response.status}`);
+          
+          // Specific error handling for common errors
+          if (response.status === 401) {
+            throw new Error("Authentication failed. Please check your API key.");
+          } else if (response.status === 429) {
+            throw new Error("Rate limit exceeded. Please try again later.");
+          } else if (response.status >= 500) {
+            throw new Error("Grok service is currently unavailable. Please try again later.");
+          } else {
+            throw new Error(`API error: ${response.status}`);
+          }
         }
         
         const data = await response.json();
@@ -120,7 +136,7 @@ export const grokService = {
         
         // Fallback to demo responses when API fails
         console.log("Using fallback response due to API error");
-        return generateFallbackResponse(params.prompt, "API error");
+        return generateFallbackResponse(params.prompt, apiError instanceof Error ? apiError.message : "API error");
       }
     } catch (error) {
       console.error("Error generating response:", error);

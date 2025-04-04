@@ -1,10 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, AlertCircle } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface APIKeyDialogProps {
   open: boolean;
@@ -21,6 +22,19 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
   setGrokApiKeyInput,
   onSave
 }) => {
+  const [keyError, setKeyError] = useState<string | null>(null);
+  
+  const validateAndSave = () => {
+    // Basic validation for Grok API key format
+    if (!grokApiKeyInput.startsWith('xai-')) {
+      setKeyError("Invalid API key format. Grok API keys should start with 'xai-'");
+      return;
+    }
+    
+    setKeyError(null);
+    onSave();
+  };
+  
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -41,15 +55,26 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
             <Input
               id="grok-apikey"
               type="password"
-              placeholder="Enter your Grok API key"
+              placeholder="Enter your Grok API key (starts with xai-)"
               value={grokApiKeyInput}
-              onChange={(e) => setGrokApiKeyInput(e.target.value)}
+              onChange={(e) => {
+                setGrokApiKeyInput(e.target.value);
+                setKeyError(null); // Clear error on input change
+              }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && grokApiKeyInput.trim()) {
-                  onSave();
+                  validateAndSave();
                 }
               }}
+              className={keyError ? "border-red-500" : ""}
             />
+            
+            {keyError && (
+              <Alert variant="destructive" className="mt-2">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{keyError}</AlertDescription>
+              </Alert>
+            )}
           </div>
           
           <p className="text-xs text-gray-500">
@@ -59,7 +84,7 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
           <div className="text-xs flex items-center gap-1 mt-2">
             <span>Get your API key from</span>
             <a 
-              href="https://www.grok.x.ai/" 
+              href="https://www.x.ai/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
@@ -73,7 +98,7 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
             Cancel
           </Button>
           <Button 
-            onClick={onSave}
+            onClick={validateAndSave}
             disabled={!grokApiKeyInput.trim()}
           >
             Save
