@@ -93,7 +93,7 @@ export const grokService = {
               content: enhancedPrompt
             }
           ],
-          model: "grok-2",
+          model: "grok-1",  // Changed from grok-2 to grok-1
           temperature: params.temperature || 0.7,
           max_tokens: params.maxTokens || 500
         };
@@ -121,6 +121,8 @@ export const grokService = {
             throw new Error("Rate limit exceeded. Please try again later.");
           } else if (response.status >= 500) {
             throw new Error("Grok service is currently unavailable. Please try again later.");
+          } else if (response.status === 404) {
+            throw new Error(`API endpoint not found. Please check the API documentation.`);
           } else {
             throw new Error(`API error: ${response.status}`);
           }

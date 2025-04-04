@@ -4,7 +4,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ExternalLink, AlertCircle } from 'lucide-react';
+import { ExternalLink, AlertCircle, Info } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 
 interface APIKeyDialogProps {
@@ -77,14 +77,17 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
             )}
           </div>
           
-          <p className="text-xs text-gray-500">
-            Your API key is stored only in your browser's local storage. We do not store it on our servers.
-          </p>
+          <Alert variant="default" className="bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800">
+            <Info className="h-4 w-4 text-blue-500" />
+            <AlertDescription className="text-blue-800 dark:text-blue-300">
+              Your API key is stored only in your browser's local storage. We do not store it on our servers.
+            </AlertDescription>
+          </Alert>
           
           <div className="text-xs flex items-center gap-1 mt-2">
             <span>Get your API key from</span>
             <a 
-              href="https://www.x.ai/" 
+              href="https://x.ai/" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
