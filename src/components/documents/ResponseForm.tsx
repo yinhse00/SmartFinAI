@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -126,18 +125,21 @@ const ResponseForm = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.docx`;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.doc`;
       document.body.appendChild(a);
       a.click();
       
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
       
       toast({
         title: "Word document generated",
         description: "Your response has been downloaded as a Word document.",
       });
     } catch (error) {
+      console.error("Word download error:", error);
       toast({
         title: "Download failed",
         description: "There was an error generating the Word document. Please try again.",
@@ -158,18 +160,21 @@ const ResponseForm = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.xlsx`;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
       
       toast({
         title: "Excel document generated",
-        description: "Your response has been downloaded as an Excel spreadsheet.",
+        description: "Your response has been downloaded as a CSV spreadsheet.",
       });
     } catch (error) {
+      console.error("Excel download error:", error);
       toast({
         title: "Download failed",
         description: "There was an error generating the Excel document. Please try again.",
@@ -190,18 +195,21 @@ const ResponseForm = () => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.pdf`;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.html`;
       document.body.appendChild(a);
       a.click();
       
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
       
       toast({
         title: "PDF document generated",
-        description: "Your response has been downloaded as a PDF document.",
+        description: "Your response has been downloaded as an HTML document formatted for printing.",
       });
     } catch (error) {
+      console.error("PDF download error:", error);
       toast({
         title: "Download failed",
         description: "There was an error generating the PDF document. Please try again.",

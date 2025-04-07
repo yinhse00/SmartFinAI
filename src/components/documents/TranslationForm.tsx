@@ -104,34 +104,89 @@ const TranslationForm = () => {
     
     try {
       let blob: Blob;
-      let fileExtension: string;
-      let mimeType: string;
+      let fileName = `Translated_Document_${new Date().toISOString().split('T')[0]}`;
       
       if (format === 'word') {
-        blob = await grokService.generateWordDocument(translatedContent);
-        fileExtension = 'docx';
-        mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        // Create a proper Word document with the translated content
+        const textContent = translatedContent;
+        
+        // Simple Word XML structure with the content
+        const wordXml = `
+          <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
+          <head>
+            <meta charset="utf-8">
+            <title>Translated Document</title>
+          </head>
+          <body>
+            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
+              ${textContent.split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
+            </div>
+          </body>
+          </html>
+        `;
+        
+        blob = new Blob([wordXml], {type: 'application/vnd.ms-word'});
+        fileName += '.doc';
       } else {
-        blob = await grokService.generatePdfDocument(translatedContent);
-        fileExtension = 'pdf';
-        mimeType = 'application/pdf';
+        // Create a proper PDF-like document with the translated content
+        const textContent = translatedContent;
+        
+        // Create a PDF-like HTML document that will render well when downloaded
+        const pdfHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Translated Document</title>
+            <style>
+              body {
+                font-family: Arial, sans-serif;
+                line-height: 1.5;
+                margin: 40px;
+              }
+              .content {
+                max-width: 800px;
+                margin: 0 auto;
+              }
+              h1 {
+                text-align: center;
+                color: #2c5282;
+              }
+            </style>
+          </head>
+          <body>
+            <div class="content">
+              <h1>Translated Document</h1>
+              ${textContent.split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
+            </div>
+          </body>
+          </html>
+        `;
+        
+        blob = new Blob([pdfHtml], {type: 'text/html'});
+        fileName += '.html';
       }
       
+      // Create download link and trigger download
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Translated_Document_${new Date().toISOString().split('T')[0]}.${fileExtension}`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       
-      URL.revokeObjectURL(url);
-      document.body.removeChild(a);
+      // Clean up
+      setTimeout(() => {
+        URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 100);
       
       toast({
         title: `${format.toUpperCase()} document generated`,
-        description: `Your translated content has been downloaded as a ${format.toUpperCase()} document.`,
+        description: `Your translated content has been downloaded as a ${format === 'word' ? 'Word' : 'PDF-formatted HTML'} document.`,
       });
     } catch (error) {
+      console.error("Download error:", error);
       toast({
         title: "Download failed",
         description: `There was an error generating the ${format.toUpperCase()} document. Please try again.`,
