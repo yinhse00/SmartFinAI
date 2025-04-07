@@ -3,6 +3,7 @@ import MainLayout from '@/components/layout/MainLayout';
 import StatCard from '@/components/dashboard/StatCard';
 import QuickActions from '@/components/dashboard/QuickActions';
 import RecentQueries from '@/components/dashboard/RecentQueries';
+import TranslationWidget from '@/components/dashboard/TranslationWidget';
 import { Button } from '@/components/ui/button';
 import { MessageSquare, Database, FileText, BarChart, BookOpen, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -54,8 +55,9 @@ const Index = () => {
         <div className="lg:col-span-2">
           <RecentQueries />
         </div>
-        <div>
+        <div className="space-y-6">
           <QuickActions />
+          <TranslationWidget />
         </div>
       </div>
 
