@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
-import { getGrokApiKey, hasGrokApiKey } from '@/services/apiKeyService';
+import { getGrokApiKey, hasGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
 import { extractReferences } from '@/services/contextUtils';
 import { Message } from './ChatMessage';
 
