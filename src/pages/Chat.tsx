@@ -46,7 +46,7 @@ const Chat = () => {
         </p>
       </div>
       
-      <ChatInterface defaultProvider="grok" />
+      <ChatInterface />
     </MainLayout>
   );
 };
