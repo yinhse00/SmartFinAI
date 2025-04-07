@@ -4,7 +4,7 @@ import ChatInterface from '@/components/chat/ChatInterface';
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { setGrokApiKey, hasGrokApiKey } from '@/services/apiKeyService';
+import { hasGrokApiKey } from '@/services/apiKeyService';
 
 const Chat = () => {
   const { toast } = useToast();

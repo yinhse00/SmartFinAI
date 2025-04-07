@@ -20,6 +20,13 @@ interface GrokResponse {
   // Add other response fields as needed based on the actual API
 }
 
+interface TranslationParams {
+  content: string;
+  sourceLanguage: 'en' | 'zh';
+  targetLanguage: 'en' | 'zh';
+  format?: string;
+}
+
 export const grokService = {
   /**
    * Check if a Grok API key is set
@@ -150,6 +157,68 @@ export const grokService = {
       return generateFallbackResponse(params.prompt, "Error generating response");
     }
   },
+
+  /**
+   * Translate content using Grok AI
+   */
+  translateContent: async (params: TranslationParams): Promise<GrokResponse> => {
+    try {
+      const apiKey = getGrokApiKey();
+      
+      if (!apiKey) {
+        console.log("No API key provided, using fallback response");
+        return generateFallbackResponse("translation request", "No API key provided");
+      }
+      
+      const sourceLang = params.sourceLanguage === 'en' ? 'English' : 'Chinese';
+      const targetLang = params.targetLanguage === 'en' ? 'English' : 'Chinese';
+      
+      try {
+        console.log("Connecting to Grok API for translation");
+        
+        const requestBody = {
+          messages: [
+            { 
+              role: 'system', 
+              content: `You are a professional translator. Translate the content from ${sourceLang} to ${targetLang} while maintaining the exact formatting, structure, and layout of the original text. Do not add any explanations or additional context.` 
+            },
+            { 
+              role: 'user', 
+              content: params.content
+            }
+          ],
+          model: "grok-2",
+          temperature: 0.3, // Lower temperature for more accurate translations
+          max_tokens: 4000  // Allow for longer translations
+        };
+        
+        const response = await fetch('/api/grok/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return {
+          text: data.choices?.[0]?.message?.content || 
+                "Translation failed."
+        };
+      } catch (apiError) {
+        console.error("Error calling Grok API for translation:", apiError);
+        return generateFallbackResponse("translation", apiError instanceof Error ? apiError.message : "API error");
+      }
+    } catch (error) {
+      console.error("Error during translation:", error);
+      return generateFallbackResponse("translation", "Error during translation");
+    }
+  },
   
   /**
    * Generate a Word document from text
@@ -172,6 +241,25 @@ export const grokService = {
     } catch (error) {
       console.error("Error generating Word document:", error);
       throw new Error("Failed to generate Word document.");
+    }
+  },
+
+  /**
+   * Generate a PDF document from text
+   */
+  generatePdfDocument: async (content: string): Promise<Blob> => {
+    try {
+      console.log("Generating PDF document with content:", content);
+      
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Return a mock blob
+      // In a real implementation, this would be an actual PDF document
+      return new Blob(['Mock PDF document content'], { type: 'application/pdf' });
+    } catch (error) {
+      console.error("Error generating PDF document:", error);
+      throw new Error("Failed to generate PDF document.");
     }
   },
   
