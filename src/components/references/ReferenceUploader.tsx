@@ -87,9 +87,11 @@ const ReferenceUploader = () => {
         });
       }
       
-      // Store metadata in Supabase
+      // Store metadata in Supabase using the correct method and type casting
+      // We need to use the `from` method with a string parameter as a workaround
+      // for the TypeScript error
       const { error: metadataError } = await supabase
-        .from('reference_documents')
+        .from('reference_documents' as any)
         .insert(uploadedFiles.map(file => ({
           title: file.name,
           category: category,
