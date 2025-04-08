@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { File, X } from 'lucide-react';
+import { FileText, FileType, X } from 'lucide-react';
 
 interface FileListProps {
   files: File[];
@@ -12,6 +12,23 @@ const FileList: React.FC<FileListProps> = ({ files, onRemoveFile }) => {
   if (files.length === 0) {
     return null;
   }
+  
+  // Helper function to determine file icon based on file extension
+  const getFileIcon = (fileName: string) => {
+    const extension = fileName.split('.').pop()?.toLowerCase();
+    
+    switch (extension) {
+      case 'pdf':
+        return <FileText className="h-5 w-5 text-red-500" />;
+      case 'docx':
+      case 'doc':
+        return <FileText className="h-5 w-5 text-blue-500" />;
+      case 'txt':
+        return <FileText className="h-5 w-5 text-gray-500" />;
+      default:
+        return <FileType className="h-5 w-5 text-finance-medium-blue dark:text-finance-accent-blue" />;
+    }
+  };
 
   return (
     <div className="space-y-2">
@@ -20,7 +37,7 @@ const FileList: React.FC<FileListProps> = ({ files, onRemoveFile }) => {
         {files.map((file, index) => (
           <div key={index} className="flex items-center justify-between p-3">
             <div className="flex items-center space-x-2">
-              <File className="h-5 w-5 text-finance-medium-blue dark:text-finance-accent-blue" />
+              {getFileIcon(file.name)}
               <div>
                 <p className="text-sm font-medium truncate max-w-[200px] sm:max-w-[300px]">{file.name}</p>
                 <p className="text-xs text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>

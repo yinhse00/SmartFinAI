@@ -18,28 +18,59 @@ const TranslationForm = () => {
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      setUploadedFile(file);
+      processFile(e.target.files[0]);
+    }
+  };
+
+  const processFile = (file: File) => {
+    setUploadedFile(file);
+    
+    // In a real implementation, we would extract text from the document
+    // For now, we'll just show the filename and simulate content extraction
+    toast({
+      title: "Document uploaded",
+      description: `${file.name} has been uploaded. Extracting content...`,
+    });
+    
+    // Simulate text extraction
+    setTimeout(() => {
+      setContent(`Content extracted from ${file.name}\n\nThis is a placeholder for the actual content that would be extracted from the document. In a real implementation, we would use a library to extract text from PDF and Word documents.`);
       
-      // In a real implementation, we would extract text from the document
-      // For now, we'll just show the filename and simulate content extraction
       toast({
-        title: "Document uploaded",
-        description: `${file.name} has been uploaded. Extracting content...`,
+        title: "Content extracted",
+        description: "Document content has been extracted and is ready for translation.",
       });
-      
-      // Simulate text extraction
-      setTimeout(() => {
-        setContent(`Content extracted from ${file.name}\n\nThis is a placeholder for the actual content that would be extracted from the document. In a real implementation, we would use a library to extract text from PDF and Word documents.`);
-        
-        toast({
-          title: "Content extracted",
-          description: "Document content has been extracted and is ready for translation.",
-        });
-      }, 1500);
+    }, 1500);
+  };
+
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      processFile(e.dataTransfer.files[0]);
     }
   };
 
@@ -107,63 +138,10 @@ const TranslationForm = () => {
       let fileName = `Translated_Document_${new Date().toISOString().split('T')[0]}`;
       
       if (format === 'word') {
-        // Create a proper Word document with the translated content
-        const textContent = translatedContent;
-        
-        // Simple Word XML structure with the content
-        const wordXml = `
-          <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
-          <head>
-            <meta charset="utf-8">
-            <title>Translated Document</title>
-          </head>
-          <body>
-            <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-              ${textContent.split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
-            </div>
-          </body>
-          </html>
-        `;
-        
-        blob = new Blob([wordXml], {type: 'application/vnd.ms-word'});
+        blob = await grokService.generateWordDocument(translatedContent);
         fileName += '.doc';
       } else {
-        // Create a proper PDF-like document with the translated content
-        const textContent = translatedContent;
-        
-        // Create a PDF-like HTML document that will render well when downloaded
-        const pdfHtml = `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <title>Translated Document</title>
-            <style>
-              body {
-                font-family: Arial, sans-serif;
-                line-height: 1.5;
-                margin: 40px;
-              }
-              .content {
-                max-width: 800px;
-                margin: 0 auto;
-              }
-              h1 {
-                text-align: center;
-                color: #2c5282;
-              }
-            </style>
-          </head>
-          <body>
-            <div class="content">
-              <h1>Translated Document</h1>
-              ${textContent.split('\n').map(line => `<p>${line || '&nbsp;'}</p>`).join('')}
-            </div>
-          </body>
-          </html>
-        `;
-        
-        blob = new Blob([pdfHtml], {type: 'text/html'});
+        blob = await grokService.generatePdfDocument(translatedContent);
         fileName += '.html';
       }
       
@@ -263,17 +241,33 @@ const TranslationForm = () => {
               </Button>
             </div>
           </div>
-          {uploadedFile && (
-            <div className="text-sm text-gray-500 flex items-center gap-1 mt-1">
-              <FileUp className="h-3.5 w-3.5" /> {uploadedFile.name}
-            </div>
-          )}
+          
+          <div 
+            className={`border-2 border-dashed rounded-lg p-4 mt-2 transition-colors ${
+              isDragging ? 'bg-gray-50 dark:bg-finance-dark-blue/30 border-finance-medium-blue' : ''
+            }`}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            {uploadedFile ? (
+              <div className="text-sm text-gray-500 flex items-center gap-1 py-1">
+                <FileUp className="h-3.5 w-3.5" /> {uploadedFile.name}
+              </div>
+            ) : (
+              <p className="text-sm text-center text-gray-500 py-2">
+                Drag and drop a document here (.pdf, .doc, .docx, .txt)
+              </p>
+            )}
+          </div>
+          
           <Textarea 
             id="content" 
             placeholder="Enter text to translate or upload a document..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="resize-none"
+            className="resize-none mt-2"
             rows={5}
           />
         </div>

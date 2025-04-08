@@ -9,20 +9,28 @@ interface MetadataFormProps {
   setCategory: (value: string) => void;
   description: string;
   setDescription: (value: string) => void;
+  isUploading?: boolean;
 }
 
 const MetadataForm: React.FC<MetadataFormProps> = ({
   category,
   setCategory,
   description,
-  setDescription
+  setDescription,
+  isUploading = false
 }) => {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="category">Document Category</Label>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger id="category">
+        <Label htmlFor="category">
+          Document Category <span className="text-red-500">*</span>
+        </Label>
+        <Select 
+          value={category} 
+          onValueChange={setCategory} 
+          disabled={isUploading}
+        >
+          <SelectTrigger id="category" className={!category ? 'text-muted-foreground' : ''}>
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
@@ -45,6 +53,7 @@ const MetadataForm: React.FC<MetadataFormProps> = ({
           onChange={(e) => setDescription(e.target.value)}
           className="resize-none"
           rows={3}
+          disabled={isUploading}
         />
       </div>
     </div>

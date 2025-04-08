@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Upload } from 'lucide-react';
 
@@ -8,10 +8,66 @@ interface FileDropZoneProps {
 }
 
 const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange }) => {
+  const [isDragging, setIsDragging] = useState(false);
+  
+  const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!isDragging) {
+      setIsDragging(true);
+    }
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      // Create a synthetic event to pass to the onFileChange handler
+      const dataTransfer = new DataTransfer();
+      
+      for (let i = 0; i < e.dataTransfer.files.length; i++) {
+        dataTransfer.items.add(e.dataTransfer.files[i]);
+      }
+      
+      const inputElement = document.getElementById('file-upload') as HTMLInputElement;
+      if (inputElement) {
+        // Update the input's files
+        inputElement.files = dataTransfer.files;
+        
+        // Trigger the onChange event
+        const event = new Event('change', { bubbles: true });
+        inputElement.dispatchEvent(event);
+        
+        // Also manually call the handler to ensure it works
+        onFileChange({ target: { files: dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>);
+      }
+    }
+  };
+
   return (
     <div 
-      className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-finance-dark-blue/30 hover:bg-gray-100 dark:hover:bg-finance-dark-blue/40 transition-colors cursor-pointer"
+      className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-finance-dark-blue/30 hover:bg-gray-100 dark:hover:bg-finance-dark-blue/40 transition-colors cursor-pointer ${
+        isDragging ? 'border-finance-medium-blue bg-gray-100 dark:bg-finance-dark-blue/40' : ''
+      }`}
       onClick={() => document.getElementById('file-upload')?.click()}
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
     >
       <Upload className="h-10 w-10 text-gray-400 mb-2" />
       <p className="text-sm text-center text-gray-600 dark:text-gray-400">

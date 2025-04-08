@@ -17,7 +17,55 @@ const TranslationWidget = () => {
   const [targetLanguage, setTargetLanguage] = useState<'zh' | 'en'>('zh');
   const [translatedContent, setTranslatedContent] = useState<string | null>(null);
   const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
   const navigate = useNavigate();
+
+  const handleDragEnter = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+  
+  const handleDragLeave = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+  
+  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+  
+  const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+      const file = e.dataTransfer.files[0];
+      
+      // Check if the file is text
+      if (file.type === 'text/plain') {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          if (event.target && typeof event.target.result === 'string') {
+            setContent(event.target.result);
+          }
+        };
+        reader.readAsText(file);
+      } else {
+        toast({
+          title: "Unsupported file type",
+          description: "Only text files (.txt) can be dropped here. For other document types, please use the full Translator page.",
+          variant: "destructive",
+        });
+      }
+    } else if (e.dataTransfer.getData('text')) {
+      // Handle dropped text
+      setContent(e.dataTransfer.getData('text'));
+    }
+  };
 
   const handleTranslate = async () => {
     if (!content.trim()) {
@@ -126,11 +174,15 @@ const TranslationWidget = () => {
 
         <div>
           <Textarea 
-            placeholder="Enter text to translate..."
+            placeholder="Enter text to translate or drop a text file..."
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="resize-none"
+            className={`resize-none ${isDragging ? 'border-finance-medium-blue bg-gray-50 dark:bg-finance-dark-blue/20' : ''}`}
             rows={2}
+            onDragEnter={handleDragEnter}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
           />
         </div>
 
