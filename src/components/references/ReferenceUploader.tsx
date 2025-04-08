@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/components/ui/use-toast';
 import { Upload, File, X } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 const ReferenceUploader = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -26,7 +28,7 @@ const ReferenceUploader = () => {
     setFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) {
       toast({
         title: "No files selected",
@@ -47,18 +49,82 @@ const ReferenceUploader = () => {
 
     setIsUploading(true);
 
-    // Simulate upload process
-    setTimeout(() => {
-      setIsUploading(false);
-      setFiles([]);
-      setCategory('');
-      setDescription('');
+    try {
+      // Upload files to Supabase storage
+      const uploadedFiles = [];
       
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = `${category}/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('references')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (error) {
+          console.error('Error uploading reference:', error);
+          throw new Error(`Error uploading ${file.name}: ${error.message}`);
+        }
+        
+        // Get public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from('references')
+          .getPublicUrl(filePath);
+          
+        uploadedFiles.push({
+          name: file.name,
+          category: category,
+          description: description,
+          path: filePath,
+          url: urlData.publicUrl,
+          size: file.size,
+          type: file.type,
+          uploadedAt: new Date()
+        });
+      }
+      
+      // Store metadata in Supabase
+      const { error: metadataError } = await supabase
+        .from('reference_documents')
+        .insert(uploadedFiles.map(file => ({
+          title: file.name,
+          category: category,
+          description: description,
+          file_path: file.path,
+          file_url: file.url,
+          file_size: file.size,
+          file_type: file.type
+        })));
+      
+      if (metadataError) {
+        console.error('Error storing metadata:', metadataError);
+        throw new Error(`Error saving document metadata: ${metadataError.message}`);
+      }
+      
+      // Success message
       toast({
         title: "Upload successful",
         description: `${files.length} document(s) have been uploaded and are being processed.`,
       });
-    }, 2000);
+      
+      // Reset form
+      setFiles([]);
+      setCategory('');
+      setDescription('');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your references. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   return (

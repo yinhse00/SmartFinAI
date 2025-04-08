@@ -10,6 +10,8 @@ import { Upload, File, X, Database } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { databaseService } from '@/services/databaseService';
 import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
+import { v4 as uuidv4 } from 'uuid';
 
 const DocumentUploader = () => {
   const [files, setFiles] = useState<File[]>([]);
@@ -51,11 +53,41 @@ const DocumentUploader = () => {
     setIsUploading(true);
 
     try {
-      // In a real implementation, you would upload the files to a server
-      // For now, we'll simulate the upload process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Upload files to Supabase storage
+      const uploadedFiles = [];
       
-      // If the user wants to add to the database, process them
+      for (const file of files) {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${uuidv4()}.${fileExt}`;
+        const filePath = `${documentType}/${fileName}`;
+        
+        const { data, error } = await supabase.storage
+          .from('documents')
+          .upload(filePath, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+          
+        if (error) {
+          console.error('Error uploading file:', error);
+          throw new Error(`Error uploading ${file.name}: ${error.message}`);
+        }
+        
+        // Get public URL for the uploaded file
+        const { data: urlData } = supabase.storage
+          .from('documents')
+          .getPublicUrl(filePath);
+          
+        uploadedFiles.push({
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          path: filePath,
+          url: urlData.publicUrl,
+        });
+      }
+      
+      // Create metadata records in the database if needed
       if (addToDatabase) {
         try {
           const importCount = await databaseService.importFromFiles(files);
@@ -76,7 +108,7 @@ const DocumentUploader = () => {
       // Success message
       toast({
         title: "Documents uploaded successfully",
-        description: `${files.length} document(s) have been uploaded and are being processed.`,
+        description: `${files.length} document(s) have been uploaded to Supabase storage.`,
       });
       
       // Reset form
@@ -85,6 +117,7 @@ const DocumentUploader = () => {
       setNotes('');
       setAddToDatabase(false);
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload failed",
         description: "There was an error uploading your documents. Please try again.",
