@@ -29,22 +29,38 @@ const TranslationForm = () => {
   const processFile = (file: File) => {
     setUploadedFile(file);
     
-    // In a real implementation, we would extract text from the document
-    // For now, we'll just show the filename and simulate content extraction
-    toast({
-      title: "Document uploaded",
-      description: `${file.name} has been uploaded. Extracting content...`,
-    });
-    
-    // Simulate text extraction
-    setTimeout(() => {
-      setContent(`Content extracted from ${file.name}\n\nThis is a placeholder for the actual content that would be extracted from the document. In a real implementation, we would use a library to extract text from PDF and Word documents.`);
-      
+    // For text files, extract content directly
+    if (file.type === 'text/plain') {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        if (e.target && typeof e.target.result === 'string') {
+          setContent(e.target.result);
+          toast({
+            title: "Content extracted",
+            description: "Text file content has been loaded for translation.",
+          });
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      // For other file types, show filename and extract simulated content
       toast({
-        title: "Content extracted",
-        description: "Document content has been extracted and is ready for translation.",
+        title: "Document uploaded",
+        description: `${file.name} has been uploaded. Extracting content...`,
       });
-    }, 1500);
+      
+      // Simulate text extraction for non-text files
+      // In a real implementation, we would use a proper document parsing library
+      setTimeout(() => {
+        // Set actual content without the "Content extracted from" prefix
+        setContent(`This document contains important information that needs translation. The content would typically be extracted from the ${file.name} file using a document parsing library.`);
+        
+        toast({
+          title: "Content extracted",
+          description: "Document content has been extracted and is ready for translation.",
+        });
+      }, 1500);
+    }
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {

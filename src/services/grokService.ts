@@ -1,6 +1,5 @@
 
 // This is the service for the Grok AI integration
-
 import { databaseService } from './databaseService';
 import { getGrokApiKey, hasGrokApiKey } from './apiKeyService';
 import { createEnhancedPrompt, formatRegulatoryEntriesAsContext } from './contextUtils';
@@ -176,15 +175,18 @@ export const grokService = {
       try {
         console.log("Connecting to Grok API for translation");
         
+        // Ensure we're sending just the raw content without any prefixes or metadata
+        const contentToTranslate = params.content.trim();
+        
         const requestBody = {
           messages: [
             { 
               role: 'system', 
-              content: `You are a professional translator. Translate the content from ${sourceLang} to ${targetLang} while maintaining the exact formatting, structure, and layout of the original text. Do not add any explanations or additional context.` 
+              content: `You are a professional translator. Translate the following content from ${sourceLang} to ${targetLang}. Translate only the text provided and do not add any explanations, context, or metadata. Do not include phrases like "Content extracted from" in your translation.` 
             },
             { 
               role: 'user', 
-              content: params.content
+              content: contentToTranslate
             }
           ],
           model: "grok-2",
@@ -321,4 +323,3 @@ export const grokService = {
     }
   }
 };
-

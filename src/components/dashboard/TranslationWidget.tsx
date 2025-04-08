@@ -99,8 +99,11 @@ const TranslationWidget = () => {
     setTranslatedContent(null);
 
     try {
+      // Use actual content without any prefixes
+      const contentToTranslate = content.trim();
+      
       const response = await grokService.translateContent({
-        content,
+        content: contentToTranslate,
         sourceLanguage,
         targetLanguage
       });
