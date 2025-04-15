@@ -12,7 +12,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 100000; // Adjusted maximum token limit to 100,000 as requested
+    return 150000; // Increased from 100,000 to 150,000 for extremely detailed queries
   }
   
   // Previous high-complexity scenarios
@@ -20,7 +20,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 20000; // Increased from 10,000 to 20,000 for regular timetable queries
+    return 50000; // Increased from 20,000 to 50,000 for regular timetable queries
   }
   
   // Complex query handling
@@ -32,18 +32,18 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 8000; // Increased from 4,000 to 8,000 for trading arrangements
+    return 15000; // Increased from 8,000 to 15,000 for trading arrangements
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 5000; // Increased from 3,500 to 5,000 for explanations
+    return 10000; // Increased from 5,000 to 10,000 for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 4000; // Increased from 3,000 to 4,000 for complex topics
+    return 8000; // Increased from 4,000 to 8,000 for complex topics
   }
   
-  return 4000; // Increased default tokens from 2,500 to 4,000
+  return 6000; // Increased default tokens from 4,000 to 6,000
 };
 
 /**

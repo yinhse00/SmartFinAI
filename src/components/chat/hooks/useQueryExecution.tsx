@@ -69,10 +69,10 @@ export const useQueryExecution = (
         
         // Set even more precise parameters for rights issue timetables
         if (financialQueryType === 'rights_issue') {
-          maxTokens = 100000; // Increased token limit for rights issue timetables to 100,000
+          maxTokens = 150000; // Increased token limit for rights issue timetables to 150,000
           temperature = 0.02; // Very precise temperature for structured output
         } else {
-          maxTokens = 10000; // Increased from 5,000 to 10,000 for other corporate actions
+          maxTokens = 15000; // Increased from 10,000 to 15,000 for other corporate actions
           temperature = 0.05; // Low temperature for consistent output
         }
       }

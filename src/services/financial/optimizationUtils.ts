@@ -24,15 +24,15 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
  */
 export function determineOptimalTokens(queryType: string, prompt: string): number {
   if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 100000; // Increased to 100,000 tokens for detailed timetables
+    return 150000; // Increased to 150,000 tokens for detailed timetables
   }
   
   if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('detail')) {
-    return 5000; // Increased from 2,000 to 5,000 for explanations
+    return 10000; // Increased from 5,000 to 10,000 for explanations
   }
   
   // Default token count
-  return 3000; // Increased from 1,500 to 3,000
+  return 6000; // Increased from 3,000 to 6,000
 }
 
 /**
