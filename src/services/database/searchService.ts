@@ -5,6 +5,8 @@
 
 import { RegulatoryEntry } from "./types";
 import { databaseService } from "./databaseService";
+import { supabase } from '@/integrations/supabase/client';
+import { ReferenceDocument } from '@/types/references';
 
 export const searchService = {
   /**
@@ -71,5 +73,48 @@ export const searchService = {
     
     console.log(`Found ${results.length} documents with matching title`);
     return results;
+  },
+
+  /**
+   * Search both in-memory database and reference documents
+   * @param query The search query
+   * @param category Optional category to filter results
+   * @returns Combined results with database entries first (prioritized)
+   */
+  searchComprehensive: async (query: string, category?: string): Promise<{
+    databaseEntries: RegulatoryEntry[],
+    referenceDocuments: ReferenceDocument[]
+  }> => {
+    // Search in-memory database
+    const databaseEntries = await searchService.search(query, category);
+    
+    // Search reference documents in Supabase
+    let referenceQuery = supabase
+      .from('reference_documents')
+      .select('*');
+      
+    if (category && category !== 'all') {
+      referenceQuery = referenceQuery.eq('category', category);
+    }
+    
+    // Add search filter for title and description
+    const { data: referenceData, error } = await referenceQuery.or(
+      `title.ilike.%${query}%,description.ilike.%${query}%`
+    );
+    
+    if (error) {
+      console.error("Error searching reference documents:", error);
+      return {
+        databaseEntries,
+        referenceDocuments: []
+      };
+    }
+    
+    console.log(`Found ${databaseEntries.length} database entries and ${referenceData?.length || 0} reference documents`);
+    
+    return {
+      databaseEntries,
+      referenceDocuments: referenceData || []
+    };
   }
 };

@@ -1,4 +1,3 @@
-
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { contextService } from '../regulatory/contextService';
 import { grokApiService } from '../api/grokApiService';
@@ -34,26 +33,74 @@ export const grokResponseGenerator = {
       const queryType = detectFinancialExpertiseArea(params.prompt);
       console.log('Detected Financial Expertise Area:', queryType);
 
+      // Check if the query contains references to specific rules or chapters
+      const ruleMatches = params.prompt.match(/rule\s+(\d+(\.\d+)*)/i) || 
+                         params.prompt.match(/chapter\s+(\d+)/i) || 
+                         params.prompt.match(/lb_chapter\s+(\d+)/i);
+      
+      if (ruleMatches) {
+        // Extract the rule or chapter number
+        const ruleNumber = ruleMatches[1];
+        console.log(`Detected reference to Rule/Chapter ${ruleNumber}, searching for specific regulatory information`);
+        
+        // Search both in-memory database and reference documents
+        const comprehensiveResults = await searchService.searchComprehensive(ruleNumber);
+        
+        // If we found matching reference documents, add their content to the context
+        if (comprehensiveResults.referenceDocuments.length > 0) {
+          console.log(`Found ${comprehensiveResults.referenceDocuments.length} reference documents matching Rule/Chapter ${ruleNumber}`);
+          
+          // Extract additional context from reference documents
+          const referenceContext = comprehensiveResults.referenceDocuments
+            .map(doc => `[${doc.title} | Reference Document]:\n${doc.description || "No detailed content available. Please check the reference document directly."}`)
+            .join('\n\n---\n\n');
+          
+          // Add specific note about prioritizing database information
+          const priorityNote = "NOTE: When information conflicts, prioritize the database entries over reference documents.";
+          
+          // Create enhanced context from both sources
+          const enhancedContext = `${priorityNote}\n\n--- DATABASE ENTRIES ---\n\n`;
+          
+          // Add database entries first (prioritized)
+          const databaseContext = comprehensiveResults.databaseEntries
+            .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
+            .join('\n\n---\n\n');
+            
+          // Combine the contexts
+          const fullContext = enhancedContext + 
+                            (databaseContext.length > 0 ? databaseContext : "No direct database entries found.") + 
+                            "\n\n--- REFERENCE DOCUMENTS ---\n\n" + 
+                            referenceContext;
+                            
+          params.regulatoryContext = fullContext;
+        }
+      }
+
       // Retrieve context with enhanced financial reasoning
       const { context, reasoning } = await contextService.getRegulatoryContextWithReasoning(params.prompt);
       console.log('Financial Context Reasoning:', reasoning);
+      
+      // Only use the context from contextService if we don't already have rule-specific context
+      if (!params.regulatoryContext && context) {
+        params.regulatoryContext = context;
+      }
 
       // Check for Trading Arrangement documents
-      const hasTradeArrangementInfo = context && 
-        (context.toLowerCase().includes('trading arrangement') || 
-         context.includes('Trading Arrangements.pdf'));
+      const hasTradeArrangementInfo = params.regulatoryContext && 
+        (params.regulatoryContext.toLowerCase().includes('trading arrangement') || 
+         params.regulatoryContext.includes('Trading Arrangements.pdf'));
       
       // Check for whitewash waiver specific queries
       const isWhitewashQuery = params.prompt.toLowerCase().includes('whitewash') ||
         (params.prompt.toLowerCase().includes('waiver') && params.prompt.toLowerCase().includes('general offer'));
       
       // Check for takeovers code document
-      const hasTakeoversCode = context && 
-        (context.toLowerCase().includes('codes on takeovers and mergers') ||
-         context.toLowerCase().includes('takeovers code'));
+      const hasTakeoversCode = params.regulatoryContext && 
+        (params.regulatoryContext.toLowerCase().includes('codes on takeovers and mergers') ||
+         params.regulatoryContext.toLowerCase().includes('takeovers code'));
       
       // If this is a whitewash query but we don't have the takeovers code or whitewash info in context
-      if (isWhitewashQuery && !context?.toLowerCase().includes('whitewash')) {
+      if (isWhitewashQuery && !params.regulatoryContext?.toLowerCase().includes('whitewash')) {
         console.log('Query involves whitewash waiver, but context lacks specific information, searching for it');
         
         const whitewashDocs = await searchService.search("whitewash waiver dealing requirements", "takeovers");
@@ -64,8 +111,8 @@ export const grokResponseGenerator = {
             .map(doc => `[${doc.title} | ${doc.source}]:\n${doc.content}`)
             .join('\n\n---\n\n');
           
-          if (context) {
-            params.regulatoryContext = additionalContext + '\n\n---\n\n' + context;
+          if (params.regulatoryContext) {
+            params.regulatoryContext = additionalContext + '\n\n---\n\n' + params.regulatoryContext;
           } else {
             params.regulatoryContext = additionalContext;
           }
@@ -74,8 +121,8 @@ export const grokResponseGenerator = {
           const whitewashFallback = `[Whitewash Waiver Dealing Requirements | Takeovers Code Note 1 to Rule 32]:
 When a waiver from a mandatory general offer obligation under Rule 26 is granted (whitewash waiver), neither the potential controlling shareholders nor any person acting in concert with them may deal in the securities of the company during the period between the announcement of the proposals and the completion of the subscription. The Executive will not normally waive an obligation under Rule 26 if the potential controlling shareholders or their concert parties have acquired voting rights in the company in the 6 months prior to the announcement of the proposals but subsequent to negotiations with the directors of the company.`;
           
-          if (context) {
-            params.regulatoryContext = whitewashFallback + '\n\n---\n\n' + context;
+          if (params.regulatoryContext) {
+            params.regulatoryContext = whitewashFallback + '\n\n---\n\n' + params.regulatoryContext;
           } else {
             params.regulatoryContext = whitewashFallback;
           }
@@ -101,8 +148,8 @@ When a waiver from a mandatory general offer obligation under Rule 26 is granted
               .map(doc => `[${doc.title} | ${doc.source}]:\n${doc.content}`)
               .join('\n\n---\n\n');
             
-            if (context) {
-              params.regulatoryContext = additionalContext + '\n\n---\n\n' + context;
+            if (params.regulatoryContext) {
+              params.regulatoryContext = additionalContext + '\n\n---\n\n' + params.regulatoryContext;
             } else {
               params.regulatoryContext = additionalContext;
             }
@@ -111,7 +158,7 @@ When a waiver from a mandatory general offer obligation under Rule 26 is granted
       }
 
       // Create a professional financial system message based on expertise area
-      const systemMessage = createFinancialExpertSystemPrompt(queryType, context);
+      const systemMessage = createFinancialExpertSystemPrompt(queryType, params.regulatoryContext);
       console.log('Using specialized financial expert prompt');
 
       // Dynamic temperature and token settings based on query complexity and our enhanced parameterUtils
@@ -170,13 +217,14 @@ When a waiver from a mandatory general offer obligation under Rule 26 is granted
         text: finalResponse,
         queryType: queryType,
         metadata: {
-          contextUsed: !!context,
+          contextUsed: !!params.regulatoryContext,
           relevanceScore: evaluateResponseRelevance(finalResponse, params.prompt, queryType),
           tradingArrangementInfoUsed: hasTradeArrangementInfo,
           takeoversCodeUsed: hasTakeoversCode,
           whitewashInfoIncluded: isWhitewashQuery && 
             (finalResponse.toLowerCase().includes('whitewash') && 
-             finalResponse.toLowerCase().includes('dealing'))
+             finalResponse.toLowerCase().includes('dealing')),
+          referenceDocumentsUsed: params.regulatoryContext?.includes('Reference Document') || false
         }
       };
 

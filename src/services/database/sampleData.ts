@@ -100,6 +100,35 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
+    // Add up-to-date information about Rule 8.05 (Qualifications for Listing)
+    databaseService.addSampleEntry({
+      title: "Rule 8.05 - Qualifications for Listing",
+      content: "Rule 8.05 of the HKEX Listing Rules sets out the basic financial eligibility requirements for new listing applicants. " +
+        "New applicants must meet one of the following three tests:\n\n" +
+        "1. Profit Test: The applicant must have a trading record of at least three financial years with:\n" +
+        "   (a) Profits attributable to shareholders of at least HK$35 million in the most recent year; and\n" +
+        "   (b) Aggregate profits attributable to shareholders of at least HK$45 million in the two preceding years; and\n" +
+        "   (c) Management continuity for at least the three preceding financial years; and\n" +
+        "   (d) Ownership continuity and control for at least the most recent audited financial year.\n\n" +
+        "2. Market Capitalization/Revenue/Cash Flow Test: The applicant must have:\n" +
+        "   (a) Market capitalization of at least HK$2 billion at the time of listing; and\n" +
+        "   (b) Revenue of at least HK$500 million for the most recent audited financial year; and\n" +
+        "   (c) Positive cash flow from operating activities of at least HK$100 million in aggregate for the three preceding financial years; and\n" +
+        "   (d) Management continuity for at least the three preceding financial years; and\n" +
+        "   (e) Ownership continuity and control for at least the most recent audited financial year.\n\n" +
+        "3. Market Capitalization/Revenue Test: The applicant must have:\n" +
+        "   (a) Market capitalization of at least HK$4 billion at the time of listing; and\n" +
+        "   (b) Revenue of at least HK$500 million for the most recent audited financial year; and\n" +
+        "   (c) Management continuity for at least the three preceding financial years; and\n" +
+        "   (d) Ownership continuity and control for at least the most recent audited financial year.\n\n" +
+        "Note: These financial tests are subject to exceptions and modifications for specific industries or circumstances. The Exchange may accept a shorter trading record period and/or vary or waive the financial standards requirement in certain cases as specified in Rule 8.05A, 8.05B and 8.05C.",
+      category: "listing_rules",
+      source: "HKEX Listing Rules Chapter 8",
+      section: "Rule 8.05",
+      lastUpdated: new Date("2023-12-01"),
+      status: "active"
+    });
+    
     console.log("Added sample regulatory data");
   }
 };
