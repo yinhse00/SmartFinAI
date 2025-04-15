@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
 import { getGrokApiKey, hasGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
@@ -17,6 +18,7 @@ const FINANCIAL_QUERY_TYPES = {
 
 export const useChatLogic = () => {
   const [input, setInput] = useState('');
+  const [lastQuery, setLastQuery] = useState('');
   const [grokApiKeyInput, setGrokApiKeyInput] = useState('');
   const [isGrokApiKeySet, setIsGrokApiKeySet] = useState(false);
   const [messages, setMessages] = useState<Message[]>([
@@ -62,17 +64,30 @@ export const useChatLogic = () => {
     setApiKeyDialogOpen(false);
   };
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const retryLastQuery = useCallback(() => {
+    if (!lastQuery) return;
+    
+    setInput(lastQuery);
+    // Small timeout to ensure UI updates before sending
+    setTimeout(() => {
+      processQuery(lastQuery);
+    }, 100);
+  }, [lastQuery]);
+
+  const processQuery = async (queryText: string) => {
+    if (!queryText.trim()) return;
     
     if (!isGrokApiKeySet) {
       setApiKeyDialogOpen(true);
       return;
     }
+    
+    // Save the query for potential retry
+    setLastQuery(queryText);
 
     const userMessage: Message = {
       id: Date.now().toString(),
-      content: input,
+      content: queryText,
       sender: 'user',
       timestamp: new Date(),
     };
@@ -84,18 +99,18 @@ export const useChatLogic = () => {
     try {
       console.group('Financial Query Processing');
       
-      const financialQueryType = identifyFinancialQueryType(input);
+      const financialQueryType = identifyFinancialQueryType(queryText);
       console.log('Financial Query Type:', financialQueryType);
       
       const responseParams: any = {
-        prompt: input,
-        temperature: getOptimalTemperature(financialQueryType, input),
-        maxTokens: getOptimalTokens(financialQueryType, input)
+        prompt: queryText,
+        temperature: getOptimalTemperature(financialQueryType, queryText),
+        maxTokens: getOptimalTokens(financialQueryType, queryText)
       };
       
       console.log(`Using specialized parameters - Temperature: ${responseParams.temperature}, Tokens: ${responseParams.maxTokens}`);
       
-      const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(input);
+      const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       responseParams.regulatoryContext = regulatoryContext;
       
       console.log('Financial Context Length:', regulatoryContext?.length);
@@ -128,7 +143,8 @@ export const useChatLogic = () => {
           references: references,
           isUsingFallback: isUsingFallback,
           reasoning: reasoning,
-          queryType: response.queryType
+          queryType: response.queryType,
+          isTruncated: false // Initialize as not truncated
         };
         
         setMessages(prev => [...prev, botMessage]);
@@ -163,6 +179,10 @@ export const useChatLogic = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSend = () => {
+    processQuery(input);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -243,6 +263,7 @@ export const useChatLogic = () => {
     setApiKeyDialogOpen,
     handleSaveApiKeys,
     handleSend,
-    handleKeyDown
+    handleKeyDown,
+    retryLastQuery
   };
 };

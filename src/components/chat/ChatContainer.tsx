@@ -1,10 +1,9 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
-import APIKeyDialog from './APIKeyDialog';
 import { Message } from './ChatMessage';
 
 interface ChatContainerProps {
@@ -16,6 +15,7 @@ interface ChatContainerProps {
   handleSend: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onOpenApiKeyDialog: () => void;
+  retryLastQuery?: () => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -26,17 +26,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   setInput,
   handleSend,
   handleKeyDown,
-  onOpenApiKeyDialog
+  onOpenApiKeyDialog,
+  retryLastQuery
 }) => {
   // Ref for chat history container
   const chatHistoryRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    if (chatHistoryRef.current) {
-      chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
-    }
-  }, [messages]);
 
   return (
     <Card className="finance-card h-full flex flex-col">
@@ -45,10 +39,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
       <CardContent 
-        className="flex-1 overflow-y-auto p-0 max-h-[calc(100vh-25rem)]" 
+        className="flex-1 overflow-hidden p-0 max-h-[calc(100vh-25rem)]" 
         ref={chatHistoryRef}
       >
-        <ChatHistory messages={messages} isLoading={isLoading} />
+        <ChatHistory 
+          messages={messages} 
+          isLoading={isLoading} 
+          onRetry={retryLastQuery}
+        />
       </CardContent>
       <ChatInput 
         input={input}

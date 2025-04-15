@@ -21,7 +21,8 @@ const ChatInterface = () => {
     setApiKeyDialogOpen,
     handleSaveApiKeys,
     handleSend,
-    handleKeyDown
+    handleKeyDown,
+    retryLastQuery
   } = useChatLogic();
 
   // Monitor for incomplete responses and handle accordingly
@@ -37,7 +38,9 @@ const ChatInterface = () => {
           !lastMessage.content.endsWith('?') &&
           !lastMessage.content.includes('|---') && // Table format check
           !lastMessage.content.endsWith(':') &&
-          !lastMessage.content.endsWith(';')) {
+          !lastMessage.content.endsWith(';') &&
+          !lastMessage.content.endsWith('}') &&
+          !lastMessage.isTruncated) {
         
         // Only show this warning if it's not clearly a structured response
         if (!lastMessage.content.includes('|') && 
@@ -45,13 +48,22 @@ const ChatInterface = () => {
             !lastMessage.content.includes('Timetable')) {
           toast({
             title: "Response Note",
-            description: "The response may have been truncated. For detailed timetables, try specifying 'rights issue timetable' explicitly.",
+            description: "The response may have been truncated. You can try asking for the same information again.",
             duration: 8000,
+            action: <button 
+                     onClick={retryLastQuery} 
+                     className="px-3 py-1 rounded bg-finance-medium-blue text-white text-xs hover:bg-finance-dark-blue"
+                    >
+                      Retry
+                    </button>
           });
+          
+          // Mark the message as truncated
+          messages[messages.length - 1].isTruncated = true;
         }
       }
     }
-  }, [messages, toast]);
+  }, [messages, toast, retryLastQuery]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
@@ -67,6 +79,7 @@ const ChatInterface = () => {
             handleSend={handleSend}
             handleKeyDown={handleKeyDown}
             onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
+            retryLastQuery={retryLastQuery}
           />
         </div>
 
