@@ -17,20 +17,40 @@ export const contextService = {
       const financialTerms = extractFinancialTerms(query);
       console.log('Identified Financial Terms:', financialTerms);
       
-      // Perform advanced search across the financial database with priority search terms
-      const searchResults = await databaseService.search(query, 'listing_rules');
-      console.log(`Found ${searchResults.length} primary results from listing rules`);
+      // Fix: Convert to lowercase and include both singular and plural forms
+      const normalizedQuery = query.toLowerCase()
+        .replace('right issue', 'rights issue')  // Common typo fix
+        .replace('rights issues', 'rights issue'); // Normalize plural form
       
-      // Secondary search in other categories if needed
-      let secondaryResults = [];
-      if (searchResults.length < 2) {
-        secondaryResults = await databaseService.search(query);
-        console.log(`Found ${secondaryResults.length} additional results from broader search`);
+      // First try an exact search in listing rules category
+      let searchResults = await databaseService.search(normalizedQuery, 'listing_rules');
+      console.log(`Found ${searchResults.length} primary results from exact search in listing rules`);
+      
+      // If no results, try searching with extracted financial terms
+      if (searchResults.length === 0) {
+        const financialTermsQuery = financialTerms.join(' ');
+        searchResults = await databaseService.search(financialTermsQuery, 'listing_rules');
+        console.log(`Found ${searchResults.length} results using financial terms in listing rules`);
+      }
+      
+      // If still no results, do a keyword search with key financial terms
+      if (searchResults.length === 0) {
+        // Check if query contains timetable references
+        if (query.toLowerCase().includes('timetable') || 
+            query.toLowerCase().includes('schedule') || 
+            query.toLowerCase().includes('timeline')) {
+          // Special handling for timetable requests
+          searchResults = await databaseService.search('rights issue timetable', 'listing_rules');
+          console.log(`Found ${searchResults.length} results using 'rights issue timetable' keyword`);
+        } else {
+          // General financial term search across all categories
+          searchResults = await databaseService.search(financialTerms[0] || normalizedQuery);
+          console.log(`Found ${searchResults.length} results from broad search`);
+        }
       }
       
       // Combine and prioritize results with financial relevance scoring
-      const allResults = [...searchResults, ...secondaryResults];
-      const prioritizedResults = prioritizeByRelevance(allResults, financialTerms);
+      const prioritizedResults = prioritizeByRelevance(searchResults, financialTerms);
       
       // Format context with section headings and regulatory citations
       const context = prioritizedResults
@@ -64,16 +84,26 @@ export const contextService = {
     try {
       console.log('Basic Financial Context Search:', query);
       
-      // Perform a search across the database with financial terms prioritization
-      const searchResults = await databaseService.search(query, 'listing_rules');
+      // Normalize query to handle common variations
+      const normalizedQuery = query.toLowerCase()
+        .replace('right issue', 'rights issue')
+        .replace('rights issues', 'rights issue');
       
-      // If no results, try a broader search with financial terms extraction
-      const fallbackResults = searchResults.length === 0 
-        ? await databaseService.search(extractFinancialTerms(query).join(' ')) 
-        : searchResults;
+      // Perform a search across the database with financial terms prioritization
+      let searchResults = await databaseService.search(normalizedQuery, 'listing_rules');
+      
+      // If no results, try keyword search
+      if (searchResults.length === 0) {
+        const financialTerms = extractFinancialTerms(query);
+        if (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule')) {
+          searchResults = await databaseService.search('rights issue timetable');
+        } else {
+          searchResults = await databaseService.search(financialTerms.join(' '));
+        }
+      }
       
       // Combine and format results with Hong Kong regulatory citations
-      const context = fallbackResults
+      const context = searchResults
         .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
         .join('\n\n---\n\n');
       
@@ -90,14 +120,26 @@ export const contextService = {
  */
 function extractFinancialTerms(query: string): string[] {
   const financialTerms = [
-    'listing rules', 'rights issue', 'takeovers code', 'connected transaction',
+    'listing rules', 'rights issue', 'right issue', 'takeovers code', 'connected transaction',
     'mandatory offer', 'disclosure', 'prospectus', 'SFC', 'HKEX', 'offering',
-    'waiver', 'circular', 'public float', 'placing', 'subscription', 'underwriting'
+    'waiver', 'circular', 'public float', 'placing', 'subscription', 'underwriting',
+    'timetable', 'schedule', 'timeline'
   ];
   
+  const lowerQuery = query.toLowerCase();
+  
+  // First check for direct matches
   const foundTerms = financialTerms.filter(term => 
-    query.toLowerCase().includes(term.toLowerCase())
+    lowerQuery.includes(term.toLowerCase())
   );
+  
+  // If no direct matches found but contains date references, add rights issue timetable
+  if (foundTerms.length === 0 && 
+    (lowerQuery.includes('date') || 
+     lowerQuery.match(/\d+\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i) ||
+     lowerQuery.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
+    return ['rights issue', 'timetable'];
+  }
   
   return foundTerms.length > 0 ? foundTerms : [query];
 }
@@ -124,6 +166,12 @@ function calculateRelevance(result: any, financialTerms: string[]): number {
     if (result.title.toLowerCase().includes(term.toLowerCase())) score += 3;
     if (result.content.toLowerCase().includes(term.toLowerCase())) score += 1;
   });
+  
+  // Special handling for timetable searches
+  if (financialTerms.some(term => term.includes('timetable') || term.includes('schedule'))) {
+    if (result.title.toLowerCase().includes('timetable')) score += 5;
+    if (result.content.toLowerCase().includes('timetable')) score += 2;
+  }
   
   // Bonus for listing rules and regulatory categories
   if (result.category === 'listing_rules') score += 2;

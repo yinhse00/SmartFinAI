@@ -1,3 +1,4 @@
+
 // This service handles the regulatory database operations
 // In a production environment, this would connect to a proper database
 // For now, we'll create a structured in-memory database that can be populated from files
@@ -54,12 +55,28 @@ export const databaseService = {
   search: async (query: string, category?: string): Promise<RegulatoryEntry[]> => {
     console.log(`Searching for "${query}" in category: ${category || 'all'}`);
     
+    // Convert query to lowercase for case-insensitive matching
+    const queryTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
+    
     // Filter by search term and optional category
     const results = regulatoryDatabase.filter(entry => {
-      const matchesQuery = entry.title.toLowerCase().includes(query.toLowerCase()) || 
-                          entry.content.toLowerCase().includes(query.toLowerCase());
+      // Check if any of the query terms match the title or content
+      const titleLower = entry.title.toLowerCase();
+      const contentLower = entry.content.toLowerCase();
       
-      if (!matchesQuery) return false;
+      const matchesByTerm = queryTerms.some(term => 
+        titleLower.includes(term) || contentLower.includes(term)
+      );
+      
+      // Also check for the whole phrase match for more precise queries
+      const matchesWholePhrase = 
+        titleLower.includes(query.toLowerCase()) || 
+        contentLower.includes(query.toLowerCase());
+        
+      // If neither matches, return false
+      if (!matchesByTerm && !matchesWholePhrase) {
+        return false;
+      }
       
       // If category is specified, filter by it
       if (category && entry.category !== category) {
