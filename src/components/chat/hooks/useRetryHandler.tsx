@@ -1,5 +1,5 @@
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
 /**
@@ -7,10 +7,14 @@ import { useToast } from '@/hooks/use-toast';
  */
 export const useRetryHandler = (
   lastQuery: string,
-  setInput: React.Dispatch<React.SetStateAction<string>>,
-  processQuery: (query: string) => Promise<void>
+  setInput: React.Dispatch<React.SetStateAction<string>>
 ) => {
   const { toast } = useToast();
+  const processQueryRef = useRef<(query: string) => Promise<void>>();
+
+  const setProcessQueryFn = useCallback((processQueryFn: (query: string) => Promise<void>) => {
+    processQueryRef.current = processQueryFn;
+  }, []);
 
   const retryLastQuery = useCallback(() => {
     if (!lastQuery) {
@@ -24,9 +28,11 @@ export const useRetryHandler = (
     
     setInput(lastQuery);
     setTimeout(() => {
-      processQuery(lastQuery);
+      if (processQueryRef.current) {
+        processQueryRef.current(lastQuery);
+      }
     }, 100);
-  }, [lastQuery, setInput, processQuery, toast]);
+  }, [lastQuery, setInput, toast]);
 
-  return { retryLastQuery };
+  return { retryLastQuery, setProcessQueryFn };
 };

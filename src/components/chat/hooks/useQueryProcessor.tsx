@@ -1,4 +1,5 @@
 
+import { useEffect } from 'react';
 import { useRetryHandler } from './useRetryHandler';
 import { useQueryExecution } from './useQueryExecution';
 import { useQueryInputHandler } from './useQueryInputHandler';
@@ -17,11 +18,8 @@ export const useQueryProcessor = (
   isGrokApiKeySet: boolean,
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  // Create a dummy processQuery that will be replaced with the real one after circular dependencies are resolved
-  const dummyProcessQuery = async (query: string) => {};
-  
-  // Set up retry handler
-  const { retryLastQuery } = useRetryHandler(lastQuery, setInput, dummyProcessQuery);
+  // Set up retry handler without passing processQuery (avoiding circular dependency)
+  const { retryLastQuery, setProcessQueryFn } = useRetryHandler(lastQuery, setInput);
   
   // Set up query execution - this is the main processing logic
   const { isLoading, processQuery } = useQueryExecution(
@@ -37,8 +35,10 @@ export const useQueryProcessor = (
   // Set up input handlers
   const { handleSend, handleKeyDown } = useQueryInputHandler(processQuery, input);
 
-  // Override the retry handler's processQuery function with the real one
-  (useRetryHandler as any).lastProcessQuery = processQuery;
+  // Set the processQuery function in the retry handler
+  useEffect(() => {
+    setProcessQueryFn(processQuery);
+  }, [processQuery, setProcessQueryFn]);
 
   return {
     isLoading,
