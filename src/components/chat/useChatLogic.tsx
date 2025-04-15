@@ -6,6 +6,7 @@ import { extractReferences } from '@/services/contextUtils';
 import { Message } from './ChatMessage';
 import { contextService } from '@/services/regulatory/contextService';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
+import { detectTruncation } from '@/utils/truncationUtils';
 
 const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
@@ -148,7 +149,7 @@ export const useChatLogic = () => {
           isUsingFallback: isUsingFallback,
           reasoning: reasoning,
           queryType: response.queryType,
-          isTruncated: detectTruncation(response.text) // Mark if the response appears truncated
+          isTruncated: detectTruncation(response.text)
         };
         
         setMessages(prev => [...prev, botMessage]);
@@ -267,25 +268,6 @@ export const useChatLogic = () => {
     }
     
     return 1500;
-  };
-
-  const detectTruncation = (content: string): boolean => {
-    if (!content) return false;
-
-    const truncationIndicators = [
-      !/[.!?:]$/.test(content) && content.length > 200,
-      (content.match(/```/g) || []).length % 2 !== 0,
-      content.trim().endsWith('-') || content.trim().endsWith('*'),
-      (content.includes('{') && !content.includes('}')) || 
-      (content.includes('[') && !content.includes(']')),
-      content.split(' ').length > 50 && 
-      !content.endsWith('.') && 
-      !content.endsWith('!') && 
-      !content.endsWith('?'),
-      (content.includes('|') && !content.includes('---'))
-    ];
-
-    return truncationIndicators.some(indicator => indicator);
   };
 
   return {
