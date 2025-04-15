@@ -54,6 +54,11 @@ export const grokService = {
         regulatoryContext = await contextService.getRegulatoryContext(params.prompt);
       }
       
+      // Check if we found relevant regulatory context
+      const hasRelevantContext = regulatoryContext && 
+                                !regulatoryContext.includes("No specific regulatory information found") &&
+                                !regulatoryContext.includes("Error fetching regulatory context");
+      
       // Create an enhanced prompt that includes the regulatory context
       const enhancedPrompt = createEnhancedPrompt(params.prompt, params.documentContext, regulatoryContext);
       
@@ -76,17 +81,24 @@ export const grokService = {
       try {
         console.log("Connecting to Grok API");
         
+        // Create a more structured prompt that explicitly tells Grok how to use the context
+        const systemMessage = hasRelevantContext 
+          ? 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
+            'You MUST base your answers on the regulatory context provided to you. ' +
+            'The regulatory context contains essential information to answer the user\'s question. ' +
+            'If the context contains details about the topic, use it to provide a detailed response with specific citations. ' +
+            'Always explicitly mention which reference documents you are citing. ' +
+            'If you find a timetable or structured process in the context, present it in a clear, step-by-step format.'
+          : 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
+            'You should base your answers on the regulatory context provided. ' +
+            'If the context doesn\'t contain relevant information to answer the question, ' +
+            'clearly state that you don\'t have specific information about that topic in your reference documents.';
+        
         const requestBody = {
           messages: [
             { 
               role: 'system', 
-              content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-                       'You should strictly base your answers on the regulatory context provided. ' +
-                       'If the context contains relevant information, use it to provide a detailed response. ' +
-                       'If the context doesn\'t contain relevant information to answer the question, ' +
-                       'clearly state that you don\'t have specific information about that topic in your reference documents. ' +
-                       'Provide specific citations from the regulatory context when possible. ' +
-                       'Explicitly mention which reference documents you are citing.'
+              content: systemMessage
             },
             { 
               role: 'user', 
@@ -94,7 +106,7 @@ export const grokService = {
             }
           ],
           model: "grok-3-mini-beta",
-          temperature: params.temperature || 0.7,
+          temperature: params.temperature || 0.5, // Lowering temperature for more precise responses
           max_tokens: params.maxTokens || 800
         };
         
@@ -137,4 +149,3 @@ export const grokService = {
    */
   generateExcelDocument: documentGenerationService.generateExcelDocument
 };
-

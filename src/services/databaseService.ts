@@ -161,7 +161,7 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
-    // Add information about Rights Issues
+    // Add detailed information about Rights Issues Timetable
     databaseService.addSampleEntry({
       title: "Rights Issues Timetable",
       content: "According to the HKEX Listing Rules, a typical rights issue timetable includes: " +
