@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useCallback } from 'react';
 import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
@@ -75,7 +74,6 @@ export const useChatLogic = () => {
     }
     
     setInput(lastQuery);
-    // Small timeout to ensure UI updates before sending
     setTimeout(() => {
       processQuery(lastQuery);
     }, 100);
@@ -89,7 +87,6 @@ export const useChatLogic = () => {
       return;
     }
     
-    // Save the query for potential retry
     setLastQuery(queryText);
 
     const userMessage: Message = {
@@ -151,11 +148,25 @@ export const useChatLogic = () => {
           isUsingFallback: isUsingFallback,
           reasoning: reasoning,
           queryType: response.queryType,
-          isTruncated: false // Initialize as not truncated
+          isTruncated: detectTruncation(response.text) // Mark if the response appears truncated
         };
         
         setMessages(prev => [...prev, botMessage]);
         console.log('Response delivered successfully');
+        
+        if (botMessage.isTruncated) {
+          toast({
+            title: "Incomplete Response",
+            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
+            duration: 10000,
+            action: <button 
+                     onClick={retryLastQuery} 
+                     className="px-3 py-1 rounded bg-finance-medium-blue text-white text-xs hover:bg-finance-dark-blue"
+                    >
+                      Retry Query
+                    </button>
+          });
+        }
       } catch (error) {
         console.error("Error generating financial expert response:", error);
         toast({
@@ -256,6 +267,25 @@ export const useChatLogic = () => {
     }
     
     return 1500;
+  };
+
+  const detectTruncation = (content: string): boolean => {
+    if (!content) return false;
+
+    const truncationIndicators = [
+      !/[.!?:]$/.test(content) && content.length > 200,
+      (content.match(/```/g) || []).length % 2 !== 0,
+      content.trim().endsWith('-') || content.trim().endsWith('*'),
+      (content.includes('{') && !content.includes('}')) || 
+      (content.includes('[') && !content.includes(']')),
+      content.split(' ').length > 50 && 
+      !content.endsWith('.') && 
+      !content.endsWith('!') && 
+      !content.endsWith('?'),
+      (content.includes('|') && !content.includes('---'))
+    ];
+
+    return truncationIndicators.some(indicator => indicator);
   };
 
   return {
