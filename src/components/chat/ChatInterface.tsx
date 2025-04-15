@@ -9,6 +9,7 @@ import { useToast } from '@/hooks/use-toast';
 import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
+import { needsEnhancedTokenSettings } from './utils/parameterUtils';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -40,19 +41,29 @@ const ChatInterface = () => {
           !lastMessage.isTruncated) {
         
         const content = lastMessage.content;
+        const queryType = lastMessage.queryType;
         
-        // Check various indicators of potential truncation
+        // Enhanced detection using multiple methods
         const isPotentiallyTruncated = detectTruncationComprehensive(content);
         
         // For trading arrangement related queries, perform specialized check
-        const isTradingRelated = lastMessage.queryType && 
+        const previousUserMessage = messages.length > 1 ? 
+          messages[messages.length - 2].content : '';
+          
+        const isTradingRelated = queryType && 
           ['rights_issue', 'open_offer', 'share_consolidation', 'board_lot_change', 'company_name_change']
-            .includes(lastMessage.queryType);
+            .includes(queryType);
             
         const isTradingArrangementIncomplete = isTradingRelated && 
-          !isTradingArrangementComplete(content, lastMessage.queryType);
+          !isTradingArrangementComplete(content, queryType);
+          
+        // Check for expected content pattern in rights issue responses
+        const isRightsIssueWithMissingContent = queryType === 'rights_issue' && 
+          content.includes('timetable') && 
+          !content.includes('Record Date') && 
+          !content.toLowerCase().includes('ex-rights');
 
-        if (isPotentiallyTruncated || isTradingArrangementIncomplete) {
+        if (isPotentiallyTruncated || isTradingArrangementIncomplete || isRightsIssueWithMissingContent) {
           // Mark the message as truncated
           const updatedMessages = [...messages];
           updatedMessages[updatedMessages.length - 1].isTruncated = true;
