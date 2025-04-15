@@ -22,6 +22,7 @@ import {
   determineOptimalTokens,
   evaluateResponseRelevance 
 } from './financial/optimizationUtils';
+import { getOptimalTemperature, getOptimalTokens, needsEnhancedTokenSettings } from '@/components/chat/utils/parameterUtils';
 
 export const grokService = {
   /**
@@ -57,11 +58,17 @@ export const grokService = {
       const systemMessage = createFinancialExpertSystemPrompt(queryType, context);
       console.log('Using specialized financial expert prompt');
 
-      // Dynamic temperature and token settings based on query complexity
-      const temperature = determineOptimalTemperature(queryType, params.prompt);
-      const maxTokens = determineOptimalTokens(queryType, params.prompt);
+      // Dynamic temperature and token settings based on query complexity and our enhanced parameterUtils
+      const useFineGrainedSettings = needsEnhancedTokenSettings(queryType, params.prompt);
+      const temperature = useFineGrainedSettings ? 
+        getOptimalTemperature(queryType, params.prompt) :
+        determineOptimalTemperature(queryType, params.prompt);
       
-      console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}`);
+      const maxTokens = useFineGrainedSettings ?
+        getOptimalTokens(queryType, params.prompt) :
+        determineOptimalTokens(queryType, params.prompt);
+      
+      console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Using Enhanced Settings: ${useFineGrainedSettings}`);
 
       // Prepare request body with enhanced instructions
       const requestBody = {
