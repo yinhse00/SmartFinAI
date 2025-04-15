@@ -12,5 +12,6 @@ export interface GrokResponse {
   metadata?: {
     contextUsed?: boolean;
     relevanceScore?: number;
+    tradingArrangementInfoUsed?: boolean;
   };
 }
