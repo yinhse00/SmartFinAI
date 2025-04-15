@@ -1,8 +1,9 @@
+
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
  * Get optimal token setting based on query type and content
- * With increased maximum token limit and safety checks
+ * With adjusted maximum token limit and safety checks
  */
 export const getOptimalTokens = (queryType: string, query: string): number => {
   // Extremely complex rights issue timetables with specific dates
@@ -12,7 +13,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 100000; // Maximum token limit as requested
+    return 50000; // Adjusted maximum token limit to 50,000 as requested
   }
   
   // Previous high-complexity scenarios
@@ -20,7 +21,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 10000; // Increased from previous implementation
+    return 10000; // Keeping this level for regular timetable queries
   }
   
   // Complex query handling
@@ -32,15 +33,15 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 4000; // Increased for trading arrangements
+    return 4000; // Keeping existing token limit for trading arrangements
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 3500; // Increased for explanations
+    return 3500; // Keeping existing token limit for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 3000; // Increased for complex topics
+    return 3000; // Keeping existing token limit for complex topics
   }
   
   return 2500; // Default tokens
