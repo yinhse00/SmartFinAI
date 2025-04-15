@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 import { getGrokApiKey, hasGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
 import { extractReferences } from '@/services/contextUtils';
 import { Message } from './ChatMessage';
+import { contextService } from '@/services/regulatory/contextService';
 
 export const useChatLogic = () => {
   const [input, setInput] = useState('');
@@ -75,8 +76,8 @@ export const useChatLogic = () => {
     setIsLoading(true);
 
     try {
-      // Get regulatory context for the query
-      const regulatoryContext = await grokService.getRegulatoryContext(input);
+      // Get regulatory context with reasoning for the query
+      const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(input);
       
       try {
         // Generate response using Grok
@@ -109,7 +110,8 @@ export const useChatLogic = () => {
           sender: 'bot',
           timestamp: new Date(),
           references: references,
-          isUsingFallback: isUsingFallback
+          isUsingFallback: isUsingFallback,
+          reasoning: reasoning
         };
         
         setMessages(prev => [...prev, botMessage]);

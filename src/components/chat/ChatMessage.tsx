@@ -1,8 +1,10 @@
 
 import React from 'react';
-import { cn } from '@/lib/utils';
-import { User, Bot, AlertTriangle } from 'lucide-react';
+import { Info } from 'lucide-react';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export interface Message {
   id: string;
@@ -10,8 +12,9 @@ export interface Message {
   sender: 'user' | 'bot';
   timestamp: Date;
   references?: string[];
-  isUsingFallback?: boolean;
   isError?: boolean;
+  isUsingFallback?: boolean;
+  reasoning?: string;
 }
 
 interface ChatMessageProps {
@@ -19,71 +22,63 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
+  const { sender, content, references, isError, isUsingFallback, reasoning } = message;
+  
   return (
-    <div
-      className={cn(
-        "flex",
-        message.sender === "user" ? "justify-end" : "justify-start"
-      )}
-    >
-      <div
-        className={cn(
-          "max-w-[80%] rounded-lg p-3",
-          message.sender === "user"
-            ? "bg-finance-medium-blue text-white"
-            : message.isError 
-              ? "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200"
-              : "bg-gray-100 dark:bg-finance-dark-blue/50 text-finance-dark-blue dark:text-white"
-        )}
-      >
-        <div className="flex items-center gap-2 mb-1">
-          {message.sender === "user" ? (
-            <User size={16} />
-          ) : (
-            <Bot size={16} />
+    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`flex items-start gap-3 max-w-[80%] ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+        <Avatar className={sender === 'user' ? 'bg-finance-medium-blue' : 'bg-finance-light-blue'}>
+          <AvatarFallback>{sender === 'user' ? 'U' : 'G'}</AvatarFallback>
+          {sender === 'bot' && (
+            <AvatarImage src="/grok-avatar.png" alt="Grok" />
           )}
-          <span className="text-xs opacity-70">
-            {message.timestamp.toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </span>
+        </Avatar>
+        
+        <div className={`space-y-2 ${sender === 'user' ? 'items-end' : 'items-start'}`}>
+          <Card className={`p-3 rounded-lg ${
+            sender === 'user' 
+              ? 'bg-finance-medium-blue text-white' 
+              : isError 
+                ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
+                : 'bg-gray-50 dark:bg-gray-800'
+          }`}>
+            <div className="whitespace-pre-line">{content}</div>
+            
+            {/* Display reasoning information if available */}
+            {reasoning && (
+              <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
+                <details className="text-sm">
+                  <summary className="font-medium cursor-pointer flex items-center gap-1 text-finance-medium-blue dark:text-finance-accent-blue">
+                    <Info size={14} />
+                    View reasoning process
+                  </summary>
+                  <ScrollArea className="h-[150px] mt-2">
+                    <div className="p-2 bg-gray-100 dark:bg-gray-900 rounded text-xs font-mono whitespace-pre-line">
+                      {reasoning}
+                    </div>
+                  </ScrollArea>
+                </details>
+              </div>
+            )}
+          </Card>
           
-          {message.isUsingFallback && (
-            <Badge 
-              variant="outline" 
-              className="ml-auto text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300 flex items-center gap-1"
-            >
-              <AlertTriangle size={10} /> Simulated Response
-            </Badge>
-          )}
-          
-          {message.isError && (
-            <Badge 
-              variant="outline" 
-              className="ml-auto text-xs bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 flex items-center gap-1"
-            >
-              <AlertTriangle size={10} /> Error
-            </Badge>
-          )}
-        </div>
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        {message.references && message.references.length > 0 && (
-          <div className="mt-2 pt-2 border-t border-gray-200 dark:border-finance-medium-blue/30">
-            <div className="text-xs opacity-70 mb-1">References:</div>
+          {references && references.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {message.references.map((ref, i) => (
-                <Badge 
-                  key={i} 
-                  variant="outline" 
-                  className="text-xs bg-finance-highlight/50 dark:bg-finance-medium-blue/20"
-                >
+              {references.map((ref, i) => (
+                <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">
                   {ref}
                 </Badge>
               ))}
             </div>
-          </div>
-        )}
+          )}
+          
+          {isUsingFallback && (
+            <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center">
+              <Info size={12} className="mr-1" />
+              Using fallback response
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
