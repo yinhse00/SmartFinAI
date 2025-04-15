@@ -73,3 +73,90 @@ export const detectTruncationComprehensive = (content: string): boolean => {
   
   return advancedTruncationIndicators.some(indicator => indicator);
 };
+
+/**
+ * Check if a financial trading arrangement content is complete
+ * Specific for trading arrangements related to rights issues, open offers,
+ * share consolidation, board lot changes and company name changes
+ * 
+ * @param content The text content to check
+ * @param queryType The type of financial query
+ * @returns Boolean indicating if the trading arrangement appears to be complete
+ */
+export const isTradingArrangementComplete = (content: string, queryType?: string): boolean => {
+  if (!content) return false;
+  
+  // Common trading arrangement phrases that should be present
+  const commonPhrases = [
+    'trading arrangement',
+    'last day',
+    'first day',
+    'ex-date',
+    'effective date'
+  ];
+  
+  // Check if at least some common phrases are present
+  const hasCommonPhrases = commonPhrases.some(phrase => 
+    content.toLowerCase().includes(phrase)
+  );
+  
+  if (!hasCommonPhrases) {
+    // Not a trading arrangement or very incomplete
+    return false;
+  }
+
+  // Specific checks based on financial event types
+  if (queryType?.includes('rights_issue') || 
+      content.toLowerCase().includes('rights issue') || 
+      content.toLowerCase().includes('nil-paid')) {
+    
+    // Rights issue should mention nil-paid rights trading period
+    const hasNilPaidTrading = content.toLowerCase().includes('nil-paid') && 
+                              (content.toLowerCase().includes('trading') || 
+                               content.toLowerCase().includes('period'));
+                               
+    // Should have key dates
+    const hasKeyDates = content.toLowerCase().includes('last day') && 
+                        content.toLowerCase().includes('first day');
+    
+    return hasNilPaidTrading && hasKeyDates;
+  }
+  
+  if (content.toLowerCase().includes('open offer')) {
+    // Open offers should explicitly mention no nil-paid rights trading
+    return content.toLowerCase().includes('no nil-paid') || 
+           (content.toLowerCase().includes('open offer') && 
+            content.toLowerCase().includes('timetable'));
+  }
+  
+  if (content.toLowerCase().includes('consolidation') || 
+      content.toLowerCase().includes('sub-division')) {
+    // Share consolidation/sub-division should mention old/new shares trading
+    return (content.toLowerCase().includes('old shares') || 
+            content.toLowerCase().includes('new shares')) &&
+           content.toLowerCase().includes('trading');
+  }
+  
+  if (content.toLowerCase().includes('board lot') || 
+      content.toLowerCase().includes('lot size')) {
+    // Board lot changes should mention parallel trading
+    return content.toLowerCase().includes('parallel trading') || 
+           (content.toLowerCase().includes('board lot') && 
+            content.toLowerCase().includes('trading arrangement'));
+  }
+  
+  if (content.toLowerCase().includes('company name') || 
+      content.toLowerCase().includes('stock short name')) {
+    // Name changes should mention new stock short name
+    return content.toLowerCase().includes('stock short name') || 
+           (content.toLowerCase().includes('company name') && 
+            content.toLowerCase().includes('trading'));
+  }
+  
+  // General check for completeness of trading arrangement information
+  return content.includes('|') && // Has table format
+         content.length > 300 &&  // Reasonably detailed
+         (content.toLowerCase().includes('conclusion') || 
+          content.toLowerCase().includes('summary') ||
+          content.toLowerCase().endsWith('.')); // Has proper ending
+};

@@ -6,6 +6,7 @@ import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
+import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -39,37 +40,17 @@ const ChatInterface = () => {
         const content = lastMessage.content;
         
         // Check various indicators of potential truncation
-        const possiblyTruncated = 
-          // Long message that doesn't end with proper punctuation
-          (content.length > 200 &&
-           !content.endsWith('.') && 
-           !content.endsWith('!') && 
-           !content.endsWith('?') &&
-           !content.endsWith(':') &&
-           !content.endsWith(';') &&
-           !content.endsWith(')') &&
-           !content.endsWith('}') &&
-           !content.endsWith(']')) ||
-          
-          // Cut off table formatting
-          (content.includes('|') && !content.includes('---') && content.split('|').length < 6) ||
-          
-          // Cut off markdown formatting 
-          ((content.split('```').length % 2) === 0) ||
-          
-          // Cut off list that ends with a bullet point
-          (content.trim().endsWith('-') || content.trim().endsWith('*')) ||
-          
-          // Cut off sentence (likely mid-sentence)
-          (content.split(' ').length > 30 && 
-           !content.endsWith('.') && !content.endsWith('!') && !content.endsWith('?') && 
-           !content.endsWith(':') && !content.includes('T+') && !content.endsWith(';')) ||
-           
-          // Possible unfinished JSON or code
-          (content.includes('{') && !content.includes('}')) ||
-          (content.includes('[') && !content.includes(']'));
+        const isPotentiallyTruncated = detectTruncationComprehensive(content);
+        
+        // For trading arrangement related queries, perform specialized check
+        const isTradingRelated = lastMessage.queryType && 
+          ['rights_issue', 'open_offer', 'share_consolidation', 'board_lot_change', 'company_name_change']
+            .includes(lastMessage.queryType);
+            
+        const isTradingArrangementIncomplete = isTradingRelated && 
+          !isTradingArrangementComplete(content, lastMessage.queryType);
 
-        if (possiblyTruncated) {
+        if (isPotentiallyTruncated || isTradingArrangementIncomplete) {
           // Mark the message as truncated
           const updatedMessages = [...messages];
           updatedMessages[updatedMessages.length - 1].isTruncated = true;

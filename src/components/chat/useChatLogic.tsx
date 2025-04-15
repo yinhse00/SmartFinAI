@@ -6,13 +6,17 @@ import { extractReferences } from '@/services/contextUtils';
 import { Message } from './ChatMessage';
 import { contextService } from '@/services/regulatory/contextService';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
-import { detectTruncation } from '@/utils/truncationUtils';
+import { detectTruncation, isTradingArrangementComplete } from '@/utils/truncationUtils';
 
 const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
   CONNECTED_TRANSACTION: 'connected_transaction',
   TAKEOVERS: 'takeovers',
   PROSPECTUS: 'prospectus',
+  OPEN_OFFER: 'open_offer',
+  SHARE_CONSOLIDATION: 'share_consolidation',
+  BOARD_LOT_CHANGE: 'board_lot_change',
+  COMPANY_NAME_CHANGE: 'company_name_change',
   GENERAL: 'general'
 };
 
@@ -140,6 +144,10 @@ export const useChatLogic = () => {
         
         const references = extractReferences(regulatoryContext);
         
+        const isTruncated = detectTruncation(response.text);
+        const isTradingArrangementTruncated = isTradingArrangementRelated(queryText) && 
+                                           !isTradingArrangementComplete(response.text, financialQueryType);
+        
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
           content: response.text,
@@ -149,7 +157,7 @@ export const useChatLogic = () => {
           isUsingFallback: isUsingFallback,
           reasoning: reasoning,
           queryType: response.queryType,
-          isTruncated: detectTruncation(response.text)
+          isTruncated: isTruncated || isTradingArrangementTruncated
         };
         
         setMessages(prev => [...prev, botMessage]);
@@ -217,6 +225,26 @@ export const useChatLogic = () => {
       return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
     } 
     
+    if (lowerQuery.includes('open offer')) {
+      return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
+    }
+    
+    if (lowerQuery.includes('share consolidation') || 
+        lowerQuery.includes('sub-division') || 
+        lowerQuery.includes('subdivision')) {
+      return FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION;
+    }
+    
+    if ((lowerQuery.includes('board lot') || lowerQuery.includes('lot size')) && 
+        lowerQuery.includes('change')) {
+      return FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE;
+    }
+    
+    if (lowerQuery.includes('company name') && 
+        (lowerQuery.includes('change') || lowerQuery.includes('chinese name'))) {
+      return FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE;
+    }
+    
     if (lowerQuery.includes('connected transaction') || lowerQuery.includes('chapter 14a')) {
       return FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION;
     }
@@ -232,9 +260,29 @@ export const useChatLogic = () => {
     return FINANCIAL_QUERY_TYPES.GENERAL;
   };
 
+  const isTradingArrangementRelated = (query: string): boolean => {
+    const lowerQuery = query.toLowerCase();
+    
+    return lowerQuery.includes('trading arrangement') || 
+           lowerQuery.includes('timetable') || 
+           lowerQuery.includes('schedule') || 
+           (lowerQuery.includes('trading') && 
+            (lowerQuery.includes('rights') || 
+             lowerQuery.includes('offer') || 
+             lowerQuery.includes('consolidation') || 
+             lowerQuery.includes('lot size') || 
+             lowerQuery.includes('name change')));
+  };
+
   const getOptimalTemperature = (queryType: string, query: string): number => {
-    if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-        (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule'))) {
+    if ([FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE, 
+         FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
+         FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+         FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE,
+         FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE].includes(queryType) && 
+        (query.toLowerCase().includes('timetable') || 
+         query.toLowerCase().includes('trading arrangement') || 
+         query.toLowerCase().includes('schedule'))) {
       return 0.1;
     }
     
@@ -254,8 +302,13 @@ export const useChatLogic = () => {
   };
 
   const getOptimalTokens = (queryType: string, query: string): number => {
-    if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-        (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule'))) {
+    if ([FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE, 
+         FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
+         FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+         FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE].includes(queryType) && 
+        (query.toLowerCase().includes('timetable') || 
+         query.toLowerCase().includes('trading arrangement') || 
+         query.toLowerCase().includes('schedule'))) {
       return 2000;
     }
     
