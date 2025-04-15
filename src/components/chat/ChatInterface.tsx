@@ -7,6 +7,8 @@ import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -60,13 +62,16 @@ const ChatInterface = () => {
           toast({
             title: "Incomplete Response",
             description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
-            duration: 10000,
-            action: <button 
+            duration: 15000,
+            action: <Button 
                      onClick={retryLastQuery} 
-                     className="px-3 py-1 rounded bg-finance-medium-blue text-white text-xs hover:bg-finance-dark-blue"
+                     variant="outline"
+                     size="sm"
+                     className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
                     >
-                      Retry Query
-                    </button>
+                      <RefreshCw size={14} />
+                      Retry query
+                    </Button>
           });
         }
       }

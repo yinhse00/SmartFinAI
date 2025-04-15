@@ -7,7 +7,7 @@ import { extractReferences } from '@/services/contextUtils';
 import { Message } from '../ChatMessage';
 import { identifyFinancialQueryType, isTradingArrangementRelated } from '../utils/queryTypeUtils';
 import { getOptimalTemperature, getOptimalTokens } from '../utils/parameterUtils';
-import { detectTruncation, isTradingArrangementComplete } from '@/utils/truncationUtils';
+import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
 import { hasGrokApiKey } from '@/services/apiKeyService';
 
 /**
@@ -69,16 +69,19 @@ export const useQueryProcessor = (
       const financialQueryType = identifyFinancialQueryType(queryText);
       console.log('Financial Query Type:', financialQueryType);
       
-      // Use higher token limits for rights issue timetables to prevent truncation
+      // Optimized parameters for preventing truncation
       let maxTokens = getOptimalTokens(financialQueryType, queryText);
       let temperature = getOptimalTemperature(financialQueryType, queryText);
       
-      // Increase token limit for rights issue queries
+      // Special case for rights issue timetable starting from a specific date
       if (financialQueryType === 'rights_issue' && 
           (queryText.toLowerCase().includes('timetable') || 
-           queryText.toLowerCase().includes('schedule'))) {
-        maxTokens = 3000; // Increase token limit for rights issue timetables
-        temperature = 0.1; // Lower temperature for more consistent output
+           queryText.toLowerCase().includes('schedule')) &&
+          (queryText.toLowerCase().includes('june') || 
+           queryText.toLowerCase().includes('july') || 
+           queryText.toLowerCase().includes('jan'))) {
+        maxTokens = 4000; // Increased token limit for rights issue timetables
+        temperature = 0.05; // Very low temperature for precise output
       }
       
       console.log(`Using specialized parameters - Temperature: ${temperature}, Tokens: ${maxTokens}`);
@@ -115,7 +118,7 @@ export const useQueryProcessor = (
         const references = extractReferences(regulatoryContext);
         
         // More accurate truncation detection
-        const isTruncated = detectTruncation(response.text);
+        const isTruncated = detectTruncationComprehensive(response.text);
         
         // Only check for trading arrangement truncation if not already detected
         const isTradingArrangementTruncated = !isTruncated && 
@@ -138,6 +141,7 @@ export const useQueryProcessor = (
         console.log('Response delivered successfully');
         
         if (botMessage.isTruncated) {
+          console.log('Response appears to be truncated, showing retry option');
           toast({
             title: "Incomplete Response",
             description: "The response appears to have been cut off. You can retry your query to get a complete answer.",

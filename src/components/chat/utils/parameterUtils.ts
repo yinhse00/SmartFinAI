@@ -10,7 +10,7 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.1;
+    return 0.05; // Even lower temperature for maximum consistency
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
@@ -47,7 +47,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 2500;
+    return 4000; // Significantly increased for complete timetables
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
@@ -56,16 +56,16 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 2000;
+    return 3000; // Increased for other trading arrangements
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 1800;
+    return 2500; // Increased for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 1600;
+    return 2000; // Increased for complex topics
   }
   
-  return 1500;
+  return 2000; // Increased default
 };

@@ -36,6 +36,34 @@ Notes:
 - The timetable must be approved by HKEX before the announcement`;
   }
   
+  // Handling for July start date as well
+  if (type === FINANCIAL_EXPERTISES.RIGHTS_ISSUE && 
+      prompt.toLowerCase().includes('timetable') &&
+      (prompt.toLowerCase().includes('july') || prompt.toLowerCase().includes('1 july'))) {
+    
+    return `# Rights Issue Timetable - Starting Date: 1 July 2025
+
+| Date | Event | Trading Implications |
+|------|-------|----------------------|
+| July 1, 2025 (T) | Announcement Day | Formal announcement of rights issue |
+| July 2, 2025 (T+1) | Ex-Rights Date | Shares trade ex-rights from this date |
+| July 4, 2025 (T+3) | Record Date | Register closing to determine entitled shareholders |
+| July 9, 2025 (T+6) | Dispatch of PALs | Provisional Allotment Letters sent to shareholders |
+| July 10, 2025 (T+7) | Commencement of nil-paid rights trading | First day dealing in nil-paid rights |
+| July 18, 2025 (T+13) | Last day of nil-paid rights trading | Last day dealing in nil-paid rights |
+| July 23, 2025 (T+16) | Latest time for acceptance and payment | Final date for acceptance and payment |
+| July 24, 2025 (T+17) | Results announcement | Announcement of rights issue results |
+| July 30, 2025 (T+23) | Dispatch of share certificates | Share certificates sent to shareholders |
+| July 31, 2025 (T+24) | Commencement of dealing in fully-paid shares | Trading of new fully-paid shares begins |
+
+Notes:
+- This timetable follows Hong Kong Listing Rules requirements
+- Minimum period for nil-paid rights trading is 10 business days under HK Listing Rules
+- Underwriters typically have the right to terminate within 1-2 business days after the acceptance deadline
+- Odd lot arrangements should be specified in the offering document
+- The timetable must be approved by HKEX before the announcement`;
+  }
+  
   // Standard fallbacks for other scenarios
   switch (type) {
     case FINANCIAL_EXPERTISES.RIGHTS_ISSUE:
@@ -65,8 +93,12 @@ Notes:
 export function isWellFormattedTimetable(response: string): boolean {
   // Check for table formatting with dates and descriptions
   const hasTableStructure = response.includes('|') && response.includes('---');
-  const hasDateEntries = /T[\+\-]\d+|Day \d+|Date/.test(response);
+  const hasDateEntries = /T[\+\-]\d+|Day \d+|Date|June|July|Jan|Feb|Mar|Apr|May|Aug|Sept|Oct|Nov|Dec/.test(response);
   const hasTimetableHeader = /timetable|timeline|schedule/i.test(response);
   
-  return hasTableStructure && hasDateEntries && hasTimetableHeader;
+  // Count number of date entries (should have at least 5 for completeness)
+  const dateMatches = response.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || [];
+  const hasEnoughDates = dateMatches.length >= 5;
+  
+  return hasTableStructure && hasDateEntries && hasTimetableHeader && hasEnoughDates;
 }

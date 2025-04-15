@@ -59,16 +59,28 @@ export const detectTruncationComprehensive = (content: string): boolean => {
      !content.endsWith(')') && !content.endsWith('}') && !content.endsWith(']')),
      
     // Cut off table formatting
-    (content.includes('|') && !content.includes('---') && content.split('|').length < 6),
+    (content.includes('|') && content.includes('|---|') && !content.includes('|---')),
     
     // Cut off markdown formatting 
-    ((content.split('```').length % 2) === 0),
+    ((content.match(/```/g) || []).length % 2 !== 0),
     
     // Possible unfinished JSON or code
     (content.includes('"{') && !content.includes('}"')),
     
+    // Table rows are uneven
+    content.includes('|') && (() => {
+      const rows = content.split('\n').filter(line => line.includes('|') && !line.includes('---'));
+      if (rows.length < 2) return false;
+      const pipeCounts = rows.map(row => (row.match(/\|/g) || []).length);
+      return pipeCounts.some(count => count !== pipeCounts[0]);
+    })(),
+    
     // Ends with conjunction or preposition
-    /\b(and|or|but|if|as|at|by|for|from|in|of|on|to|with)$/i.test(content.trim())
+    /\b(and|or|but|if|as|at|by|for|from|in|of|on|to|with)$/i.test(content.trim()),
+    
+    // Timetable seems incomplete (less than 5 dates)
+    content.toLowerCase().includes('timetable') && 
+    (content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || []).length < 5
   ];
   
   return advancedTruncationIndicators.some(indicator => indicator);
@@ -105,10 +117,14 @@ export const isTradingArrangementComplete = (content: string, queryType?: string
     return false;
   }
 
-  // Specific checks based on financial event types
+  // For rights issue timetables, check for all necessary components
   if (queryType?.includes('rights_issue') || 
       content.toLowerCase().includes('rights issue') || 
       content.toLowerCase().includes('nil-paid')) {
+    
+    // Rights issue should mention at least 5 key dates
+    const dateMatches = content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || [];
+    if (dateMatches.length < 5) return false;
     
     // Rights issue should mention nil-paid rights trading period
     const hasNilPaidTrading = content.toLowerCase().includes('nil-paid') && 
@@ -116,10 +132,15 @@ export const isTradingArrangementComplete = (content: string, queryType?: string
                                content.toLowerCase().includes('period'));
                                
     // Should have key dates
-    const hasKeyDates = content.toLowerCase().includes('last day') && 
-                        content.toLowerCase().includes('first day');
+    const hasKeyDates = content.toLowerCase().includes('ex-rights') || 
+                        (content.toLowerCase().includes('record') && content.toLowerCase().includes('date'));
     
-    return hasNilPaidTrading && hasKeyDates;
+    // Should mention acceptance deadline and results announcement
+    const hasCompletionDates = (content.toLowerCase().includes('acceptance') && content.toLowerCase().includes('deadline')) ||
+                             content.toLowerCase().includes('results announcement') ||
+                             content.toLowerCase().includes('fully-paid shares');
+    
+    return hasNilPaidTrading && hasKeyDates && hasCompletionDates;
   }
   
   if (content.toLowerCase().includes('open offer')) {
@@ -155,8 +176,9 @@ export const isTradingArrangementComplete = (content: string, queryType?: string
   
   // General check for completeness of trading arrangement information
   return content.includes('|') && // Has table format
-         content.length > 300 &&  // Reasonably detailed
+         content.length > 500 &&  // Reasonably detailed
          (content.toLowerCase().includes('conclusion') || 
           content.toLowerCase().includes('summary') ||
-          content.toLowerCase().endsWith('.')); // Has proper ending
+          content.toLowerCase().endsWith('.') ||
+          content.toLowerCase().includes('note')); // Has proper ending
 };
