@@ -80,20 +80,33 @@ export const useChatLogic = () => {
     setIsLoading(true);
 
     try {
+      // Check if this is a rights issue timetable query - special handling
+      const isRightsIssueQuery = input.toLowerCase().includes('rights') && 
+                                (input.toLowerCase().includes('issue') || 
+                                 input.toLowerCase().includes('timetable'));
+                                 
+      const isSpecificTimetableRequest = isRightsIssueQuery && 
+                                        (input.toLowerCase().includes('timetable') || 
+                                         input.toLowerCase().includes('schedule') || 
+                                         input.toLowerCase().includes('timeline'));
+
+      // Set appropriate parameters based on query type
+      const responseParams: any = {
+        prompt: input,
+        temperature: isSpecificTimetableRequest ? 0.1 : 0.7,  // Lower temperature for timetables
+        maxTokens: isSpecificTimetableRequest ? 2000 : 1500  // More tokens for detailed timetables
+      };
+      
       // Get regulatory context with reasoning for the query
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(input);
+      responseParams.regulatoryContext = regulatoryContext;
       
       // Log the context being used
       console.log("Using regulatory context:", regulatoryContext);
       
       try {
         // Generate response using Grok
-        const response = await grokService.generateResponse({
-          prompt: input,
-          regulatoryContext: regulatoryContext,
-          temperature: 0.7,
-          maxTokens: 500
-        });
+        const response = await grokService.generateResponse(responseParams);
         
         // Check if we're using a fallback response (API call failed)
         const isUsingFallback = response.text.includes("Based on your query about") || 
