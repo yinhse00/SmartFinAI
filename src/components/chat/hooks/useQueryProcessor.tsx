@@ -69,13 +69,25 @@ export const useQueryProcessor = (
       const financialQueryType = identifyFinancialQueryType(queryText);
       console.log('Financial Query Type:', financialQueryType);
       
+      // Use higher token limits for rights issue timetables to prevent truncation
+      let maxTokens = getOptimalTokens(financialQueryType, queryText);
+      let temperature = getOptimalTemperature(financialQueryType, queryText);
+      
+      // Increase token limit for rights issue queries
+      if (financialQueryType === 'rights_issue' && 
+          (queryText.toLowerCase().includes('timetable') || 
+           queryText.toLowerCase().includes('schedule'))) {
+        maxTokens = 3000; // Increase token limit for rights issue timetables
+        temperature = 0.1; // Lower temperature for more consistent output
+      }
+      
+      console.log(`Using specialized parameters - Temperature: ${temperature}, Tokens: ${maxTokens}`);
+      
       const responseParams: any = {
         prompt: queryText,
-        temperature: getOptimalTemperature(financialQueryType, queryText),
-        maxTokens: getOptimalTokens(financialQueryType, queryText)
+        temperature: temperature,
+        maxTokens: maxTokens
       };
-      
-      console.log(`Using specialized parameters - Temperature: ${responseParams.temperature}, Tokens: ${responseParams.maxTokens}`);
       
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       responseParams.regulatoryContext = regulatoryContext;
@@ -102,8 +114,12 @@ export const useQueryProcessor = (
         
         const references = extractReferences(regulatoryContext);
         
+        // More accurate truncation detection
         const isTruncated = detectTruncation(response.text);
-        const isTradingArrangementTruncated = isTradingArrangementRelated(queryText) && 
+        
+        // Only check for trading arrangement truncation if not already detected
+        const isTradingArrangementTruncated = !isTruncated && 
+                                           isTradingArrangementRelated(queryText) && 
                                            !isTradingArrangementComplete(response.text, financialQueryType);
         
         const botMessage: Message = {
