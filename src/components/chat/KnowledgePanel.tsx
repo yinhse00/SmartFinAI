@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { File, Link as LinkIcon } from 'lucide-react';
+import { File, Link as LinkIcon, FileText } from 'lucide-react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
