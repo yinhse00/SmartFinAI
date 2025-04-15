@@ -2,6 +2,7 @@
 import React, { useRef, useEffect } from 'react';
 import ChatMessage, { Message } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ChatHistoryProps {
   messages: Message[];
