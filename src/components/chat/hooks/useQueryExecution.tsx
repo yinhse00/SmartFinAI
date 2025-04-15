@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
@@ -70,10 +69,10 @@ export const useQueryExecution = (
         
         // Set even more precise parameters for rights issue timetables
         if (financialQueryType === 'rights_issue') {
-          maxTokens = 10000; // Higher token limit for rights issue timetables
-          temperature = 0.03; // Very precise temperature for structured output
+          maxTokens = 100000; // Increased token limit for rights issue timetables to 100,000
+          temperature = 0.02; // Very precise temperature for structured output
         } else {
-          maxTokens = 5000; // Standard for other corporate actions
+          maxTokens = 10000; // Increased from 5,000 to 10,000 for other corporate actions
           temperature = 0.05; // Low temperature for consistent output
         }
       }

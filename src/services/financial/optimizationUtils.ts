@@ -1,11 +1,10 @@
-
 /**
  * Determine optimal temperature setting based on query type and content
  */
 export function determineOptimalTemperature(queryType: string, prompt: string): number {
   // For factual regulatory matters, use lower temperature
   if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 0.1; // Very precise for timetables
+    return 0.05; // Even more precise for timetables (reduced from 0.1)
   }
   
   if (['listing_rules', 'takeovers_code'].includes(queryType)) {
@@ -25,15 +24,15 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
  */
 export function determineOptimalTokens(queryType: string, prompt: string): number {
   if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 2500; // More tokens for detailed timetables
+    return 100000; // Increased to 100,000 tokens for detailed timetables
   }
   
   if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('detail')) {
-    return 2000; // More tokens for explanations
+    return 5000; // Increased from 2,000 to 5,000 for explanations
   }
   
   // Default token count
-  return 1500;
+  return 3000; // Increased from 1,500 to 3,000
 }
 
 /**

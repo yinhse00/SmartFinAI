@@ -1,4 +1,3 @@
-
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -13,7 +12,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 50000; // Adjusted maximum token limit to 50,000 as requested
+    return 100000; // Adjusted maximum token limit to 100,000 as requested
   }
   
   // Previous high-complexity scenarios
@@ -21,7 +20,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 10000; // Keeping this level for regular timetable queries
+    return 20000; // Increased from 10,000 to 20,000 for regular timetable queries
   }
   
   // Complex query handling
@@ -33,18 +32,18 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 4000; // Keeping existing token limit for trading arrangements
+    return 8000; // Increased from 4,000 to 8,000 for trading arrangements
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 3500; // Keeping existing token limit for explanations
+    return 5000; // Increased from 3,500 to 5,000 for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 3000; // Keeping existing token limit for complex topics
+    return 4000; // Increased from 3,000 to 4,000 for complex topics
   }
   
-  return 2500; // Default tokens
+  return 4000; // Increased default tokens from 2,500 to 4,000
 };
 
 /**
