@@ -54,10 +54,37 @@ export const grokService = {
       const { context, reasoning } = await contextService.getRegulatoryContextWithReasoning(params.prompt);
       console.log('Financial Context Reasoning:', reasoning);
 
+      // Check for Trading Arrangement documents
+      const hasTradeArrangementInfo = context && 
+        (context.toLowerCase().includes('trading arrangement') || 
+         context.includes('Trading Arrangements.pdf'));
+      
       // Special handling for trading arrangement related queries
       const isTradingArrangement = isTradingArrangementQuery(params.prompt);
       if (isTradingArrangement) {
         console.log('Query involves trading arrangements, applying specialized handling');
+        console.log('Context contains Trading Arrangement information:', hasTradeArrangementInfo ? 'Yes' : 'No');
+        
+        // If this is a trading arrangement query but we don't have the Trading Arrangement document,
+        // attempt to find it specifically
+        if (!hasTradeArrangementInfo) {
+          console.log('Attempting to find Trading Arrangement document specifically');
+          const tradingDocs = await databaseService.searchByTitle("Trading Arrangements");
+          
+          if (tradingDocs.length > 0) {
+            console.log('Found Trading Arrangement document, adding to context');
+            // Add the trading arrangement document to the context
+            const additionalContext = tradingDocs
+              .map(doc => `[${doc.title} | ${doc.source}]:\n${doc.content}`)
+              .join('\n\n---\n\n');
+            
+            if (context) {
+              params.regulatoryContext = additionalContext + '\n\n---\n\n' + context;
+            } else {
+              params.regulatoryContext = additionalContext;
+            }
+          }
+        }
       }
 
       // Create a professional financial system message based on expertise area
@@ -121,7 +148,8 @@ export const grokService = {
         queryType: queryType,
         metadata: {
           contextUsed: !!context,
-          relevanceScore: evaluateResponseRelevance(finalResponse, params.prompt, queryType)
+          relevanceScore: evaluateResponseRelevance(finalResponse, params.prompt, queryType),
+          tradingArrangementInfoUsed: hasTradeArrangementInfo
         }
       };
 

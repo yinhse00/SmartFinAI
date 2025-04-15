@@ -1,4 +1,3 @@
-
 // This service handles the regulatory database operations
 // In a production environment, this would connect to a proper database
 // For now, we'll create a structured in-memory database that can be populated from files
@@ -86,6 +85,26 @@ export const databaseService = {
       return true;
     });
     
+    return results;
+  },
+  
+  /**
+   * Search the regulatory database specifically by title
+   * This is particularly useful for finding specific documents like Trading Arrangements
+   */
+  searchByTitle: async (titleQuery: string): Promise<RegulatoryEntry[]> => {
+    console.log(`Searching for documents with title containing "${titleQuery}"`);
+    
+    // Convert query to lowercase for case-insensitive matching
+    const lowerTitleQuery = titleQuery.toLowerCase();
+    
+    // Find entries with matching title
+    const results = regulatoryDatabase.filter(entry => {
+      const titleLower = entry.title.toLowerCase();
+      return titleLower.includes(lowerTitleQuery);
+    });
+    
+    console.log(`Found ${results.length} documents with matching title`);
     return results;
   },
   

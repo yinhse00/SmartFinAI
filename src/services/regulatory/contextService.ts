@@ -23,9 +23,36 @@ export const contextService = {
         .replace('rights issues', 'rights issue') // Normalize plural form
         .replace('right issues', 'rights issue'); // Another common typo
       
-      // First try an exact search in listing rules category
+      // First check if this is a trading arrangement query for any of the special corporate actions
+      const isTradingArrangementQuery = normalizedQuery.includes('trading arrangement') || 
+                                    normalizedQuery.includes('timetable') || 
+                                    normalizedQuery.includes('schedule');
+                                    
+      const corporateActions = ['rights issue', 'open offer', 'share consolidation', 'board lot', 'company name change'];
+      const isCorporateAction = corporateActions.some(action => normalizedQuery.includes(action));
+      
+      // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
+      let tradingArrangementsResults = [];
+      if (isTradingArrangementQuery && isCorporateAction) {
+        console.log('Identified as corporate action trading arrangement query - specifically searching for Trading Arrangement documents');
+        
+        // Direct search for Trading Arrangement document by title
+        tradingArrangementsResults = await databaseService.searchByTitle("Trading Arrangements");
+        console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
+        
+        // If title search didn't yield results, try content search
+        if (tradingArrangementsResults.length === 0) {
+          tradingArrangementsResults = await databaseService.search("trading arrangement corporate action", "listing_rules");
+          console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
+        }
+      }
+      
+      // Regular search in listing rules category
       let searchResults = await databaseService.search(normalizedQuery, 'listing_rules');
       console.log(`Found ${searchResults.length} primary results from exact search in listing rules`);
+      
+      // Add trading arrangement results to the beginning for priority
+      searchResults = [...tradingArrangementsResults, ...searchResults];
       
       // If no results, try searching with extracted financial terms
       if (searchResults.length === 0 || searchResults.length < 2) {
