@@ -1,6 +1,11 @@
 
-import { databaseService } from '../databaseService';
+import { databaseService, RegulatoryEntry } from '../databaseService';
 import { QUERY_TYPE_TO_CATEGORY } from '../constants/financialConstants';
+import { extractFinancialTerms } from './utils/financialTermsExtractor';
+import { removeDuplicateResults, prioritizeByRelevance } from './utils/resultProcessors';
+import { generateContextReasoning } from './utils/contextReasoningGenerator';
+import { isWhitewashWaiverQuery, isGeneralOfferQuery, isTradingArrangementQuery, isCorporateActionQuery } from './utils/queryDetector';
+import { getWhitewashWaiverFallbackEntry } from './fallbacks/whitewashFallback';
 
 /**
  * Financial regulatory context service - specialized for Hong Kong corporate finance
@@ -25,23 +30,18 @@ export const contextService = {
         .replace('right issues', 'rights issue'); // Another common typo
       
       // Check if this query is about whitewash waivers specifically
-      const isWhitewashWaiverQuery = normalizedQuery.includes('whitewash') || 
-                                 normalizedQuery.includes('whitewashed') ||
-                                 (normalizedQuery.includes('waiver') && normalizedQuery.includes('general offer'));
+      const isWhitewashQuery = isWhitewashWaiverQuery(normalizedQuery);
                                  
-      if (isWhitewashWaiverQuery) {
+      if (isWhitewashQuery) {
         console.log('Identified as whitewash waiver query - specifically searching for related documents');
       }
       
       // Determine if this is a general offer query (takeovers code)
-      const isGeneralOfferQuery = normalizedQuery.includes('general offer') || 
-                               normalizedQuery.includes('takeover') ||
-                               normalizedQuery.includes('mandatory offer') ||
-                               isWhitewashWaiverQuery;
+      const isGeneralOffer = isGeneralOfferQuery(normalizedQuery, isWhitewashQuery);
       
       // For general offer queries, specifically search for takeovers code documents
       let takeoversResults = [];
-      if (isGeneralOfferQuery) {
+      if (isGeneralOffer) {
         console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
         
         // First, specifically check for the takeovers and mergers code PDF
@@ -63,7 +63,7 @@ export const contextService = {
         }
         
         // Special handling for whitewash waiver queries
-        if (isWhitewashWaiverQuery) {
+        if (isWhitewashQuery) {
           const whitewashResults = await databaseService.search("whitewash waiver dealing requirements", "takeovers");
           console.log(`Found ${whitewashResults.length} whitewash waiver specific results`);
           
@@ -73,16 +73,12 @@ export const contextService = {
       }
       
       // Check for Trading Arrangement documents for corporate actions
-      const isTradingArrangementQuery = normalizedQuery.includes('trading arrangement') || 
-                                    normalizedQuery.includes('timetable') || 
-                                    normalizedQuery.includes('schedule');
-                                    
-      const corporateActions = ['rights issue', 'open offer', 'share consolidation', 'board lot', 'company name change'];
-      const isCorporateAction = corporateActions.some(action => normalizedQuery.includes(action));
+      const isTradingArrangement = isTradingArrangementQuery(normalizedQuery);
+      const isCorporateAction = isCorporateActionQuery(normalizedQuery);
       
       // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
       let tradingArrangementsResults = [];
-      if (isTradingArrangementQuery) {
+      if (isTradingArrangement) {
         if (isCorporateAction) {
           console.log('Identified as corporate action trading arrangement query');
           
@@ -95,7 +91,7 @@ export const contextService = {
             tradingArrangementsResults = await databaseService.search("trading arrangement corporate action", "listing_rules");
             console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
           }
-        } else if (isGeneralOfferQuery) {
+        } else if (isGeneralOffer) {
           console.log('Identified as general offer timetable query');
           // No specific search needed here as we already searched for takeovers documents
         }
@@ -103,7 +99,7 @@ export const contextService = {
       
       // Determine the appropriate category based on query content
       let searchCategory = 'listing_rules'; // Default
-      if (isGeneralOfferQuery) {
+      if (isGeneralOffer) {
         searchCategory = 'takeovers';
       }
       
@@ -112,7 +108,7 @@ export const contextService = {
       console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
       
       // Prioritize results based on query type
-      if (isGeneralOfferQuery) {
+      if (isGeneralOffer) {
         // For general offer queries, prioritize takeovers results
         searchResults = [...takeoversResults, ...searchResults];
       } else {
@@ -139,7 +135,7 @@ export const contextService = {
             query.toLowerCase().includes('schedule') || 
             query.toLowerCase().includes('timeline')) {
             
-          if (isGeneralOfferQuery) {
+          if (isGeneralOffer) {
             // Special handling for general offer timetable requests
             const timetableResults = await databaseService.search('general offer timetable takeovers', 'takeovers');
             console.log(`Found ${timetableResults.length} results using 'general offer timetable' keyword`);
@@ -159,7 +155,7 @@ export const contextService = {
       }
       
       // For whitewash waiver queries, ensure we have dealing requirements information
-      if (isWhitewashWaiverQuery && !searchResults.some(result => 
+      if (isWhitewashQuery && !searchResults.some(result => 
           result.content.toLowerCase().includes('dealing') && 
           result.content.toLowerCase().includes('whitewash'))) {
         console.log("Adding specific whitewash waiver dealing requirements");
@@ -173,7 +169,7 @@ export const contextService = {
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
       // Special case for general offer timetable - add fallback if needed
-      if (isGeneralOfferQuery && 
+      if (isGeneralOffer && 
           (query.toLowerCase().includes('timetable') || 
            query.toLowerCase().includes('schedule') ||
            query.toLowerCase().includes('timeline')) &&
@@ -262,162 +258,4 @@ export const contextService = {
       return 'Error fetching Hong Kong financial regulatory context';
     }
   }
-};
-
-/**
- * Extract financial and regulatory terms from a query
- */
-function extractFinancialTerms(query: string): string[] {
-  const financialTerms = [
-    'listing rules', 'rights issue', 'right issue', 'takeovers code', 'connected transaction',
-    'mandatory offer', 'disclosure', 'prospectus', 'SFC', 'HKEX', 'offering',
-    'waiver', 'circular', 'public float', 'placing', 'subscription', 'underwriting',
-    'timetable', 'schedule', 'timeline', 'whitewash', 'share buy back', 'dealing requirements'
-  ];
-  
-  const lowerQuery = query.toLowerCase();
-  
-  // First check for direct matches
-  const foundTerms = financialTerms.filter(term => 
-    lowerQuery.includes(term.toLowerCase())
-  );
-  
-  // If no direct matches found but contains date references, add rights issue timetable
-  if ((foundTerms.length === 0 || !foundTerms.some(term => term.includes('timetable'))) && 
-    (lowerQuery.includes('date') || 
-     lowerQuery.includes('june') ||
-     lowerQuery.includes('jan') ||
-     lowerQuery.includes('feb') ||
-     lowerQuery.includes('mar') ||
-     lowerQuery.includes('apr') ||
-     lowerQuery.includes('may') ||
-     lowerQuery.includes('jun') ||
-     lowerQuery.includes('jul') ||
-     lowerQuery.includes('aug') ||
-     lowerQuery.includes('sep') ||
-     lowerQuery.includes('oct') ||
-     lowerQuery.includes('nov') ||
-     lowerQuery.includes('dec') ||
-     lowerQuery.match(/\d+\s+(january|february|march|april|may|june|july|august|september|october|november|december)/i) ||
-     lowerQuery.match(/\d{1,2}\/\d{1,2}\/\d{2,4}/))) {
-    
-    // Add timetable terms if they're missing but query has dates
-    if (lowerQuery.includes('rights') || lowerQuery.includes('right')) {
-      return [...foundTerms, 'timetable', 'rights issue'].filter((v, i, a) => a.indexOf(v) === i);
-    }
-    return [...foundTerms, 'timetable'].filter((v, i, a) => a.indexOf(v) === i);
-  }
-  
-  return foundTerms.length > 0 ? foundTerms : [query];
-}
-
-/**
- * Remove duplicate search results
- */
-function removeDuplicateResults(results: any[]): any[] {
-  const uniqueIds = new Set();
-  return results.filter(result => {
-    // Create a simple ID from title and source
-    const resultId = `${result.title}|${result.source}`;
-    if (uniqueIds.has(resultId)) {
-      return false;
-    }
-    uniqueIds.add(resultId);
-    return true;
-  });
-}
-
-/**
- * Prioritize search results based on relevance to financial terms
- */
-function prioritizeByRelevance(results: any[], financialTerms: string[]): any[] {
-  return results.sort((a, b) => {
-    const aRelevance = calculateRelevance(a, financialTerms);
-    const bRelevance = calculateRelevance(b, financialTerms);
-    return bRelevance - aRelevance;
-  });
-}
-
-/**
- * Calculate relevance score of a result to financial terms
- */
-function calculateRelevance(result: any, financialTerms: string[]): number {
-  let score = 0;
-  
-  // Score based on matches in title and content
-  financialTerms.forEach(term => {
-    if (result.title.toLowerCase().includes(term.toLowerCase())) score += 3;
-    if (result.content.toLowerCase().includes(term.toLowerCase())) score += 1;
-  });
-  
-  // Special handling for timetable searches
-  if (financialTerms.some(term => term.includes('timetable') || term.includes('schedule'))) {
-    if (result.title.toLowerCase().includes('timetable')) score += 5;
-    if (result.content.toLowerCase().includes('timetable')) score += 2;
-  }
-  
-  // Bonus for listing rules and regulatory categories
-  if (result.category === 'listing_rules') score += 2;
-  if (result.category === 'takeovers') score += 2;
-  
-  return score;
-}
-
-/**
- * Generate reasoning for why specific context was selected
- */
-function generateContextReasoning(results: any[], query: string, financialTerms: string[]): string {
-  if (results.length === 0) {
-    return 'No relevant Hong Kong financial regulatory information found for this query.';
-  }
-  
-  // If we have results but they might be limited
-  if (results.length < 2 && (query.toLowerCase().includes('rights issue') && query.toLowerCase().includes('timetable'))) {
-    return 'Limited specific regulatory information found. Providing general rights issue timetable guidance based on Hong Kong Listing Rules Chapter 10.';
-  }
-  
-  // Special case for whitewash waivers
-  if (query.toLowerCase().includes('whitewash')) {
-    if (results.some(result => result.content.toLowerCase().includes('dealing') && result.content.toLowerCase().includes('whitewash'))) {
-      return 'Found relevant Takeovers Code provisions including specific dealing requirements for whitewash waivers under Note 1 to Rule 32.';
-    }
-  }
-  
-  const categoryCount: Record<string, number> = {};
-  results.forEach(result => {
-    categoryCount[result.category] = (categoryCount[result.category] || 0) + 1;
-  });
-  
-  const mainCategories = Object.entries(categoryCount)
-    .sort((a, b) => b[1] - a[1])
-    .map(([cat]) => cat);
-  
-  // Check if we have the takeovers code document
-  const hasTakeoversCode = results.some(result => 
-    result.title.toLowerCase().includes('codes on takeovers and mergers') || 
-    result.title.toLowerCase().includes('takeovers code')
-  );
-  
-  let matchedTerms = financialTerms.length ? 
-    `financial terms (${financialTerms.join(', ')})` : 
-    'general financial context';
-    
-  if (hasTakeoversCode) {
-    matchedTerms = 'Codes on Takeovers and Mergers and Share Buy-backs and ' + matchedTerms;
-  }
-  
-  return `Found ${results.length} relevant Hong Kong financial document(s) matching ${matchedTerms}. Primary sources include ${mainCategories.join(', ')} regulations.`;
-}
-
-// Fix the issue with the whitewash waiver information by providing all required properties
-const getWhitewashWaiverFallbackEntry = () => {
-  return {
-    id: `whitewash-waiver-${Date.now()}`,
-    title: "Whitewash Waiver Dealing Requirements",
-    source: "Takeovers Code Note 1 to Rule 32",
-    content: "When a waiver from a mandatory general offer obligation under Rule 26 is granted (whitewash waiver), neither the potential controlling shareholders nor any person acting in concert with them may deal in the securities of the company during the period between the announcement of the proposals and the completion of the subscription. The Executive will not normally waive an obligation under Rule 26 if the potential controlling shareholders or their concert parties have acquired voting rights in the company in the 6 months prior to the announcement of the proposals but subsequent to negotiations with the directors of the company.",
-    category: "takeovers" as const,
-    lastUpdated: new Date(),
-    status: "active" as const
-  };
 };
