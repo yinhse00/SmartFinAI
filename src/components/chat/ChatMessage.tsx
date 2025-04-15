@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Info } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,6 +14,7 @@ export interface Message {
   isError?: boolean;
   isUsingFallback?: boolean;
   reasoning?: string;
+  queryType?: string;
 }
 
 interface ChatMessageProps {
@@ -22,7 +22,7 @@ interface ChatMessageProps {
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message }) => {
-  const { sender, content, references, isError, isUsingFallback, reasoning } = message;
+  const { sender, content, references, isError, isUsingFallback, reasoning, queryType } = message;
   
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
