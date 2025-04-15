@@ -32,26 +32,6 @@ export async function uploadFilesToSupabase(
   try {
     console.log('Starting upload of', files.length, 'files to category:', category);
     
-    // Check if references bucket exists - no longer attempting to create it
-    // since that requires admin privileges
-    const { data: bucketData, error: bucketError } = await supabase.storage
-      .getBucket('references');
-    
-    if (bucketError) {
-      console.error('Error checking bucket existence:', bucketError);
-      
-      // Instead of creating bucket (which requires admin privileges),
-      // inform the user about the issue
-      if (bucketError.message.includes('not found')) {
-        console.error('References bucket not found');
-        throw new Error('The storage bucket for references does not exist. Please contact an administrator to create it.');
-      } else {
-        throw new Error(`Error accessing storage: ${bucketError.message}`);
-      }
-    } else {
-      console.log('References bucket exists');
-    }
-    
     // Upload files to Supabase storage
     const uploadedFiles: UploadedFile[] = [];
     const failedUploads: { name: string, error: string }[] = [];
@@ -86,6 +66,20 @@ export async function uploadFilesToSupabase(
         
       if (error) {
         console.error('Error uploading file:', file.name, error);
+        
+        // Provide more specific error messages based on error type
+        if (error.message.includes('bucket not found')) {
+          return { 
+            success: false, 
+            message: "The 'references' storage bucket does not exist. Please contact your administrator." 
+          };
+        } else if (error.message.includes('permission')) {
+          return { 
+            success: false, 
+            message: "You don't have permission to upload to the 'references' bucket. Please contact your administrator." 
+          };
+        }
+        
         failedUploads.push({ name: file.name, error: error.message });
         continue;
       }
