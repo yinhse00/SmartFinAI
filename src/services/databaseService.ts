@@ -243,6 +243,23 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
+    // Add information about General Offers under Takeovers Code
+    databaseService.addSampleEntry({
+      title: "General Offers Timetable",
+      content: "Takeovers Code Rule 15 establishes the timeline requirements for general offers:\n\n" +
+        "1. First closing date must be at least 21 days following the posting of the offer document (Rule 15.1).\n\n" +
+        "2. An offer must initially be open for at least 21 days following the date on which the offer document is posted (Rule 15.1).\n\n" +
+        "3. When an offer becomes or is declared unconditional as to acceptances, it should remain open for acceptance for not less than 14 days thereafter (Rule 15.3).\n\n" + 
+        "4. All conditions must be fulfilled or the offer must lapse within 60 days of posting the offer document, or 21 days from the date the offer becomes or is declared unconditional as to acceptances, whichever is later (Rule 15.5).\n\n" +
+        "5. The offeror must post consideration to accepting shareholders within 7 days following the later of: the date on which the offer becomes or is declared unconditional; or the date of receipt of a complete acceptance (Rule 20.1).\n\n" +
+        "6. Competing offers may cause adjustments to timetables at the Executive's discretion (Rule 15.6).",
+      category: "takeovers",
+      source: "SFC Takeovers Code Rule 15",
+      section: "Rule 15",
+      lastUpdated: new Date("2023-01-15"),
+      status: "active"
+    });
+    
     console.log("Added sample regulatory data");
   }
 };

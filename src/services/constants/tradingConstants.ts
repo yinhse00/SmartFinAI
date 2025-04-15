@@ -20,6 +20,30 @@ Notes:
 - Share certificates for fully-paid shares are typically posted 6 business days after acceptance deadline
 - Final timetables must be approved by HKEX before announcement`,
 
+  GENERAL_OFFER: `# Timetable for Mandatory General Offer under Hong Kong Takeovers Code
+
+| Day | Event | Regulatory Reference |
+|-----|-------|----------------------|
+| Day 0 | Triggering Event (Acquisition of 30%+ voting rights) | Rule 26.1 |
+| Day 0-3 | Announcement (Rule 3.5 announcement) | Rule 3.5 |
+| Day 0-21 | Appointment of Independent Financial Adviser | Rule 2.1 |
+| Day 0-28 | Despatch of Offer Document | Rule 8.2 |
+| Day 0-35 | Despatch of Offeree Board Circular | Rule 8.4 |
+| Day 0-28 to Day 0-59 | First Closing Date (Min. 21 days after despatch) | Rule 15.1, Note 1 |
+| Day 0-80 | Final Day to Fulfill or Waive Conditions (60 days from despatch) | Rule 15.5 |
+| Day 0-95 | Final Closing Date (No later than Day 81 if unconditional by Day 60) | Rule 15.5, Note 2 |
+| Day 0+7 from Closing | Settlement (within 7 days of offer closing) | Rule 20.1 |
+
+Notes:
+- Rule 26.1 requires a mandatory offer when a person acquires 30% or more of voting rights, or when holding between 30-50% increases by more than 2% in any 12 months
+- The first closing date must be at least 21 days from the date of despatch of the offer document
+- All conditions must be fulfilled or waived within 60 days of despatch of the offer document, or 21 days from when it becomes unconditional as to acceptances, whichever is later
+- The offeror must announce the level of acceptances by 7:00 p.m. on the closing date
+- Settlement must be made within 7 days of the offer closing
+- If competing offers emerge, timetables may be aligned by the Executive
+- Offer prices cannot be lowered once announced (Rule 18.1)
+- This timetable reflects Takeovers Code requirements and practice in Hong Kong`,
+
   OPEN_OFFER: `# Trading Arrangements for Open Offer under Hong Kong Listing Rules
 
 | Date | Event | Trading Implications |

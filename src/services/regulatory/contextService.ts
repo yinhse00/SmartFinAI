@@ -1,5 +1,5 @@
-
 import { databaseService } from '../databaseService';
+import { QUERY_TYPE_TO_CATEGORY } from '../constants/financialConstants';
 
 /**
  * Financial regulatory context service - specialized for Hong Kong corporate finance
@@ -23,7 +23,28 @@ export const contextService = {
         .replace('rights issues', 'rights issue') // Normalize plural form
         .replace('right issues', 'rights issue'); // Another common typo
       
-      // First check if this is a trading arrangement query for any of the special corporate actions
+      // Determine if this is a general offer query (takeovers code)
+      const isGeneralOfferQuery = normalizedQuery.includes('general offer') || 
+                               normalizedQuery.includes('takeover') ||
+                               normalizedQuery.includes('mandatory offer');
+      
+      // For general offer queries, specifically search for takeovers code documents
+      let takeoversResults = [];
+      if (isGeneralOfferQuery) {
+        console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
+        
+        // Direct search in takeovers category
+        takeoversResults = await databaseService.search(normalizedQuery, 'takeovers');
+        console.log(`Found ${takeoversResults.length} Takeovers Code documents by category search`);
+        
+        // If direct search didn't yield results, try content search with specific terms
+        if (takeoversResults.length === 0) {
+          takeoversResults = await databaseService.search("general offer mandatory takeovers code", "takeovers");
+          console.log(`Found ${takeoversResults.length} results from takeovers keyword search`);
+        }
+      }
+      
+      // Check for Trading Arrangement documents for corporate actions
       const isTradingArrangementQuery = normalizedQuery.includes('trading arrangement') || 
                                     normalizedQuery.includes('timetable') || 
                                     normalizedQuery.includes('schedule');
@@ -33,32 +54,49 @@ export const contextService = {
       
       // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
       let tradingArrangementsResults = [];
-      if (isTradingArrangementQuery && isCorporateAction) {
-        console.log('Identified as corporate action trading arrangement query - specifically searching for Trading Arrangement documents');
-        
-        // Direct search for Trading Arrangement document by title
-        tradingArrangementsResults = await databaseService.searchByTitle("Trading Arrangements");
-        console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
-        
-        // If title search didn't yield results, try content search
-        if (tradingArrangementsResults.length === 0) {
-          tradingArrangementsResults = await databaseService.search("trading arrangement corporate action", "listing_rules");
-          console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
+      if (isTradingArrangementQuery) {
+        if (isCorporateAction) {
+          console.log('Identified as corporate action trading arrangement query');
+          
+          // Direct search for Trading Arrangement document by title
+          tradingArrangementsResults = await databaseService.searchByTitle("Trading Arrangements");
+          console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
+          
+          // If title search didn't yield results, try content search
+          if (tradingArrangementsResults.length === 0) {
+            tradingArrangementsResults = await databaseService.search("trading arrangement corporate action", "listing_rules");
+            console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
+          }
+        } else if (isGeneralOfferQuery) {
+          console.log('Identified as general offer timetable query');
+          // No specific search needed here as we already searched for takeovers documents
         }
       }
       
-      // Regular search in listing rules category
-      let searchResults = await databaseService.search(normalizedQuery, 'listing_rules');
-      console.log(`Found ${searchResults.length} primary results from exact search in listing rules`);
+      // Determine the appropriate category based on query content
+      let searchCategory = 'listing_rules'; // Default
+      if (isGeneralOfferQuery) {
+        searchCategory = 'takeovers';
+      }
       
-      // Add trading arrangement results to the beginning for priority
-      searchResults = [...tradingArrangementsResults, ...searchResults];
+      // Regular search in appropriate category
+      let searchResults = await databaseService.search(normalizedQuery, searchCategory);
+      console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
+      
+      // Prioritize results based on query type
+      if (isGeneralOfferQuery) {
+        // For general offer queries, prioritize takeovers results
+        searchResults = [...takeoversResults, ...searchResults];
+      } else {
+        // For other queries, prioritize trading arrangement results if applicable
+        searchResults = [...tradingArrangementsResults, ...searchResults];
+      }
       
       // If no results, try searching with extracted financial terms
       if (searchResults.length === 0 || searchResults.length < 2) {
         const financialTermsQuery = financialTerms.join(' ');
-        const termResults = await databaseService.search(financialTermsQuery, 'listing_rules');
-        console.log(`Found ${termResults.length} results using financial terms in listing rules`);
+        const termResults = await databaseService.search(financialTermsQuery, searchCategory);
+        console.log(`Found ${termResults.length} results using financial terms in ${searchCategory}`);
         
         // Combine results if we found some with terms
         if (termResults.length > 0) {
@@ -72,10 +110,18 @@ export const contextService = {
         if (query.toLowerCase().includes('timetable') || 
             query.toLowerCase().includes('schedule') || 
             query.toLowerCase().includes('timeline')) {
-          // Special handling for timetable requests - always include rights issue timetable info
-          const timetableResults = await databaseService.search('rights issue timetable', 'listing_rules');
-          console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
-          searchResults = [...searchResults, ...timetableResults];
+            
+          if (isGeneralOfferQuery) {
+            // Special handling for general offer timetable requests
+            const timetableResults = await databaseService.search('general offer timetable takeovers', 'takeovers');
+            console.log(`Found ${timetableResults.length} results using 'general offer timetable' keyword`);
+            searchResults = [...searchResults, ...timetableResults];
+          } else {
+            // Default to rights issue timetable info for other timetable requests
+            const timetableResults = await databaseService.search('rights issue timetable', 'listing_rules');
+            console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
+            searchResults = [...searchResults, ...timetableResults];
+          }
         } else {
           // General financial term search across all categories
           const generalResults = await databaseService.search(financialTerms[0] || normalizedQuery);
@@ -90,13 +136,27 @@ export const contextService = {
       // Combine and prioritize results with financial relevance scoring
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
-      // Special case for rights issue timetables - ensure we have at least basic information
-      if (query.toLowerCase().includes('rights issue') && 
+      // Special case for general offer timetable - add fallback if needed
+      if (isGeneralOfferQuery && 
           (query.toLowerCase().includes('timetable') || 
            query.toLowerCase().includes('schedule') ||
            query.toLowerCase().includes('timeline')) &&
           prioritizedResults.length < 2) {
-        console.log("Enhancing timetable context with fallback information");
+        console.log("Enhancing general offer timetable context with fallback information");
+        prioritizedResults.push({
+          title: "General Offer Timetable",
+          source: "Takeovers Code Rule 15",
+          content: "A general offer timetable under the Takeovers Code begins with the Rule 3.5 announcement and must specify a closing date not less than 21 days from the date the offer document is posted. All conditions must be satisfied within 60 days from the offer document posting, unless extended by the Executive.",
+          category: "takeovers"
+        });
+      }
+      // Special case for rights issue timetables if needed
+      else if (query.toLowerCase().includes('rights issue') && 
+          (query.toLowerCase().includes('timetable') || 
+           query.toLowerCase().includes('schedule') ||
+           query.toLowerCase().includes('timeline')) &&
+          prioritizedResults.length < 2) {
+        console.log("Enhancing rights issue timetable context with fallback information");
         prioritizedResults.push({
           title: "Rights Issue Timetable",
           source: "Listing Rules Chapter 10",

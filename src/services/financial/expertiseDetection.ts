@@ -13,6 +13,13 @@ export function detectFinancialExpertiseArea(prompt: string): string {
     if (tradingType) return tradingType;
   }
   
+  // Enhanced detection for general offers and takeovers code related queries
+  if ((lowerPrompt.includes('general offer') || lowerPrompt.includes('mandatory offer') || 
+       lowerPrompt.includes('takeover offer')) && 
+      !lowerPrompt.includes('rights issue')) {
+    return FINANCIAL_EXPERTISES.TAKEOVERS;
+  }
+  
   // Prioritize specific Hong Kong financial expertise areas
   if (lowerPrompt.includes('rights issue'))
     return FINANCIAL_EXPERTISES.RIGHTS_ISSUE;
@@ -37,8 +44,7 @@ export function detectFinancialExpertiseArea(prompt: string): string {
       lowerPrompt.includes('chapter 14a'))
     return FINANCIAL_EXPERTISES.CONNECTED_TRANSACTIONS;
     
-  if ((lowerPrompt.includes('takeover') || lowerPrompt.includes('takeovers code')) && 
-      lowerPrompt.includes('mandatory'))
+  if ((lowerPrompt.includes('takeover') || lowerPrompt.includes('takeovers code')))
     return FINANCIAL_EXPERTISES.TAKEOVERS;
     
   if (lowerPrompt.includes('prospectus') || 
