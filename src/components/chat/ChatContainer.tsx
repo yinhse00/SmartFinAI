@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
 import ChatHistory from './ChatHistory';
@@ -28,13 +28,26 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   handleKeyDown,
   onOpenApiKeyDialog
 }) => {
+  // Ref for chat history container
+  const chatHistoryRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (chatHistoryRef.current) {
+      chatHistoryRef.current.scrollTop = chatHistoryRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
-      <CardContent className="flex-1 overflow-y-auto p-0">
+      <CardContent 
+        className="flex-1 overflow-y-auto p-0" 
+        ref={chatHistoryRef}
+      >
         <ChatHistory messages={messages} isLoading={isLoading} />
       </CardContent>
       <ChatInput 

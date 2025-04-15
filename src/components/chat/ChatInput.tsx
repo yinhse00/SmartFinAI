@@ -2,8 +2,9 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Info } from 'lucide-react';
+import { Send, Loader2, Info, Calendar, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ChatInputProps {
   input: string;
@@ -24,6 +25,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onOpenApiKeyDialog,
   handleKeyDown
 }) => {
+  // Suggestions for specific financial queries
+  const suggestions = [
+    "rights issue timetable with starting date [date]",
+    "connected transaction requirements",
+    "takeovers code Rule 26 explanation",
+    "prospectus disclosure requirements"
+  ];
+
   return (
     <div className="p-4 border-t">
       <div className="flex gap-2">
@@ -43,19 +52,59 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
         </Button>
       </div>
-      <div className="mt-2 text-xs text-gray-500 flex items-center gap-1">
-        <Info size={12} />
-        <span>
-          Using Grok AI for accurate regulatory assistance. Responses include context from our database.
-          {!isGrokApiKeySet && (
-            <Badge 
-              variant="outline" 
-              className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
-            >
-              API Key Required
-            </Badge>
-          )}
-        </span>
+      
+      <div className="mt-2 text-xs space-y-1">
+        <div className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
+          <Info size={12} />
+          <span>
+            Using Grok AI for accurate regulatory assistance. Responses include context from our database.
+            {!isGrokApiKeySet && (
+              <Badge 
+                variant="outline" 
+                className="ml-1 text-xs bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300"
+              >
+                API Key Required
+              </Badge>
+            )}
+          </span>
+        </div>
+        
+        <div className="flex gap-1 flex-wrap">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="text-xs cursor-pointer bg-finance-light-blue/20 hover:bg-finance-light-blue/40"
+                  onClick={() => setInput("Please construct a rights issue timetable when the starting date is 1 June 2025")}
+                >
+                  <Calendar size={10} className="mr-1" />
+                  Rights Issue Timetable
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Request a detailed rights issue timetable</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="text-xs cursor-pointer bg-finance-light-blue/20 hover:bg-finance-light-blue/40"
+                  onClick={() => setInput("Explain connected transaction requirements under Chapter 14A")}
+                >
+                  Connected Transactions
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Learn about connected transaction requirements</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       </div>
     </div>
   );
