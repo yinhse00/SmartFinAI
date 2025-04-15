@@ -65,7 +65,14 @@ export const useChatLogic = () => {
   };
 
   const retryLastQuery = useCallback(() => {
-    if (!lastQuery) return;
+    if (!lastQuery) {
+      toast({
+        title: "No previous query",
+        description: "There is no previous query to retry.",
+        variant: "destructive"
+      });
+      return;
+    }
     
     setInput(lastQuery);
     // Small timeout to ensure UI updates before sending
@@ -258,6 +265,7 @@ export const useChatLogic = () => {
     setGrokApiKeyInput,
     isGrokApiKeySet,
     messages,
+    setMessages,
     isLoading,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,

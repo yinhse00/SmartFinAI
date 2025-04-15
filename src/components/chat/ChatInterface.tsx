@@ -16,6 +16,7 @@ const ChatInterface = () => {
     setGrokApiKeyInput,
     isGrokApiKeySet,
     messages,
+    setMessages,
     isLoading,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
@@ -25,45 +26,71 @@ const ChatInterface = () => {
     retryLastQuery
   } = useChatLogic();
 
-  // Monitor for incomplete responses and handle accordingly
+  // Enhanced truncation detection for incomplete responses
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      // Check if the last message might be incomplete (ends abruptly)
+      
+      // Only check bot messages that aren't already marked as truncated
       if (lastMessage.sender === 'bot' && 
           lastMessage.content && 
-          lastMessage.content.length > 500 &&
-          !lastMessage.content.endsWith('.') && 
-          !lastMessage.content.endsWith('!') && 
-          !lastMessage.content.endsWith('?') &&
-          !lastMessage.content.includes('|---') && // Table format check
-          !lastMessage.content.endsWith(':') &&
-          !lastMessage.content.endsWith(';') &&
-          !lastMessage.content.endsWith('}') &&
           !lastMessage.isTruncated) {
         
-        // Only show this warning if it's not clearly a structured response
-        if (!lastMessage.content.includes('|') && 
-            !lastMessage.content.includes('T+') && 
-            !lastMessage.content.includes('Timetable')) {
+        const content = lastMessage.content;
+        
+        // Check various indicators of potential truncation
+        const possiblyTruncated = 
+          // Long message that doesn't end with proper punctuation
+          (content.length > 200 &&
+           !content.endsWith('.') && 
+           !content.endsWith('!') && 
+           !content.endsWith('?') &&
+           !content.endsWith(':') &&
+           !content.endsWith(';') &&
+           !content.endsWith(')') &&
+           !content.endsWith('}') &&
+           !content.endsWith(']')) ||
+          
+          // Cut off table formatting
+          (content.includes('|') && !content.includes('---') && content.split('|').length < 6) ||
+          
+          // Cut off markdown formatting 
+          ((content.split('```').length % 2) === 0) ||
+          
+          // Cut off list that ends with a bullet point
+          (content.trim().endsWith('-') || content.trim().endsWith('*')) ||
+          
+          // Cut off sentence (likely mid-sentence)
+          (content.split(' ').length > 30 && 
+           !content.endsWith('.') && !content.endsWith('!') && !content.endsWith('?') && 
+           !content.endsWith(':') && !content.includes('T+') && !content.endsWith(';')) ||
+           
+          // Possible unfinished JSON or code
+          (content.includes('{') && !content.includes('}')) ||
+          (content.includes('[') && !content.includes(']'));
+
+        if (possiblyTruncated) {
+          // Mark the message as truncated
+          const updatedMessages = [...messages];
+          updatedMessages[updatedMessages.length - 1].isTruncated = true;
+          setMessages(updatedMessages);
+          
+          // Show toast with retry option
           toast({
-            title: "Response Note",
-            description: "The response may have been truncated. You can try asking for the same information again.",
-            duration: 8000,
+            title: "Incomplete Response",
+            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
+            duration: 10000,
             action: <button 
                      onClick={retryLastQuery} 
                      className="px-3 py-1 rounded bg-finance-medium-blue text-white text-xs hover:bg-finance-dark-blue"
                     >
-                      Retry
+                      Retry Query
                     </button>
           });
-          
-          // Mark the message as truncated
-          messages[messages.length - 1].isTruncated = true;
         }
       }
     }
-  }, [messages, toast, retryLastQuery]);
+  }, [messages, toast, retryLastQuery, setMessages]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
