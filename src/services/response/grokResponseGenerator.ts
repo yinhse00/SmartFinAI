@@ -15,7 +15,7 @@ import { generateFallbackResponse } from '../fallbackResponseService';
 import { isTradingArrangementComplete } from '@/utils/truncationUtils';
 import { FINANCIAL_EXPERTISES } from '../constants/financialConstants';
 import { RIGHTS_ISSUE_TIMETABLE_FALLBACK } from '../constants/fallbackConstants';
-import { databaseService } from '../databaseService';
+import { databaseService, searchService } from '../databaseService';
 
 /**
  * Service for generating responses using Grok AI with financial expertise
@@ -56,7 +56,7 @@ export const grokResponseGenerator = {
       if (isWhitewashQuery && !context?.toLowerCase().includes('whitewash')) {
         console.log('Query involves whitewash waiver, but context lacks specific information, searching for it');
         
-        const whitewashDocs = await databaseService.search("whitewash waiver dealing requirements", "takeovers");
+        const whitewashDocs = await searchService.search("whitewash waiver dealing requirements", "takeovers");
         
         if (whitewashDocs.length > 0) {
           console.log('Found whitewash waiver documents, adding to context');
@@ -92,7 +92,7 @@ When a waiver from a mandatory general offer obligation under Rule 26 is granted
         // attempt to find it specifically
         if (!hasTradeArrangementInfo) {
           console.log('Attempting to find Trading Arrangement document specifically');
-          const tradingDocs = await databaseService.searchByTitle("Trading Arrangements");
+          const tradingDocs = await searchService.searchByTitle("Trading Arrangements");
           
           if (tradingDocs.length > 0) {
             console.log('Found Trading Arrangement document, adding to context');
