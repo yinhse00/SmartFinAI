@@ -8,6 +8,8 @@ import FileDropZone from './FileDropZone';
 import FileList from './FileList';
 import MetadataForm from './MetadataForm';
 import { uploadFilesToSupabase } from '@/utils/referenceUploadUtils';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 interface FileWithError extends File {
   error?: string;
@@ -156,10 +158,19 @@ const ReferenceUploader = () => {
 
         {/* Error Message */}
         {uploadError && (
-          <div className="p-3 rounded border border-red-200 bg-red-50 text-red-600 text-sm dark:bg-red-900/10 dark:border-red-900/30 dark:text-red-400">
-            <p className="font-medium">Upload failed</p>
-            <p>{uploadError}</p>
-          </div>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Upload failed</AlertTitle>
+            <AlertDescription>
+              {uploadError}
+              {uploadError.includes('bucket does not exist') && (
+                <p className="mt-2 text-sm">
+                  This application requires a Supabase storage bucket named 'references'. 
+                  Please ask your administrator to set up the required storage bucket.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
 
         {/* Metadata */}

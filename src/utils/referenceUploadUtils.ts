@@ -32,28 +32,19 @@ export async function uploadFilesToSupabase(
   try {
     console.log('Starting upload of', files.length, 'files to category:', category);
     
-    // Check if references bucket exists
+    // Check if references bucket exists - no longer attempting to create it
+    // since that requires admin privileges
     const { data: bucketData, error: bucketError } = await supabase.storage
       .getBucket('references');
     
     if (bucketError) {
       console.error('Error checking bucket existence:', bucketError);
       
-      // Create bucket if it doesn't exist
+      // Instead of creating bucket (which requires admin privileges),
+      // inform the user about the issue
       if (bucketError.message.includes('not found')) {
-        console.log('References bucket not found, creating it...');
-        const { error: createError } = await supabase.storage.createBucket('references', {
-          public: false,
-          allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
-          fileSizeLimit: 20971520 // 20MB
-        });
-        
-        if (createError) {
-          console.error('Error creating bucket:', createError);
-          throw new Error(`Failed to create storage bucket: ${createError.message}`);
-        } else {
-          console.log('Successfully created references bucket');
-        }
+        console.error('References bucket not found');
+        throw new Error('The storage bucket for references does not exist. Please contact an administrator to create it.');
       } else {
         throw new Error(`Error accessing storage: ${bucketError.message}`);
       }
