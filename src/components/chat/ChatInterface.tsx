@@ -25,7 +25,7 @@ const ChatInterface = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex-1 flex gap-4">
-        {/* Chat Window */}
+        {/* Financial Expert Chat Window */}
         <div className="flex-1 flex flex-col">
           <ChatContainer 
             messages={messages}
@@ -39,11 +39,11 @@ const ChatInterface = () => {
           />
         </div>
 
-        {/* Knowledge Panel */}
+        {/* Hong Kong Financial Knowledge Panel */}
         <KnowledgePanel />
       </div>
 
-      {/* API Key Dialog */}
+      {/* API Key Dialog for Financial Expert Access */}
       <APIKeyDialog 
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}

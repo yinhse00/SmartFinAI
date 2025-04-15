@@ -1,4 +1,5 @@
-// This is the service for the Grok AI integration
+
+// This is the service for the Grok AI integration specialized for Hong Kong financial expertise
 import { databaseService } from './databaseService';
 import { hasGrokApiKey, getGrokApiKey } from './apiKeyService';
 import { createEnhancedPrompt, formatRegulatoryEntriesAsContext } from './contextUtils';
@@ -19,8 +20,11 @@ interface GrokRequestParams {
 
 interface GrokResponse {
   text: string;
-  // Add other response fields as needed based on the actual API
   queryType?: string;
+  metadata?: {
+    contextUsed?: boolean;
+    relevanceScore?: number;
+  }
 }
 
 interface TranslationParams {
@@ -29,6 +33,19 @@ interface TranslationParams {
   targetLanguage: 'en' | 'zh';
   format?: string;
 }
+
+// Financial expertises available in the system
+const FINANCIAL_EXPERTISES = {
+  LISTING_RULES: 'listing_rules',
+  TAKEOVERS: 'takeovers_code',
+  RIGHTS_ISSUE: 'rights_issue',
+  CONNECTED_TRANSACTIONS: 'connected_transactions',
+  DISCLOSURE: 'disclosure',
+  PROSPECTUS: 'prospectus',
+  CIRCULAR: 'circular',
+  WAIVER: 'waiver',
+  GENERAL: 'general'
+};
 
 // Detailed rights issue timetable data to use when API fails to generate one
 const RIGHTS_ISSUE_TIMETABLE_FALLBACK = `Timetable for a Rights Issue under Hong Kong Listing Rules
@@ -74,24 +91,31 @@ export const grokService = {
   getRegulatoryContext: contextService.getRegulatoryContext,
   
   /**
-   * Enhanced response generation with more robust context handling
+   * Enhanced professional financial response generation with advanced context handling
    */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
     try {
-      // Enhanced logging for debugging
-      console.group('Grok Response Generation');
-      console.log('Input Prompt:', params.prompt);
+      // Enhanced logging for professional financial expertise
+      console.group('Hong Kong Financial Expert Response Generation');
+      console.log('Input Query:', params.prompt);
 
-      // Detect specific query types
-      const queryType = detectQueryType(params.prompt);
-      console.log('Detected Query Type:', queryType);
+      // Detect specific query types for specialized financial handling
+      const queryType = detectFinancialExpertiseArea(params.prompt);
+      console.log('Detected Financial Expertise Area:', queryType);
 
-      // Retrieve context with enhanced reasoning
+      // Retrieve context with enhanced financial reasoning
       const { context, reasoning } = await contextService.getRegulatoryContextWithReasoning(params.prompt);
-      console.log('Context Reasoning:', reasoning);
+      console.log('Financial Context Reasoning:', reasoning);
 
-      // Create a more structured system message based on query type
-      const systemMessage = createSystemMessageForQueryType(queryType, context);
+      // Create a professional financial system message based on expertise area
+      const systemMessage = createFinancialExpertSystemPrompt(queryType, context);
+      console.log('Using specialized financial expert prompt');
+
+      // Dynamic temperature and token settings based on query complexity
+      const temperature = determineOptimalTemperature(queryType, params.prompt);
+      const maxTokens = determineOptimalTokens(queryType, params.prompt);
+      
+      console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}`);
 
       // Prepare request body with enhanced instructions
       const requestBody = {
@@ -100,24 +124,38 @@ export const grokService = {
           { role: 'user', content: params.prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: queryType === 'timetable' ? 0.1 : 0.3,
-        max_tokens: queryType === 'timetable' ? 2000 : 1500,
+        temperature: temperature,
+        max_tokens: maxTokens,
       };
 
-      console.log('Request Body:', requestBody);
-
-      // Make API call
+      // Make API call with professional financial expertise configuration
       const response = await grokApiService.callChatCompletions(requestBody);
+      
+      // Process the response
+      const responseText = response.choices[0].message.content;
+      
+      // Handle special case for timetables if response quality is insufficient
+      let finalResponse = responseText;
+      if (queryType === FINANCIAL_EXPERTISES.RIGHTS_ISSUE && 
+          params.prompt.toLowerCase().includes('timetable') &&
+          !isWellFormattedTimetable(responseText)) {
+        console.log('Using fallback professional timetable format for rights issue');
+        finalResponse = RIGHTS_ISSUE_TIMETABLE_FALLBACK;
+      }
 
       console.groupEnd();
 
       return {
-        text: response.choices[0].message.content,
-        queryType: queryType
+        text: finalResponse,
+        queryType: queryType,
+        metadata: {
+          contextUsed: !!context,
+          relevanceScore: evaluateResponseRelevance(finalResponse, params.prompt, queryType)
+        }
       };
 
     } catch (error) {
-      console.error('Grok Response Generation Error:', error);
+      console.error('Hong Kong Financial Expert Response Error:', error);
       console.groupEnd();
 
       return generateFallbackResponse(params.prompt, error);
@@ -145,44 +183,185 @@ export const grokService = {
   generateExcelDocument: documentGenerationService.generateExcelDocument
 };
 
-// Helper function to detect query type
-function detectQueryType(prompt: string): string {
+/**
+ * Detect financial expertise area needed for the query
+ */
+function detectFinancialExpertiseArea(prompt: string): string {
   const lowerPrompt = prompt.toLowerCase();
-  if (lowerPrompt.includes('rights issue') && lowerPrompt.includes('timetable')) return 'timetable';
-  if (lowerPrompt.includes('connected transaction')) return 'connected_transaction';
-  if (lowerPrompt.includes('mandatory offer')) return 'mandatory_offer';
-  return 'general';
+  
+  // Prioritize specific Hong Kong financial expertise areas
+  if (lowerPrompt.includes('rights issue') && 
+      (lowerPrompt.includes('timetable') || lowerPrompt.includes('schedule')))
+    return FINANCIAL_EXPERTISES.RIGHTS_ISSUE;
+    
+  if (lowerPrompt.includes('connected transaction') || 
+      lowerPrompt.includes('chapter 14a'))
+    return FINANCIAL_EXPERTISES.CONNECTED_TRANSACTIONS;
+    
+  if ((lowerPrompt.includes('takeover') || lowerPrompt.includes('takeovers code')) && 
+      lowerPrompt.includes('mandatory'))
+    return FINANCIAL_EXPERTISES.TAKEOVERS;
+    
+  if (lowerPrompt.includes('prospectus') || 
+      lowerPrompt.includes('offering document'))
+    return FINANCIAL_EXPERTISES.PROSPECTUS;
+    
+  if (lowerPrompt.includes('disclosure') || 
+      lowerPrompt.includes('announcement'))
+    return FINANCIAL_EXPERTISES.DISCLOSURE;
+    
+  if (lowerPrompt.includes('circular') || 
+      lowerPrompt.includes('shareholder approval'))
+    return FINANCIAL_EXPERTISES.CIRCULAR;
+    
+  if (lowerPrompt.includes('waiver') || 
+      lowerPrompt.includes('exemption'))
+    return FINANCIAL_EXPERTISES.WAIVER;
+    
+  if (lowerPrompt.includes('listing rules') || 
+      lowerPrompt.includes('hkex'))
+    return FINANCIAL_EXPERTISES.LISTING_RULES;
+    
+  return FINANCIAL_EXPERTISES.GENERAL;
 }
 
-// Create system message tailored to query type
-function createSystemMessageForQueryType(queryType: string, context: string): string {
-  const baseMessage = `You are a Hong Kong regulatory expert. Use the following context precisely:
+/**
+ * Create system prompt tailored to specific financial expertise areas
+ */
+function createFinancialExpertSystemPrompt(expertiseArea: string, context: string): string {
+  // Base prompt with professional financial credentials and role definition
+  const basePrompt = `You are a senior Hong Kong corporate finance expert with deep expertise in Hong Kong listing rules, SFC regulations, takeovers code, and securities law. You have over 15 years of experience advising investment banks, law firms, and listed companies on complex regulatory matters. Use the following financial regulatory context precisely:
 
 ${context}
 
+Always cite specific rule numbers, regulations, and regulatory guidance in your responses. Format your answers professionally as a senior financial advisor would, with clear structure and precise technical language appropriate for bankers and lawyers.
+
 `;
 
-  switch (queryType) {
-    case 'timetable':
-      return baseMessage + `For rights issue timetables:
-- Format your response as a clear, professionally structured table
-- Include specific rule references from Chapter 10 of HK Listing Rules
-- Be extremely precise about dates, events, and regulatory requirements
-- Do not summarize or generalize; provide exact details`;
+  // Specialized expertise-specific instructions
+  switch (expertiseArea) {
+    case FINANCIAL_EXPERTISES.RIGHTS_ISSUE:
+      return basePrompt + `For rights issue inquiries:
+- Present timetables in a professional, clear tabular format
+- Include all key regulatory dates and deadlines from Chapter 10 of HK Listing Rules
+- Specify exact regulatory requirements for each step with rule references
+- Include notes on underwriting requirements, connected person implications, and disclosure obligations
+- Address practical considerations on pricing, excess applications, and compensatory arrangements`;
 
-    case 'connected_transaction':
-      return baseMessage + `For connected transactions:
-- Cite specific rules from Chapter 14A
-- Explain transaction classification and approval requirements
-- Highlight disclosure and shareholders' approval thresholds`;
+    case FINANCIAL_EXPERTISES.CONNECTED_TRANSACTIONS:
+      return basePrompt + `For connected transaction analysis:
+- Cite specific rules from Chapter 14A of the Listing Rules
+- Explain transaction categorization methodology and thresholds
+- Detail calculation methods for percentage ratios
+- Outline precise disclosure and shareholders' approval requirements
+- Address exemption conditions with exact rule references`;
 
-    case 'mandatory_offer':
-      return baseMessage + `For mandatory offer rules:
-- Reference Rule 26 of Takeovers Code
-- Explain triggering events for mandatory offers
-- Detail calculation of offer price and shareholders' rights`;
+    case FINANCIAL_EXPERTISES.TAKEOVERS:
+      return basePrompt + `For takeovers code inquiries:
+- Reference specific Rules and Notes from the HK Takeovers Code
+- Explain mandatory offer triggers with precise threshold calculations
+- Detail offer price determination methodology
+- Specify exact timing requirements and documentation needs
+- Address practical considerations on compliance and implementation`;
+
+    case FINANCIAL_EXPERTISES.DISCLOSURE:
+      return basePrompt + `For disclosure requirements:
+- Cite specific disclosure obligations under the Listing Rules and SFO
+- Outline exact timing requirements for different disclosure types
+- Detail content requirements with template structures
+- Address inside information disclosure obligations
+- Explain consequences of non-compliance with regulatory references`;
+
+    case FINANCIAL_EXPERTISES.PROSPECTUS:
+      return basePrompt + `For prospectus requirements:
+- Reference specific CWUMPO and Listing Rules requirements
+- Detail exact content requirements with section-by-section guidance
+- Explain due diligence obligations with regulatory citations
+- Outline liability provisions and safe harbor conditions
+- Address practical drafting considerations and common pitfalls`;
 
     default:
-      return baseMessage + `Provide a comprehensive, rule-based regulatory analysis.`;
+      return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate.`;
   }
+}
+
+/**
+ * Determine optimal temperature setting based on query type and content
+ */
+function determineOptimalTemperature(queryType: string, prompt: string): number {
+  // For factual regulatory matters, use lower temperature
+  if (queryType === FINANCIAL_EXPERTISES.RIGHTS_ISSUE && prompt.toLowerCase().includes('timetable')) {
+    return 0.1; // Very precise for timetables
+  }
+  
+  if ([FINANCIAL_EXPERTISES.LISTING_RULES, FINANCIAL_EXPERTISES.TAKEOVERS].includes(queryType)) {
+    return 0.2; // Precise for rule interpretations
+  }
+  
+  if (prompt.toLowerCase().includes('example') || prompt.toLowerCase().includes('template')) {
+    return 0.4; // Slightly higher for examples but still controlled
+  }
+  
+  // Default for general inquiries
+  return 0.3;
+}
+
+/**
+ * Determine optimal token limit based on query complexity
+ */
+function determineOptimalTokens(queryType: string, prompt: string): number {
+  if (queryType === FINANCIAL_EXPERTISES.RIGHTS_ISSUE && prompt.toLowerCase().includes('timetable')) {
+    return 2500; // More tokens for detailed timetables
+  }
+  
+  if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('detail')) {
+    return 2000; // More tokens for explanations
+  }
+  
+  // Default token count
+  return 1500;
+}
+
+/**
+ * Check if the response contains a well-formatted timetable
+ */
+function isWellFormattedTimetable(response: string): boolean {
+  // Check for table formatting with dates and descriptions
+  const hasTableStructure = response.includes('|') && response.includes('---');
+  const hasDateEntries = /T[\+\-]\d+|Day \d+|Date/.test(response);
+  const hasTimetableHeader = /timetable|timeline|schedule/i.test(response);
+  
+  return hasTableStructure && hasDateEntries && hasTimetableHeader;
+}
+
+/**
+ * Evaluate relevance of response to the original query
+ */
+function evaluateResponseRelevance(response: string, query: string, queryType: string): number {
+  let score = 0;
+  
+  // Check for specific rule citations
+  if (/Rule \d+\.\d+|\[Chapter \d+\]|section \d+/i.test(response)) {
+    score += 3;
+  }
+  
+  // Check for HK-specific regulatory entities
+  if (/HKEX|SFC|Hong Kong Stock Exchange|Securities and Futures Commission/i.test(response)) {
+    score += 2;
+  }
+  
+  // Check for professional financial terminology
+  const financialTerms = [
+    'listing rules', 'takeovers code', 'SFO', 'circular', 'disclosure',
+    'connected transaction', 'inside information', 'prospectus'
+  ];
+  
+  financialTerms.forEach(term => {
+    if (response.toLowerCase().includes(term)) {
+      score += 1;
+    }
+  });
+  
+  // Normalize to 0-10 scale
+  return Math.min(10, score);
 }

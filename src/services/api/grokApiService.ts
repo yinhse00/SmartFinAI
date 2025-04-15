@@ -1,6 +1,6 @@
 
 /**
- * Service for handling Grok API communications
+ * Service for handling Grok API communications for financial expertise
  */
 import { getGrokApiKey } from '../apiKeyService';
 import { generateFallbackResponse } from '../fallbackResponseService';
@@ -15,58 +15,78 @@ interface GrokChatRequestBody {
   max_tokens?: number;
 }
 
+// Custom headers for financial expert API calls
+const FINANCIAL_EXPERT_HEADERS = {
+  'X-Financial-Expert': 'true',
+  'X-Domain': 'hk-corporate-finance'
+};
+
 export const grokApiService = {
   /**
-   * Make a request to the Grok API chat completions endpoint
+   * Make a specialized financial expert request to the Grok API
    */
   callChatCompletions: async (requestBody: GrokChatRequestBody): Promise<any> => {
     const apiKey = getGrokApiKey();
     
     if (!apiKey) {
-      throw new Error("No API key provided");
+      throw new Error("No API key provided for financial expert access");
     }
     
     // Validate API key format (basic validation)
     if (!apiKey.startsWith('xai-')) {
-      throw new Error("Invalid API key format");
+      throw new Error("Invalid financial expert API key format");
     }
     
-    console.log("Connecting to Grok API");
-    console.log("Request body:", JSON.stringify(requestBody));
+    console.group('Financial Expert API Call');
+    console.log("Connecting to Grok financial expert API");
+    console.log("Request model:", requestBody.model);
+    console.log("Temperature:", requestBody.temperature);
+    console.log("Max tokens:", requestBody.max_tokens);
     
     // Use a proxy endpoint to avoid CORS issues
-    const response = await fetch('/api/grok/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify(requestBody)
-    });
-    
-    if (!response.ok) {
-      const errorData = await response.text();
-      console.error(`API error ${response.status}:`, errorData);
+    try {
+      const response = await fetch('/api/grok/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+          ...FINANCIAL_EXPERT_HEADERS
+        },
+        body: JSON.stringify(requestBody)
+      });
       
-      // Specific error handling for common errors
-      if (response.status === 401) {
-        throw new Error("Authentication failed. Please check your API key.");
-      } else if (response.status === 429) {
-        throw new Error("Rate limit exceeded. Please try again later.");
-      } else if (response.status >= 500) {
-        throw new Error("Grok service is currently unavailable. Please try again later.");
-      } else if (response.status === 404) {
-        // Check for specific model-related errors in the response
-        if (errorData.includes("model") && errorData.includes("does not exist")) {
-          throw new Error("The specified model is not available. Please use a different model or check API documentation.");
+      if (!response.ok) {
+        const errorData = await response.text();
+        console.error(`Financial expert API error ${response.status}:`, errorData);
+        
+        // Specific error handling for financial expertise API
+        if (response.status === 401) {
+          throw new Error("Financial expert authentication failed. Please check your API key.");
+        } else if (response.status === 429) {
+          throw new Error("Financial expert rate limit exceeded. Please try again later.");
+        } else if (response.status >= 500) {
+          throw new Error("Financial expert service is currently unavailable. Please try again later.");
+        } else if (response.status === 404) {
+          // Check for specific model-related errors in the response
+          if (errorData.includes("model") && errorData.includes("does not exist")) {
+            throw new Error("The specified financial expert model is not available. Please use a different model.");
+          } else {
+            throw new Error("Financial expert API endpoint not found. Please check the API documentation.");
+          }
         } else {
-          throw new Error("API endpoint not found. Please check the API documentation.");
+          throw new Error(`Financial expert API error: ${response.status}`);
         }
-      } else {
-        throw new Error(`API error: ${response.status}`);
       }
+      
+      const data = await response.json();
+      console.log("Financial expert API response received successfully");
+      console.groupEnd();
+      
+      return data;
+    } catch (error) {
+      console.error("Financial expert API call failed:", error);
+      console.groupEnd();
+      throw error;
     }
-    
-    return await response.json();
   }
 };

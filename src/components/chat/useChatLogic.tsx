@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
@@ -8,6 +7,14 @@ import { Message } from './ChatMessage';
 import { contextService } from '@/services/regulatory/contextService';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 
+const FINANCIAL_QUERY_TYPES = {
+  RIGHTS_ISSUE: 'rights_issue',
+  CONNECTED_TRANSACTION: 'connected_transaction',
+  TAKEOVERS: 'takeovers',
+  PROSPECTUS: 'prospectus',
+  GENERAL: 'general'
+};
+
 export const useChatLogic = () => {
   const [input, setInput] = useState('');
   const [grokApiKeyInput, setGrokApiKeyInput] = useState('');
@@ -15,7 +22,7 @@ export const useChatLogic = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      content: 'Hello! I\'m your Hong Kong regulatory assistant. How can I help you today?',
+      content: 'Hello! I\'m your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?',
       sender: 'bot',
       timestamp: new Date(),
     }
@@ -24,15 +31,12 @@ export const useChatLogic = () => {
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const { toast } = useToast();
   
-  // Fetch all reference documents for better context
   const { data: referenceDocuments } = useReferenceDocuments();
 
-  // Check if API key is set on component mount
   useEffect(() => {
     const hasGrokKey = hasGrokApiKey();
     setIsGrokApiKeySet(hasGrokKey);
     
-    // Open dialog if no API key
     if (!hasGrokKey) {
       setApiKeyDialogOpen(true);
     }
@@ -44,12 +48,12 @@ export const useChatLogic = () => {
       setIsGrokApiKeySet(true);
       toast({
         title: "API Key Saved",
-        description: "Your Grok API key has been saved. You can now use the full Grok AI service.",
+        description: "Your Grok API key has been saved. You can now use our specialized financial expertise service.",
       });
     } else {
       toast({
         title: "API Key Required",
-        description: "Please enter a valid Grok API key to proceed.",
+        description: "Please enter a valid Grok API key to access professional financial expertise.",
         variant: "destructive"
       });
       return;
@@ -61,13 +65,11 @@ export const useChatLogic = () => {
   const handleSend = async () => {
     if (!input.trim()) return;
     
-    // Check if Grok API key is set
     if (!isGrokApiKeySet) {
       setApiKeyDialogOpen(true);
       return;
     }
 
-    // Add user message
     const userMessage: Message = {
       id: Date.now().toString(),
       content: input,
@@ -80,48 +82,42 @@ export const useChatLogic = () => {
     setIsLoading(true);
 
     try {
-      // Check if this is a rights issue timetable query - special handling
-      const isRightsIssueQuery = input.toLowerCase().includes('rights') && 
-                                (input.toLowerCase().includes('issue') || 
-                                 input.toLowerCase().includes('timetable'));
-                                 
-      const isSpecificTimetableRequest = isRightsIssueQuery && 
-                                        (input.toLowerCase().includes('timetable') || 
-                                         input.toLowerCase().includes('schedule') || 
-                                         input.toLowerCase().includes('timeline'));
-
-      // Set appropriate parameters based on query type
+      console.group('Financial Query Processing');
+      
+      const financialQueryType = identifyFinancialQueryType(input);
+      console.log('Financial Query Type:', financialQueryType);
+      
       const responseParams: any = {
         prompt: input,
-        temperature: isSpecificTimetableRequest ? 0.1 : 0.7,  // Lower temperature for timetables
-        maxTokens: isSpecificTimetableRequest ? 2000 : 1500  // More tokens for detailed timetables
+        temperature: getOptimalTemperature(financialQueryType, input),
+        maxTokens: getOptimalTokens(financialQueryType, input)
       };
       
-      // Get regulatory context with reasoning for the query
+      console.log(`Using specialized parameters - Temperature: ${responseParams.temperature}, Tokens: ${responseParams.maxTokens}`);
+      
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(input);
       responseParams.regulatoryContext = regulatoryContext;
       
-      // Log the context being used
-      console.log("Using regulatory context:", regulatoryContext);
+      console.log('Financial Context Length:', regulatoryContext?.length);
+      console.log('Financial Reasoning:', reasoning);
       
       try {
-        // Generate response using Grok
+        console.log('Calling Grok financial expert API');
         const response = await grokService.generateResponse(responseParams);
         
-        // Check if we're using a fallback response (API call failed)
         const isUsingFallback = response.text.includes("Based on your query about") || 
                                response.text.includes("Regarding your query about") ||
                                response.text.includes("In response to your query");
         
         if (isUsingFallback && isGrokApiKeySet) {
+          console.log('Using fallback response - API connection issue');
           toast({
-            title: "API Connection Issue",
-            description: "Could not connect to Grok API. Using fallback response instead.",
+            title: "Financial Expert Connection Issue",
+            description: "Could not connect to financial expertise service. Using fallback response.",
             variant: "destructive"
           });
         }
         
-        // Find references from the regulatory context
         const references = extractReferences(regulatoryContext);
         
         const botMessage: Message = {
@@ -131,22 +127,23 @@ export const useChatLogic = () => {
           timestamp: new Date(),
           references: references,
           isUsingFallback: isUsingFallback,
-          reasoning: reasoning
+          reasoning: reasoning,
+          queryType: response.queryType
         };
         
         setMessages(prev => [...prev, botMessage]);
+        console.log('Response delivered successfully');
       } catch (error) {
-        console.error("Error generating response:", error);
+        console.error("Error generating financial expert response:", error);
         toast({
-          title: "Error",
-          description: "Failed to generate a response. Please check your API key and try again.",
+          title: "Expert Response Error",
+          description: "Failed to generate a financial expert response. Please check your API key and try again.",
           variant: "destructive"
         });
         
-        // Add error message
         const errorMessage: Message = {
           id: (Date.now() + 1).toString(),
-          content: "I'm sorry, I encountered an error while trying to generate a response. Please check your API key and try again.",
+          content: "I'm sorry, I encountered an error while analyzing your financial query. Please check your API key or try rephrasing your question.",
           sender: 'bot',
           timestamp: new Date(),
           isError: true
@@ -154,8 +151,10 @@ export const useChatLogic = () => {
         
         setMessages(prev => [...prev, errorMessage]);
       }
+      
+      console.groupEnd();
     } catch (error) {
-      console.error("Error in chat process:", error);
+      console.error("Error in financial chat process:", error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -170,6 +169,66 @@ export const useChatLogic = () => {
     if (e.key === 'Enter') {
       handleSend();
     }
+  };
+
+  const identifyFinancialQueryType = (query: string): string => {
+    const lowerQuery = query.toLowerCase();
+    
+    if (lowerQuery.includes('rights issue')) {
+      return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
+    } 
+    
+    if (lowerQuery.includes('connected transaction') || lowerQuery.includes('chapter 14a')) {
+      return FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION;
+    }
+    
+    if (lowerQuery.includes('takeover') || lowerQuery.includes('mandatory offer') || lowerQuery.includes('rule 26')) {
+      return FINANCIAL_QUERY_TYPES.TAKEOVERS;
+    }
+    
+    if (lowerQuery.includes('prospectus') || lowerQuery.includes('offering document') || lowerQuery.includes('ipo')) {
+      return FINANCIAL_QUERY_TYPES.PROSPECTUS;
+    }
+    
+    return FINANCIAL_QUERY_TYPES.GENERAL;
+  };
+
+  const getOptimalTemperature = (queryType: string, query: string): number => {
+    if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
+        (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule'))) {
+      return 0.1;
+    }
+    
+    if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
+      return 0.2;
+    }
+    
+    if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('analysis')) {
+      return 0.3;
+    }
+    
+    if (query.toLowerCase().includes('example') || query.toLowerCase().includes('case study')) {
+      return 0.4;
+    }
+    
+    return 0.3;
+  };
+
+  const getOptimalTokens = (queryType: string, query: string): number => {
+    if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
+        (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule'))) {
+      return 2000;
+    }
+    
+    if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
+      return 1800;
+    }
+    
+    if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
+      return 1600;
+    }
+    
+    return 1500;
   };
 
   return {
