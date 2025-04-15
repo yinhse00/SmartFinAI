@@ -13,5 +13,7 @@ export interface GrokResponse {
     contextUsed?: boolean;
     relevanceScore?: number;
     tradingArrangementInfoUsed?: boolean;
+    takeoversCodeUsed?: boolean;
+    whitewashInfoIncluded?: boolean;
   };
 }
