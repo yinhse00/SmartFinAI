@@ -15,10 +15,11 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/grok/, '/v1'), // Change to /v1 to match Grok's API structure
         secure: true,
-        timeout: 60000, // Increased timeout for complex financial expert queries
+        timeout: 120000, // Doubled timeout for complex financial expert queries
         configure: (proxy, _options) => {
           proxy.on('proxyReq', function(proxyReq) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
+            proxyReq.setHeader('X-Long-Response', 'true'); // Signal that we expect long responses
           });
           proxy.on('error', function(err, _req, _res) {
             console.log('Financial expert proxy error:', err);
