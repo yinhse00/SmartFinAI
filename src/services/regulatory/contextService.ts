@@ -15,6 +15,46 @@ export const contextService = {
     try {
       console.log(`Searching for "${query}" in reference documents...`);
       
+      // Check for specific keywords related to rights issues in the query
+      const isRightsIssueQuery = 
+        query.toLowerCase().includes('right') && 
+        (query.toLowerCase().includes('issue') || 
+         query.toLowerCase().includes('timetable') ||
+         query.toLowerCase().includes('schedule') ||
+         query.toLowerCase().includes('timeline'));
+      
+      // If explicitly asking about rights issues, prioritize that data
+      if (isRightsIssueQuery) {
+        console.log("Rights issue query detected, prioritizing rights issue information");
+        
+        // First check reference documents in Supabase
+        let { data: rightsIssueDocuments, error } = await supabase
+          .from('reference_documents')
+          .select('*')
+          .or('title.ilike.%right%issue%,description.ilike.%right%issue%')
+          .order('created_at', { ascending: false });
+          
+        // If we found relevant documents in Supabase, return them
+        if (!error && rightsIssueDocuments && rightsIssueDocuments.length > 0) {
+          console.log(`Found ${rightsIssueDocuments.length} rights issue documents in reference_documents table`);
+          return formatDocumentsAsContext(rightsIssueDocuments);
+        }
+        
+        // If no documents found in Supabase, search the in-memory database
+        console.log("No rights issue documents found in reference_documents table, checking in-memory database");
+        
+        // Search in-memory database for rights issue entries
+        const rightsIssueEntries = await databaseService.search('rights issue');
+        
+        if (rightsIssueEntries && rightsIssueEntries.length > 0) {
+          console.log(`Found ${rightsIssueEntries.length} rights issue entries in in-memory database`);
+          return formatRegulatoryEntriesAsContext(rightsIssueEntries);
+        }
+      }
+      
+      // If not explicitly a rights issue query or no rights issue data found,
+      // proceed with the regular search logic
+      
       // Create an array of keywords to search for
       const keywords = extractKeywords(query);
       console.log("Using keywords for search:", keywords);
