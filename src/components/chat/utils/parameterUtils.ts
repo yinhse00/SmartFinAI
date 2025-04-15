@@ -1,9 +1,74 @@
-
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
- * Get optimal temperature setting based on query type and content
+ * Get optimal token setting based on query type and content
+ * With increased maximum token limit and safety checks
  */
+export const getOptimalTokens = (queryType: string, query: string): number => {
+  // Extremely complex rights issue timetables with specific dates
+  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
+      (query.toLowerCase().includes('timetable') || 
+       query.toLowerCase().includes('trading arrangement') || 
+       query.toLowerCase().includes('schedule')) &&
+      (query.toLowerCase().includes('detailed') || 
+       query.toLowerCase().includes('comprehensive'))) {
+    return 100000; // Maximum token limit as requested
+  }
+  
+  // Previous high-complexity scenarios
+  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
+      (query.toLowerCase().includes('timetable') || 
+       query.toLowerCase().includes('trading arrangement') || 
+       query.toLowerCase().includes('schedule'))) {
+    return 10000; // Increased from previous implementation
+  }
+  
+  // Complex query handling
+  if ([
+    FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
+    FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+    FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE
+  ].includes(queryType) && 
+      (query.toLowerCase().includes('timetable') || 
+       query.toLowerCase().includes('trading arrangement') || 
+       query.toLowerCase().includes('schedule'))) {
+    return 4000; // Increased for trading arrangements
+  }
+  
+  if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
+    return 3500; // Increased for explanations
+  }
+  
+  if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
+    return 3000; // Increased for complex topics
+  }
+  
+  return 2500; // Default tokens
+};
+
+/**
+ * Determine if response needs enhanced token settings
+ */
+export const needsEnhancedTokenSettings = (queryType: string, query: string): boolean => {
+  const complexTopicIndicators = [
+    'detailed explanation', 'comprehensive guide', 'full timetable',
+    'step by step', 'all requirements', 'complete process', 
+    'exhaustive breakdown', 'in-depth analysis'
+  ];
+  
+  const hasComplexIndicator = complexTopicIndicators.some(
+    indicator => query.toLowerCase().includes(indicator)
+  );
+  
+  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
+      (query.toLowerCase().includes('timetable') || 
+       query.toLowerCase().includes('trading'))) {
+    return true;
+  }
+  
+  return hasComplexIndicator;
+};
+
 export const getOptimalTemperature = (queryType: string, query: string): number => {
   // Rights issue timetable queries need very low temperature for consistency
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
@@ -36,71 +101,4 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
   }
   
   return 0.3;
-};
-
-/**
- * Get optimal token setting based on query type and content
- */
-export const getOptimalTokens = (queryType: string, query: string): number => {
-  // Rights issue timetable queries need more tokens to complete the response
-  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-      (query.toLowerCase().includes('timetable') || 
-       query.toLowerCase().includes('trading arrangement') || 
-       query.toLowerCase().includes('schedule'))) {
-    return 8000; // Maximum tokens for complete timetables without truncation
-  }
-  
-  // Special handling for date-specific rights issue timetables
-  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-      query.toLowerCase().includes('timetable') &&
-      (query.toLowerCase().includes('june') || 
-       query.toLowerCase().includes('july') || 
-       query.toLowerCase().includes('jan'))) {
-    return 10000; // Even more tokens for specific date timetables
-  }
-  
-  if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
-       FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
-       FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE].includes(queryType) && 
-      (query.toLowerCase().includes('timetable') || 
-       query.toLowerCase().includes('trading arrangement') || 
-       query.toLowerCase().includes('schedule'))) {
-    return 4000; // Increased for other trading arrangements
-  }
-  
-  if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 3500; // Increased for explanations
-  }
-  
-  if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 3000; // Increased for complex topics
-  }
-  
-  return 2500; // Increased default
-};
-
-/**
- * Determine if response needs enhanced token settings
- * (New helper function to detect complex queries)
- */
-export const needsEnhancedTokenSettings = (queryType: string, query: string): boolean => {
-  // Check for specific complex financial scenarios
-  const complexTopicIndicators = [
-    'detailed explanation', 'comprehensive guide', 'full timetable',
-    'step by step', 'all requirements', 'complete process'
-  ];
-  
-  // Check if query mentions any complex indicators
-  const hasComplexIndicator = complexTopicIndicators.some(
-    indicator => query.toLowerCase().includes(indicator)
-  );
-  
-  // Always use enhanced settings for trading arrangements
-  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-      (query.toLowerCase().includes('timetable') || 
-       query.toLowerCase().includes('trading'))) {
-    return true;
-  }
-  
-  return hasComplexIndicator;
 };
