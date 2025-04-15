@@ -6,6 +6,7 @@ import { getGrokApiKey, hasGrokApiKey, setGrokApiKey } from '@/services/apiKeySe
 import { extractReferences } from '@/services/contextUtils';
 import { Message } from './ChatMessage';
 import { contextService } from '@/services/regulatory/contextService';
+import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 
 export const useChatLogic = () => {
   const [input, setInput] = useState('');
@@ -22,6 +23,9 @@ export const useChatLogic = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   const { toast } = useToast();
+  
+  // Fetch all reference documents for better context
+  const { data: referenceDocuments } = useReferenceDocuments();
 
   // Check if API key is set on component mount
   useEffect(() => {
@@ -78,6 +82,9 @@ export const useChatLogic = () => {
     try {
       // Get regulatory context with reasoning for the query
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(input);
+      
+      // Log the context being used
+      console.log("Using regulatory context:", regulatoryContext);
       
       try {
         // Generate response using Grok

@@ -81,14 +81,16 @@ export const grokService = {
             { 
               role: 'system', 
               content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-                       'Use the provided regulatory context to generate accurate responses.' 
+                       'You should strictly base your answers on the regulatory context provided. ' +
+                       'If the context doesn\'t contain relevant information to answer the question, ' +
+                       'clearly state that you don\'t have specific information about that topic in your reference documents.'
             },
             { 
               role: 'user', 
               content: enhancedPrompt
             }
           ],
-          model: "grok-3-mini-beta",  // Updated from grok-2 to grok-3-mini-beta
+          model: "grok-3-mini-beta",
           temperature: params.temperature || 0.7,
           max_tokens: params.maxTokens || 500
         };
