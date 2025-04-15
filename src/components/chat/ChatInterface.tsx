@@ -34,14 +34,19 @@ const ChatInterface = () => {
           lastMessage.content.length > 500 &&
           !lastMessage.content.endsWith('.') && 
           !lastMessage.content.endsWith('!') && 
-          !lastMessage.content.endsWith('?')) {
+          !lastMessage.content.endsWith('?') &&
+          !lastMessage.content.includes('|---') && // Table format check
+          !lastMessage.content.endsWith(':') &&
+          !lastMessage.content.endsWith(';')) {
         
-        // Only show this warning if it's not clearly a structured response like a timetable
-        if (!lastMessage.content.includes('|') && !lastMessage.content.includes('T+')) {
+        // Only show this warning if it's not clearly a structured response
+        if (!lastMessage.content.includes('|') && 
+            !lastMessage.content.includes('T+') && 
+            !lastMessage.content.includes('Timetable')) {
           toast({
-            title: "Note",
-            description: "The response may have been truncated. Try asking a more specific question if needed.",
-            duration: 5000,
+            title: "Response Note",
+            description: "The response may have been truncated. For detailed timetables, try specifying 'rights issue timetable' explicitly.",
+            duration: 8000,
           });
         }
       }

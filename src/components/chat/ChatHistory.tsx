@@ -20,13 +20,15 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading }) => {
   }, [messages]);
 
   return (
-    <div className="flex-1 overflow-y-auto py-4 space-y-4">
-      {messages.map((message) => (
-        <ChatMessage key={message.id} message={message} />
-      ))}
-      {isLoading && <ChatLoadingIndicator />}
-      <div ref={messagesEndRef} />
-    </div>
+    <ScrollArea className="h-full pr-4">
+      <div className="py-4 space-y-4">
+        {messages.map((message) => (
+          <ChatMessage key={message.id} message={message} />
+        ))}
+        {isLoading && <ChatLoadingIndicator />}
+        <div ref={messagesEndRef} />
+      </div>
+    </ScrollArea>
   );
 };
 

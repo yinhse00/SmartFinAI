@@ -2,7 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Info, Calendar, Clock } from 'lucide-react';
+import { Send, Loader2, Info, Calendar, Clock, BookOpen, FileText } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -96,11 +96,30 @@ const ChatInput: React.FC<ChatInputProps> = ({
                   className="text-xs cursor-pointer bg-finance-light-blue/20 hover:bg-finance-light-blue/40"
                   onClick={() => setInput("Explain connected transaction requirements under Chapter 14A")}
                 >
+                  <FileText size={10} className="mr-1" />
                   Connected Transactions
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
                 <p className="text-xs">Learn about connected transaction requirements</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Badge 
+                  variant="outline" 
+                  className="text-xs cursor-pointer bg-finance-light-blue/20 hover:bg-finance-light-blue/40"
+                  onClick={() => setInput("Explain takeovers code Rule 26 mandatory offer requirements")}
+                >
+                  <BookOpen size={10} className="mr-1" />
+                  Takeovers Code
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">Learn about mandatory offer requirements</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
