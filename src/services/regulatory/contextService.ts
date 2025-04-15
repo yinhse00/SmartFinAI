@@ -1,5 +1,4 @@
-
-import { databaseService, RegulatoryEntry } from '../databaseService';
+import { databaseService, searchService, RegulatoryEntry } from '../databaseService';
 import { QUERY_TYPE_TO_CATEGORY } from '../constants/financialConstants';
 import { extractFinancialTerms } from './utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from './utils/resultProcessors';
@@ -45,26 +44,26 @@ export const contextService = {
         console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
         
         // First, specifically check for the takeovers and mergers code PDF
-        const takeoversCodeResults = await databaseService.searchByTitle("codes on takeovers and mergers and share buy backs");
+        const takeoversCodeResults = await searchService.searchByTitle("codes on takeovers and mergers and share buy backs");
         if (takeoversCodeResults.length > 0) {
           console.log('Found specific "codes on takeovers and mergers and share buy backs.pdf" document');
           takeoversResults = [...takeoversCodeResults];
         }
         
         // Direct search in takeovers category
-        const categoryResults = await databaseService.search(normalizedQuery, 'takeovers');
+        const categoryResults = await searchService.search(normalizedQuery, 'takeovers');
         console.log(`Found ${categoryResults.length} Takeovers Code documents by category search`);
         takeoversResults = [...takeoversResults, ...categoryResults];
         
         // If direct search didn't yield results, try content search with specific terms
         if (takeoversResults.length === 0) {
-          takeoversResults = await databaseService.search("general offer mandatory takeovers code", "takeovers");
+          takeoversResults = await searchService.search("general offer mandatory takeovers code", "takeovers");
           console.log(`Found ${takeoversResults.length} results from takeovers keyword search`);
         }
         
         // Special handling for whitewash waiver queries
         if (isWhitewashQuery) {
-          const whitewashResults = await databaseService.search("whitewash waiver dealing requirements", "takeovers");
+          const whitewashResults = await searchService.search("whitewash waiver dealing requirements", "takeovers");
           console.log(`Found ${whitewashResults.length} whitewash waiver specific results`);
           
           // Add whitewash-specific documents to results
@@ -83,12 +82,12 @@ export const contextService = {
           console.log('Identified as corporate action trading arrangement query');
           
           // Direct search for Trading Arrangement document by title
-          tradingArrangementsResults = await databaseService.searchByTitle("Trading Arrangements");
+          tradingArrangementsResults = await searchService.searchByTitle("Trading Arrangements");
           console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
           
           // If title search didn't yield results, try content search
           if (tradingArrangementsResults.length === 0) {
-            tradingArrangementsResults = await databaseService.search("trading arrangement corporate action", "listing_rules");
+            tradingArrangementsResults = await searchService.search("trading arrangement corporate action", "listing_rules");
             console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
           }
         } else if (isGeneralOffer) {
@@ -104,7 +103,7 @@ export const contextService = {
       }
       
       // Regular search in appropriate category
-      let searchResults = await databaseService.search(normalizedQuery, searchCategory);
+      let searchResults = await searchService.search(normalizedQuery, searchCategory);
       console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
       
       // Prioritize results based on query type
@@ -119,7 +118,7 @@ export const contextService = {
       // If no results, try searching with extracted financial terms
       if (searchResults.length === 0 || searchResults.length < 2) {
         const financialTermsQuery = financialTerms.join(' ');
-        const termResults = await databaseService.search(financialTermsQuery, searchCategory);
+        const termResults = await searchService.search(financialTermsQuery, searchCategory);
         console.log(`Found ${termResults.length} results using financial terms in ${searchCategory}`);
         
         // Combine results if we found some with terms
@@ -137,18 +136,18 @@ export const contextService = {
             
           if (isGeneralOffer) {
             // Special handling for general offer timetable requests
-            const timetableResults = await databaseService.search('general offer timetable takeovers', 'takeovers');
+            const timetableResults = await searchService.search('general offer timetable takeovers', 'takeovers');
             console.log(`Found ${timetableResults.length} results using 'general offer timetable' keyword`);
             searchResults = [...searchResults, ...timetableResults];
           } else {
             // Default to rights issue timetable info for other timetable requests
-            const timetableResults = await databaseService.search('rights issue timetable', 'listing_rules');
+            const timetableResults = await searchService.search('rights issue timetable', 'listing_rules');
             console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
             searchResults = [...searchResults, ...timetableResults];
           }
         } else {
           // General financial term search across all categories
-          const generalResults = await databaseService.search(financialTerms[0] || normalizedQuery);
+          const generalResults = await searchService.search(financialTerms[0] || normalizedQuery);
           console.log(`Found ${generalResults.length} results from broad search`);
           searchResults = [...searchResults, ...generalResults];
         }
@@ -235,15 +234,15 @@ export const contextService = {
         .replace('rights issues', 'rights issue');
       
       // Perform a search across the database with financial terms prioritization
-      let searchResults = await databaseService.search(normalizedQuery, 'listing_rules');
+      let searchResults = await searchService.search(normalizedQuery, 'listing_rules');
       
       // If no results, try keyword search
       if (searchResults.length === 0) {
         const financialTerms = extractFinancialTerms(query);
         if (query.toLowerCase().includes('timetable') || query.toLowerCase().includes('schedule')) {
-          searchResults = await databaseService.search('rights issue timetable');
+          searchResults = await searchService.search('rights issue timetable');
         } else {
-          searchResults = await databaseService.search(financialTerms.join(' '));
+          searchResults = await searchService.search(financialTerms.join(' '));
         }
       }
       
