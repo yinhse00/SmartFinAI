@@ -99,7 +99,7 @@ export const grokService = {
               content: enhancedPrompt
             }
           ],
-          model: "grok-2",  // Using grok-2 model as per Grok API docs
+          model: "grok-3-mini-beta",  // Updated from grok-2 to grok-3-mini-beta
           temperature: params.temperature || 0.7,
           max_tokens: params.maxTokens || 500
         };
@@ -189,7 +189,7 @@ export const grokService = {
               content: contentToTranslate
             }
           ],
-          model: "grok-2",
+          model: "grok-3-mini-beta",  // Updated from grok-2 to grok-3-mini-beta
           temperature: 0.3, // Lower temperature for more accurate translations
           max_tokens: 4000  // Allow for longer translations
         };
