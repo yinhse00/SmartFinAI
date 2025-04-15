@@ -6,9 +6,10 @@ import { FileText, FileType, X } from 'lucide-react';
 interface FileListProps {
   files: File[];
   onRemoveFile: (index: number) => void;
+  disabled?: boolean;
 }
 
-const FileList: React.FC<FileListProps> = ({ files, onRemoveFile }) => {
+const FileList: React.FC<FileListProps> = ({ files, onRemoveFile, disabled = false }) => {
   if (files.length === 0) {
     return null;
   }
@@ -50,6 +51,7 @@ const FileList: React.FC<FileListProps> = ({ files, onRemoveFile }) => {
                 e.stopPropagation();
                 onRemoveFile(index);
               }}
+              disabled={disabled}
             >
               <X className="h-4 w-4" />
             </Button>

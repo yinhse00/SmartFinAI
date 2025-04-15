@@ -5,9 +5,10 @@ import { Upload } from 'lucide-react';
 
 interface FileDropZoneProps {
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  isUploading?: boolean;
 }
 
-const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange }) => {
+const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading = false }) => {
   const [isDragging, setIsDragging] = useState(false);
   
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
@@ -60,18 +61,22 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange }) => {
 
   return (
     <div 
-      className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-finance-dark-blue/30 hover:bg-gray-100 dark:hover:bg-finance-dark-blue/40 transition-colors cursor-pointer ${
+      className={`border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center bg-gray-50 dark:bg-finance-dark-blue/30 hover:bg-gray-100 dark:hover:bg-finance-dark-blue/40 transition-colors ${
+        isUploading ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'
+      } ${
         isDragging ? 'border-finance-medium-blue bg-gray-100 dark:bg-finance-dark-blue/40' : ''
       }`}
-      onClick={() => document.getElementById('file-upload')?.click()}
-      onDragEnter={handleDragEnter}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
+      onClick={() => !isUploading && document.getElementById('file-upload')?.click()}
+      onDragEnter={!isUploading ? handleDragEnter : undefined}
+      onDragOver={!isUploading ? handleDragOver : undefined}
+      onDragLeave={!isUploading ? handleDragLeave : undefined}
+      onDrop={!isUploading ? handleDrop : undefined}
     >
       <Upload className="h-10 w-10 text-gray-400 mb-2" />
       <p className="text-sm text-center text-gray-600 dark:text-gray-400">
-        Drag and drop your files here, or <span className="text-finance-light-blue dark:text-finance-accent-blue">browse</span>
+        {isUploading ? 'Uploading files...' : (
+          <>Drag and drop your files here, or <span className="text-finance-light-blue dark:text-finance-accent-blue">browse</span></>
+        )}
       </p>
       <p className="text-xs text-center text-gray-500 dark:text-gray-500 mt-1">
         Supports PDF, DOCX, TXT (max 20MB per file)
@@ -83,6 +88,7 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange }) => {
         multiple
         onChange={onFileChange}
         accept=".pdf,.docx,.txt"
+        disabled={isUploading}
       />
     </div>
   );

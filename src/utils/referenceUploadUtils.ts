@@ -38,10 +38,31 @@ export async function uploadFilesToSupabase(
   }
 
   try {
+    console.log('Starting upload of', files.length, 'files to category:', category);
+    
+    // Check if references bucket exists, create if not
+    const { data: bucketData, error: bucketError } = await supabase.storage
+      .getBucket('references');
+    
+    if (bucketError && bucketError.message.includes('not found')) {
+      console.log('References bucket not found, creating it...');
+      const { error: createError } = await supabase.storage.createBucket('references', {
+        public: false,
+        allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+        fileSizeLimit: 20971520 // 20MB
+      });
+      
+      if (createError) {
+        console.error('Error creating bucket:', createError);
+        throw new Error(`Error creating storage bucket: ${createError.message}`);
+      }
+    }
+    
     // Upload files to Supabase storage
     const uploadedFiles: UploadedFile[] = [];
     
     for (const file of files) {
+      console.log(`Uploading file: ${file.name} (${file.size} bytes)`);
       const fileExt = file.name.split('.').pop();
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `${category}/${fileName}`;
@@ -57,6 +78,8 @@ export async function uploadFilesToSupabase(
         console.error('Error uploading reference:', error);
         throw new Error(`Error uploading ${file.name}: ${error.message}`);
       }
+      
+      console.log('File uploaded successfully, getting public URL');
       
       // Get public URL for the uploaded file
       const { data: urlData } = supabase.storage
@@ -75,9 +98,11 @@ export async function uploadFilesToSupabase(
       });
     }
     
+    console.log('All files uploaded, saving metadata to database');
+    
     // Store metadata in Supabase
     const { error: metadataError } = await supabase
-      .from('reference_documents' as any)
+      .from('reference_documents')
       .insert(uploadedFiles.map(file => ({
         title: file.name,
         category: file.category,
@@ -93,15 +118,30 @@ export async function uploadFilesToSupabase(
       throw new Error(`Error saving document metadata: ${metadataError.message}`);
     }
     
+    console.log('Upload complete, files:', uploadedFiles.length);
+    
     return { 
       success: true, 
       message: `${files.length} document(s) have been uploaded and are being processed.` 
     };
   } catch (error) {
     console.error('Upload error:', error);
+    
+    // Provide more detailed error message
+    let errorMessage = "There was an error uploading your references. Please try again.";
+    if (error instanceof Error) {
+      errorMessage = `Upload failed: ${error.message}`;
+    }
+    
+    toast({
+      title: "Upload failed",
+      description: errorMessage,
+      variant: "destructive",
+    });
+    
     return { 
       success: false, 
-      message: "There was an error uploading your references. Please try again." 
+      message: errorMessage
     };
   }
 }

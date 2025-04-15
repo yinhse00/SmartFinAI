@@ -27,9 +27,29 @@ const ReferenceUploader = () => {
   };
 
   const handleUpload = async () => {
+    // Basic validation
+    if (files.length === 0) {
+      toast({
+        title: "No files selected",
+        description: "Please select at least one file to upload.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!category) {
+      toast({
+        title: "Category required",
+        description: "Please select a category for the documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsUploading(true);
     
     try {
+      console.log('Starting upload process');
       const result = await uploadFilesToSupabase(files, category, description);
       
       if (result.success) {
@@ -49,6 +69,13 @@ const ReferenceUploader = () => {
           variant: "destructive",
         });
       }
+    } catch (error) {
+      console.error('Unhandled error during upload:', error);
+      toast({
+        title: "Upload error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsUploading(false);
     }
@@ -64,10 +91,17 @@ const ReferenceUploader = () => {
       </CardHeader>
       <CardContent className="space-y-6">
         {/* File Drop Area */}
-        <FileDropZone onFileChange={handleFileChange} />
+        <FileDropZone 
+          onFileChange={handleFileChange} 
+          isUploading={isUploading}
+        />
 
         {/* Selected Files */}
-        <FileList files={files} onRemoveFile={removeFile} />
+        <FileList 
+          files={files} 
+          onRemoveFile={removeFile}
+          disabled={isUploading} 
+        />
 
         {/* Metadata */}
         <MetadataForm 
@@ -75,13 +109,14 @@ const ReferenceUploader = () => {
           setCategory={setCategory}
           description={description}
           setDescription={setDescription}
+          isUploading={isUploading}
         />
       </CardContent>
       <CardFooter className="flex justify-end">
         <Button 
           onClick={handleUpload} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={isUploading}
+          disabled={isUploading || files.length === 0 || !category}
         >
           {isUploading ? (
             <>
