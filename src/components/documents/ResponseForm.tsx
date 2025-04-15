@@ -94,8 +94,7 @@ const ResponseForm = () => {
 
       const response = await grokService.generateResponse({
         prompt: promptText,
-        regulatoryContext: regulatoryContext || undefined,
-        responseFormat: 'text'
+        regulatoryContext: regulatoryContext || undefined
       });
       
       setGeneratedResponse(response.text);
