@@ -1,4 +1,3 @@
-
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -47,7 +46,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 6000; // Significantly increased for complete timetables without truncation
+    return 8000; // Maximum tokens for complete timetables without truncation
   }
   
   // Special handling for date-specific rights issue timetables
@@ -56,7 +55,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('june') || 
        query.toLowerCase().includes('july') || 
        query.toLowerCase().includes('jan'))) {
-    return 8000; // Maximum tokens for date-specific timetables
+    return 10000; // Even more tokens for specific date timetables
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
