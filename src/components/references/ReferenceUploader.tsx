@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/components/ui/use-toast';
@@ -9,24 +9,58 @@ import FileList from './FileList';
 import MetadataForm from './MetadataForm';
 import { uploadFilesToSupabase } from '@/utils/referenceUploadUtils';
 
+interface FileWithError extends File {
+  error?: string;
+}
+
 const ReferenceUploader = () => {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<FileWithError[]>([]);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      const newFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...newFiles]);
+      const newFiles = Array.from(e.target.files) as FileWithError[];
+      
+      // Validate files before adding them
+      const validatedFiles = newFiles.map(file => {
+        const fileExt = file.name.split('.').pop()?.toLowerCase();
+        
+        if (!['pdf', 'docx', 'txt'].includes(fileExt || '')) {
+          return { ...file, error: 'Invalid file type. Only PDF, DOCX, and TXT are supported.' };
+        }
+        
+        if (file.size > 20971520) { // 20MB
+          return { ...file, error: 'File exceeds 20MB limit' };
+        }
+        
+        return file;
+      });
+      
+      setFiles(prev => [...prev, ...validatedFiles]);
+      setUploadError(null);
     }
-  };
+  }, []);
 
-  const removeFile = (index: number) => {
+  const removeFile = useCallback((index: number) => {
     setFiles(prev => prev.filter((_, i) => i !== index));
-  };
+  }, []);
 
-  const handleUpload = async () => {
+  const validateFiles = useCallback(() => {
+    const invalidFiles = files.filter(file => {
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      return !['pdf', 'docx', 'txt'].includes(fileExt || '') || file.size > 20971520;
+    });
+    
+    return invalidFiles.length === 0;
+  }, [files]);
+
+  const handleUpload = useCallback(async () => {
+    // Reset error state
+    setUploadError(null);
+    
     // Basic validation
     if (files.length === 0) {
       toast({
@@ -46,10 +80,20 @@ const ReferenceUploader = () => {
       return;
     }
     
+    // Validate file types and sizes
+    if (!validateFiles()) {
+      toast({
+        title: "Invalid files",
+        description: "Please remove invalid files before uploading.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     setIsUploading(true);
     
     try {
-      console.log('Starting upload process');
+      console.log('Starting upload process with', files.length, 'files');
       const result = await uploadFilesToSupabase(files, category, description);
       
       if (result.success) {
@@ -63,6 +107,8 @@ const ReferenceUploader = () => {
         setCategory('');
         setDescription('');
       } else {
+        console.error('Upload failed:', result.error || result.message);
+        setUploadError(result.message);
         toast({
           title: "Upload failed",
           description: result.message,
@@ -71,6 +117,8 @@ const ReferenceUploader = () => {
       }
     } catch (error) {
       console.error('Unhandled error during upload:', error);
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setUploadError(errorMessage);
       toast({
         title: "Upload error",
         description: "An unexpected error occurred. Please try again.",
@@ -79,7 +127,10 @@ const ReferenceUploader = () => {
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [files, category, description, validateFiles]);
+
+  // Check for invalid files
+  const hasInvalidFiles = !validateFiles();
 
   return (
     <Card className="finance-card">
@@ -103,6 +154,14 @@ const ReferenceUploader = () => {
           disabled={isUploading} 
         />
 
+        {/* Error Message */}
+        {uploadError && (
+          <div className="p-3 rounded border border-red-200 bg-red-50 text-red-600 text-sm dark:bg-red-900/10 dark:border-red-900/30 dark:text-red-400">
+            <p className="font-medium">Upload failed</p>
+            <p>{uploadError}</p>
+          </div>
+        )}
+
         {/* Metadata */}
         <MetadataForm 
           category={category}
@@ -116,7 +175,7 @@ const ReferenceUploader = () => {
         <Button 
           onClick={handleUpload} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={isUploading || files.length === 0 || !category}
+          disabled={isUploading || files.length === 0 || !category || hasInvalidFiles}
         >
           {isUploading ? (
             <>

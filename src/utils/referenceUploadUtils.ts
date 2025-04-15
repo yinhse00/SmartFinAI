@@ -18,52 +18,71 @@ export async function uploadFilesToSupabase(
   files: File[],
   category: string,
   description: string
-): Promise<{ success: boolean; message: string }> {
+): Promise<{ success: boolean; message: string; error?: any }> {
   if (files.length === 0) {
-    toast({
-      title: "No files selected",
-      description: "Please select at least one file to upload.",
-      variant: "destructive",
-    });
+    console.log('No files provided for upload');
     return { success: false, message: "No files selected" };
   }
 
   if (!category) {
-    toast({
-      title: "Category required",
-      description: "Please select a category for the documents.",
-      variant: "destructive",
-    });
+    console.log('No category provided for upload');
     return { success: false, message: "Category required" };
   }
 
   try {
     console.log('Starting upload of', files.length, 'files to category:', category);
     
-    // Check if references bucket exists, create if not
+    // Check if references bucket exists
     const { data: bucketData, error: bucketError } = await supabase.storage
       .getBucket('references');
     
-    if (bucketError && bucketError.message.includes('not found')) {
-      console.log('References bucket not found, creating it...');
-      const { error: createError } = await supabase.storage.createBucket('references', {
-        public: false,
-        allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
-        fileSizeLimit: 20971520 // 20MB
-      });
+    if (bucketError) {
+      console.error('Error checking bucket existence:', bucketError);
       
-      if (createError) {
-        console.error('Error creating bucket:', createError);
-        throw new Error(`Error creating storage bucket: ${createError.message}`);
+      // Create bucket if it doesn't exist
+      if (bucketError.message.includes('not found')) {
+        console.log('References bucket not found, creating it...');
+        const { error: createError } = await supabase.storage.createBucket('references', {
+          public: false,
+          allowedMimeTypes: ['application/pdf', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain'],
+          fileSizeLimit: 20971520 // 20MB
+        });
+        
+        if (createError) {
+          console.error('Error creating bucket:', createError);
+          throw new Error(`Failed to create storage bucket: ${createError.message}`);
+        } else {
+          console.log('Successfully created references bucket');
+        }
+      } else {
+        throw new Error(`Error accessing storage: ${bucketError.message}`);
       }
+    } else {
+      console.log('References bucket exists');
     }
     
     // Upload files to Supabase storage
     const uploadedFiles: UploadedFile[] = [];
+    const failedUploads: { name: string, error: string }[] = [];
     
     for (const file of files) {
       console.log(`Uploading file: ${file.name} (${file.size} bytes)`);
-      const fileExt = file.name.split('.').pop();
+      
+      // Validate file size
+      if (file.size > 20971520) { // 20MB
+        console.error(`File too large: ${file.name}`);
+        failedUploads.push({ name: file.name, error: 'File exceeds 20MB limit' });
+        continue;
+      }
+      
+      // Validate file type
+      const fileExt = file.name.split('.').pop()?.toLowerCase();
+      if (!['pdf', 'docx', 'txt'].includes(fileExt || '')) {
+        console.error(`Invalid file type: ${file.name}`);
+        failedUploads.push({ name: file.name, error: 'Invalid file type. Only PDF, DOCX, and TXT are supported.' });
+        continue;
+      }
+      
       const fileName = `${uuidv4()}.${fileExt}`;
       const filePath = `${category}/${fileName}`;
       
@@ -75,11 +94,12 @@ export async function uploadFilesToSupabase(
         });
         
       if (error) {
-        console.error('Error uploading reference:', error);
-        throw new Error(`Error uploading ${file.name}: ${error.message}`);
+        console.error('Error uploading file:', file.name, error);
+        failedUploads.push({ name: file.name, error: error.message });
+        continue;
       }
       
-      console.log('File uploaded successfully, getting public URL');
+      console.log('File uploaded successfully:', file.name);
       
       // Get public URL for the uploaded file
       const { data: urlData } = supabase.storage
@@ -98,7 +118,14 @@ export async function uploadFilesToSupabase(
       });
     }
     
-    console.log('All files uploaded, saving metadata to database');
+    if (uploadedFiles.length === 0) {
+      return { 
+        success: false, 
+        message: `Failed to upload files. ${failedUploads.map(f => `${f.name}: ${f.error}`).join(', ')}` 
+      };
+    }
+    
+    console.log('Saving metadata to database for', uploadedFiles.length, 'files');
     
     // Store metadata in Supabase
     const { error: metadataError } = await supabase
@@ -120,28 +147,30 @@ export async function uploadFilesToSupabase(
     
     console.log('Upload complete, files:', uploadedFiles.length);
     
+    // Handle partial success
+    if (failedUploads.length > 0) {
+      return { 
+        success: true, 
+        message: `Successfully uploaded ${uploadedFiles.length} file(s). Failed to upload ${failedUploads.length} file(s).` 
+      };
+    }
+    
     return { 
       success: true, 
-      message: `${files.length} document(s) have been uploaded and are being processed.` 
+      message: `${uploadedFiles.length} document(s) have been uploaded and are being processed.` 
     };
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('Unhandled upload error:', error);
     
-    // Provide more detailed error message
     let errorMessage = "There was an error uploading your references. Please try again.";
     if (error instanceof Error) {
       errorMessage = `Upload failed: ${error.message}`;
     }
     
-    toast({
-      title: "Upload failed",
-      description: errorMessage,
-      variant: "destructive",
-    });
-    
     return { 
       success: false, 
-      message: errorMessage
+      message: errorMessage,
+      error: error
     };
   }
 }
