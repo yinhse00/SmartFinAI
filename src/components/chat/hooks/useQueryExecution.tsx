@@ -55,15 +55,27 @@ export const useQueryExecution = (
       let maxTokens = getOptimalTokens(financialQueryType, queryText);
       let temperature = getOptimalTemperature(financialQueryType, queryText);
       
-      // Special case for rights issue timetable starting from a specific date
-      if (financialQueryType === 'rights_issue' && 
+      // Special case for trading arrangements for various corporate actions
+      if ((financialQueryType === 'rights_issue' || 
+           financialQueryType === 'open_offer' || 
+           financialQueryType === 'share_consolidation' || 
+           financialQueryType === 'board_lot_change' || 
+           financialQueryType === 'company_name_change') && 
           (queryText.toLowerCase().includes('timetable') || 
-           queryText.toLowerCase().includes('schedule')) &&
-          (queryText.toLowerCase().includes('june') || 
-           queryText.toLowerCase().includes('july') || 
-           queryText.toLowerCase().includes('jan'))) {
-        maxTokens = 4000; // Increased token limit for rights issue timetables
-        temperature = 0.05; // Very low temperature for precise output
+           queryText.toLowerCase().includes('trading arrangement') || 
+           queryText.toLowerCase().includes('schedule'))) {
+        
+        // Fine-tuned parameters based on corporate action type
+        console.log(`Processing ${financialQueryType} trading arrangement query`);
+        
+        // Set even more precise parameters for rights issue timetables
+        if (financialQueryType === 'rights_issue') {
+          maxTokens = 10000; // Higher token limit for rights issue timetables
+          temperature = 0.03; // Very precise temperature for structured output
+        } else {
+          maxTokens = 5000; // Standard for other corporate actions
+          temperature = 0.05; // Low temperature for consistent output
+        }
       }
       
       console.log(`Using specialized parameters - Temperature: ${temperature}, Tokens: ${maxTokens}`);

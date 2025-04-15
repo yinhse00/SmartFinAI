@@ -57,13 +57,28 @@ export const needsEnhancedTokenSettings = (queryType: string, query: string): bo
     'exhaustive breakdown', 'in-depth analysis'
   ];
   
+  // Add specific trading arrangement indicators
+  const tradingArrangementIndicators = [
+    'trading arrangement', 'timetable', 'schedule', 'ex-date', 'record date',
+    'nil-paid rights', 'payment date', 'trading period', 'board lot'
+  ];
+
   const hasComplexIndicator = complexTopicIndicators.some(
     indicator => query.toLowerCase().includes(indicator)
   );
   
-  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-      (query.toLowerCase().includes('timetable') || 
-       query.toLowerCase().includes('trading'))) {
+  const hasTradingArrangementIndicator = tradingArrangementIndicators.some(
+    indicator => query.toLowerCase().includes(indicator)
+  );
+  
+  // Special cases for trading arrangements
+  if ([
+    FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE,
+    FINANCIAL_QUERY_TYPES.OPEN_OFFER,
+    FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+    FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE,
+    FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE
+  ].includes(queryType) && hasTradingArrangementIndicator) {
     return true;
   }
   

@@ -54,6 +54,12 @@ export const grokService = {
       const { context, reasoning } = await contextService.getRegulatoryContextWithReasoning(params.prompt);
       console.log('Financial Context Reasoning:', reasoning);
 
+      // Special handling for trading arrangement related queries
+      const isTradingArrangement = isTradingArrangementQuery(params.prompt);
+      if (isTradingArrangement) {
+        console.log('Query involves trading arrangements, applying specialized handling');
+      }
+
       // Create a professional financial system message based on expertise area
       const systemMessage = createFinancialExpertSystemPrompt(queryType, context);
       console.log('Using specialized financial expert prompt');
@@ -70,7 +76,7 @@ export const grokService = {
       
       console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Using Enhanced Settings: ${useFineGrainedSettings}`);
 
-      // Prepare request body with enhanced instructions
+      // Prepare request body with enhanced instructions for trading arrangements
       const requestBody = {
         messages: [
           { role: 'system', content: systemMessage },
