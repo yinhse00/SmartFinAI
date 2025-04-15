@@ -1,4 +1,3 @@
-
 // This is the service for the Grok AI integration
 import { databaseService } from './databaseService';
 import { hasGrokApiKey, getGrokApiKey } from './apiKeyService';
@@ -21,6 +20,7 @@ interface GrokRequestParams {
 interface GrokResponse {
   text: string;
   // Add other response fields as needed based on the actual API
+  queryType?: string;
 }
 
 interface TranslationParams {
@@ -74,207 +74,53 @@ export const grokService = {
   getRegulatoryContext: contextService.getRegulatoryContext,
   
   /**
-   * Generate a response from Grok AI with regulatory context
+   * Enhanced response generation with more robust context handling
    */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
     try {
-      // If no regulatory context was provided, try to find relevant context
-      let regulatoryContext = params.regulatoryContext;
-      
-      // Check if the query is about rights issues or timetables
-      const isRightsIssueQuery = params.prompt.toLowerCase().includes('right') && 
-        (params.prompt.toLowerCase().includes('issue') || params.prompt.toLowerCase().includes('timetable'));
-      
-      if (!regulatoryContext) {
-        if (isRightsIssueQuery) {
-          console.log("Rights issue query detected, prioritizing rights issue information");
-          // Force a specific search for rights issue timetable information
-          regulatoryContext = await contextService.getRegulatoryContext("rights issue timetable detailed");
-          
-          // Enhance the regulatory context with the detailed timetable
-          if (!regulatoryContext.includes("T-30 to T-60") && !regulatoryContext.includes("T+16")) {
-            console.log("Adding detailed rights issue timetable to context");
-            regulatoryContext += "\n\n--- Rights Issue Detailed Timetable (HK Listing Rules Chapter 10) ---\n" + RIGHTS_ISSUE_TIMETABLE_FALLBACK;
-          }
-        } else {
-          regulatoryContext = await contextService.getRegulatoryContext(params.prompt);
-        }
-      }
-      
-      // Special case for rights issue timetable queries - if the main context doesn't have detailed information
-      if (isRightsIssueQuery && !regulatoryContext.includes("T-30 to T-60") && !regulatoryContext.includes("T+16")) {
-        console.log("Detected rights issue query but context lacks detailed information, enhancing context");
-        regulatoryContext += "\n\n--- Rights Issue Detailed Timetable (HK Listing Rules Chapter 10) ---\n" + RIGHTS_ISSUE_TIMETABLE_FALLBACK;
-      }
-      
-      // Check if we found relevant regulatory context
-      const hasRelevantContext = regulatoryContext && 
-                                !regulatoryContext.includes("No specific regulatory information found") &&
-                                !regulatoryContext.includes("Error fetching regulatory context");
-      
-      // Log the context being used for debugging purposes
-      console.log("Using regulatory context:", regulatoryContext);
-      
-      // Create an enhanced prompt that includes the regulatory context
-      const enhancedPrompt = createEnhancedPrompt(params.prompt, params.documentContext, regulatoryContext);
-      
-      console.log("Generating response with enhanced prompt:", enhancedPrompt);
-      
-      const apiKey = getGrokApiKey();
-      
-      // Check if API key is available
-      if (!apiKey) {
-        console.log("No API key provided, using fallback response");
-        return generateFallbackResponse(params.prompt, "No API key provided");
-      }
-      
-      // Validate API key format (basic validation)
-      if (!apiKey.startsWith('xai-')) {
-        console.error("Invalid API key format");
-        return generateFallbackResponse(params.prompt, "Invalid API key format");
-      }
+      // Enhanced logging for debugging
+      console.group('Grok Response Generation');
+      console.log('Input Prompt:', params.prompt);
 
-      // Special case for rights issue timetable - if request is explicitly about timetable
-      if (isRightsIssueQuery && 
-          (params.prompt.toLowerCase().includes('timetable') || 
-           params.prompt.toLowerCase().includes('schedule') ||
-           params.prompt.toLowerCase().includes('timeline'))) {
-        console.log("Specific rights issue timetable request detected");
-        
-        try {
-          console.log("Connecting to Grok API for rights issue timetable");
-          
-          // For timetables, use more explicit instructions
-          const timetableSystemMessage = 
-            'You are a Hong Kong regulatory expert specializing in rights issues. ' +
-            'The user is asking about a rights issue timetable under Hong Kong Listing Rules. ' +
-            'You MUST format your response as a detailed table showing the exact timing of each event ' +
-            'in a rights issue process, with columns for Date/Event and Description. ' +
-            'Include key regulatory references to specific rules in Chapter 10 of the HK Listing Rules. ' +
-            'Present information extremely precisely and professionally, as it would appear in a ' + 
-            'formal legal or regulatory document. DO NOT summarize or simplify the information. ' +
-            'Include all relevant timing details, regulatory requirements, and notes about variations that might apply.';
-          
-          const requestBody = {
-            messages: [
-              { 
-                role: 'system', 
-                content: timetableSystemMessage
-              },
-              { 
-                role: 'user', 
-                content: `Here is the regulatory context that you MUST use for your response:\n\n${regulatoryContext}\n\nBased on this regulatory information, please provide the detailed timetable for a rights issue under Hong Kong Listing Rules. Format it as a comprehensive table with Date/Event and Description columns.`
-              }
-            ],
-            model: "grok-3-mini-beta",
-            temperature: 0.1, // Lower temperature for more precise timetable
-            max_tokens: 2000, // Increase token limit for detailed timetable
-            response_format: { type: "text" }
-          };
-          
-          // Log the request body for debugging
-          console.log("Timetable request body:", JSON.stringify(requestBody));
-          
-          const data = await grokApiService.callChatCompletions(requestBody);
-          
-          const responseContent = data.choices?.[0]?.message?.content;
-          
-          // Check if we got a proper timetable response
-          if (responseContent && 
-              (responseContent.includes("T-") || 
-               responseContent.includes("T+") || 
-               responseContent.includes("Date/Event") || 
-               responseContent.includes("| --- | --- |"))) {
-            
-            console.log("Valid timetable response received from API");
-            return { text: responseContent };
-          } else {
-            console.log("API response doesn't contain timetable format, using fallback");
-            return { text: RIGHTS_ISSUE_TIMETABLE_FALLBACK };
-          }
-        } catch (apiTimetableError) {
-          console.error("Error calling Grok API for timetable:", apiTimetableError);
-          console.log("Using timetable fallback due to API error");
-          return { text: RIGHTS_ISSUE_TIMETABLE_FALLBACK };
-        }
-      }
-      
-      // Standard processing for non-timetable specific requests
-      try {
-        console.log("Connecting to Grok API");
-        
-        // Create a more structured prompt that explicitly tells Grok how to use the context
-        const systemMessage = hasRelevantContext 
-          ? 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-            'You MUST base your answers on the regulatory context provided to you. ' +
-            'The regulatory context contains essential information to answer the user\'s question. ' +
-            'If the context contains details about a timetable or process, you MUST present it in a clear, step-by-step table format. ' +
-            'For timetables especially, create a formal table with dates/events and descriptions in separate columns. ' +
-            'Be extremely precise and detailed, presenting information exactly as it appears in the context. ' +
-            'If the context includes specific rules or article numbers, always cite them. ' +
-            'If the user is asking about a rights issue timetable, you MUST format it as a clear table showing each date, event, and description ' +
-            'exactly matching the information from the context provided, with no omissions.'
-          : 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
-            'You should base your answers on the regulatory context provided. ' +
-            'If the context doesn\'t contain relevant information to answer the question, ' +
-            'clearly state that you don\'t have specific information about that topic in your reference documents.';
-        
-        const requestBody = {
-          messages: [
-            { 
-              role: 'system', 
-              content: systemMessage
-            },
-            { 
-              role: 'user', 
-              content: enhancedPrompt
-            }
-          ],
-          model: "grok-3-mini-beta",
-          temperature: params.temperature || 0.2, // Lowering temperature further for more precise responses
-          max_tokens: params.maxTokens || 1500, // Increasing max tokens to allow for more detailed responses
-          response_format: { type: "text" }
-        };
-        
-        // Log the request body for debugging
-        console.log("Request body:", JSON.stringify(requestBody));
-        
-        const data = await grokApiService.callChatCompletions(requestBody);
-        
-        const responseContent = data.choices?.[0]?.message?.content;
-        
-        // Check if the response seems inadequate and it's a rights issue query
-        if ((responseContent?.includes("I couldn't generate a response based on the regulatory context") || 
-            responseContent?.includes("No specific information") ||
-            responseContent?.includes("I don't have specific information")) && 
-            isRightsIssueQuery) {
-          
-          console.log("Received inadequate response for rights issue query, using fallback");
-          if (params.prompt.toLowerCase().includes('timetable')) {
-            return { text: RIGHTS_ISSUE_TIMETABLE_FALLBACK };
-          } else {
-            return generateFallbackResponse(params.prompt, "Incomplete API response");
-          }
-        }
-        
-        return {
-          text: responseContent || 
-                "I'm sorry, I couldn't generate a response based on the regulatory context."
-        };
-      } catch (apiError) {
-        console.error("Error calling Grok API:", apiError);
-        
-        // Fallback to demo responses when API fails
-        console.log("Using fallback response due to API error");
-        if (isRightsIssueQuery && params.prompt.toLowerCase().includes('timetable')) {
-          return { text: RIGHTS_ISSUE_TIMETABLE_FALLBACK };
-        } else {
-          return generateFallbackResponse(params.prompt, apiError instanceof Error ? apiError.message : "API error");
-        }
-      }
+      // Detect specific query types
+      const queryType = detectQueryType(params.prompt);
+      console.log('Detected Query Type:', queryType);
+
+      // Retrieve context with enhanced reasoning
+      const { context, reasoning } = await contextService.getRegulatoryContextWithReasoning(params.prompt);
+      console.log('Context Reasoning:', reasoning);
+
+      // Create a more structured system message based on query type
+      const systemMessage = createSystemMessageForQueryType(queryType, context);
+
+      // Prepare request body with enhanced instructions
+      const requestBody = {
+        messages: [
+          { role: 'system', content: systemMessage },
+          { role: 'user', content: params.prompt }
+        ],
+        model: "grok-3-mini-beta",
+        temperature: queryType === 'timetable' ? 0.1 : 0.3,
+        max_tokens: queryType === 'timetable' ? 2000 : 1500,
+      };
+
+      console.log('Request Body:', requestBody);
+
+      // Make API call
+      const response = await grokApiService.callChatCompletions(requestBody);
+
+      console.groupEnd();
+
+      return {
+        text: response.choices[0].message.content,
+        queryType: queryType
+      };
+
     } catch (error) {
-      console.error("Error generating response:", error);
-      return generateFallbackResponse(params.prompt, "Error generating response");
+      console.error('Grok Response Generation Error:', error);
+      console.groupEnd();
+
+      return generateFallbackResponse(params.prompt, error);
     }
   },
 
@@ -298,3 +144,45 @@ export const grokService = {
    */
   generateExcelDocument: documentGenerationService.generateExcelDocument
 };
+
+// Helper function to detect query type
+function detectQueryType(prompt: string): string {
+  const lowerPrompt = prompt.toLowerCase();
+  if (lowerPrompt.includes('rights issue') && lowerPrompt.includes('timetable')) return 'timetable';
+  if (lowerPrompt.includes('connected transaction')) return 'connected_transaction';
+  if (lowerPrompt.includes('mandatory offer')) return 'mandatory_offer';
+  return 'general';
+}
+
+// Create system message tailored to query type
+function createSystemMessageForQueryType(queryType: string, context: string): string {
+  const baseMessage = `You are a Hong Kong regulatory expert. Use the following context precisely:
+
+${context}
+
+`;
+
+  switch (queryType) {
+    case 'timetable':
+      return baseMessage + `For rights issue timetables:
+- Format your response as a clear, professionally structured table
+- Include specific rule references from Chapter 10 of HK Listing Rules
+- Be extremely precise about dates, events, and regulatory requirements
+- Do not summarize or generalize; provide exact details`;
+
+    case 'connected_transaction':
+      return baseMessage + `For connected transactions:
+- Cite specific rules from Chapter 14A
+- Explain transaction classification and approval requirements
+- Highlight disclosure and shareholders' approval thresholds`;
+
+    case 'mandatory_offer':
+      return baseMessage + `For mandatory offer rules:
+- Reference Rule 26 of Takeovers Code
+- Explain triggering events for mandatory offers
+- Detail calculation of offer price and shareholders' rights`;
+
+    default:
+      return baseMessage + `Provide a comprehensive, rule-based regulatory analysis.`;
+  }
+}
