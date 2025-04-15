@@ -82,8 +82,11 @@ export const grokService = {
               role: 'system', 
               content: 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
                        'You should strictly base your answers on the regulatory context provided. ' +
+                       'If the context contains relevant information, use it to provide a detailed response. ' +
                        'If the context doesn\'t contain relevant information to answer the question, ' +
-                       'clearly state that you don\'t have specific information about that topic in your reference documents.'
+                       'clearly state that you don\'t have specific information about that topic in your reference documents. ' +
+                       'Provide specific citations from the regulatory context when possible. ' +
+                       'Explicitly mention which reference documents you are citing.'
             },
             { 
               role: 'user', 
@@ -92,7 +95,7 @@ export const grokService = {
           ],
           model: "grok-3-mini-beta",
           temperature: params.temperature || 0.7,
-          max_tokens: params.maxTokens || 500
+          max_tokens: params.maxTokens || 800
         };
         
         const data = await grokApiService.callChatCompletions(requestBody);
@@ -134,3 +137,4 @@ export const grokService = {
    */
   generateExcelDocument: documentGenerationService.generateExcelDocument
 };
+

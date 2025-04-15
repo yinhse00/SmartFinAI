@@ -161,6 +161,49 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
+    // Add information about Rights Issues
+    databaseService.addSampleEntry({
+      title: "Rights Issues Timetable",
+      content: "According to the HKEX Listing Rules, a typical rights issue timetable includes: " +
+        "1. Board meeting to approve rights issue: Day 0 " +
+        "2. Publication of announcement: Day 1 " +
+        "3. Last day of dealings in shares on cum-rights basis: Day 4 " +
+        "4. Ex-date (first day of dealings in shares on ex-rights basis): Day 5 " +
+        "5. Latest time for lodging transfers of shares to qualify for rights: Day 6 at 4:30 pm " +
+        "6. Register of members closes: Days 7-11 " +
+        "7. Record date: Day 11 " +
+        "8. Register of members reopens: Day 12 " +
+        "9. Despatch of rights issue documents: Day 12 " +
+        "10. First day of dealings in nil-paid rights: Day 15 " +
+        "11. Last day of dealings in nil-paid rights: Day 21 " +
+        "12. Latest time for acceptance of and payment for rights shares: Day 26 at 4:00 pm " +
+        "13. Announcement of results of rights issue: Day 28 " +
+        "14. Despatch of certificates for fully-paid rights shares: Day 33 " +
+        "15. Dealings in fully-paid rights shares commence: Day 35",
+      category: "listing_rules",
+      source: "HKEX Listing Rules Chapter 7",
+      section: "Chapter 7",
+      lastUpdated: new Date("2022-09-20"),
+      status: "active"
+    });
+    
+    databaseService.addSampleEntry({
+      title: "Rights Issue Requirements",
+      content: "Rights issues by Hong Kong listed companies are primarily governed by Chapter 7 of the HKEX Listing Rules. " +
+        "Key requirements include: " +
+        "1. The rights issue must be made pro rata to existing shareholders. " +
+        "2. The subscription period must be at least 10 business days from the dispatch of the rights issue documents. " +
+        "3. Rights issues require approval by shareholders unless the new shares being issued are not more than 50% of the existing issued shares. " +
+        "4. The issuer must make arrangements to dispose of rights shares not subscribed and the net proceeds exceeding HK$100 must be paid to the original allottees. " +
+        "5. The company must issue a prospectus in accordance with the Companies (Winding Up and Miscellaneous Provisions) Ordinance. " +
+        "6. For companies with a primary listing on HKEX, the rights shares must be offered for subscription at a price that is at a discount of at least 30% to the benchmarked price.",
+      category: "listing_rules",
+      source: "HKEX Listing Rules Chapter 7",
+      section: "Chapter 7",
+      lastUpdated: new Date("2022-09-20"),
+      status: "active"
+    });
+    
     console.log("Added sample regulatory data");
   }
 };
