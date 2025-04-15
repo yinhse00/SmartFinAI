@@ -1,4 +1,3 @@
-
 /**
  * Service for handling regulatory context operations
  */
@@ -27,7 +26,25 @@ export const contextService = {
       if (isRightsIssueQuery) {
         console.log("Rights issue query detected, prioritizing rights issue information");
         
-        // First check reference documents in Supabase
+        // First get the detailed rights issue timetable from in-memory database
+        const rightsIssueEntries = await databaseService.search('rights issue timetable');
+        
+        if (rightsIssueEntries && rightsIssueEntries.length > 0) {
+          const detailedEntries = rightsIssueEntries.filter(entry => 
+            entry.title.toLowerCase().includes('timetable') && 
+            entry.content.length > 500
+          );
+          
+          if (detailedEntries.length > 0) {
+            console.log(`Found detailed rights issue timetable in database`);
+            return formatRegulatoryEntriesAsContext(detailedEntries);
+          }
+          
+          console.log(`Found ${rightsIssueEntries.length} rights issue entries in in-memory database`);
+          return formatRegulatoryEntriesAsContext(rightsIssueEntries);
+        }
+        
+        // If not found in memory, check reference documents in Supabase
         let { data: rightsIssueDocuments, error } = await supabase
           .from('reference_documents')
           .select('*')
@@ -38,17 +55,6 @@ export const contextService = {
         if (!error && rightsIssueDocuments && rightsIssueDocuments.length > 0) {
           console.log(`Found ${rightsIssueDocuments.length} rights issue documents in reference_documents table`);
           return formatDocumentsAsContext(rightsIssueDocuments);
-        }
-        
-        // If no documents found in Supabase, search the in-memory database
-        console.log("No rights issue documents found in reference_documents table, checking in-memory database");
-        
-        // Search in-memory database for rights issue entries
-        const rightsIssueEntries = await databaseService.search('rights issue');
-        
-        if (rightsIssueEntries && rightsIssueEntries.length > 0) {
-          console.log(`Found ${rightsIssueEntries.length} rights issue entries in in-memory database`);
-          return formatRegulatoryEntriesAsContext(rightsIssueEntries);
         }
       }
       

@@ -50,8 +50,19 @@ export const grokService = {
     try {
       // If no regulatory context was provided, try to find relevant context
       let regulatoryContext = params.regulatoryContext;
+      
+      // Check if the query is about rights issues or timetables
+      const isRightsIssueQuery = params.prompt.toLowerCase().includes('right') && 
+        (params.prompt.toLowerCase().includes('issue') || params.prompt.toLowerCase().includes('timetable'));
+      
       if (!regulatoryContext) {
-        regulatoryContext = await contextService.getRegulatoryContext(params.prompt);
+        if (isRightsIssueQuery) {
+          console.log("Rights issue query detected, prioritizing rights issue information");
+          // Force a specific search for rights issue timetable information
+          regulatoryContext = await contextService.getRegulatoryContext("rights issue timetable detailed");
+        } else {
+          regulatoryContext = await contextService.getRegulatoryContext(params.prompt);
+        }
       }
       
       // Check if we found relevant regulatory context
@@ -89,11 +100,12 @@ export const grokService = {
           ? 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
             'You MUST base your answers on the regulatory context provided to you. ' +
             'The regulatory context contains essential information to answer the user\'s question. ' +
-            'If the context contains details about the topic, use it to provide a detailed response with specific citations. ' +
-            'Always explicitly mention which reference documents you are citing. ' +
-            'If you find a timetable or structured process in the context, present it in a clear, step-by-step format. ' +
-            'If the user asks about a timetable, ensure you format it clearly with dates, events, and descriptions in a structured manner. ' +
-            'Be comprehensive and specific, and never omit important details from the context.'
+            'If the context contains details about a timetable or process, you MUST present it in a clear, step-by-step table format. ' +
+            'For timetables especially, create a formal table with dates/events and descriptions in separate columns. ' +
+            'Be extremely precise and detailed, presenting information exactly as it appears in the context. ' +
+            'If the context includes specific rules or article numbers, always cite them. ' +
+            'If the user is asking about a rights issue timetable, you MUST format it as a clear table showing each date, event, and description ' +
+            'exactly matching the information from the context provided, with no omissions.'
           : 'You are a regulatory advisor specialized in Hong Kong financial regulations. ' +
             'You should base your answers on the regulatory context provided. ' +
             'If the context doesn\'t contain relevant information to answer the question, ' +
@@ -111,8 +123,9 @@ export const grokService = {
             }
           ],
           model: "grok-3-mini-beta",
-          temperature: params.temperature || 0.3, // Lowering temperature further for more precise responses
-          max_tokens: params.maxTokens || 1200 // Increasing max tokens to allow for more detailed responses
+          temperature: params.temperature || 0.2, // Lowering temperature further for more precise responses
+          max_tokens: params.maxTokens || 1500, // Increasing max tokens to allow for more detailed responses
+          response_format: { type: "text" }
         };
         
         // Log the request body for debugging
@@ -120,8 +133,20 @@ export const grokService = {
         
         const data = await grokApiService.callChatCompletions(requestBody);
         
+        const responseContent = data.choices?.[0]?.message?.content;
+        
+        // Check if the response seems inadequate and it's a rights issue query
+        if ((responseContent?.includes("I couldn't generate a response based on the regulatory context") || 
+            responseContent?.includes("No specific information") ||
+            responseContent?.includes("I don't have specific information")) && 
+            isRightsIssueQuery) {
+          
+          console.log("Received inadequate response for rights issue query, using fallback");
+          return generateFallbackResponse(params.prompt, "Incomplete API response");
+        }
+        
         return {
-          text: data.choices?.[0]?.message?.content || 
+          text: responseContent || 
                 "I'm sorry, I couldn't generate a response based on the regulatory context."
         };
       } catch (apiError) {

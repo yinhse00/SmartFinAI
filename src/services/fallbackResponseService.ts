@@ -1,4 +1,3 @@
-
 /**
  * Generate fallback responses when the API call fails
  */
@@ -14,19 +13,34 @@ export function generateFallbackResponse(query: string, reason: string = "API un
   // Return different responses based on query content to simulate AI responses
   if (lowerQuery.includes('rights issue') || lowerQuery.includes('timetable')) {
     return {
-      text: `Based on your query about rights issues, here is my response:\n\n` +
-            `A typical Rights Issue timetable for Hong Kong listed companies includes:\n\n` +
-            `1. Announcement Date (Day 0): Initial announcement of the rights issue\n` +
-            `2. Ex-Rights Date (Day 3-5): Shares begin trading without rights to the offering\n` +
-            `3. Record Date (Day 5-7): Date to determine eligible shareholders\n` +
-            `4. Prospectus Posting (Day 7-10): Rights issue documents sent to shareholders\n` +
-            `5. Subscription Period (Day 10-24): 14-day period for shareholders to exercise rights\n` +
-            `6. Trading of Nil-paid Rights (Day 10-20): Period when rights can be traded\n` +
-            `7. Latest Time for Acceptance (Day 24): Deadline for payment and acceptance\n` +
-            `8. Announcement of Results (Day 25-26): Results of the rights subscription\n` +
-            `9. Refund Checks Dispatch (Day 27-28): Refunds for unsuccessful excess applications\n` +
-            `10. Dealing in Fully-paid Rights (Day 28-30): New shares begin trading\n\n` +
-            `This timetable follows the requirements under Chapter 7 of the Hong Kong Listing Rules.`
+      text: `Timetable for a Rights Issue under Hong Kong Listing Rules
+
+This timetable outlines the typical steps and timeline for a rights issue under the Hong Kong Stock Exchange (HKEx) Listing Rules (Main Board), assuming no general meeting is required for shareholder approval (e.g., pre-emption rights are maintained per Rule 13.36(2)(a) or a general mandate exists). The schedule is indicative and may vary based on company circumstances, whether the issue is renounceable, and specific regulatory approvals. Always consult legal and financial advisors for compliance. References align with the HKEx Listing Rules and market practice.
+
+| Date/Event | Description |
+|------------|-------------|
+| T-30 to T-60 (1–2 months before announcement) | Prepare draft prospectus or listing document and related materials. Submit to HKEx for review if required (Rule 14.04). Engage underwriters, if any (Rule 10.24A). |
+| T-1 (Day before announcement) | Board meeting to approve the rights issue. Underwriting agreement (if applicable) signed and held in escrow. Finalize listing document details. |
+| T (Announcement Day) | Announce the rights issue via a Regulatory Information Service (RIS) (Rule 10.22). Publish listing document/prospectus (Rule 14.08). If underwritten, disclose underwriter details and compliance with Rule 10.24A. For non-fully underwritten issues, disclose risks on the front cover (Rule 10.23). |
+| T+1 | Submit application for listing of nil-paid rights and new shares to HKEx (Rule 10.26). HKEx reviews and approves listing. |
+| T+2 | Record date to determine eligible shareholders. Dispatch Provisional Allotment Letters (PALs) to shareholders (for renounceable issues) (Rule 10.31). |
+| T+3 | Nil-paid rights trading begins on HKEx (for renounceable issues). Typically lasts 10 business days (market practice). |
+| T+12 (10 business days after T+2) | Nil-paid rights trading ends. Deadline for shareholders to accept rights and pay for shares (Rule 10.29). Excess application period closes (if applicable, per Rule 10.31(3)). |
+| T+13 to T+14 | Calculate acceptances and excess applications. Notify underwriters of any shortfall (if underwritten). Underwriters arrange for sale of unsubscribed shares ("rump placement") (Rule 10.31(1)(b)). |
+| T+15 | Announce results of the rights issue via RIS, including subscription levels and rump placement details (if any) (Rule 10.32). |
+| T+16 | New shares issued and admitted to trading on HKEx. Dealings in fully-paid shares commence. Refund cheques (if any) dispatched to shareholders for excess applications. |
+| T+17 onwards | Finalize accounts with clearing systems (e.g., CCASS). Update share register. |
+
+Notes:
+- Underwriting: If underwritten, the underwriter must be licensed under the Securities and Futures Ordinance and independent of the issuer, unless compensatory arrangements are in place for controlling shareholders acting as underwriters (Rule 10.24A, 10.31(2)).
+- Compensatory Arrangements: For unsubscribed shares, issuers must adopt excess application or compensatory arrangements (e.g., sale of rump shares), fully disclosed in announcements and listing documents (Rule 10.31(1)).
+- Connected Persons: Rights issues to connected persons (e.g., directors, substantial shareholders) are exempt from connected transaction rules if pro-rata to existing shareholdings (Rule 14A.31(3)(a)).
+- Timing Adjustments: If a general meeting is required (e.g., no general mandate or pre-emption rights disapplied), add 14–21 days for notice and meeting (Rule 13.36(1)).
+- Disclosure: The listing document must include the intended use of proceeds, risks of non-full subscription, and substantial shareholder commitments (Rule 10.23, 10.24).
+
+This timetable assumes a renounceable rights issue with no significant regulatory delays. For non-renounceable issues, nil-paid trading steps are omitted, but the acceptance period remains similar.
+
+Source: Adapted from HKEx Listing Rules (Main Board), particularly Chapter 10, and market practice.`
     };
   }
   

@@ -1,4 +1,3 @@
-
 // This service handles the regulatory database operations
 // In a production environment, this would connect to a proper database
 // For now, we'll create a structured in-memory database that can be populated from files
@@ -164,7 +163,8 @@ export const initializeSampleData = () => {
     // Add comprehensive information about Rights Issues Timetable
     databaseService.addSampleEntry({
       title: "Rights Issues Timetable",
-      content: "According to the HKEX Listing Rules, a comprehensive rights issue timetable includes the following key dates and events:\n\n" +
+      content: "Timetable for a Rights Issue under Hong Kong Listing Rules\n\n" +
+        "This timetable outlines the typical steps and timeline for a rights issue under the Hong Kong Stock Exchange (HKEx) Listing Rules (Main Board), assuming no general meeting is required for shareholder approval (e.g., pre-emption rights are maintained per Rule 13.36(2)(a) or a general mandate exists). The schedule is indicative and may vary based on company circumstances, whether the issue is renounceable, and specific regulatory approvals.\n\n" +
         "T-30 to T-60 (1–2 months before announcement): Prepare draft prospectus or listing document and related materials. Submit to HKEx for review if required (Rule 14.04). Engage underwriters, if any (Rule 10.24A).\n\n" +
         "T-1 (Day before announcement): Board meeting to approve the rights issue. Underwriting agreement (if applicable) signed and held in escrow. Finalize listing document details.\n\n" +
         "T (Announcement Day): Announce the rights issue via a Regulatory Information Service (RIS) (Rule 10.22). Publish listing document/prospectus (Rule 14.08). If underwritten, disclose underwriter details and compliance with Rule 10.24A. For non-fully underwritten issues, disclose risks on the front cover (Rule 10.23).\n\n" +
