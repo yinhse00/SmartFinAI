@@ -63,10 +63,11 @@ export const useQueryExecution = (
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
       
+      // Ensure all 4 arguments are passed, using empty string as fallback
       logContextInfo(
         regulatoryContext || '', 
         reasoning || '', 
-        financialQueryType,
+        financialQueryType || 'unspecified', 
         contextTime
       );
       
@@ -111,4 +112,3 @@ export const useQueryExecution = (
     processQuery
   };
 };
-
