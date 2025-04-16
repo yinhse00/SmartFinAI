@@ -1,11 +1,11 @@
 
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { grokService } from '@/services/grokService';
 import { contextService } from '@/services/regulatory/contextService';
 import { useQueryParameters } from './useQueryParameters';
 import { useResponseHandling } from './useResponseHandling';
-import { setTruncationLogLevel, LogLevel } from '@/utils/truncation';
+import { useQueryLogger } from './useQueryLogger';
+import { useQueryBuilder } from './useQueryBuilder';
 import { Message } from '../ChatMessage';
 
 /**
@@ -24,11 +24,11 @@ export const useQueryExecution = (
   const { toast } = useToast();
   const { determineQueryParameters } = useQueryParameters();
   const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
+  const { setupLogging, logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
+  const { buildResponseParams } = useQueryBuilder();
 
-  // Enable debug logging for truncation detection in development
-  if (process.env.NODE_ENV === 'development') {
-    setTruncationLogLevel(LogLevel.DEBUG);
-  }
+  // Set up logging
+  setupLogging();
 
   const processQuery = async (queryText: string) => {
     if (!queryText.trim()) return;
@@ -53,23 +53,18 @@ export const useQueryExecution = (
     setIsLoading(true);
 
     try {
-      console.group('Financial Query Processing');
+      logQueryStart(queryText);
       
       // Get optimal parameters for the query
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
-      
-      const responseParams: any = {
-        prompt: queryText,
-        temperature: temperature,
-        maxTokens: maxTokens
-      };
+      logQueryParameters(financialQueryType, temperature, maxTokens);
       
       // Get regulatory context
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
-      responseParams.regulatoryContext = regulatoryContext;
+      logContextInfo(regulatoryContext, reasoning);
       
-      console.log('Financial Context Length:', regulatoryContext?.length);
-      console.log('Financial Reasoning:', reasoning);
+      // Build response parameters
+      const responseParams = buildResponseParams(queryText, temperature, maxTokens, regulatoryContext);
       
       // Handle API response
       await handleApiResponse(
@@ -81,7 +76,7 @@ export const useQueryExecution = (
         updatedMessages
       );
       
-      console.groupEnd();
+      finishLogging();
     } catch (error) {
       console.error("Error in financial chat process:", error);
       toast({

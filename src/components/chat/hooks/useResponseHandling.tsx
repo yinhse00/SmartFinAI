@@ -1,15 +1,11 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
-import { extractReferences } from '@/services/contextUtils';
-import { 
-  getTruncationDiagnostics, 
-  analyzeFinancialResponse, 
-  isTradingArrangementComplete 
-} from '@/utils/truncation';
+import { getTruncationDiagnostics } from '@/utils/truncation';
 import { Message } from '../ChatMessage';
-import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { useResponseFormatter } from './useResponseFormatter';
+import { useTruncationDetection, isTradingArrangementRelated } from './useTruncationDetection';
+import { useErrorHandling } from './useErrorHandling';
 
 /**
  * Hook for handling API responses
@@ -20,6 +16,9 @@ export const useResponseHandling = (
   isGrokApiKeySet: boolean
 ) => {
   const { toast } = useToast();
+  const { formatBotMessage, showTruncationToast } = useResponseFormatter();
+  const { isResponseComplete } = useTruncationDetection();
+  const { handleApiError, handleFallbackResponse } = useErrorHandling();
 
   const handleApiResponse = async (
     queryText: string,
@@ -38,101 +37,46 @@ export const useResponseHandling = (
                              response.text.includes("In response to your query");
       
       if (isUsingFallback && isGrokApiKeySet) {
-        console.log('Using fallback response - API connection issue');
-        toast({
-          title: "Financial Expert Connection Issue",
-          description: "Could not connect to financial expertise service. Using fallback response.",
-          variant: "destructive"
-        });
+        handleFallbackResponse(isGrokApiKeySet);
       }
       
-      const references = extractReferences(regulatoryContext);
-      
-      // Enhanced truncation detection with multiple methods
+      // Get basic diagnostics
       const diagnostics = getTruncationDiagnostics(response.text);
-      const isTruncated = diagnostics.isTruncated;
       
-      // Financial content-specific analysis
-      const financialAnalysis = analyzeFinancialResponse(response.text, financialQueryType);
+      // Format the bot message
+      const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
       
-      // Only check for trading arrangement truncation if not already detected
-      const isTradingArrangementTruncated = !isTruncated && 
-                                         isTradingArrangementRelated(queryText) && 
-                                         !isTradingArrangementComplete(response.text, financialQueryType);
+      // Do comprehensive completeness check
+      const completenessCheck = isResponseComplete(
+        response.text, 
+        diagnostics, 
+        financialQueryType, 
+        queryText
+      );
       
-      const isResponseIncomplete = isTruncated || 
-                                isTradingArrangementTruncated || 
-                                !financialAnalysis.isComplete;
-                                
-      if (isResponseIncomplete) {
+      // If not complete, mark as truncated
+      if (!completenessCheck.isComplete) {
         console.log('Incomplete response detected:', {
-          basicTruncation: isTruncated,
+          basicTruncation: diagnostics.isTruncated,
           diagnostics: diagnostics,
-          tradingArrangementTruncated: isTradingArrangementTruncated,
-          financialAnalysisMissingElements: financialAnalysis.missingElements
+          reasons: completenessCheck.reasons,
+          financialAnalysisMissingElements: completenessCheck.financialAnalysis.missingElements
         });
+        
+        botMessage.isTruncated = true;
       }
-      
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.text,
-        sender: 'bot',
-        timestamp: new Date(),
-        references: references,
-        isUsingFallback: isUsingFallback,
-        reasoning: reasoning,
-        queryType: response.queryType,
-        isTruncated: isResponseIncomplete
-      };
       
       setMessages([...processedMessages, botMessage]);
       console.log('Response delivered successfully');
       
       if (botMessage.isTruncated) {
         console.log('Response appears to be truncated, showing retry option');
-        
-        // Show toast with more detailed reason for truncation
-        let truncationReason = "The response appears to have been cut off.";
-        
-        if (diagnostics.reasons.length > 0) {
-          truncationReason = `The response appears incomplete: ${diagnostics.reasons[0]}`;
-        } else if (financialAnalysis.missingElements.length > 0) {
-          truncationReason = `Financial content incomplete: ${financialAnalysis.missingElements[0]}`;
-        }
-        
-        toast({
-          title: "Incomplete Response",
-          description: truncationReason + " You can retry your query to get a complete answer.",
-          duration: 10000,
-          action: <Button 
-                   onClick={retryLastQuery}
-                   variant="outline"
-                   size="sm" 
-                   className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
-                  >
-                    <RefreshCw size={14} />
-                    Retry Query
-                  </Button>
-        });
+        showTruncationToast(diagnostics, completenessCheck.financialAnalysis, retryLastQuery);
       }
       
       return botMessage;
     } catch (error) {
-      console.error("Error generating financial expert response:", error);
-      toast({
-        title: "Expert Response Error",
-        description: "Failed to generate a financial expert response. Please check your API key and try again.",
-        variant: "destructive"
-      });
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'm sorry, I encountered an error while analyzing your financial query. Please check your API key or try rephrasing your question.",
-        sender: 'bot',
-        timestamp: new Date(),
-        isError: true
-      };
-      
+      const errorMessage = handleApiError(error, processedMessages);
       setMessages([...processedMessages, errorMessage]);
       return errorMessage;
     }
@@ -142,11 +86,3 @@ export const useResponseHandling = (
     handleApiResponse
   };
 };
-
-// Helper function to check if a query is related to trading arrangements
-function isTradingArrangementRelated(queryText: string): boolean {
-  const normalizedQuery = queryText.toLowerCase();
-  return normalizedQuery.includes('trading arrangement') || 
-         normalizedQuery.includes('timetable') || 
-         normalizedQuery.includes('schedule');
-}

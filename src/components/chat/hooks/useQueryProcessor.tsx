@@ -6,7 +6,7 @@ import { useQueryInputHandler } from './useQueryInputHandler';
 import { Message } from '../ChatMessage';
 
 /**
- * Hook to manage query processing
+ * Hook for managing query processing
  */
 export const useQueryProcessor = (
   messages: Message[],
