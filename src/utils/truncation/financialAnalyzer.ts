@@ -1,6 +1,7 @@
 
 import { logTruncation, LogLevel } from './logLevel';
-import { detectTruncationComprehensive } from './advancedDetection'; // Fixed import path
+import { detectTruncationComprehensive } from './advancedDetection';
+import { analyzeFinancialResponse as analyzeFinancialResponseDetails } from './financialResponseAnalyzer';
 
 /**
  * Analyzes a financial response for completeness
@@ -22,10 +23,6 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     analysis.isComplete = false;
     analysis.missingElements.push("Response appears truncated by advanced indicators");
   }
-  
-  // Import and use the existing analyzeFinancialResponse from financialResponseAnalyzer
-  // instead of the non-existent analyzeFinancialResponseDetails function
-  const { analyzeFinancialResponse: analyzeFinancialResponseDetails } = require('./financialResponseAnalyzer');
   
   // Get detailed financial analysis
   const financialAnalysis = analyzeFinancialResponseDetails(content, financialQueryType);
