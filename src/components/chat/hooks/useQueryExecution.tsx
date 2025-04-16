@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { contextService } from '@/services/regulatory/contextService';
@@ -67,8 +66,13 @@ export const useQueryExecution = (
       const contextStart = Date.now();
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
-      logContextInfo(regulatoryContext, reasoning, financialQueryType, contextTime);
-      
+      // Pass all 4 arguments to logContextInfo
+      logContextInfo(
+        regulatoryContext, 
+        reasoning, 
+        financialQueryType,
+        contextTime
+      );
       
       // Update processing stage - now we're actually processing the query
       setProcessingStage('processing');
