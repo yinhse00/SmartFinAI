@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { contextService } from '@/services/regulatory/contextService';
@@ -89,8 +90,8 @@ export const useQueryExecution = (
       const result = await handleApiResponse(
         queryText, 
         responseParams, 
-        regulatoryContext, 
-        reasoning, 
+        regulatoryContext ?? '', 
+        reasoning ?? '', 
         financialQueryType,
         updatedMessages
       );
@@ -123,3 +124,4 @@ export const useQueryExecution = (
     processQuery
   };
 };
+
