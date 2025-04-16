@@ -16,5 +16,10 @@ export interface GrokResponse {
     takeoversCodeUsed?: boolean;
     whitewashInfoIncluded?: boolean;
     referenceDocumentsUsed?: boolean;
+    responseCompleteness?: {
+      isComplete: boolean;
+      confidence: 'low' | 'medium' | 'high';
+      reasons?: string[];
+    };
   };
 }

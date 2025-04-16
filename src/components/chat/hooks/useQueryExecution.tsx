@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
@@ -5,8 +6,17 @@ import { contextService } from '@/services/regulatory/contextService';
 import { extractReferences } from '@/services/contextUtils';
 import { identifyFinancialQueryType, isTradingArrangementRelated } from '../utils/queryTypeUtils';
 import { getOptimalTemperature, getOptimalTokens } from '../utils/parameterUtils';
-import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
+import { 
+  detectTruncationComprehensive, 
+  isTradingArrangementComplete,
+  getTruncationDiagnostics,
+  analyzeFinancialResponse,
+  LogLevel,
+  setTruncationLogLevel
+} from '@/utils/truncationUtils';
 import { Message } from '../ChatMessage';
+import { RefreshCw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 /**
  * Hook for handling query execution logic
@@ -22,6 +32,11 @@ export const useQueryExecution = (
 ) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Enable debug logging for truncation detection in development
+  if (process.env.NODE_ENV === 'development') {
+    setTruncationLogLevel(LogLevel.DEBUG);
+  }
 
   const processQuery = async (queryText: string) => {
     if (!queryText.trim()) return;
@@ -69,11 +84,11 @@ export const useQueryExecution = (
         
         // Set even more precise parameters for rights issue timetables
         if (financialQueryType === 'rights_issue') {
-          maxTokens = 150000; // Increased token limit for rights issue timetables to 150,000
-          temperature = 0.02; // Very precise temperature for structured output
+          maxTokens = 250000; // Increased token limit for rights issue timetables 
+          temperature = 0.01; // Very precise temperature for structured output
         } else {
-          maxTokens = 15000; // Increased from 10,000 to 15,000 for other corporate actions
-          temperature = 0.05; // Low temperature for consistent output
+          maxTokens = 30000; // Increased from 15,000 to 30,000 for other corporate actions
+          temperature = 0.03; // Lower temperature for consistent output
         }
       }
       
@@ -132,13 +147,30 @@ export const useQueryExecution = (
       
       const references = extractReferences(regulatoryContext);
       
-      // More accurate truncation detection
-      const isTruncated = detectTruncationComprehensive(response.text);
+      // Enhanced truncation detection with multiple methods
+      const diagnostics = getTruncationDiagnostics(response.text);
+      const isTruncated = diagnostics.isTruncated;
+      
+      // Financial content-specific analysis
+      const financialAnalysis = analyzeFinancialResponse(response.text, financialQueryType);
       
       // Only check for trading arrangement truncation if not already detected
       const isTradingArrangementTruncated = !isTruncated && 
                                          isTradingArrangementRelated(queryText) && 
                                          !isTradingArrangementComplete(response.text, financialQueryType);
+      
+      const isResponseIncomplete = isTruncated || 
+                                isTradingArrangementTruncated || 
+                                !financialAnalysis.isComplete;
+                                
+      if (isResponseIncomplete) {
+        console.log('Incomplete response detected:', {
+          basicTruncation: isTruncated,
+          diagnostics: diagnostics,
+          tradingArrangementTruncated: isTradingArrangementTruncated,
+          financialAnalysisMissingElements: financialAnalysis.missingElements
+        });
+      }
       
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
@@ -149,7 +181,7 @@ export const useQueryExecution = (
         isUsingFallback: isUsingFallback,
         reasoning: reasoning,
         queryType: response.queryType,
-        isTruncated: isTruncated || isTradingArrangementTruncated
+        isTruncated: isResponseIncomplete
       };
       
       setMessages(prev => [...prev, botMessage]);
@@ -157,16 +189,29 @@ export const useQueryExecution = (
       
       if (botMessage.isTruncated) {
         console.log('Response appears to be truncated, showing retry option');
+        
+        // Show toast with more detailed reason for truncation
+        let truncationReason = "The response appears to have been cut off.";
+        
+        if (diagnostics.reasons.length > 0) {
+          truncationReason = `The response appears incomplete: ${diagnostics.reasons[0]}`;
+        } else if (financialAnalysis.missingElements.length > 0) {
+          truncationReason = `Financial content incomplete: ${financialAnalysis.missingElements[0]}`;
+        }
+        
         toast({
           title: "Incomplete Response",
-          description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
+          description: truncationReason + " You can retry your query to get a complete answer.",
           duration: 10000,
-          action: <button 
-                   onClick={retryLastQuery} 
-                   className="px-3 py-1 rounded bg-finance-medium-blue text-white text-xs hover:bg-finance-dark-blue"
+          action: <Button 
+                   onClick={retryLastQuery}
+                   variant="outline"
+                   size="sm" 
+                   className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
                   >
+                    <RefreshCw size={14} />
                     Retry Query
-                  </button>
+                  </Button>
         });
       }
     } catch (error) {

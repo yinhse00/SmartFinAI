@@ -6,7 +6,12 @@ import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
-import { detectTruncationComprehensive, isTradingArrangementComplete } from '@/utils/truncationUtils';
+import { 
+  detectTruncationComprehensive, 
+  isTradingArrangementComplete, 
+  getTruncationDiagnostics,
+  analyzeFinancialResponse
+} from '@/utils/truncationUtils';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { needsEnhancedTokenSettings } from './utils/parameterUtils';
@@ -43,8 +48,9 @@ const ChatInterface = () => {
         const content = lastMessage.content;
         const queryType = lastMessage.queryType;
         
-        // Enhanced detection using multiple methods
-        const isPotentiallyTruncated = detectTruncationComprehensive(content);
+        // Comprehensive truncation detection with detailed diagnostics
+        const diagnostics = getTruncationDiagnostics(content);
+        const isPotentiallyTruncated = diagnostics.isTruncated;
         
         // For trading arrangement related queries, perform specialized check
         const previousUserMessage = messages.length > 1 ? 
@@ -62,17 +68,34 @@ const ChatInterface = () => {
           content.includes('timetable') && 
           !content.includes('Record Date') && 
           !content.toLowerCase().includes('ex-rights');
+          
+        // Use enhanced financial response analysis for more accurate detection
+        const financialAnalysis = analyzeFinancialResponse(content, queryType);
+        
+        const isTruncated = isPotentiallyTruncated || 
+                           isTradingArrangementIncomplete || 
+                           isRightsIssueWithMissingContent ||
+                           !financialAnalysis.isComplete;
 
-        if (isPotentiallyTruncated || isTradingArrangementIncomplete || isRightsIssueWithMissingContent) {
+        if (isTruncated) {
+          console.log('Response appears incomplete:', {
+            basicTruncation: isPotentiallyTruncated,
+            tradingArrangementIncomplete: isTradingArrangementIncomplete,
+            diagnostics: diagnostics.reasons,
+            financialAnalysis: financialAnalysis.missingElements
+          });
+          
           // Mark the message as truncated
           const updatedMessages = [...messages];
           updatedMessages[updatedMessages.length - 1].isTruncated = true;
           setMessages(updatedMessages);
           
-          // Show toast with retry option
+          // Show toast with retry option and more specific details
           toast({
             title: "Incomplete Response",
-            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
+            description: diagnostics.reasons.length > 0 
+              ? `The response appears incomplete: ${diagnostics.reasons[0]}` 
+              : "The response appears to have been cut off. You can retry your query to get a complete answer.",
             duration: 15000,
             action: <Button 
                      onClick={retryLastQuery} 
