@@ -26,7 +26,7 @@ export const useResponseAnalysis = () => {
     
     // Quick check for obvious truncation markers
     const hasObviousTruncation = responseText.endsWith('...') || 
-                              responseText.includes('I'll continue') ||
+                              responseText.includes("I'll continue") ||
                               responseText.includes('I will continue');
                               
     if (hasObviousTruncation) {
