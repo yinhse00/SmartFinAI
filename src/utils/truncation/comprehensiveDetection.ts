@@ -70,8 +70,10 @@ export const detectTruncationComprehensive = (content: string): boolean => {
       return openingTags > closingTags;
     })(),
     
-    // Missing complete conclusion 
-    content.length > 4000 && !(/\b(in conclusion|to summarize|in summary|key points:|to recap|in short|overall|thus|therefore)\b/i.test(content.slice(-1000))),
+    // Missing complete conclusion for financial comparisons
+    content.length > 5000 && 
+    content.toLowerCase().includes('difference between') && 
+    !(/\b(in conclusion|to summarize|in summary|key points:|to recap|in short|overall|thus|therefore)\b/i.test(content.slice(-1500))),
     
     // Ends with "For more" or "For additional" suggesting incomplete guidance
     /\b(for more|for additional|for further|if you need|should you require|contact|please specify)\s*$/i.test(content.trim()),
@@ -91,7 +93,13 @@ export const detectTruncationComprehensive = (content: string): boolean => {
     content.toLowerCase().includes('open offer') && 
     !content.toLowerCase().includes('key differences') && 
     !content.toLowerCase().includes('summary') && 
-    !content.toLowerCase().includes('conclusion')
+    !content.toLowerCase().includes('conclusion'),
+    
+    // Financial specific check - table without explanation
+    content.includes('|') && 
+    content.includes('|---') && 
+    content.toLowerCase().includes('financial') && 
+    !(/\b(notes:|note:|explanation:|explained below|as shown above)\b/i.test(content))
   ];
   
   for (let i = 0; i < advancedTruncationIndicators.length; i++) {

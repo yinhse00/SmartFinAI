@@ -54,24 +54,43 @@ export const useResponseHandling = (
         queryText
       );
 
-      // If detected as incomplete on first pass, try once more with higher token limit
-      if (!completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
-        console.log('Initial response appears incomplete, retrying with higher token limit');
+      // Advanced retry strategy with up to 3 attempts for financial content
+      let retryCount = 0;
+      const maxRetries = 3;
+      
+      while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
+        console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with higher token limit`);
         
-        // Increase token limit by 50% and try again for first retry
-        const increasedTokens = Math.floor(responseParams.maxTokens * 1.5);
+        // Exponential increase in token limit with each retry
+        const tokenMultiplier = retryCount === 0 ? 1.5 : (retryCount === 1 ? 2 : 3);
+        const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
+        
+        // Decrease temperature with each retry for more consistency
+        const temperatureReduction = retryCount === 0 ? 0.8 : (retryCount === 1 ? 0.6 : 0.4);
+        const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
+        
         const enhancedParams = {
           ...responseParams,
           maxTokens: increasedTokens,
-          temperature: Math.max(0.01, responseParams.temperature * 0.8) // Lower temperature slightly
+          temperature: reducedTemperature
         };
         
-        console.log(`Retrying with increased tokens: ${increasedTokens}`);
+        console.log(`Retry #${retryCount + 1} with tokens: ${increasedTokens}, temperature: ${reducedTemperature}`);
         
-        // First retry attempt with increased tokens
         try {
+          // Special handling for financial comparison queries to ensure completeness
+          if (financialQueryType === 'rights_issue' && 
+              queryText.toLowerCase().includes('difference') && 
+              retryCount === maxRetries - 1) {
+            
+            // For the final retry of a comparison query, explicitly request conclusion
+            enhancedParams.prompt = enhancedParams.prompt + 
+              " Make sure to include a complete conclusion section that summarizes all key differences.";
+          }
+          
+          // Execute retry
           response = await grokService.generateResponse(enhancedParams);
-          console.log('Auto-retry completed, checking completeness of new response');
+          console.log(`Retry #${retryCount + 1} completed, checking completeness`);
           
           // Re-check completeness
           const newDiagnostics = getTruncationDiagnostics(response.text);
@@ -82,66 +101,31 @@ export const useResponseHandling = (
             queryText
           );
           
-          // If still incomplete and it's a complex financial query, try one more time with much higher tokens
-          if (!newCompletenessCheck.isComplete && 
-              (financialQueryType === 'rights_issue' || 
-               queryText.toLowerCase().includes('difference between') ||
-               queryText.toLowerCase().includes('compare'))) {
-            
-            console.log('Response still incomplete after first retry, attempting second retry with much higher token limit');
-            
-            // Double the tokens for second retry and use very low temperature
-            const finalRetryParams = {
-              ...responseParams,
-              maxTokens: responseParams.maxTokens * 2, // Double the original token count
-              temperature: 0.1 // Very low temperature for precision
-            };
-            
-            console.log(`Second retry with tokens: ${finalRetryParams.maxTokens}`);
-            
-            try {
-              response = await grokService.generateResponse(finalRetryParams);
-              console.log('Second auto-retry completed, checking final completeness');
-              
-              // Final completeness check
-              const finalDiagnostics = getTruncationDiagnostics(response.text);
-              const finalCompletenessCheck = isResponseComplete(
-                response.text,
-                finalDiagnostics,
-                financialQueryType,
-                queryText
-              );
-              
-              // Update our references to use the latest response data
-              completenessCheck.isComplete = finalCompletenessCheck.isComplete;
-              completenessCheck.reasons = finalCompletenessCheck.reasons;
-              completenessCheck.financialAnalysis = finalCompletenessCheck.financialAnalysis;
-              
-              console.log(`Second auto-retry result - Complete: ${finalCompletenessCheck.isComplete}`);
-            } catch (secondRetryError) {
-              console.error('Second auto-retry failed:', secondRetryError);
-              // Continue with previous response if second retry fails
-            }
-          } else {
-            // Update references with first retry results
-            completenessCheck.isComplete = newCompletenessCheck.isComplete;
-            completenessCheck.reasons = newCompletenessCheck.reasons;
-            completenessCheck.financialAnalysis = newCompletenessCheck.financialAnalysis;
-            
-            console.log(`Auto-retry result - Complete: ${newCompletenessCheck.isComplete}`);
+          // Update completeness check results
+          completenessCheck.isComplete = newCompletenessCheck.isComplete;
+          completenessCheck.reasons = newCompletenessCheck.reasons;
+          completenessCheck.financialAnalysis = newCompletenessCheck.financialAnalysis;
+          
+          console.log(`Retry #${retryCount + 1} result - Complete: ${newCompletenessCheck.isComplete}`);
+          
+          // If complete, break out of retry loop
+          if (newCompletenessCheck.isComplete) {
+            break;
           }
         } catch (retryError) {
-          console.error('Auto-retry failed:', retryError);
-          // Continue with original response if retry fails
+          console.error(`Retry #${retryCount + 1} failed:`, retryError);
+          // Continue with previous response if retry fails
         }
+        
+        retryCount++;
       }
       
       // Format the bot message
       const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
       
-      // If not complete after retry attempts, mark as truncated
+      // If still not complete after all retry attempts, mark as truncated
       if (!completenessCheck.isComplete) {
-        console.log('Incomplete response detected:', {
+        console.log('Incomplete response detected after all retries:', {
           reasons: completenessCheck.reasons,
           financialAnalysisMissingElements: completenessCheck.financialAnalysis.missingElements
         });

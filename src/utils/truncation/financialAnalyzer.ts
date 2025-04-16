@@ -23,6 +23,18 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     analysis.missingElements.push("Response appears truncated by advanced indicators");
   }
   
+  // Check for conclusion section in all financial responses
+  if (content.length > 3000 && 
+      !content.toLowerCase().includes('in conclusion') &&
+      !content.toLowerCase().includes('to conclude') &&
+      !content.toLowerCase().includes('key differences:') &&
+      !content.toLowerCase().includes('key points:') &&
+      !content.toLowerCase().includes('summary:') &&
+      !content.toLowerCase().includes('to summarize')) {
+    analysis.isComplete = false;
+    analysis.missingElements.push("Missing conclusion or summary section");
+  }
+  
   // Domain-specific checks based on query type
   if (financialQueryType) {
     logTruncation(LogLevel.DEBUG, `Analyzing financial response for ${financialQueryType}`, {
@@ -71,6 +83,15 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
               analysis.isComplete = false;
               analysis.missingElements.push(`Insufficient key dates for comparison (found ${dateMatches.length})`);
             }
+          }
+          
+          // Check for conclusion specifically in comparison responses
+          if (!lowerContent.includes('in conclusion') && 
+              !lowerContent.includes('to conclude') && 
+              !lowerContent.includes('key differences:') && 
+              !lowerContent.includes('summary of differences')) {
+            analysis.isComplete = false;
+            analysis.missingElements.push("Missing conclusion section in comparison");
           }
         } else {
           // Standard rights issue query
@@ -126,10 +147,11 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       if (content.toLowerCase().includes('timetable') || 
           content.toLowerCase().includes('comparison')) {
         // Check if the response ends with a table or list without conclusion
-        const lastParagraphs = content.split('\n').slice(-5).join('\n').toLowerCase();
+        const lastParagraphs = content.split('\n').slice(-7).join('\n').toLowerCase();
         if ((lastParagraphs.includes('|') || lastParagraphs.includes('-')) && 
             !lastParagraphs.includes('conclusion') && 
-            !lastParagraphs.includes('summary')) {
+            !lastParagraphs.includes('summary') &&
+            !lastParagraphs.includes('key points')) {
           analysis.isComplete = false;
           analysis.missingElements.push("Response ends with table or list without conclusion");
         }
