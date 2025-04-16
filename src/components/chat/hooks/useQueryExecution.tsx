@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { contextService } from '@/services/regulatory/contextService';
@@ -32,6 +31,7 @@ export const useQueryExecution = (
   setupLogging();
 
   const processQuery = async (queryText: string) => {
+    
     if (!queryText.trim()) return;
     
     if (!isGrokApiKeySet) {
@@ -67,6 +67,7 @@ export const useQueryExecution = (
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
       logContextInfo(regulatoryContext, reasoning, financialQueryType, contextTime);
+      
       
       // Update processing stage - now we're actually processing the query
       setProcessingStage('processing');
