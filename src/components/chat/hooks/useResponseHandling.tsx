@@ -1,3 +1,4 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { Message } from '../ChatMessage';
@@ -57,8 +58,11 @@ export const useResponseHandling = (
       // First attempt with significantly increased token limits
       console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
       
+      // Make the initial API call
+      let apiResponse = await grokService.generateResponse(responseParams);
+      
       // Check if it's using fallback
-      const isUsingFallback = isFallbackResponse(response.text);
+      const isUsingFallback = isFallbackResponse(apiResponse.text);
       
       if (isUsingFallback && isGrokApiKeySet) {
         handleFallbackResponse(isGrokApiKeySet);
@@ -66,7 +70,7 @@ export const useResponseHandling = (
       
       // Analyze response completeness
       let completenessCheck = analyzeResponseCompleteness(
-        response.text, 
+        apiResponse.text, 
         financialQueryType, 
         queryText, 
         isSimpleQuery
@@ -99,12 +103,12 @@ export const useResponseHandling = (
         
         try {
           // Execute retry with enhanced parameters
-          response = await grokService.generateResponse(enhancedParams);
+          apiResponse = await grokService.generateResponse(enhancedParams);
           console.log(`Retry #${retryCount + 1} completed, checking completeness`);
           
           // Re-analyze completeness with stricter criteria on each retry
           completenessCheck = analyzeResponseCompleteness(
-            response.text, 
+            apiResponse.text, 
             financialQueryType, 
             queryText, 
             false // Force full analysis on retries
@@ -127,7 +131,7 @@ export const useResponseHandling = (
       
       // Format the bot message
       const botMessage = formatBotMessage(
-        { ...response, queryType: financialQueryType }, 
+        { ...apiResponse, queryType: financialQueryType }, 
         regulatoryContext, 
         reasoning, 
         isUsingFallback
