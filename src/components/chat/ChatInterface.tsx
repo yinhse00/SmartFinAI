@@ -119,6 +119,7 @@ const ChatInterface = () => {
       <div className="flex-1 flex gap-4">
         {/* Financial Expert Chat Window */}
         <div className="flex-1 flex flex-col">
+          {/* Always show processing indicator when loading, with current stage */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
           
           <ChatContainer 

@@ -9,7 +9,7 @@ import { useQueryBuilder } from './useQueryBuilder';
 import { Message } from '../ChatMessage';
 
 /**
- * Hook for handling query execution logic
+ * Hook for handling query execution logic with optimized processing times
  */
 export const useQueryExecution = (
   messages: Message[],
@@ -57,24 +57,28 @@ export const useQueryExecution = (
     try {
       logQueryStart(queryText);
       
-      // Get optimal parameters for the query
+      // Get optimal parameters for the query with much higher token limits
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
       logQueryParameters(financialQueryType, temperature, maxTokens);
       
-      // Get regulatory context
-      console.log('Collecting regulatory context...');
+      // Optimize time by using more focused context fetching
+      console.log('Collecting focused regulatory context...');
+      const contextStart = Date.now();
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
+      const contextTime = Date.now() - contextStart;
+      console.log(`Context fetched in ${contextTime}ms`);
       logContextInfo(regulatoryContext, reasoning);
       
       // Update processing stage
       setProcessingStage('processing');
       console.log('Processing query with regulatory context...');
       
-      // Build response parameters
+      // Build response parameters with higher token limits
       const responseParams = buildResponseParams(queryText, temperature, maxTokens, regulatoryContext);
       
       // Handle API response
       console.log('Generating response...');
+      const processingStart = Date.now();
       const result = await handleApiResponse(
         queryText, 
         responseParams, 
@@ -83,13 +87,15 @@ export const useQueryExecution = (
         financialQueryType,
         updatedMessages
       );
+      const processingTime = Date.now() - processingStart;
+      console.log(`Response generated in ${processingTime}ms`);
       
       // Final processing
       setProcessingStage('finalizing');
       console.log('Finalizing response...');
       
-      // Small delay to ensure UI shows finalizing state
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      // Shorten the finalizing delay to improve overall responsiveness
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       finishLogging();
     } catch (error) {

@@ -8,7 +8,7 @@ import { useTruncationDetection, isTradingArrangementRelated } from './useTrunca
 import { useErrorHandling } from './useErrorHandling';
 
 /**
- * Hook for handling API responses
+ * Hook for handling API responses with massively increased token limits
  */
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -31,7 +31,9 @@ export const useResponseHandling = (
     try {
       console.log('Calling Grok financial expert API');
       
-      // First attempt
+      // First attempt with significantly increased token limits
+      // Preemptively use 3x the initial token limit to reduce need for retries
+      responseParams.maxTokens = responseParams.maxTokens * 3;
       let response = await grokService.generateResponse(responseParams);
       
       // Check if it's using fallback
@@ -54,19 +56,21 @@ export const useResponseHandling = (
         queryText
       );
 
-      // Enhanced aggressive retry strategy with up to 4 attempts for financial content
+      // Ultra-aggressive retry strategy with up to 3 attempts for financial content
+      // But each attempt uses massively increased token limits
       let retryCount = 0;
-      const maxRetries = 4;
+      const maxRetries = 3; // Reduced from 4 to speed up overall processing
       
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
-        console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with higher token limit`);
+        console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with extreme token limit`);
         
-        // Exponential increase in token limit with each retry - much more aggressive scaling
-        const tokenMultiplier = retryCount === 0 ? 2 : (retryCount === 1 ? 3 : (retryCount === 2 ? 4 : 5));
+        // Super aggressive token scaling for faster convergence to complete responses
+        // Use multipliers of 5x, 8x, and 10x to almost guarantee complete responses
+        const tokenMultiplier = retryCount === 0 ? 5 : (retryCount === 1 ? 8 : 10);
         const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
         
-        // Decrease temperature with each retry for more consistency
-        const temperatureReduction = retryCount === 0 ? 0.7 : (retryCount === 1 ? 0.5 : (retryCount === 2 ? 0.3 : 0.1));
+        // Aggressive temperature reduction for more reliable outputs
+        const temperatureReduction = retryCount === 0 ? 0.5 : (retryCount === 1 ? 0.3 : 0.1);
         const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
         
         const enhancedParams = {
@@ -118,7 +122,7 @@ export const useResponseHandling = (
           
           console.log(`Retry #${retryCount + 1} result - Complete: ${newCompletenessCheck.isComplete}`);
           
-          // If complete, break out of retry loop
+          // If complete, break out of retry loop immediately to save time
           if (newCompletenessCheck.isComplete) {
             break;
           }
