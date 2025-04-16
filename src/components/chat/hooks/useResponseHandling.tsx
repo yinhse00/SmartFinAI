@@ -38,7 +38,7 @@ export const useResponseHandling = (
       const isSimpleQuery = isQuerySimple(queryText);
       
       // Boost token limit based on query complexity
-      const baseTokenMultiplier = isSimpleQuery ? 2 : 3;
+      const baseTokenMultiplier = isSimpleQuery ? 4 : 8;
       responseParams.maxTokens = responseParams.maxTokens * baseTokenMultiplier;
       
       // Add specific instructions for aggregation-related queries
@@ -49,11 +49,11 @@ export const useResponseHandling = (
         responseParams.prompt += " Ensure a complete explanation of the aggregation requirements, including how the 50% threshold is calculated, whether previous approvals affect subsequent issues, and provide a direct conclusion. Include all relevant rule references and requirements for independent shareholders' approval.";
         
         // Increase max tokens for these complex queries
-        responseParams.maxTokens = Math.max(responseParams.maxTokens, 5000000);
+        responseParams.maxTokens = Math.max(responseParams.maxTokens, 8000000);
       }
       
-      // Add completion instruction to all prompts
-      responseParams.prompt += " Please provide a complete and concise response.";
+      // Add forceful completion instruction to all prompts
+      responseParams.prompt += " IMPORTANT: Provide a complete response with all relevant information and a clear conclusion. DO NOT cut off your response before it is complete.";
       
       // First attempt with significantly increased token limits
       console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
@@ -84,11 +84,11 @@ export const useResponseHandling = (
       // Log the completeness check results
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
       
-      // Retry logic for incomplete responses
+      // Retry logic for incomplete responses - more aggressive approach
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with enhanced parameters`);
         
-        // Get enhanced parameters for this retry attempt
+        // Get enhanced parameters for this retry attempt with more aggressive settings
         const enhancedParams = enhanceParamsForRetry(
           responseParams, 
           retryCount, 
@@ -104,12 +104,12 @@ export const useResponseHandling = (
           response = await grokService.generateResponse(enhancedParams);
           console.log(`Retry #${retryCount + 1} completed, checking completeness`);
           
-          // Re-analyze completeness
+          // Re-analyze completeness with stricter criteria on each retry
           completenessCheck = analyzeResponseCompleteness(
             response.text, 
             financialQueryType, 
             queryText, 
-            isSimpleQuery
+            false // Force full analysis on retries
           );
           
           console.log(`Retry #${retryCount + 1} result - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
@@ -128,9 +128,14 @@ export const useResponseHandling = (
       }
       
       // Format the bot message
-      const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
+      const botMessage = formatBotMessage(
+        { ...response, queryType: financialQueryType }, 
+        regulatoryContext, 
+        reasoning, 
+        isUsingFallback
+      );
       
-      // Only mark as truncated for non-simple queries
+      // Only mark as truncated for non-simple queries that failed completeness check
       if (!isSimpleQuery && !completenessCheck.isComplete) {
         console.log('Incomplete response detected after all retries:', {
           reasons: completenessCheck.reasons,

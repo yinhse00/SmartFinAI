@@ -22,7 +22,12 @@ export const useResponseFormatter = () => {
     
     // Enhanced truncation detection with multiple methods
     const diagnostics = getTruncationDiagnostics(response.text);
-    const isTruncated = diagnostics.isTruncated;
+    
+    // Use financial response analyzer for additional checks
+    const financialAnalysis = analyzeFinancialResponse(response.text, response.queryType);
+    
+    // Combined check for truncation from multiple sources
+    const isTruncated = diagnostics.isTruncated || financialAnalysis.isTruncated;
     
     const botMessage: Message = {
       id: (Date.now() + 1).toString(),
