@@ -1,4 +1,3 @@
-
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { contextService } from '../regulatory/contextService';
 import { grokApiService } from '../api/grokApiService';
@@ -13,18 +12,19 @@ import { responseOptimizer } from './modules/responseOptimizer';
 import { responseEnhancer } from './modules/responseEnhancer';
 import { responseFormatter } from './modules/responseFormatter';
 
-/**
- * Service for generating responses using Grok AI with financial expertise
- */
 export const grokResponseGenerator = {
-  /**
-   * Enhanced professional financial response generation with advanced context handling
-   */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
     try {
-      // Enhanced logging for professional financial expertise
       console.group('Hong Kong Financial Expert Response Generation');
       console.log('Input Query:', params.prompt);
+
+      // Enhanced logging for fallback detection
+      const fallbackLogging = {
+        apiKeyAvailable: !!params.apiKey,
+        queryType: '',
+        contextAvailable: !!params.regulatoryContext,
+        fallbackReason: ''
+      };
 
       // Check if this is a simple conversational query
       const isSimpleQuery = isSimpleConversationalQuery(params.prompt);
@@ -133,13 +133,26 @@ export const grokResponseGenerator = {
         params.prompt
       );
 
+      // Before returning fallback, log detailed information
+      if (typeof finalResponse === 'object' && finalResponse.text.includes("Based on your query about")) {
+        fallbackLogging.fallbackReason = 'Automatic fallback due to incomplete response generation';
+        console.warn('Fallback Response Triggered:', fallbackLogging);
+      }
+
+      // You can add more specific logging here to capture reasons for fallback
+
       console.groupEnd();
       return finalResponse;
-
     } catch (error) {
       console.error('Hong Kong Financial Expert Response Error:', error);
+      console.group('Fallback Response Details');
+      console.log('Error Type:', error instanceof Error ? error.name : 'Unknown Error');
+      console.log('Error Message:', error instanceof Error ? error.message : error);
       console.groupEnd();
-      return generateFallbackResponse(params.prompt, error);
+      console.groupEnd();
+      
+      // Generate fallback with more context about the error
+      return generateFallbackResponse(params.prompt, error instanceof Error ? error.message : 'Unexpected error');
     }
   },
 };
