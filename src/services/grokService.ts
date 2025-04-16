@@ -26,39 +26,8 @@ export const grokService = {
    * Enhanced professional financial response generation with advanced context handling
    */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
-    try {
-      // Use the enhanced grokResponseGenerator service
-      const response = await grokResponseGenerator.generateResponse(params);
-      
-      // Add response completeness check if not already present
-      if (response.metadata && !response.metadata.responseCompleteness) {
-        const { detectTruncationComprehensive, getTruncationDiagnostics } = require('@/utils/truncationUtils');
-        const diagnostics = getTruncationDiagnostics(response.text);
-        
-        response.metadata.responseCompleteness = {
-          isComplete: !diagnostics.isTruncated,
-          confidence: diagnostics.confidence,
-          reasons: diagnostics.reasons
-        };
-      }
-      
-      return response;
-    } catch (error) {
-      console.error("Error in grokService generateResponse:", error);
-      
-      // Return fallback response with truncation metadata
-      return {
-        text: "I apologize, but I encountered an error while processing your request. Please try again or rephrase your question.",
-        metadata: {
-          contextUsed: false,
-          responseCompleteness: {
-            isComplete: false,
-            confidence: 'high',
-            reasons: ["Error in response generation"]
-          }
-        }
-      };
-    }
+    // Use the enhanced grokResponseGenerator service
+    return await grokResponseGenerator.generateResponse(params);
   },
 
   /**
