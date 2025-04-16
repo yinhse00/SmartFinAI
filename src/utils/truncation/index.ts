@@ -9,5 +9,6 @@ export { analyzeFinancialResponse } from './financialAnalyzer';
 export * from './financialResponseAnalyzer';
 export * from './tradingArrangementDetection';
 export * from './tradingArrangementChecks';
-export * from './utils/contentHelpers';
+// Import and re-export from contentHelpers, excluding isComparisonQuery which is already exported from checkers
+export { hasConclusion, extractDates } from './utils/contentHelpers';
 export * from './checkers';

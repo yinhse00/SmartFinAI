@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import KnowledgePanel from './KnowledgePanel';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
+import ProcessingIndicator from './ProcessingIndicator';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -27,6 +28,7 @@ const ChatInterface = () => {
     messages,
     setMessages,
     isLoading,
+    processingStage,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
@@ -117,6 +119,8 @@ const ChatInterface = () => {
       <div className="flex-1 flex gap-4">
         {/* Financial Expert Chat Window */}
         <div className="flex-1 flex flex-col">
+          {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
+          
           <ChatContainer 
             messages={messages}
             isLoading={isLoading}

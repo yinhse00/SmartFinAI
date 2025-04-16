@@ -1,4 +1,3 @@
-
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
@@ -25,11 +24,13 @@ export const useChatLogic = () => {
   const { data: referenceDocuments } = useReferenceDocuments();
   
   // Query processor
-  const { 
-    isLoading, 
-    handleSend, 
-    handleKeyDown, 
-    retryLastQuery 
+  const {
+    isLoading,
+    handleSend,
+    handleKeyDown,
+    processQuery,
+    retryLastQuery,
+    processingStage
   } = useQueryProcessor(
     messages,
     setMessages,
@@ -63,6 +64,7 @@ export const useChatLogic = () => {
     isLoading,
     handleSend,
     handleKeyDown,
-    retryLastQuery
+    retryLastQuery,
+    processingStage
   };
 };

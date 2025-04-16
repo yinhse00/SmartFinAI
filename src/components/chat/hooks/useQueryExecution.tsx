@@ -21,6 +21,7 @@ export const useQueryExecution = (
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   const [isLoading, setIsLoading] = useState(false);
+  const [processingStage, setProcessingStage] = useState<'preparing' | 'processing' | 'finalizing'>('preparing');
   const { toast } = useToast();
   const { determineQueryParameters } = useQueryParameters();
   const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
@@ -51,6 +52,7 @@ export const useQueryExecution = (
     setMessages(updatedMessages);
     setInput('');
     setIsLoading(true);
+    setProcessingStage('preparing');
 
     try {
       logQueryStart(queryText);
@@ -60,14 +62,20 @@ export const useQueryExecution = (
       logQueryParameters(financialQueryType, temperature, maxTokens);
       
       // Get regulatory context
+      console.log('Collecting regulatory context...');
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       logContextInfo(regulatoryContext, reasoning);
+      
+      // Update processing stage
+      setProcessingStage('processing');
+      console.log('Processing query with regulatory context...');
       
       // Build response parameters
       const responseParams = buildResponseParams(queryText, temperature, maxTokens, regulatoryContext);
       
       // Handle API response
-      await handleApiResponse(
+      console.log('Generating response...');
+      const result = await handleApiResponse(
         queryText, 
         responseParams, 
         regulatoryContext, 
@@ -75,6 +83,13 @@ export const useQueryExecution = (
         financialQueryType,
         updatedMessages
       );
+      
+      // Final processing
+      setProcessingStage('finalizing');
+      console.log('Finalizing response...');
+      
+      // Small delay to ensure UI shows finalizing state
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       finishLogging();
     } catch (error) {
@@ -91,6 +106,7 @@ export const useQueryExecution = (
 
   return {
     isLoading,
+    processingStage,
     processQuery
   };
 };

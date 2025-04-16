@@ -22,7 +22,7 @@ export const useQueryProcessor = (
   const { retryLastQuery, setProcessQueryFn } = useRetryHandler(lastQuery, setInput);
   
   // Set up query execution - this is the main processing logic
-  const { isLoading, processQuery } = useQueryExecution(
+  const { isLoading, processQuery, processingStage } = useQueryExecution(
     messages,
     setMessages,
     setLastQuery,
@@ -45,6 +45,7 @@ export const useQueryProcessor = (
     handleSend,
     handleKeyDown,
     processQuery,
-    retryLastQuery
+    retryLastQuery,
+    processingStage
   };
 };
