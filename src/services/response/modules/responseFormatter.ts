@@ -17,7 +17,8 @@ export const responseFormatter = {
     tradingArrangementInfoUsed: boolean,
     takeoversCodeUsed: boolean,
     isWhitewashQuery: boolean,
-    hasRefDocuments: boolean
+    hasRefDocuments: boolean,
+    isBackupResponse?: boolean  // Added optional parameter
   ): GrokResponse => {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
@@ -52,6 +53,7 @@ export const responseFormatter = {
           (text.toLowerCase().includes('whitewash') && 
            text.toLowerCase().includes('dealing')),
         referenceDocumentsUsed: hasRefDocuments,
+        isBackupResponse: isBackupResponse,  // Added the property
         responseCompleteness: {
           isComplete: completenessOverride || !diagnostics.isTruncated,
           confidence: diagnostics.confidence,
