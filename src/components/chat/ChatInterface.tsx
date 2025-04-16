@@ -14,7 +14,7 @@ import {
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Database } from 'lucide-react';
 import { needsEnhancedTokenSettings } from './utils/parameterUtils';
 
 const ChatInterface = () => {
@@ -119,8 +119,16 @@ const ChatInterface = () => {
       <div className="flex-1 flex gap-4">
         {/* Financial Expert Chat Window */}
         <div className="flex-1 flex flex-col">
-          {/* Always show processing indicator when loading, with current stage */}
+          {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
+          
+          {/* Database review status indicator */}
+          {isLoading && processingStage === 'reviewing' && (
+            <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue animate-pulse">
+              <Database size={14} />
+              <span>Reviewing database for accurate information...</span>
+            </div>
+          )}
           
           <ChatContainer 
             messages={messages}
