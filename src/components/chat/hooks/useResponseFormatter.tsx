@@ -54,9 +54,9 @@ export const useResponseFormatter = () => {
     }
     
     toast({
-      title: "Incomplete Response",
-      description: truncationReason + " You can retry your query to get a complete answer.",
-      duration: 10000,
+      title: "Incomplete Response Detected",
+      description: truncationReason + " You can retry your query to get a complete answer with increased token limits.",
+      duration: 15000,
       action: <Button 
                onClick={retryLastQuery}
                variant="outline"
@@ -64,7 +64,7 @@ export const useResponseFormatter = () => {
                className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
               >
                 <RefreshCw size={14} />
-                Retry Query
+                Retry with Higher Limits
               </Button>
     });
   };

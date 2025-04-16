@@ -24,10 +24,13 @@ export const useResponseAnalysis = () => {
       };
     }
     
-    // Quick check for obvious truncation markers
+    // Enhanced check for obvious truncation markers
     const hasObviousTruncation = responseText.endsWith('...') || 
                               responseText.includes("I'll continue") ||
-                              responseText.includes('I will continue');
+                              responseText.includes('I will continue') ||
+                              responseText.includes('In the next part') ||
+                              responseText.includes('to be continued') ||
+                              responseText.endsWith('will explain');
                               
     if (hasObviousTruncation) {
       return {
@@ -40,6 +43,15 @@ export const useResponseAnalysis = () => {
     // Only perform comprehensive check for complex financial/regulatory queries
     // Get basic diagnostics
     const diagnostics = getTruncationDiagnostics(responseText);
+    
+    // Check for incomplete sentences at the end
+    const lastSentenceIncomplete = !responseText.trim().match(/[.!?。]\s*$/);
+    const isLongResponse = responseText.length > 1000;
+    
+    if (lastSentenceIncomplete && isLongResponse) {
+      diagnostics.isTruncated = true;
+      diagnostics.reasons.push('Response ends with incomplete sentence');
+    }
     
     // Do comprehensive completeness check for financial/regulatory queries
     const completenessCheck = isResponseComplete(

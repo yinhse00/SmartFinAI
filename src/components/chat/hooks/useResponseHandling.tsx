@@ -37,6 +37,10 @@ export const useResponseHandling = (
       // Determine if this is a simple conversational query
       const isSimpleQuery = isQuerySimple(queryText);
       
+      // Boost token limit based on query complexity
+      const baseTokenMultiplier = isSimpleQuery ? 2 : 3;
+      responseParams.maxTokens = responseParams.maxTokens * baseTokenMultiplier;
+      
       // Add specific instructions for aggregation-related queries
       if (queryText.toLowerCase().includes('rule 7.19a') || 
           queryText.toLowerCase().includes('aggregate') || 
@@ -48,8 +52,11 @@ export const useResponseHandling = (
         responseParams.maxTokens = Math.max(responseParams.maxTokens, 5000000);
       }
       
+      // Add completion instruction to all prompts
+      responseParams.prompt += " Please provide a complete and concise response.";
+      
       // First attempt with significantly increased token limits
-      // Already using 3x from the calling function
+      console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
       let response = await grokService.generateResponse(responseParams);
       
       // Check if it's using fallback
@@ -74,9 +81,12 @@ export const useResponseHandling = (
       const maxRetries = determineMaxRetries(isSimpleQuery, isAggregationQuery);
       let retryCount = 0;
       
+      // Log the completeness check results
+      console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
+      
       // Retry logic for incomplete responses
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
-        console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with extreme token limit`);
+        console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with enhanced parameters`);
         
         // Get enhanced parameters for this retry attempt
         const enhancedParams = enhanceParamsForRetry(
@@ -102,10 +112,11 @@ export const useResponseHandling = (
             isSimpleQuery
           );
           
-          console.log(`Retry #${retryCount + 1} result - Complete: ${completenessCheck.isComplete}`);
+          console.log(`Retry #${retryCount + 1} result - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
           
           // If complete, break out of retry loop immediately to save time
           if (completenessCheck.isComplete) {
+            console.log('Received complete response, breaking retry loop');
             break;
           }
         } catch (retryError) {
