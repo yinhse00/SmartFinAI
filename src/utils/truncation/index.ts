@@ -9,3 +9,5 @@ export { analyzeFinancialResponse } from './financialAnalyzer';
 export * from './financialResponseAnalyzer';
 export * from './tradingArrangementDetection';
 export * from './tradingArrangementChecks';
+export * from './utils/contentHelpers';
+export * from './checkers';
