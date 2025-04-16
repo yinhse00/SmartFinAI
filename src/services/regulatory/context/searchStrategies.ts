@@ -68,6 +68,43 @@ export const searchStrategies = {
   },
 
   /**
+   * Execute specialized search for FAQ documents
+   */
+  findFAQDocuments: async (query: string) => {
+    // Check if query might be related to continuing obligations or FAQs
+    const isFaqRelated = query.toLowerCase().includes('continuing obligation') || 
+                         query.toLowerCase().includes('faq') ||
+                         query.match(/\b10\.4\b/);
+    
+    if (isFaqRelated) {
+      console.log('Query appears related to FAQs or continuing obligations, searching for relevant documents');
+      
+      // First try with exact "10.4 FAQ" title search
+      let faqResults = await searchService.searchByTitle("10.4 FAQ Continuing Obligations");
+      
+      if (faqResults.length > 0) {
+        console.log('Found specific "10.4 FAQ Continuing Obligations" document');
+        return faqResults;
+      }
+      
+      // Then try broader title search
+      faqResults = await searchService.searchByTitle("FAQ");
+      
+      if (faqResults.length > 0) {
+        console.log(`Found ${faqResults.length} FAQ documents by title search`);
+        return faqResults;
+      }
+      
+      // Finally, try content search
+      faqResults = await searchService.search("continuing obligations FAQ", "listing_rules");
+      console.log(`Found ${faqResults.length} results from FAQ keyword search`);
+      return faqResults;
+    }
+    
+    return [];
+  },
+
+  /**
    * Execute specialized search for listing rules regarding rights issues
    */
   findSpecificRulesDocuments: async (query: string) => {
@@ -79,6 +116,14 @@ export const searchStrategies = {
     if (ruleMatches) {
       const ruleNumber = ruleMatches[1];
       console.log(`Found reference to Rule ${ruleNumber}, searching specifically`);
+      
+      // Check if this is rule 10.4 which relates to FAQs
+      if (ruleNumber === '10.4') {
+        const faqResults = await searchStrategies.findFAQDocuments(query);
+        if (faqResults.length > 0) {
+          return faqResults;
+        }
+      }
       
       // Search for the exact rule number
       ruleResults = await searchService.search(`rule ${ruleNumber}`, 'listing_rules');

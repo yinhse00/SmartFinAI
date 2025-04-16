@@ -1,3 +1,4 @@
+
 import { searchService } from '../databaseService';
 import { extractFinancialTerms } from './utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from './utils/resultProcessors';
@@ -16,6 +17,29 @@ export const contextService = {
     try {
       console.group('Retrieving Specialized Financial Context');
       console.log('Original Query:', query);
+      
+      // Check if this might be FAQ related
+      const isFaqQuery = query.toLowerCase().includes('faq') || 
+                         query.toLowerCase().includes('continuing obligation') ||
+                         query.match(/\b10\.4\b/);
+                         
+      if (isFaqQuery) {
+        console.log('Detected FAQ/continuing obligations query, prioritizing relevant documents');
+        // Get FAQ documents first
+        const faqResults = await searchStrategies.findFAQDocuments(query);
+        
+        if (faqResults.length > 0) {
+          console.log(`Found ${faqResults.length} FAQ documents to prioritize`);
+          // Format context with section headings and regulatory citations
+          const context = contextFormatter.formatEntriesToContext(faqResults);
+          
+          // Generate reasoning that explains why these specific regulations are relevant
+          const reasoning = `This response is based directly on official HKEX documentation from "10.4 FAQ Continuing Obligations" that provides authoritative guidance on the inquiry. The information is taken verbatim from the official FAQ document to ensure accuracy.`;
+          
+          console.groupEnd();
+          return contextFormatter.createContextResponse(context, reasoning);
+        }
+      }
       
       // Check if this is a rights issue aggregation query
       const isAggregationQuery = query.toLowerCase().includes('rights issue') && 
@@ -183,6 +207,21 @@ export const contextService = {
   getRegulatoryContext: async (query: string): Promise<string> => {
     try {
       console.log('Basic Financial Context Search:', query);
+      
+      // Check if this might be FAQ related
+      const isFaqQuery = query.toLowerCase().includes('faq') || 
+                        query.toLowerCase().includes('continuing obligation') ||
+                        query.match(/\b10\.4\b/);
+      
+      if (isFaqQuery) {
+        // Get FAQ documents first
+        const faqResults = await searchStrategies.findFAQDocuments(query);
+        
+        if (faqResults.length > 0) {
+          console.log(`Found ${faqResults.length} FAQ documents to prioritize`);
+          return contextFormatter.formatEntriesToContext(faqResults);
+        }
+      }
       
       // Normalize query to handle common variations
       const normalizedQuery = query.toLowerCase()

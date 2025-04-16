@@ -58,24 +58,47 @@ export const useQueryExecution = (
       const isSimpleQuery = isSimpleConversationalQuery(queryText);
       console.log(`Query type: ${isSimpleQuery ? 'Conversational' : 'Financial/Regulatory'}`);
       
+      // Check specifically for FAQ/continuing obligations queries
+      const isFaqQuery = queryText.toLowerCase().includes('faq') || 
+                        queryText.toLowerCase().includes('continuing obligation') ||
+                        queryText.match(/\b10\.4\b/);
+      
       // Get query parameters with optimized token settings
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
       const enhancedMaxTokens = isSimpleQuery ? maxTokens * 2 : maxTokens * 10; // Use smaller limit for simple queries
       
-      logQueryParameters(financialQueryType, temperature, enhancedMaxTokens);
+      // Use lower temperature for FAQ queries to ensure accurate information retrieval
+      const actualTemperature = isFaqQuery ? 0.2 : temperature;
       
-      // Skip context retrieval for simple conversational queries
+      logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
+      
+      // Always perform context retrieval for FAQ queries regardless of type
       let regulatoryContext = '';
       let reasoning = '';
       let contextTime = 0;
       
-      if (!isSimpleQuery) {
-        // Only perform context search for non-conversational queries
+      if (!isSimpleQuery || isFaqQuery) {
+        // Retrieve context for non-conversational queries or FAQ queries
         const contextStart = Date.now();
         const contextResult = await contextService.getRegulatoryContextWithReasoning(queryText);
         regulatoryContext = contextResult.context || '';
         reasoning = contextResult.reasoning || '';
         contextTime = Date.now() - contextStart;
+        
+        // For FAQ queries, check if we found relevant FAQ content
+        if (isFaqQuery && !regulatoryContext.toLowerCase().includes('faq') && 
+            !regulatoryContext.toLowerCase().includes('continuing obligation')) {
+          console.log('FAQ query detected but no FAQ content found, searching specifically for FAQ content');
+          // If no FAQ content found in the initial search, try a more focused search
+          const faqContextResult = await contextService.getRegulatoryContextWithReasoning("FAQ continuing obligations");
+          if (faqContextResult.context && 
+             (faqContextResult.context.toLowerCase().includes('faq') || 
+              faqContextResult.context.toLowerCase().includes('continuing obligation'))) {
+            console.log('Found FAQ content in focused search, using this context instead');
+            regulatoryContext = faqContextResult.context;
+            reasoning = "This context is from the '10.4 FAQ Continuing Obligations' document which should be used verbatim for accurate answers.";
+          }
+        }
       }
       
       // Log context info (with empty values for simple queries)
@@ -91,9 +114,14 @@ export const useQueryExecution = (
       // Build optimized response parameters
       const responseParams = buildResponseParams(
         queryText, 
-        temperature, 
+        actualTemperature, 
         enhancedMaxTokens
       );
+      
+      // For FAQ queries, add specific instructions
+      if (isFaqQuery) {
+        responseParams.prompt += " Please respond with the EXACT wording from the '10.4 FAQ Continuing Obligations' document. DO NOT paraphrase or use your own knowledge.";
+      }
       
       const processingStart = Date.now();
       const result = await handleApiResponse(

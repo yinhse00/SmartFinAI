@@ -85,6 +85,11 @@ export const grokResponseGenerator = {
       const isTradingArrangement = queryAnalyzer.isTradingArrangement(params.prompt);
       const hasTakeoversCode = queryAnalyzer.hasTakeoversCode(params.regulatoryContext);
       const hasTradeArrangementInfo = queryAnalyzer.hasTradeArrangementInfo(params.regulatoryContext);
+      
+      // Check if this might be FAQ related
+      const isFaqQuery = params.prompt.toLowerCase().includes('faq') || 
+                        params.prompt.toLowerCase().includes('continuing obligation') ||
+                        params.prompt.match(/\b10\.4\b/);
 
       // Enhance context with whitewash waiver information if needed
       params = await contextEnhancer.enhanceWithWhitewashContext(params, isWhitewashQuery);
@@ -104,11 +109,20 @@ export const grokResponseGenerator = {
       }
 
       // Create a professional financial system message based on expertise area
-      const systemMessage = createFinancialExpertSystemPrompt(queryType, params.regulatoryContext);
+      let systemMessage = createFinancialExpertSystemPrompt(queryType, params.regulatoryContext);
+      
+      // For FAQ queries, add specific instructions to use the exact wording from the database
+      if (isFaqQuery) {
+        systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
+      }
+      
       console.log('Using specialized financial expert prompt');
 
       // Get optimized parameters for the request
       const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, params.prompt);
+      
+      // Use lower temperature for FAQ queries to ensure exact information retrieval
+      const actualTemperature = isFaqQuery ? 0.2 : temperature;
 
       // Prepare request body
       const requestBody = {
@@ -117,7 +131,7 @@ export const grokResponseGenerator = {
           { role: 'user', content: params.prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: temperature,
+        temperature: actualTemperature,
         max_tokens: maxTokens,
       };
 
