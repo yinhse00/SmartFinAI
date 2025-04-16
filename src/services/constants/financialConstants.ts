@@ -15,6 +15,7 @@ export const FINANCIAL_EXPERTISES = {
   CIRCULAR: 'circular',
   WAIVER: 'waiver',
   LISTING_RULES: 'listing_rules',
+  CONVERSATIONAL: 'conversational', // Add this missing property
   GENERAL: 'general'
 };
 
@@ -34,5 +35,6 @@ export const QUERY_TYPE_TO_CATEGORY = {
   'circular': 'listing_rules',
   'waiver': 'listing_rules',
   'listing_rules': 'listing_rules',
+  'conversational': 'all', // Add mapping for conversational type
   'general': 'all'
 };

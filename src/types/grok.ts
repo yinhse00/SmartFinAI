@@ -9,6 +9,8 @@ export interface GrokRequestParams {
 export interface GrokResponse {
   text: string;
   queryType?: string;
+  hasContext?: boolean; // Add the missing property
+  relevanceScore?: number; // Added this to match the implementation in grokResponseGenerator.ts
   metadata?: {
     contextUsed?: boolean;
     relevanceScore?: number;
