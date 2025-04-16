@@ -7,7 +7,7 @@ export interface RegulatoryEntry {
   id: string;
   title: string;
   content: string;
-  category: 'listing_rules' | 'takeovers' | 'guidance' | 'precedents' | 'other';
+  category: 'listing_rules' | 'takeovers' | 'guidance' | 'decisions' | 'checklists' | 'other';
   source: string;
   section?: string;
   lastUpdated: Date;

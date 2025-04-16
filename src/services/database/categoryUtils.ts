@@ -26,3 +26,4 @@ export function determineCategory(filename: string): DocumentCategory {
   
   return 'other';
 }
+

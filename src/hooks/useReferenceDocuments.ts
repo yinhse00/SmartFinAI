@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ReferenceDocument } from '@/types/references';
+import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export function useReferenceDocuments(category?: string) {
   return useQuery({
@@ -23,7 +23,14 @@ export function useReferenceDocuments(category?: string) {
         throw new Error(`Failed to fetch reference documents: ${error.message}`);
       }
       
-      return data || [];
+      // Convert the raw data to ReferenceDocument type
+      const typedData = data?.map(item => ({
+        ...item,
+        category: item.category as DocumentCategory
+      })) as ReferenceDocument[];
+      
+      return typedData || [];
     }
   });
 }
+

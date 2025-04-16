@@ -1,4 +1,3 @@
-
 /**
  * This service handles the regulatory database operations
  * In a production environment, this would connect to a proper database

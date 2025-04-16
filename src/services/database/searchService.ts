@@ -6,7 +6,7 @@
 import { RegulatoryEntry } from "./types";
 import { databaseService } from "./databaseService";
 import { supabase } from '@/integrations/supabase/client';
-import { ReferenceDocument } from '@/types/references';
+import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export const searchService = {
   /**
@@ -112,9 +112,16 @@ export const searchService = {
     
     console.log(`Found ${databaseEntries.length} database entries and ${referenceData?.length || 0} reference documents`);
     
+    // Convert the raw data to ReferenceDocument type
+    const typedReferenceData = referenceData?.map(item => ({
+      ...item,
+      category: item.category as DocumentCategory
+    })) as ReferenceDocument[] || [];
+    
     return {
       databaseEntries,
-      referenceDocuments: referenceData || []
+      referenceDocuments: typedReferenceData
     };
   }
 };
+
