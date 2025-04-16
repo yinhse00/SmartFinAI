@@ -1,6 +1,5 @@
-
 import { GrokRequestParams } from '@/types/grok';
-import { searchService } from '../../databaseService';
+import { searchService } from '../../database/searchService';
 
 /**
  * Enhances query context with relevant regulatory information
@@ -57,7 +56,7 @@ export const contextEnhancer = {
       }
     }
     
-    // Special handling for rights issue aggregation questions
+    // Special handling for rights issue aggregation questions - enhanced with more details
     if (params.prompt.toLowerCase().includes('rights issue') && 
         (params.prompt.toLowerCase().includes('aggregate') || 
          params.prompt.toLowerCase().includes('within 12 months') ||
@@ -83,10 +82,14 @@ export const contextEnhancer = {
           params.regulatoryContext = aggregationContext;
         }
         
-        // Add fallback information for Rule 7.19A if not found in results
+        // Add enhanced fallback information for Rule 7.19A if not found in results
         if (!params.regulatoryContext.includes('7.19A')) {
           const rule719aFallback = `[Rights Issue Aggregation Requirements | Listing Rules Rule 7.19A]:
-Under Listing Rule 7.19A(1), if a rights issue, when aggregated with any other rights issues, open offers, and specific mandate placings announced by the issuer within the previous 12 months, would increase the number of issued shares by more than 50%, the rights issue must be made conditional on approval by shareholders at general meeting by resolution on which any controlling shareholders shall abstain from voting in favor. Where there is no controlling shareholder, directors and chief executive must abstain from voting in favor. The 50% threshold applies to the aggregate increase over the 12-month period, not to each individual corporate action.`;
+Under Listing Rule 7.19A(1), if a rights issue, when aggregated with any other rights issues, open offers, and specific mandate placings announced by the issuer within the previous 12 months, would increase the number of issued shares by more than 50%, the rights issue must be made conditional on approval by shareholders at general meeting by resolution on which any controlling shareholders shall abstain from voting in favor. Where there is no controlling shareholder, directors and chief executive must abstain from voting in favor. 
+
+The 50% threshold applies to the aggregate increase over the 12-month period, not to each individual corporate action. Previous approval of one rights issue does not exempt subsequent rights issues from the aggregation calculation. Each new rights issue must be assessed based on the cumulative effect of all rights issues within the rolling 12-month period.
+
+For example, if a company has already conducted a 1-for-1 rights issue (100% increase) with proper shareholders' approval, a subsequent 1-for-5 rights issue (20% increase) within 12 months would need to be assessed based on the aggregated increase from both issues. Independent shareholders' approval would be required for each rights issue that, when aggregated with previous issues within 12 months, exceeds the 50% threshold.`;
           
           if (params.regulatoryContext) {
             params.regulatoryContext = rule719aFallback + '\n\n---\n\n' + params.regulatoryContext;

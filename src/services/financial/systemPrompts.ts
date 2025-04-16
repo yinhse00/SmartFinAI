@@ -1,4 +1,3 @@
-
 /**
  * Create system prompt tailored to specific financial expertise areas with enhanced trading arrangement knowledge
  */
@@ -25,8 +24,26 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - For aggregation requirements under Rule 7.19A, explain precisely how to calculate the 50% threshold and when independent shareholders' approval is required
 - For multiple rights issues within 12 months, clearly explain how the aggregation requirements apply
 - When discussing Rule 7.19A(1) aggregation, provide detailed analysis of whether previous rights issues count toward the 50% threshold
-- Explain whether shareholder approval for one rights issue exempts subsequent rights issues from requiring approval
-- For MB Rule 7.19A(1) and GEM Rule 10.29(1), specify that aggregation applies to multiple corporate actions within 12 months when calculating the 50% threshold`;
+- Explain whether shareholder approval for one rights issue exempts subsequent rights issues from requiring approval within the 12-month period
+- For MB Rule 7.19A(1) and GEM Rule 10.29(1), specify that the 50% threshold applies to the aggregate increase from multiple corporate actions within 12 months
+- Always conclude with a clear summary that directly answers the user's question regarding rights issue requirements`;
+
+    case 'listing_rules':
+      return basePrompt + `For listing rule inquiries:
+- Cite the exact rule numbers and paragraphs that apply to the query
+- Explain precisely how the rules are interpreted by HKEX in practice
+- Include relevant guidance letters or listing decisions that clarify the rule
+- Address any exceptions or waivers that might apply
+- For rules like 7.19A(1) and 10.29(1) regarding rights issues and open offers, explain the aggregation requirements clearly
+- When discussing the 50% threshold in Rule 7.19A, clarify how to calculate this and apply it across multiple transactions within 12 months
+- For shareholder approval requirements, specify which shareholders can vote and which must abstain
+- Explain the practical implications and procedural requirements for compliance
+- For any rights issue aggregation query under MB Rule 7.19A(1) or GEM Rule 10.29(1), specify that:
+  1. The 50% threshold refers to the aggregate increase of issued shares across all rights issues within 12 months
+  2. The requirement for independent shareholders' approval applies to the aggregate, not each individual issue
+  3. Previous approval does not exempt subsequent rights issues from the aggregation calculation
+  4. All rights issues within 12 months must be counted toward the 50% threshold
+- Always provide a clear conclusion that directly answers whether approval is required or not`;
 
     case 'open_offer':
       return basePrompt + `For open offer inquiries:
@@ -78,19 +95,7 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - When discussing whitewash waivers, include the dealing requirements for the applicant
 - Address practical considerations on compliance and implementation`;
 
-    case 'listing_rules':
-      return basePrompt + `For listing rule inquiries:
-- Cite the exact rule numbers and paragraphs that apply to the query
-- Explain precisely how the rules are interpreted by HKEX in practice
-- Include relevant guidance letters or listing decisions that clarify the rule
-- Address any exceptions or waivers that might apply
-- For rules like 7.19A(1) and 10.29(1) regarding rights issues and open offers, explain the aggregation requirements clearly
-- When discussing the 50% threshold in Rule 7.19A, clarify how to calculate this and apply it across multiple transactions
-- For shareholder approval requirements, specify which shareholders can vote and which must abstain
-- Explain the practical implications and procedural requirements for compliance
-- For any rights issue aggregation query under MB Rule 7.19A(1) or GEM Rule 10.29(1), specify that rights issues within 12 months are aggregated when calculating the 50% threshold`;
-
     default:
-      return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications.`;
+      return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications. Always include a clear conclusion section summarizing your analysis and directly addressing the user's question.`;
   }
 }

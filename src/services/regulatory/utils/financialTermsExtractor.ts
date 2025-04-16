@@ -10,7 +10,7 @@ export function extractFinancialTerms(query: string): string[] {
     'timetable', 'schedule', 'timeline', 'whitewash', 'share buy back', 'dealing requirements',
     'rule 7.19', 'rule 7.19A', 'rule 10.29', 'independent shareholders approval', 'aggregate', 'aggregation',
     'mb rule', 'gem rule', 'shareholders approval', 'independent shareholders', '7.19A(1)', '10.29(1)',
-    'within 12 months', 'previous'
+    'within 12 months', 'previous', '50% threshold', 'listing committee', 'exemption'
   ];
   
   const lowerQuery = query.toLowerCase();
@@ -31,9 +31,10 @@ export function extractFinancialTerms(query: string): string[] {
     foundTerms.push(`rule ${ruleMatches[1]}`);
   }
   
-  // Handle aggregation requirements specifically for rights issues
-  if (lowerQuery.includes('aggregate') || lowerQuery.includes('previous') && 
-      lowerQuery.includes('within 12 months') && 
+  // Enhanced handling for aggregation requirements specifically for rights issues
+  if ((lowerQuery.includes('aggregate') || 
+       lowerQuery.includes('previous') || 
+       lowerQuery.includes('within 12 months')) && 
       (lowerQuery.includes('rights issue') || lowerQuery.includes('right issue'))) {
     if (!foundTerms.includes('aggregate')) {
       foundTerms.push('aggregate');
@@ -43,6 +44,21 @@ export function extractFinancialTerms(query: string): string[] {
     }
     if (!foundTerms.some(term => term.includes('7.19A'))) {
       foundTerms.push('rule 7.19A');
+    }
+    
+    // Add shareholder approval requirements for rights issues
+    if (!foundTerms.includes('independent shareholders approval')) {
+      foundTerms.push('independent shareholders approval');
+    }
+  }
+  
+  // Enhanced handling for rule 7.19A(1) or 10.29(1) references
+  if (lowerQuery.includes('7.19a(1)') || lowerQuery.includes('10.29(1)')) {
+    if (!foundTerms.includes('aggregate')) {
+      foundTerms.push('aggregate');
+    }
+    if (!foundTerms.includes('within 12 months')) {
+      foundTerms.push('within 12 months');
     }
   }
   

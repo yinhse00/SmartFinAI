@@ -35,6 +35,17 @@ export const useResponseHandling = (
       // Determine if this is a simple conversational query
       const isSimpleQuery = isSimpleConversationalQuery(queryText);
       
+      // Add specific instructions for aggregation-related queries
+      if (queryText.toLowerCase().includes('rule 7.19a') || 
+          queryText.toLowerCase().includes('aggregate') || 
+          queryText.toLowerCase().includes('within 12 months')) {
+        
+        responseParams.prompt += " Ensure a complete explanation of the aggregation requirements, including how the 50% threshold is calculated, whether previous approvals affect subsequent issues, and provide a direct conclusion. Include all relevant rule references and requirements for independent shareholders' approval.";
+        
+        // Increase max tokens for these complex queries
+        responseParams.maxTokens = Math.max(responseParams.maxTokens, 5000000);
+      }
+      
       // First attempt with significantly increased token limits
       // Already using 3x from the calling function
       let response = await grokService.generateResponse(responseParams);
@@ -65,22 +76,33 @@ export const useResponseHandling = (
       }
 
       // For simple queries, skip retries completely
-      // For complex queries, implement aggressive retry strategy with up to 2 attempts
+      // For complex queries, implement aggressive retry strategy with up to 3 attempts
       let retryCount = 0;
-      const maxRetries = isSimpleQuery ? 0 : 2; // No retries for simple queries
+      const maxRetries = isSimpleQuery ? 0 : 3; // No retries for simple queries, but 3 for complex ones
+      
+      // For rights issue aggregation queries, always try at least one retry with specialized prompt
+      const isAggregationQuery = queryText.toLowerCase().includes('aggregate') && 
+                              (queryText.toLowerCase().includes('rights issue') ||
+                               queryText.toLowerCase().includes('rule 7.19a'));
+                               
+      if (isAggregationQuery && !completenessCheck.isComplete) {
+        console.log('Rights issue aggregation query detected, ensuring at least one retry');
+        retryCount = 0; // Force at least one retry
+      }
       
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with extreme token limit`);
         
         // Super aggressive token scaling for faster convergence to complete responses
         // Use multipliers of 6x and 10x to almost guarantee complete responses
-        const tokenMultiplier = retryCount === 0 ? 6 : 10;
+        const tokenMultiplier = retryCount === 0 ? 6 : (retryCount === 1 ? 10 : 15);
         const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
         
         // Aggressive temperature reduction for more reliable outputs
-        const temperatureReduction = retryCount === 0 ? 0.5 : 0.2;
+        const temperatureReduction = retryCount === 0 ? 0.5 : (retryCount === 1 ? 0.2 : 0.1);
         const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
         
+        // Create enhanced params
         const enhancedParams = {
           ...responseParams,
           maxTokens: increasedTokens,
@@ -90,6 +112,11 @@ export const useResponseHandling = (
         console.log(`Retry #${retryCount + 1} with tokens: ${increasedTokens}, temperature: ${reducedTemperature}`);
         
         try {
+          // For rights issue aggregation queries, add specific instructions
+          if (isAggregationQuery && retryCount === 0) {
+            enhancedParams.prompt += " IMPORTANT: You must fully explain the Rule 7.19A aggregation requirements and how the 50% threshold is calculated across multiple rights issues within 12 months. Specify whether previous shareholders' approval affects subsequent rights issues. Include proper rule references and end with a definitive conclusion addressing the approval requirement directly.";
+          }
+          
           // Special handling for financial comparison queries to ensure completeness
           if ((financialQueryType === 'rights_issue' || 
               financialQueryType.includes('financial') ||

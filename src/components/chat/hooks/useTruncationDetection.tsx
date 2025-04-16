@@ -22,6 +22,43 @@ export const useTruncationDetection = () => {
     let isComplete = !diagnosticsResult.isTruncated;
     const reasons: string[] = [];
     
+    // Check for critical financial requirements
+    const isAggregationQuery = queryText.toLowerCase().includes('aggregate') || 
+                            queryText.toLowerCase().includes('rule 7.19a') || 
+                            queryText.toLowerCase().includes('within 12 months');
+    
+    // Special checks for Rule 7.19A aggregation queries
+    if (isAggregationQuery) {
+      const hasKeyElements = content.toLowerCase().includes('50% threshold') && 
+                           content.toLowerCase().includes('independent shareholders') && 
+                           content.toLowerCase().includes('12 month');
+      
+      const hasDirectAnswer = content.toLowerCase().includes('need to seek') || 
+                           content.toLowerCase().includes('approval is required') || 
+                           content.toLowerCase().includes('approval is not required') ||
+                           content.toLowerCase().includes('needs approval') || 
+                           content.toLowerCase().includes('does not need approval');
+      
+      const hasConclusion = content.toLowerCase().includes('conclusion') || 
+                         content.toLowerCase().includes('in summary') || 
+                         content.toLowerCase().includes('to summarize');
+      
+      if (!hasKeyElements) {
+        isComplete = false;
+        reasons.push("Missing key aggregation requirements information");
+      }
+      
+      if (!hasDirectAnswer) {
+        isComplete = false;
+        reasons.push("No direct answer to the approval requirement question");
+      }
+      
+      if (!hasConclusion && content.length > 3000) {
+        isComplete = false;
+        reasons.push("Missing conclusion section");
+      }
+    }
+    
     // Financial content-specific analysis
     const financialAnalysis = analyzeFinancialResponse(content, queryType);
     
@@ -33,7 +70,7 @@ export const useTruncationDetection = () => {
     // Collect reasons for incompleteness
     if (diagnosticsResult.isTruncated) {
       isComplete = false;
-      reasons.push("Standard truncation detected");
+      reasons.push("Response appears truncated by advanced indicators");
     }
     
     if (isTradingArrangementTruncated) {
@@ -46,6 +83,18 @@ export const useTruncationDetection = () => {
       financialAnalysis.missingElements.forEach((element: string) => {
         reasons.push(`Missing ${element}`);
       });
+    }
+    
+    // For Rule 7.19A responses that look complete despite truncation indicators
+    if (isAggregationQuery && 
+        content.toLowerCase().includes('50% threshold') && 
+        content.toLowerCase().includes('independent shareholders') && 
+        content.toLowerCase().includes('12 month') &&
+        content.toLowerCase().includes('in conclusion') &&
+        content.toLowerCase().includes('approval')) {
+      
+      // Include as an additional check but don't override overall completeness
+      reasons.push("Response contains all key aggregation elements but may have other issues");
     }
     
     return {

@@ -50,8 +50,14 @@ export const getTruncationDiagnostics = (content: string): {
     confidence = 'medium';
   }
   
-  // Financial specific checks
+  // Financial specific checks - enhanced to detect rights issue and aggregation issues
   if (checkFinancialSpecificTruncation(content)) {
+    confidence = 'high';
+  }
+  
+  // Enhanced check for regulatory content
+  if (checkRegulatoryContentTruncation(content)) {
+    reasons.push("Regulatory content appears to be incomplete");
     confidence = 'high';
   }
   
@@ -113,5 +119,55 @@ function checkFinancialSpecificTruncation(content: string): boolean {
     foundIssue = true;
   }
   
+  // Enhanced rights issue requirement checks
+  if (lowerContent.includes('rights issue') && 
+      lowerContent.includes('aggregate') && 
+      !lowerContent.includes('12 months') && 
+      !lowerContent.includes('50%')) {
+    logTruncation(LogLevel.INFO, "Rights issue aggregation requirements incomplete");
+    foundIssue = true;
+  }
+  
   return foundIssue;
+}
+
+/**
+ * Check for regulatory-specific truncation indicators
+ * @param content The content to check
+ * @returns True if regulatory content appears incomplete
+ */
+function checkRegulatoryContentTruncation(content: string): boolean {
+  const lowerContent = content.toLowerCase();
+  
+  // Check for incomplete rule citations
+  if ((lowerContent.includes('rule 7.19') || lowerContent.includes('rule 7.19a')) && 
+      !lowerContent.includes('50% threshold') && 
+      !lowerContent.includes('aggregation')) {
+    return true;
+  }
+  
+  // Check for incomplete rule analysis
+  if (lowerContent.includes('rule') && 
+      lowerContent.includes('approval') && 
+      !lowerContent.includes('conclusion') && 
+      !lowerContent.includes('summary')) {
+    return true;
+  }
+  
+  // Check for key requirements missing in rights issue responses
+  if (lowerContent.includes('rights issue') && 
+      lowerContent.includes('approval') && 
+      !lowerContent.includes('independent shareholders')) {
+    return true;
+  }
+  
+  // Check for missing conclusion in lengthy responses
+  if (content.length > 5000 && 
+      !lowerContent.includes('in conclusion') && 
+      !lowerContent.includes('to summarize') && 
+      !lowerContent.includes('in summary')) {
+    return true;
+  }
+  
+  return false;
 }
