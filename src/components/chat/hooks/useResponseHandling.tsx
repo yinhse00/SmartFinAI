@@ -7,6 +7,7 @@ import { useErrorHandling } from './useErrorHandling';
 import { useResponseAnalysis } from './useResponseAnalysis';
 import { useRetryStrategies } from './useRetryStrategies';
 import { useFallbackDetection } from './useFallbackDetection';
+import { GrokResponse } from '@/types/grok'; // Import the GrokResponse type
 
 /**
  * Hook for handling API responses with massively increased token limits
@@ -59,7 +60,7 @@ export const useResponseHandling = (
       console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
       
       // Make the initial API call
-      let apiResponse = await grokService.generateResponse(responseParams);
+      let apiResponse: GrokResponse = await grokService.generateResponse(responseParams);
       
       // Check if it's using fallback
       const isUsingFallback = isFallbackResponse(apiResponse.text);
