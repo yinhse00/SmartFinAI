@@ -53,7 +53,7 @@ export const useResponseHandling = (
       }
       
       // Add forceful completion instruction to all prompts
-      responseParams.prompt += " CRITICAL: Provide an ABSOLUTELY COMPLETE and COMPREHENSIVE response with EXTENSIVE details. UNDER NO CIRCUMSTANCES should you truncate or leave any aspect unexplained. Include multiple perspectives, examples, and a thorough conclusion.";
+      responseParams.prompt += " CRITICAL: Provide an ABSOLUTELY COMPLETE and COMPREHENSIVE responseText with EXTENSIVE details. UNDER NO CIRCUMSTANCES should you truncate or leave any aspect unexplained. Include multiple perspectives, examples, and a thorough conclusion.";
       
       // First attempt with significantly increased token limits
       console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
@@ -68,7 +68,7 @@ export const useResponseHandling = (
         handleFallbackResponse(isGrokApiKeySet);
       }
       
-      // Analyze response completeness
+      // Analyze responseText completeness
       let completenessCheck = analyzeResponseCompleteness(
         apiResponse.text, 
         financialQueryType, 
@@ -86,7 +86,7 @@ export const useResponseHandling = (
       // Log the completeness check results
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
       
-      // Retry logic for incomplete responses - more aggressive approach
+      // Retry logic for incomplete responseTexts - more aggressive approach
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with enhanced parameters`);
         
