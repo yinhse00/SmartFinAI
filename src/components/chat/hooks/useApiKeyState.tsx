@@ -26,9 +26,27 @@ export const useApiKeyState = () => {
         try {
           setGrokApiKey(defaultApiKey);
           setIsGrokApiKeySet(true);
-          console.log('Default Grok API key set');
+          console.log('Default Grok API key set successfully');
+          
+          // Verify key is actually stored
+          setTimeout(() => {
+            const keyStored = hasGrokApiKey();
+            if (!keyStored) {
+              console.warn('API key verification failed - localStorage may be blocked');
+              toast({
+                title: "API Key Storage Issue",
+                description: "Unable to store API key in browser storage. Private browsing mode may block storage.",
+                variant: "destructive"
+              });
+            }
+          }, 500);
         } catch (error) {
           console.error('Failed to set default API key:', error);
+          toast({
+            title: "API Key Error",
+            description: "Failed to set default API key. Please try entering one manually.",
+            variant: "destructive"
+          });
         }
       }
     };
@@ -40,17 +58,32 @@ export const useApiKeyState = () => {
     const interval = setInterval(checkApiKey, 60000); // Check every minute
     
     return () => clearInterval(interval);
-  }, []);
+  }, [toast]);
 
   const handleSaveApiKeys = () => {
     if (grokApiKeyInput.trim()) {
       try {
         setGrokApiKey(grokApiKeyInput.trim());
-        setIsGrokApiKeySet(true);
-        toast({
-          title: "API Key Saved",
-          description: "Your Grok API key has been saved. You can now use our specialized financial expertise service.",
-        });
+        
+        // Verify key was actually stored
+        setTimeout(() => {
+          const keyStored = hasGrokApiKey();
+          if (keyStored) {
+            setIsGrokApiKeySet(true);
+            toast({
+              title: "API Key Saved",
+              description: "Your Grok API key has been saved. You can now use our specialized financial expertise service.",
+            });
+            setApiKeyDialogOpen(false);
+          } else {
+            console.warn('API key verification failed - localStorage may be blocked');
+            toast({
+              title: "API Key Storage Issue",
+              description: "Unable to store API key. Private browsing mode may block storage.",
+              variant: "destructive"
+            });
+          }
+        }, 500);
       } catch (error) {
         console.error('Failed to save API key:', error);
         toast({
@@ -68,8 +101,6 @@ export const useApiKeyState = () => {
       });
       return;
     }
-    
-    setApiKeyDialogOpen(false);
   };
 
   return {

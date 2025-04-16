@@ -22,6 +22,9 @@ export const grokResponseGenerator = {
 
       // Use provided API key or get from local storage
       const apiKey = params.apiKey || getGrokApiKey();
+      
+      // Log API key status (not the actual key) for debugging
+      console.log('API Key available:', !!apiKey, apiKey ? `Key starts with: ${apiKey.substring(0, 4)}...` : 'No key');
 
       // Enhanced logging for fallback detection
       const fallbackLogging = {
@@ -59,24 +62,29 @@ export const grokResponseGenerator = {
           ],
           model: "grok-3-mini-beta",
           temperature: 0.7,
-          max_tokens: params.maxTokens || 2000,
+          max_tokens: Math.min(2000, params.maxTokens || 2000), // Ensure token limit is reasonable
         };
         
-        // Make API call with simpler configuration for conversational queries
-        const response = await grokApiService.callChatCompletions(requestBody, apiKey);
-        
-        // Get the raw response text
-        const responseText = response.choices[0].message.content;
-        
-        console.groupEnd();
-        return {
-          text: responseText,
-          queryType: 'conversational',
-          metadata: {
-            contextUsed: false,
-            relevanceScore: 1.0
-          }
-        };
+        try {
+          // Make API call with simpler configuration for conversational queries
+          const response = await grokApiService.callChatCompletions(requestBody, apiKey);
+          
+          // Get the raw response text
+          const responseText = response.choices[0].message.content;
+          
+          console.groupEnd();
+          return {
+            text: responseText,
+            queryType: 'conversational',
+            metadata: {
+              contextUsed: false,
+              relevanceScore: 1.0
+            }
+          };
+        } catch (conversationalError) {
+          console.error("Error in conversational API call, falling back to standard processing:", conversationalError);
+          // Continue with standard processing if conversational approach fails
+        }
       }
 
       // For financial/regulatory queries or simple queries with context, continue with standard processing flow
@@ -121,14 +129,20 @@ export const grokResponseGenerator = {
         systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
       }
       
+      // Add special production environment instruction to help avoid incomplete responses
+      systemMessage += "\n\nCRITICAL: Ensure your response is complete and not truncated. If discussing a procedure or process with multiple steps, include ALL steps. If creating a timetable or list, ensure all required items are included. Format tables properly with complete information.";
+      
       console.log('Using specialized financial expert prompt with database prioritization');
 
-      // Get optimized parameters for the request
+      // Get optimized parameters for the request - use production-safe values
       const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, params.prompt);
       
       // Use lower temperature for database-backed queries to ensure exact information retrieval
       // This helps ensure responses match database content more closely
       const actualTemperature = params.regulatoryContext ? 0.1 : temperature;
+      
+      // Ensure token count is within safe limits for production environments
+      const safeMaxTokens = Math.min(3500, maxTokens);
 
       // Prepare request body
       const requestBody = {
@@ -138,35 +152,77 @@ export const grokResponseGenerator = {
         ],
         model: "grok-3-mini-beta",
         temperature: actualTemperature,
-        max_tokens: maxTokens,
+        max_tokens: safeMaxTokens,
       };
 
-      // Make API call with professional financial expertise configuration
-      const response = await grokApiService.callChatCompletions(requestBody, apiKey);
-      
-      // Get the raw response text
-      const responseText = response.choices[0].message.content;
-      
-      // Calculate relevance score for context
-      const relevanceScore = responseOptimizer.calculateRelevanceScore(responseText, params.prompt, queryType);
-      
-      // Enhance response with metadata
-      const finalResponse = responseEnhancer.enhanceResponse(
-        responseText, 
-        queryType, 
-        !!params.regulatoryContext, 
-        relevanceScore, 
-        params.prompt
-      );
+      try {
+        // Make API call with professional financial expertise configuration
+        const response = await grokApiService.callChatCompletions(requestBody, apiKey);
+        
+        // Get the raw response text
+        const responseText = response.choices[0].message.content;
+        
+        // Calculate relevance score for context
+        const relevanceScore = responseOptimizer.calculateRelevanceScore(responseText, params.prompt, queryType);
+        
+        // Enhance response with metadata
+        const finalResponse = responseEnhancer.enhanceResponse(
+          responseText, 
+          queryType, 
+          !!params.regulatoryContext, 
+          relevanceScore, 
+          params.prompt
+        );
 
-      // Before returning fallback, log detailed information
-      if (typeof finalResponse === 'object' && finalResponse.text.includes("Based on your query about")) {
-        fallbackLogging.fallbackReason = 'Automatic fallback due to incomplete response generation';
-        console.warn('Fallback Response Triggered:', fallbackLogging);
+        // Before returning fallback, log detailed information
+        if (typeof finalResponse === 'object' && finalResponse.text.includes("Based on your query about")) {
+          fallbackLogging.fallbackReason = 'Automatic fallback due to incomplete response generation';
+          console.warn('Fallback Response Triggered:', fallbackLogging);
+        }
+
+        console.groupEnd();
+        return finalResponse;
+      } catch (apiError) {
+        console.error("API call failed, attempting backup approach with simplified parameters:", apiError);
+        
+        // If first attempt fails, try again with more conservative parameters
+        try {
+          // Use more conservative parameters for backup attempt
+          const backupRequestBody = {
+            messages: [
+              { role: 'system', content: "You are a Hong Kong financial regulations expert. Provide accurate information based on Hong Kong listing rules, takeovers code, and corporate finance regulations." },
+              { role: 'user', content: params.prompt }
+            ],
+            model: "grok-3-mini-beta",
+            temperature: 0.1,  // Very low temperature for factual accuracy
+            max_tokens: 2000,  // Conservative token limit
+          };
+          
+          console.log("Attempting backup API call with simplified parameters");
+          const backupResponse = await grokApiService.callChatCompletions(backupRequestBody, apiKey);
+          
+          const backupResponseText = backupResponse.choices[0].message.content;
+          
+          console.groupEnd();
+          return {
+            text: backupResponseText,
+            queryType: queryType || 'general',
+            metadata: {
+              contextUsed: false,
+              relevanceScore: 0.8,
+              isBackupResponse: true
+            }
+          };
+        } catch (backupError) {
+          // If both attempts fail, fall back to fallback response
+          console.error('Both API attempts failed, using fallback:', backupError);
+          console.groupEnd();
+          
+          // Generate fallback with more context about the error
+          return generateFallbackResponse(params.prompt, 
+            apiError instanceof Error ? apiError.message : 'API connection failed');
+        }
       }
-
-      console.groupEnd();
-      return finalResponse;
     } catch (error) {
       console.error('Hong Kong Financial Expert Response Error:', error);
       console.group('Fallback Response Details');

@@ -44,23 +44,20 @@ export const grokApiService = {
     console.log("Request model:", requestBody.model);
     console.log("Temperature:", requestBody.temperature);
     console.log("Max tokens:", requestBody.max_tokens);
+    console.log("Using API Key:", apiKey.substring(0, 8) + "***");
     
     // Add retry mechanism with exponential backoff for production resilience
     let retries = 0;
-    const maxRetries = 2; // Maximum number of retry attempts
+    const maxRetries = 3; // Increased maximum retries for production resilience
     
     while (retries <= maxRetries) {
       try {
-        // Use absolute URL to ensure consistency between development and production
+        // Construct absolute URL with current origin for production compatibility
+        const baseUrl = window.location.origin;
         let apiEndpoint = '/api/grok/chat/completions';
         
-        // If we're in production and the relative URL might be different, handle it
-        if (window.location.hostname.includes('lovable') || window.location.hostname.includes('.app')) {
-          // Ensure we're using the correct endpoint in production
-          if (!apiEndpoint.startsWith('/')) {
-            apiEndpoint = '/' + apiEndpoint;
-          }
-        }
+        // Log the API endpoint for debugging
+        console.log("API endpoint:", baseUrl + apiEndpoint);
         
         const response = await fetch(apiEndpoint, {
           method: 'POST',
@@ -71,6 +68,9 @@ export const grokApiService = {
           },
           body: JSON.stringify(requestBody)
         });
+        
+        // Log response status for debugging
+        console.log("API response status:", response.status);
         
         if (!response.ok) {
           const errorData = await response.text();
@@ -110,9 +110,12 @@ export const grokApiService = {
           throw error;
         }
         
-        // Wait before retrying (exponential backoff)
-        const delay = Math.pow(2, retries) * 500; // 1000ms, 2000ms, 4000ms, etc.
-        console.log(`API call failed, retrying in ${delay}ms (attempt ${retries} of ${maxRetries})...`);
+        // Wait before retrying (exponential backoff with jitter for production resilience)
+        const baseDelay = Math.pow(2, retries) * 500; // 1000ms, 2000ms, 4000ms, etc.
+        const jitter = Math.random() * 500; // Add up to 500ms of random jitter
+        const delay = baseDelay + jitter;
+        
+        console.log(`API call failed, retrying in ${Math.round(delay)}ms (attempt ${retries} of ${maxRetries})...`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
