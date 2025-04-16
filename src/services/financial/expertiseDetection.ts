@@ -7,6 +7,11 @@ import { FINANCIAL_EXPERTISES } from '../constants/financialConstants';
 export function detectFinancialExpertiseArea(prompt: string): string {
   const lowerPrompt = prompt.toLowerCase();
   
+  // First detect if this is a simple conversational query that doesn't need detailed processing
+  if (isSimpleConversationalQuery(prompt)) {
+    return FINANCIAL_EXPERTISES.CONVERSATIONAL;
+  }
+  
   // First check for trading arrangement related queries
   if (isTradingArrangementQuery(prompt)) {
     const tradingType = determineTradingArrangementType(prompt);
@@ -68,6 +73,45 @@ export function detectFinancialExpertiseArea(prompt: string): string {
     return FINANCIAL_EXPERTISES.LISTING_RULES;
     
   return FINANCIAL_EXPERTISES.GENERAL;
+}
+
+/**
+ * Determine if a query is a simple conversational query that doesn't need regulatory context
+ */
+export function isSimpleConversationalQuery(prompt: string): boolean {
+  const lowerPrompt = prompt.toLowerCase().trim();
+  
+  // Check if it's a greeting or very short query
+  if (lowerPrompt.length < 15) {
+    return true;
+  }
+  
+  // Common conversational patterns
+  const conversationalPatterns = [
+    'hello', 'hi', 'hey', 'good morning', 'good afternoon', 'good evening',
+    'how are you', 'what is your name', 'who are you', 'what can you do',
+    'thanks', 'thank you', 'goodbye', 'bye', 'see you', 'talk to you later',
+    'what is your strength', 'your strength', 'your capabilities', 'your features',
+    'help me', 'i need help', 'can you help', 'assist me', 'introduction',
+    'tell me about yourself', 'what are you'
+  ];
+  
+  // Check if query contains conversational patterns
+  for (const pattern of conversationalPatterns) {
+    if (lowerPrompt.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  // If query doesn't contain any financial terms, it's likely conversational
+  const financialTerms = [
+    'listing', 'rules', 'takeover', 'prospectus', 'ipo', 'transaction',
+    'rights issue', 'offer', 'securities', 'shares', 'waiver', 'exemption',
+    'disclosure', 'circular', 'chapter', 'rule', 'schedule', 'timetable'
+  ];
+  
+  // If the query doesn't contain any financial terms, consider it conversational
+  return !financialTerms.some(term => lowerPrompt.includes(term));
 }
 
 /**

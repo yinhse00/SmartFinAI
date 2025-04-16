@@ -5,11 +5,16 @@ export const useQueryBuilder = () => {
     temperature: number, 
     maxTokens: number
   ) => {
-    // Enhance query to explicitly request complete responses
-    const enhancedQuery = `${queryText.trim()}. Please ensure to include a clear conclusion or summary section at the end of your response that ties everything together. Your response must be complete and well-structured.`;
+    // Check if this is a simple conversational query
+    const isSimpleQuery = isSimpleConversationalQuery(queryText);
+    
+    // For simple queries, don't add as much enhancement
+    const enhancedQuery = isSimpleQuery
+      ? `${queryText.trim()}. Please provide a complete and concise response.`
+      : `${queryText.trim()}. Please ensure to include a clear conclusion or summary section at the end of your response that ties everything together. Your response must be complete and well-structured.`;
     
     const responseParams: any = {
-      prompt: enhanceQueryWithKeyTerms(enhancedQuery),
+      prompt: isSimpleQuery ? enhancedQuery : enhanceQueryWithKeyTerms(enhancedQuery),
       temperature: temperature,
       maxTokens: maxTokens
     };
@@ -46,3 +51,6 @@ export const useQueryBuilder = () => {
     buildResponseParams
   };
 };
+
+// Import the isSimpleConversationalQuery function
+import { isSimpleConversationalQuery } from '@/services/financial/expertiseDetection';

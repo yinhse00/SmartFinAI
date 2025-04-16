@@ -3,7 +3,7 @@ import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { contextService } from '../regulatory/contextService';
 import { grokApiService } from '../api/grokApiService';
 import { createFinancialExpertSystemPrompt } from '../financial/systemPrompts';
-import { detectFinancialExpertiseArea } from '../financial/expertiseDetection';
+import { detectFinancialExpertiseArea, isSimpleConversationalQuery } from '../financial/expertiseDetection';
 import { generateFallbackResponse } from '../fallbackResponseService';
 
 // Import refactored modules
@@ -26,7 +26,46 @@ export const grokResponseGenerator = {
       console.group('Hong Kong Financial Expert Response Generation');
       console.log('Input Query:', params.prompt);
 
-      // Detect specific query types for specialized financial handling
+      // Check if this is a simple conversational query
+      const isSimpleQuery = isSimpleConversationalQuery(params.prompt);
+      
+      if (isSimpleQuery) {
+        console.log('Simple conversational query detected, using streamlined processing');
+        
+        // Simplified system message for conversational queries
+        const conversationalSystemMessage = 
+          "You are a helpful virtual assistant with expertise in Hong Kong financial regulations. " +
+          "For simple conversational queries, provide direct and concise responses while maintaining " +
+          "a professional tone. If the user asks about your capabilities, explain that you specialize " +
+          "in Hong Kong financial regulations, listing rules, and corporate actions.";
+        
+        // Prepare streamlined request for conversational queries
+        const requestBody = {
+          messages: [
+            { role: 'system', content: conversationalSystemMessage },
+            { role: 'user', content: params.prompt }
+          ],
+          model: "grok-3-mini-beta",
+          temperature: 0.7,
+          max_tokens: params.maxTokens || 2000,
+        };
+        
+        // Make API call with simpler configuration for conversational queries
+        const response = await grokApiService.callChatCompletions(requestBody);
+        
+        // Get the raw response text
+        const responseText = response.choices[0].message.content;
+        
+        console.groupEnd();
+        return {
+          text: responseText,
+          queryType: 'conversational',
+          hasContext: false,
+          relevanceScore: 1.0
+        };
+      }
+
+      // For financial/regulatory queries, continue with standard processing flow
       const queryType = detectFinancialExpertiseArea(params.prompt);
       console.log('Detected Financial Expertise Area:', queryType);
 

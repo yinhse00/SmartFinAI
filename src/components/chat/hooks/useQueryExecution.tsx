@@ -7,6 +7,7 @@ import { useResponseHandling } from './useResponseHandling';
 import { useQueryLogger } from './useQueryLogger';
 import { useQueryBuilder } from './useQueryBuilder';
 import { Message } from '../ChatMessage';
+import { isSimpleConversationalQuery } from '@/services/financial/expertiseDetection';
 
 export const useQueryExecution = (
   messages: Message[],
@@ -53,35 +54,53 @@ export const useQueryExecution = (
     try {
       logQueryStart(queryText);
       
-      // Increase token limits significantly - 10x the original limit
+      // Check if this is a simple conversational query
+      const isSimpleQuery = isSimpleConversationalQuery(queryText);
+      console.log(`Query type: ${isSimpleQuery ? 'Conversational' : 'Financial/Regulatory'}`);
+      
+      // Get query parameters with optimized token settings
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
-      const enhancedMaxTokens = maxTokens * 10; // Dramatically increase token limit
+      const enhancedMaxTokens = isSimpleQuery ? maxTokens * 2 : maxTokens * 10; // Use smaller limit for simple queries
       
       logQueryParameters(financialQueryType, temperature, enhancedMaxTokens);
       
-      const contextStart = Date.now();
-      const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
-      const contextTime = Date.now() - contextStart;
+      // Skip context retrieval for simple conversational queries
+      let regulatoryContext = '';
+      let reasoning = '';
+      let contextTime = 0;
       
-      // Ensure all 4 arguments are passed to logContextInfo
+      if (!isSimpleQuery) {
+        // Only perform context search for non-conversational queries
+        const contextStart = Date.now();
+        const contextResult = await contextService.getRegulatoryContextWithReasoning(queryText);
+        regulatoryContext = contextResult.context || '';
+        reasoning = contextResult.reasoning || '';
+        contextTime = Date.now() - contextStart;
+      }
+      
+      // Log context info (with empty values for simple queries)
       logContextInfo(
-        regulatoryContext || '', 
-        reasoning || '', 
+        regulatoryContext, 
+        reasoning, 
         financialQueryType || 'unspecified', 
         contextTime
       );
       
       setProcessingStage('processing');
       
-      // Build response parameters with massive token limits
-      const responseParams = buildResponseParams(queryText, temperature, enhancedMaxTokens);
+      // Build optimized response parameters
+      const responseParams = buildResponseParams(
+        queryText, 
+        temperature, 
+        enhancedMaxTokens
+      );
       
       const processingStart = Date.now();
       const result = await handleApiResponse(
         queryText, 
         responseParams, 
-        regulatoryContext || '',  
-        reasoning || '',
+        regulatoryContext,
+        reasoning,
         financialQueryType || 'unspecified',
         updatedMessages
       );
@@ -90,8 +109,9 @@ export const useQueryExecution = (
       
       setProcessingStage('finalizing');
       
-      // Slightly reduced finalizing wait time
-      await new Promise(resolve => setTimeout(resolve, 250));
+      // Reduced finalizing wait time for simple queries
+      const finalizingTime = isSimpleQuery ? 150 : 250;
+      await new Promise(resolve => setTimeout(resolve, finalizingTime));
       
       finishLogging();
     } catch (error) {

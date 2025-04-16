@@ -6,6 +6,7 @@ import { Message } from '../ChatMessage';
 import { useResponseFormatter } from './useResponseFormatter';
 import { useTruncationDetection, isTradingArrangementRelated } from './useTruncationDetection';
 import { useErrorHandling } from './useErrorHandling';
+import { isSimpleConversationalQuery } from '@/services/financial/expertiseDetection';
 
 /**
  * Hook for handling API responses with massively increased token limits
@@ -31,6 +32,9 @@ export const useResponseHandling = (
     try {
       console.log('Calling Grok financial expert API');
       
+      // Determine if this is a simple conversational query
+      const isSimpleQuery = isSimpleConversationalQuery(queryText);
+      
       // First attempt with significantly increased token limits
       // Already using 3x from the calling function
       let response = await grokService.generateResponse(responseParams);
@@ -47,18 +51,23 @@ export const useResponseHandling = (
       // Get basic diagnostics
       const diagnostics = getTruncationDiagnostics(response.text);
       
-      // Do comprehensive completeness check
-      const completenessCheck = isResponseComplete(
-        response.text, 
-        diagnostics, 
-        financialQueryType, 
-        queryText
-      );
+      // For simple queries, skip extensive completeness checking
+      let completenessCheck = { isComplete: true, reasons: [], financialAnalysis: { isComplete: true, missingElements: [] } };
+      
+      if (!isSimpleQuery) {
+        // Do comprehensive completeness check for financial/regulatory queries
+        completenessCheck = isResponseComplete(
+          response.text, 
+          diagnostics, 
+          financialQueryType, 
+          queryText
+        );
+      }
 
-      // Ultra-aggressive retry strategy with up to 2 attempts for financial content
-      // Using fewer but more effective retries to reduce overall processing time
+      // For simple queries, skip retries completely
+      // For complex queries, implement aggressive retry strategy with up to 2 attempts
       let retryCount = 0;
-      const maxRetries = 2; // Reduced from 3 to speed up overall processing
+      const maxRetries = isSimpleQuery ? 0 : 2; // No retries for simple queries
       
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with extreme token limit`);
@@ -136,8 +145,8 @@ export const useResponseHandling = (
       // Format the bot message
       const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
       
-      // If still not complete after all retry attempts, mark as truncated
-      if (!completenessCheck.isComplete) {
+      // Only mark as truncated for non-simple queries
+      if (!isSimpleQuery && !completenessCheck.isComplete) {
         console.log('Incomplete response detected after all retries:', {
           reasons: completenessCheck.reasons,
           financialAnalysisMissingElements: completenessCheck.financialAnalysis.missingElements
