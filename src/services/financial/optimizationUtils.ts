@@ -9,15 +9,15 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
   }
   
   if (['listing_rules', 'takeovers_code'].includes(queryType)) {
-    return 0.15; // Further reduced from 0.2 to 0.15 for rule interpretations
+    return 0.05; // Further reduced from 0.15 to 0.05 for rule interpretations to ensure database accuracy
   }
   
   if (prompt.toLowerCase().includes('example') || prompt.toLowerCase().includes('template')) {
-    return 0.3; // Reduced from 0.4 to 0.3 for more consistent examples
+    return 0.1; // Reduced from 0.3 to 0.1 for more consistent examples
   }
   
   // Default for general inquiries
-  return 0.2; // Reduced from 0.3 to 0.2
+  return 0.1; // Reduced from 0.2 to 0.1 to prioritize database content over creative generation
 }
 
 /**
@@ -32,7 +32,7 @@ export function determineOptimalTokens(queryType: string, prompt: string): numbe
     return 3500; // Reasonable token limit for explanations
   }
   
-  // Default token count
+  // Default token count - reduced to prevent exceeding limits
   return 3000; // Reasonable default token limit
 }
 
@@ -63,6 +63,13 @@ export function evaluateResponseRelevance(response: string, query: string, query
       score += 1;
     }
   });
+  
+  // Check if response appears to directly quote database content
+  if (response.includes('[') && response.includes(']') && 
+      (response.includes('---') || response.includes('FAQ') || 
+       response.includes('Source:') || response.includes('Reference:'))) {
+    score += 5; // Strongly favor responses that appear to quote database content
+  }
   
   // Normalize to 0-10 scale
   return Math.min(10, score);

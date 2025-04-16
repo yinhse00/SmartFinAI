@@ -49,7 +49,9 @@ export const useQueryExecution = (
     setMessages(updatedMessages);
     setInput('');
     setIsLoading(true);
-    setProcessingStage('preparing');
+    
+    // Always start with database review stage
+    setProcessingStage('reviewing');
 
     try {
       logQueryStart(queryText);
@@ -67,58 +69,54 @@ export const useQueryExecution = (
       
       // Get query parameters with optimized token settings
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
-      const enhancedMaxTokens = isSimpleQuery ? maxTokens * 2 : maxTokens * 10; // Use smaller limit for simple queries
+      const enhancedMaxTokens = isSimpleQuery ? maxTokens * 1.5 : maxTokens * 2; // Reduced multiplier to avoid exceeding limits
       
       // Use much lower temperature for FAQ queries to ensure more literal information retrieval
       const actualTemperature = isFaqQuery ? 0.1 : temperature;
       
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
       
-      // Always perform comprehensive context retrieval for FAQ queries regardless of type
+      // IMPORTANT CHANGE: Always perform comprehensive context retrieval regardless of query type
+      // This ensures we always check the database first before answering
       let regulatoryContext = '';
       let reasoning = '';
       let contextTime = 0;
       
-      setProcessingStage('reviewing');
+      // Always do a comprehensive database review for ALL queries
+      const contextStart = Date.now();
+      const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
+      regulatoryContext = contextResult.context || '';
+      reasoning = contextResult.reasoning || '';
+      contextTime = Date.now() - contextStart;
       
-      // Always do a comprehensive database review for non-conversational queries or FAQ queries
-      if (!isSimpleQuery || isFaqQuery) {
-        // More comprehensive context retrieval with database verification
-        const contextStart = Date.now();
-        const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
-        regulatoryContext = contextResult.context || '';
-        reasoning = contextResult.reasoning || '';
-        contextTime = Date.now() - contextStart;
+      // For FAQ queries, ensure we've searched across multiple potential sources
+      if (isFaqQuery) {
+        console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
         
-        // For FAQ queries, ensure we've searched across multiple potential sources
-        if (isFaqQuery) {
-          console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
+        // If initial search didn't yield strong FAQ content, try multiple search strategies
+        if (!regulatoryContext.toLowerCase().includes('faq') && 
+            !regulatoryContext.toLowerCase().includes('continuing obligation')) {
+          console.log('Initial search didn\'t find specific FAQ content, trying specialized search');
           
-          // If initial search didn't yield strong FAQ content, try multiple search strategies
-          if (!regulatoryContext.toLowerCase().includes('faq') && 
-              !regulatoryContext.toLowerCase().includes('continuing obligation')) {
-            console.log('Initial search didn\'t find specific FAQ content, trying specialized search');
+          // Try with multiple variants of the FAQ search query
+          const faqSearchQueries = [
+            "10.4 FAQ Continuing Obligations",
+            "FAQ continuing obligations",
+            "continuing obligations FAQ",
+            "10.4 FAQ"
+          ];
+          
+          for (const faqQuery of faqSearchQueries) {
+            console.log(`Trying specialized FAQ search with query: ${faqQuery}`);
+            const faqContextResult = await contextService.getRegulatoryContextWithReasoning(faqQuery);
             
-            // Try with multiple variants of the FAQ search query
-            const faqSearchQueries = [
-              "10.4 FAQ Continuing Obligations",
-              "FAQ continuing obligations",
-              "continuing obligations FAQ",
-              "10.4 FAQ"
-            ];
-            
-            for (const faqQuery of faqSearchQueries) {
-              console.log(`Trying specialized FAQ search with query: ${faqQuery}`);
-              const faqContextResult = await contextService.getRegulatoryContextWithReasoning(faqQuery);
-              
-              if (faqContextResult.context && 
-                 (faqContextResult.context.toLowerCase().includes('faq') || 
-                  faqContextResult.context.toLowerCase().includes('continuing obligation'))) {
-                console.log('Found FAQ content in specialized search, using this context');
-                regulatoryContext = faqContextResult.context;
-                reasoning = "This context is from the '10.4 FAQ Continuing Obligations' document which contains the exact wording needed for accurate answers.";
-                break;
-              }
+            if (faqContextResult.context && 
+               (faqContextResult.context.toLowerCase().includes('faq') || 
+                faqContextResult.context.toLowerCase().includes('continuing obligation'))) {
+              console.log('Found FAQ content in specialized search, using this context');
+              regulatoryContext = faqContextResult.context;
+              reasoning = "This context is from the '10.4 FAQ Continuing Obligations' document which contains the exact wording needed for accurate answers.";
+              break;
             }
           }
         }
@@ -146,8 +144,8 @@ export const useQueryExecution = (
         responseParams.prompt += " IMPORTANT: For questions related to FAQs or continuing obligations, you MUST use the EXACT wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract and quote the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document verbatim. If no exact match is found, explicitly state that.";
       }
       
-      // For all queries, emphasize database content priority
-      responseParams.prompt += " Always prioritize information from the regulatory database over general knowledge. When regulatory guidance exists in the database, use it verbatim.";
+      // IMPROVED INSTRUCTION: For all queries, emphasize database content priority
+      responseParams.prompt += " CRITICAL: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the database, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
       
       const processingStart = Date.now();
       const result = await handleApiResponse(

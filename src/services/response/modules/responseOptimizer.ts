@@ -14,18 +14,19 @@ export const responseOptimizer = {
     // Use simpler parameters for conversational queries
     if (isSimpleQuery) {
       return {
-        temperature: 0.7,
+        temperature: 0.3, // Lower temperature to prioritize database facts
         maxTokens: 2000
       };
     }
     
-    // Get base temperature setting
-    const temperature = getOptimalTemperature(queryType, prompt);
+    // Get base temperature setting - use lower values to increase accuracy
+    const baseTemperature = getOptimalTemperature(queryType, prompt);
+    const temperature = Math.min(0.2, baseTemperature); // Cap at 0.2 to ensure factual accuracy
     
     // Smart token allocation based on query complexity
     const baseTokens = getOptimalTokens(queryType, prompt);
     const maxTokens = prompt.length > 200 ? 
-      Math.min(4000, baseTokens * 1.2) : 
+      Math.min(4000, baseTokens * 1.2) : // Cap at 4000 to prevent errors
       baseTokens;
     
     console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Simple Query: ${isSimpleQuery}`);

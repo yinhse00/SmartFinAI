@@ -31,11 +31,18 @@ export const grokResponseGenerator = {
         fallbackReason: ''
       };
 
+      // Check if this might be FAQ related
+      const isFaqQuery = params.prompt.toLowerCase().includes('faq') || 
+                        params.prompt.toLowerCase().includes('continuing obligation') ||
+                        params.prompt.match(/\b10\.4\b/);
+
       // Check if this is a simple conversational query
       const isSimpleQuery = isSimpleConversationalQuery(params.prompt);
       
-      if (isSimpleQuery) {
-        console.log('Simple conversational query detected, using streamlined processing');
+      // IMPORTANT CHANGE: Even for simple queries, prioritize database content
+      // Only use the simplified processing if there's no regulatory context after checking
+      if (isSimpleQuery && !params.regulatoryContext) {
+        console.log('Simple conversational query detected with no relevant database content, using streamlined processing');
         
         // Simplified system message for conversational queries
         const conversationalSystemMessage = 
@@ -72,7 +79,7 @@ export const grokResponseGenerator = {
         };
       }
 
-      // For financial/regulatory queries, continue with standard processing flow
+      // For financial/regulatory queries or simple queries with context, continue with standard processing flow
       const queryType = detectFinancialExpertiseArea(params.prompt);
       fallbackLogging.queryType = queryType;
       console.log('Detected Financial Expertise Area:', queryType);
@@ -86,11 +93,6 @@ export const grokResponseGenerator = {
       const hasTakeoversCode = queryAnalyzer.hasTakeoversCode(params.regulatoryContext);
       const hasTradeArrangementInfo = queryAnalyzer.hasTradeArrangementInfo(params.regulatoryContext);
       
-      // Check if this might be FAQ related
-      const isFaqQuery = params.prompt.toLowerCase().includes('faq') || 
-                        params.prompt.toLowerCase().includes('continuing obligation') ||
-                        params.prompt.match(/\b10\.4\b/);
-
       // Enhance context with whitewash waiver information if needed
       params = await contextEnhancer.enhanceWithWhitewashContext(params, isWhitewashQuery);
       
@@ -111,18 +113,22 @@ export const grokResponseGenerator = {
       // Create a professional financial system message based on expertise area
       let systemMessage = createFinancialExpertSystemPrompt(queryType, params.regulatoryContext);
       
+      // IMPROVED INSTRUCTION: Add stronger instructions to use database content
+      systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the provided database content, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
+      
       // For FAQ queries, add specific instructions to use the exact wording from the database
       if (isFaqQuery) {
         systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
       }
       
-      console.log('Using specialized financial expert prompt');
+      console.log('Using specialized financial expert prompt with database prioritization');
 
       // Get optimized parameters for the request
       const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, params.prompt);
       
-      // Use lower temperature for FAQ queries to ensure exact information retrieval
-      const actualTemperature = isFaqQuery ? 0.2 : temperature;
+      // Use lower temperature for database-backed queries to ensure exact information retrieval
+      // This helps ensure responses match database content more closely
+      const actualTemperature = params.regulatoryContext ? 0.1 : temperature;
 
       // Prepare request body
       const requestBody = {
@@ -158,8 +164,6 @@ export const grokResponseGenerator = {
         fallbackLogging.fallbackReason = 'Automatic fallback due to incomplete response generation';
         console.warn('Fallback Response Triggered:', fallbackLogging);
       }
-
-      // You can add more specific logging here to capture reasons for fallback
 
       console.groupEnd();
       return finalResponse;

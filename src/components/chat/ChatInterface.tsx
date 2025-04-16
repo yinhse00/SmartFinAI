@@ -122,11 +122,14 @@ const ChatInterface = () => {
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
           
-          {/* Database review status indicator */}
+          {/* Enhanced database review status indicator */}
           {isLoading && processingStage === 'reviewing' && (
-            <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue animate-pulse">
-              <Database size={14} />
-              <span>Reviewing database for accurate information...</span>
+            <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue dark:text-finance-light-blue">
+              <Database size={14} className="animate-pulse" />
+              <span className="font-medium">Reviewing database for accurate information...</span>
+              <span className="text-[10px] bg-finance-light-blue/20 dark:bg-finance-medium-blue/30 px-1.5 py-0.5 rounded-full">
+                Consulting HK regulatory database
+              </span>
             </div>
           )}
           
