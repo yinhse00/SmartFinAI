@@ -66,7 +66,6 @@ export const useQueryExecution = (
       const contextStart = Date.now();
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
-      console.log(`Context fetched in ${contextTime}ms`);
       logContextInfo(regulatoryContext, reasoning, financialQueryType, contextTime);
       
       // Update processing stage - now we're actually processing the query
