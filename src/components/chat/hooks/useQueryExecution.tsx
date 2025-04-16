@@ -80,9 +80,9 @@ export const useQueryExecution = (
       const result = await handleApiResponse(
         queryText, 
         responseParams, 
-        regulatoryContext || '', 
-        reasoning || '', 
-        financialQueryType,
+        regulatoryContext || '',  
+        reasoning || '',
+        financialQueryType || 'unspecified',
         updatedMessages
       );
       const processingTime = Date.now() - processingStart;
