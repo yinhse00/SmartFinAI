@@ -10,18 +10,18 @@ export const useRetryStrategies = () => {
     financialQueryType: string,
     queryText: string
   ) => {
-    // More aggressive token scaling for faster convergence
-    const tokenMultiplier = retryCount === 0 ? 10 : (retryCount === 1 ? 15 : 20);
+    // More reasonable token scaling for faster convergence
+    const tokenMultiplier = retryCount === 0 ? 1.5 : (retryCount === 1 ? 2 : 3);
     const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
     
     // More aggressive temperature reduction for reliable outputs
-    const temperatureReduction = retryCount === 0 ? 0.4 : (retryCount === 1 ? 0.2 : 0.1);
+    const temperatureReduction = retryCount === 0 ? 0.8 : (retryCount === 1 ? 0.6 : 0.4);
     const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
     
     // Create enhanced params with explicit completion instructions
     const enhancedParams = {
       ...responseParams,
-      maxTokens: increasedTokens,
+      maxTokens: Math.min(increasedTokens, 4000), // Cap at 4000 tokens
       temperature: reducedTemperature,
       prompt: responseParams.prompt + " CRITICAL: You MUST provide a complete response with all necessary information and a clear conclusion. DO NOT truncate your response."
     };
@@ -42,18 +42,18 @@ export const useRetryStrategies = () => {
         " Ensure your response includes a complete conclusion section summarizing key differences and recommendations.";
     }
     
-    console.log(`Enhanced retry parameters - Tokens: ${increasedTokens}, Temperature: ${reducedTemperature}`);
+    console.log(`Enhanced retry parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}`);
     return enhancedParams;
   };
 
   const determineMaxRetries = (isSimpleQuery: boolean, isAggregationQuery: boolean): number => {
     // Increased retry attempts for better response completeness
     if (isSimpleQuery) {
-      return 2; // Two retries even for simple queries
+      return 1; // One retry for simple queries
     } else if (isAggregationQuery) {
-      return 4; // Maximum 4 retries for critical aggregation queries
+      return 2; // Maximum 2 retries for critical aggregation queries
     } else {
-      return 3; // 3 retries for standard financial queries
+      return 2; // 2 retries for standard financial queries
     }
   };
 

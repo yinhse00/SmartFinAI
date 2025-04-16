@@ -25,7 +25,7 @@ export const responseOptimizer = {
     // Smart token allocation based on query complexity
     const baseTokens = getOptimalTokens(queryType, prompt);
     const maxTokens = prompt.length > 200 ? 
-      Math.min(8000, baseTokens * 1.5) : 
+      Math.min(4000, baseTokens * 1.2) : 
       baseTokens;
     
     console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Simple Query: ${isSimpleQuery}`);

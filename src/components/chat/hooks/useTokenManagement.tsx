@@ -5,7 +5,7 @@ import { GrokResponse } from '@/types/grok';
  * Hook for managing token limits and parameters for API requests
  */
 export const useTokenManagement = () => {
-  const MAX_TOKENS = 8000;  // Reasonable maximum token limit
+  const MAX_TOKENS = 4000;  // Reasonable maximum token limit
   
   const enhanceTokenLimits = (
     queryText: string,
@@ -13,8 +13,8 @@ export const useTokenManagement = () => {
     isSimpleQuery: boolean,
     isAggregationQuery: boolean
   ) => {
-    // Use more conservative multipliers
-    const baseTokenMultiplier = isSimpleQuery ? 2 : 4;
+    // Use conservative multipliers
+    const baseTokenMultiplier = isSimpleQuery ? 1.2 : 1.5;
     
     // Calculate tokens with a safe maximum
     const calculatedTokens = Math.min(
@@ -29,14 +29,14 @@ export const useTokenManagement = () => {
         queryText.toLowerCase().includes('aggregate') || 
         queryText.toLowerCase().includes('within 12 months')) {
       
-      responseParams.prompt += " Ensure a comprehensive and detailed explanation of the aggregation requirements.";
+      responseParams.prompt += " Ensure a comprehensive explanation of the aggregation requirements.";
       
       // Slightly increase max tokens for complex queries, but still within limits
-      responseParams.maxTokens = Math.min(responseParams.maxTokens * 1.5, MAX_TOKENS);
+      responseParams.maxTokens = Math.min(responseParams.maxTokens * 1.2, MAX_TOKENS);
     }
     
-    // Add forceful completion instruction to all prompts
-    responseParams.prompt += " Provide a complete and comprehensive response with extensive details.";
+    // Add completion instruction to all prompts
+    responseParams.prompt += " Provide a complete response with necessary details.";
     
     return responseParams;
   };
