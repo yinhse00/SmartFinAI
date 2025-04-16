@@ -1,13 +1,11 @@
-
-import { detectTruncationComprehensive } from './advancedDetection';
 import { logTruncation, LogLevel } from './logLevel';
-import { analyzeFinancialResponse as analyzeFinancialResponseDetails } from './financialResponseAnalyzer';
+import { detectTruncationComprehensive } from './advancedDetection'; // Fixed import path
 
 /**
- * Analyzes a response for financial-specific completeness indicators
+ * Analyzes a financial response for completeness
  * @param content Response content
  * @param financialQueryType Type of financial query
- * @returns Detailed analysis of content completeness
+ * @returns Analysis result with details about completeness
  */
 export const analyzeFinancialResponse = (content: string, financialQueryType?: string) => {
   const analysis = {
