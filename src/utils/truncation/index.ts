@@ -5,7 +5,7 @@ export * from './basicDetection';
 export * from './advancedDetection';
 export * from './diagnostics';
 export * from './financialDetection';
-export * from './financialAnalyzer';
+export { analyzeFinancialResponse } from './financialAnalyzer';
 export * from './financialResponseAnalyzer';
 export * from './tradingArrangementDetection';
 export * from './tradingArrangementChecks';
