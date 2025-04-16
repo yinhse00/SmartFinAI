@@ -15,5 +15,6 @@ export interface GrokResponse {
     tradingArrangementInfoUsed?: boolean;
     takeoversCodeUsed?: boolean;
     whitewashInfoIncluded?: boolean;
+    referenceDocumentsUsed?: boolean;
   };
 }
