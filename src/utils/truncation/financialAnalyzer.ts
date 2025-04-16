@@ -41,8 +41,8 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
             
         // Check for both rights issue and open offer concepts
         if (lowerContent.includes('rights issue') && lowerContent.includes('open offer')) {
-          const mandatoryRightsIssueTerms = ['nil-paid rights', 'ex-rights'];
-          const mandatoryOpenOfferTerms = ['no nil-paid', 'ex-entitlement'];
+          const mandatoryRightsIssueTerms = ['nil-paid rights', 'ex-rights', 'trading period'];
+          const mandatoryOpenOfferTerms = ['no nil-paid', 'ex-entitlement', 'no trading of rights'];
           
           // Check for missing terms in the comparison
           const missingRightsTerms = mandatoryRightsIssueTerms.filter(term => !lowerContent.includes(term));
@@ -61,6 +61,16 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
             missingOpenOfferTerms.forEach(term => {
               analysis.missingElements.push(`Missing key open offer term: ${term}`);
             });
+          }
+          
+          // Check for timetable completeness in comparison
+          if (lowerContent.includes('timetable')) {
+            // For timetables, ensure we have adequate date information for both
+            const dateMatches = content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || [];
+            if (dateMatches.length < 8) { // We need more dates when comparing two timetables
+              analysis.isComplete = false;
+              analysis.missingElements.push(`Insufficient key dates for comparison (found ${dateMatches.length})`);
+            }
           }
         } else {
           // Standard rights issue query
@@ -111,6 +121,19 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
         analysis.isComplete = false;
         analysis.missingElements.push(`Insufficient key dates (found ${dateMatches.length})`);
       }
+      
+      // Check that the response doesn't end abruptly
+      if (content.toLowerCase().includes('timetable') || 
+          content.toLowerCase().includes('comparison')) {
+        // Check if the response ends with a table or list without conclusion
+        const lastParagraphs = content.split('\n').slice(-5).join('\n').toLowerCase();
+        if ((lastParagraphs.includes('|') || lastParagraphs.includes('-')) && 
+            !lastParagraphs.includes('conclusion') && 
+            !lastParagraphs.includes('summary')) {
+          analysis.isComplete = false;
+          analysis.missingElements.push("Response ends with table or list without conclusion");
+        }
+      }
     }
     
     // Open offer checks
@@ -127,6 +150,13 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
         analysis.missingElements.push(
           ...missingKeywords.map(k => `Missing key open offer concept: ${k}`)
         );
+      }
+      
+      // Check that open offer explicitly mentions no nil-paid rights
+      if (!lowerContent.includes('no nil-paid') && !lowerContent.includes('not have nil-paid') && 
+          !lowerContent.includes('unlike rights issues') && !lowerContent.includes('no trading of rights')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("Missing key open offer distinction (no nil-paid rights trading)");
       }
     }
     

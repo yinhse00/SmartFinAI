@@ -34,10 +34,37 @@ export const useQueryBuilder = () => {
       if (normalizedQuery.includes('difference') || normalizedQuery.includes('compare') || 
           normalizedQuery.includes('versus') || normalizedQuery.includes('vs')) {
         
-        // Only enhance if the query doesn't already mention these terms
-        if (!normalizedQuery.includes('ex-rights') || !normalizedQuery.includes('nil-paid')) {
-          return `${queryText} Please include essential elements like ex-rights dates, nil-paid rights trading, and acceptance deadlines in your comprehensive comparison.`;
+        // Only enhance if the query doesn't already mention all these terms
+        let enhancedQuery = queryText;
+        
+        if (!normalizedQuery.includes('ex-rights') || 
+            !normalizedQuery.includes('nil-paid') ||
+            !normalizedQuery.includes('trading period') || 
+            !normalizedQuery.includes('timetable')) {
+          enhancedQuery += " Please include essential elements like ex-rights dates, nil-paid rights trading periods, and acceptance deadlines in your comprehensive comparison.";
         }
+        
+        if (!normalizedQuery.includes('open offer') && 
+            (normalizedQuery.includes('difference') || normalizedQuery.includes('compare'))) {
+          enhancedQuery += " When comparing with open offers, please highlight that open offers do not have nil-paid rights trading periods.";
+        }
+        
+        return enhancedQuery;
+      } 
+      else if (normalizedQuery.includes('timetable') || normalizedQuery.includes('schedule')) {
+        // For timetable queries, ensure we ask for comprehensive structure
+        if (!normalizedQuery.includes('ex-rights') || 
+            !normalizedQuery.includes('nil-paid') ||
+            !normalizedQuery.includes('trading period')) {
+          return `${queryText} Please provide a comprehensive timetable with all key dates including ex-rights date, nil-paid rights trading period, and acceptance deadline.`;
+        }
+      }
+    }
+    
+    // For open offer queries, ensure we mention key differences from rights issues
+    if (normalizedQuery.includes('open offer')) {
+      if (!normalizedQuery.includes('no nil-paid') && !normalizedQuery.includes('rights issue')) {
+        return `${queryText} Please note the key difference that open offers do not have nil-paid rights trading periods, unlike rights issues.`;
       }
     }
     

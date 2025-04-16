@@ -71,13 +71,27 @@ export const detectTruncationComprehensive = (content: string): boolean => {
     })(),
     
     // Missing complete conclusion 
-    !content.toLowerCase().includes('in conclusion') && 
-    !content.toLowerCase().includes('to summarize') &&
-    !content.toLowerCase().includes('in summary') &&
-    content.length > 4000,
+    content.length > 4000 && !(/\b(in conclusion|to summarize|in summary|key points:|to recap|in short|overall|thus|therefore)\b/i.test(content.slice(-1000))),
     
     // Ends with "For more" or "For additional" suggesting incomplete guidance
-    /\b(for more|for additional|for further)\s*$/i.test(content.trim())
+    /\b(for more|for additional|for further|if you need|should you require|contact|please specify)\s*$/i.test(content.trim()),
+    
+    // Detects if response appears to be waiting for more specific information
+    /\b(let me know|tell me more|provide more detail|specify your|if you have any|for specific|would you like me to)\s*$/i.test(content.trim()),
+    
+    // Financial content specific checks
+    content.toLowerCase().includes('rights issue') && 
+    content.toLowerCase().includes('timetable') && 
+    !content.toLowerCase().includes('acceptance') && 
+    !content.toLowerCase().includes('payment date'),
+    
+    // Check for comparison response without conclusion
+    content.toLowerCase().includes('difference between') && 
+    content.toLowerCase().includes('rights issue') && 
+    content.toLowerCase().includes('open offer') && 
+    !content.toLowerCase().includes('key differences') && 
+    !content.toLowerCase().includes('summary') && 
+    !content.toLowerCase().includes('conclusion')
   ];
   
   for (let i = 0; i < advancedTruncationIndicators.length; i++) {
@@ -139,6 +153,30 @@ export const getTruncationDiagnostics = (content: string): {
   
   if (/\b(and|or|but|if|as|at|by|for|from|in|of|on|to|with)$/i.test(content.trim())) {
     reasons.push("Content ends with conjunction or preposition");
+    confidence = 'medium';
+  }
+  
+  // Financial specific checks
+  if (content.toLowerCase().includes('timetable') && 
+     (content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || []).length < 5) {
+    reasons.push("Timetable appears incomplete - insufficient dates");
+    confidence = 'high';
+  }
+  
+  if (content.toLowerCase().includes('rights issue') && 
+      content.toLowerCase().includes('timetable') && 
+      !content.toLowerCase().includes('acceptance')) {
+    reasons.push("Rights issue timetable missing acceptance information");
+    confidence = 'high';
+  }
+  
+  if (content.toLowerCase().includes('difference between') && 
+      content.toLowerCase().includes('rights issue') && 
+      content.toLowerCase().includes('open offer') && 
+      !content.toLowerCase().includes('conclusion') && 
+      !content.toLowerCase().includes('summary') && 
+      !content.toLowerCase().includes('key differences')) {
+    reasons.push("Comparison appears to be missing conclusion section");
     confidence = 'medium';
   }
   

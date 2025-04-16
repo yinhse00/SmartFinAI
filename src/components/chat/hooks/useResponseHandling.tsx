@@ -58,7 +58,7 @@ export const useResponseHandling = (
       if (!completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log('Initial response appears incomplete, retrying with higher token limit');
         
-        // Increase token limit by 50% and try again
+        // Increase token limit by 50% and try again for first retry
         const increasedTokens = Math.floor(responseParams.maxTokens * 1.5);
         const enhancedParams = {
           ...responseParams,
@@ -68,7 +68,7 @@ export const useResponseHandling = (
         
         console.log(`Retrying with increased tokens: ${increasedTokens}`);
         
-        // Second attempt with increased tokens
+        // First retry attempt with increased tokens
         try {
           response = await grokService.generateResponse(enhancedParams);
           console.log('Auto-retry completed, checking completeness of new response');
@@ -82,12 +82,54 @@ export const useResponseHandling = (
             queryText
           );
           
-          // Update our references to use the latest response data
-          completenessCheck.isComplete = newCompletenessCheck.isComplete;
-          completenessCheck.reasons = newCompletenessCheck.reasons;
-          completenessCheck.financialAnalysis = newCompletenessCheck.financialAnalysis;
-          
-          console.log(`Auto-retry result - Complete: ${newCompletenessCheck.isComplete}`);
+          // If still incomplete and it's a complex financial query, try one more time with much higher tokens
+          if (!newCompletenessCheck.isComplete && 
+              (financialQueryType === 'rights_issue' || 
+               queryText.toLowerCase().includes('difference between') ||
+               queryText.toLowerCase().includes('compare'))) {
+            
+            console.log('Response still incomplete after first retry, attempting second retry with much higher token limit');
+            
+            // Double the tokens for second retry and use very low temperature
+            const finalRetryParams = {
+              ...responseParams,
+              maxTokens: responseParams.maxTokens * 2, // Double the original token count
+              temperature: 0.1 // Very low temperature for precision
+            };
+            
+            console.log(`Second retry with tokens: ${finalRetryParams.maxTokens}`);
+            
+            try {
+              response = await grokService.generateResponse(finalRetryParams);
+              console.log('Second auto-retry completed, checking final completeness');
+              
+              // Final completeness check
+              const finalDiagnostics = getTruncationDiagnostics(response.text);
+              const finalCompletenessCheck = isResponseComplete(
+                response.text,
+                finalDiagnostics,
+                financialQueryType,
+                queryText
+              );
+              
+              // Update our references to use the latest response data
+              completenessCheck.isComplete = finalCompletenessCheck.isComplete;
+              completenessCheck.reasons = finalCompletenessCheck.reasons;
+              completenessCheck.financialAnalysis = finalCompletenessCheck.financialAnalysis;
+              
+              console.log(`Second auto-retry result - Complete: ${finalCompletenessCheck.isComplete}`);
+            } catch (secondRetryError) {
+              console.error('Second auto-retry failed:', secondRetryError);
+              // Continue with previous response if second retry fails
+            }
+          } else {
+            // Update references with first retry results
+            completenessCheck.isComplete = newCompletenessCheck.isComplete;
+            completenessCheck.reasons = newCompletenessCheck.reasons;
+            completenessCheck.financialAnalysis = newCompletenessCheck.financialAnalysis;
+            
+            console.log(`Auto-retry result - Complete: ${newCompletenessCheck.isComplete}`);
+          }
         } catch (retryError) {
           console.error('Auto-retry failed:', retryError);
           // Continue with original response if retry fails

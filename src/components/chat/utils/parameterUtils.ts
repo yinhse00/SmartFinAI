@@ -1,3 +1,4 @@
+
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -12,12 +13,18 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 400000; // Increased from 250,000 to 400,000 for extremely detailed queries
+    return 600000; // Significantly increased from 400,000 to 600,000 for extremely detailed queries
   }
   
-  // Rights issue general queries (including comparisons with other corporate actions)
+  // Rights issue general queries including comparison queries (difference between, vs, etc)
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE) {
-    return 200000; // Increased from 100,000 to 200,000 for all rights issue queries
+    if (query.toLowerCase().includes('difference between') || 
+        query.toLowerCase().includes('compare') || 
+        query.toLowerCase().includes('versus') || 
+        query.toLowerCase().includes('vs')) {
+      return 400000; // Increased from 200,000 to 400,000 for comparison queries which tend to be comprehensive
+    }
+    return 300000; // Increased from 200,000 to 300,000 for all rights issue queries
   }
   
   // Complex query handling for other corporate actions
@@ -29,7 +36,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 150000; // Increased from 50,000 to 150,000 for trading arrangements
+    return 250000; // Increased from 150,000 to 250,000 for trading arrangements
   }
   
   // Comparison queries (like "what is the difference between X and Y")
@@ -37,18 +44,18 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 100000; // New specific setting for comparison queries
+    return 200000; // Increased from 100,000 to 200,000 for comparison queries
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 50000; // Increased from 20,000 to 50,000 for explanations
+    return 100000; // Increased from 50,000 to 100,000 for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 30000; // Increased from 15,000 to 30,000 for complex topics
+    return 60000; // Increased from 30,000 to 60,000 for complex topics
   }
   
-  return 20000; // Increased default tokens from 10,000 to 20,000
+  return 40000; // Increased default tokens from 20,000 to 40,000
 };
 
 /**
