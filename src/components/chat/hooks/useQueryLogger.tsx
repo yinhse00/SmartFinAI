@@ -18,12 +18,12 @@ export const useQueryLogger = () => {
   };
   
   const logContextInfo = (
-    regulatoryContext: string | undefined, 
-    reasoning: string | undefined,
+    regulatoryContext: string,
+    reasoning: string,
     queryType: string,
     contextTime: number
   ) => {
-    console.log('Financial Context Length:', regulatoryContext?.length);
+    console.log('Financial Context Length:', regulatoryContext.length);
     console.log('Financial Reasoning:', reasoning);
     console.log('Query Type:', queryType);
     console.log(`Context fetched in ${contextTime}ms`);

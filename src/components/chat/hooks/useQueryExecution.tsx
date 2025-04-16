@@ -68,10 +68,10 @@ export const useQueryExecution = (
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
       
-      // Pass all 4 arguments to logContextInfo, ensuring we provide a fallback or default value if needed
+      // Ensure we pass all 4 required arguments to logContextInfo
       logContextInfo(
-        regulatoryContext ?? '', 
-        reasoning ?? '', 
+        regulatoryContext || '', 
+        reasoning || '', 
         financialQueryType,
         contextTime
       );
@@ -90,8 +90,8 @@ export const useQueryExecution = (
       const result = await handleApiResponse(
         queryText, 
         responseParams, 
-        regulatoryContext ?? '', 
-        reasoning ?? '', 
+        regulatoryContext || '', 
+        reasoning || '', 
         financialQueryType,
         updatedMessages
       );
