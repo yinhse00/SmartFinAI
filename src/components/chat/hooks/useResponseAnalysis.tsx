@@ -15,8 +15,8 @@ export const useResponseAnalysis = () => {
     queryText: string,
     isSimpleQuery: boolean
   ) => {
-    // For simple queries, skip extensive completeness checking
-    if (isSimpleQuery) {
+    // Fast-path for simple queries and shorter responses
+    if (isSimpleQuery || responseText.length < 500) {
       return { 
         isComplete: true, 
         reasons: [], 
@@ -24,6 +24,20 @@ export const useResponseAnalysis = () => {
       };
     }
     
+    // Quick check for obvious truncation markers
+    const hasObviousTruncation = responseText.endsWith('...') || 
+                              responseText.includes('I'll continue') ||
+                              responseText.includes('I will continue');
+                              
+    if (hasObviousTruncation) {
+      return {
+        isComplete: false,
+        reasons: ['Response has obvious truncation markers'],
+        financialAnalysis: { isComplete: false, missingElements: ['Complete response'] }
+      };
+    }
+    
+    // Only perform comprehensive check for complex financial/regulatory queries
     // Get basic diagnostics
     const diagnostics = getTruncationDiagnostics(responseText);
     
@@ -39,7 +53,9 @@ export const useResponseAnalysis = () => {
   };
   
   const isQuerySimple = (queryText: string): boolean => {
-    return isSimpleConversationalQuery(queryText);
+    return isSimpleConversationalQuery(queryText) || 
+           queryText.length < 80 || 
+           !queryText.includes('?');
   };
   
   const isQueryAggregationRelated = (queryText: string): boolean => {

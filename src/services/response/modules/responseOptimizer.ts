@@ -8,16 +8,27 @@ import { getOptimalTemperature, getOptimalTokens, needsEnhancedTokenSettings } f
 
 export const responseOptimizer = {
   getOptimizedParameters: (queryType: string, prompt: string) => {
-    // Dynamic temperature and token settings based on query complexity
-    // Always use enhanced settings for completeness
+    // Dynamic token allocation based on query complexity
+    const isSimpleQuery = prompt.length < 100 && !prompt.includes('?');
+    
+    // Use simpler parameters for conversational queries
+    if (isSimpleQuery) {
+      return {
+        temperature: 0.7,
+        maxTokens: 2000 // Lower token count for simple queries
+      };
+    }
+    
+    // Get base temperature setting
     const temperature = getOptimalTemperature(queryType, prompt);
     
-    // Massively increased token limits to prevent truncation
-    // Base token count multiplied by 4 for all queries to prevent truncation
+    // Smart token allocation based on query complexity
     const baseTokens = getOptimalTokens(queryType, prompt);
-    const maxTokens = Math.min(4000000, baseTokens * 4); // Cap at 4M but ensure very high limits
+    const maxTokens = prompt.length > 200 ? 
+      Math.min(2000000, baseTokens * 2) : // Cap at 2M for complex queries
+      Math.min(1000000, baseTokens); // Cap at 1M for standard queries
     
-    console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Using Enhanced Settings: true`);
+    console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Simple Query: ${isSimpleQuery}`);
     
     return { temperature, maxTokens };
   },
