@@ -50,8 +50,11 @@ export const useQueryBuilder = () => {
         }
 
         if (!normalizedQuery.includes('conclusion') && !normalizedQuery.includes('summary')) {
-          enhancedQuery += " Please include a conclusion section that summarizes the key differences.";
+          enhancedQuery += " Please include a conclusion section that summarizes the key differences. Ensure your response is complete without truncation.";
         }
+        
+        // Add specific request for complete response
+        enhancedQuery += " Make sure to provide a complete response without truncation, covering all aspects fully.";
         
         return enhancedQuery;
       } 
@@ -69,8 +72,17 @@ export const useQueryBuilder = () => {
           enhancedQuery += " Please include a conclusion or summary section after presenting the timetable.";
         }
         
+        // Add specific request for complete response
+        enhancedQuery += " Please ensure your response is complete and covers all relevant events in the timetable without truncation.";
+        
         return enhancedQuery;
       }
+      
+      // General rights issue query
+      let enhancedQuery = queryText;
+      // Add specific request for complete response
+      enhancedQuery += " Please provide a comprehensive response that covers all aspects of rights issues including trading arrangements without truncation.";
+      return enhancedQuery;
     }
     
     // For open offer queries, ensure we mention key differences from rights issues
@@ -87,18 +99,29 @@ export const useQueryBuilder = () => {
         }
       }
       
+      // Add specific request for complete response
+      enhancedQuery += " Please ensure your response is complete and covers all aspects thoroughly without truncation.";
+      
       return enhancedQuery;
     }
     
     // For general comparison queries, ensure we ask for a conclusion
     if (normalizedQuery.includes('difference') || normalizedQuery.includes('compare') || 
         normalizedQuery.includes('versus') || normalizedQuery.includes('vs')) {
+      let enhancedQuery = queryText;
+      
       if (!normalizedQuery.includes('conclusion') && !normalizedQuery.includes('summary')) {
-        return `${queryText} Please include a conclusion section that summarizes the key differences.`;
+        enhancedQuery += " Please include a conclusion section that summarizes the key differences.";
       }
+      
+      // Add specific request for complete response
+      enhancedQuery += " Please provide a comprehensive comparison without truncation, ensuring all aspects are covered thoroughly.";
+      
+      return enhancedQuery;
     }
     
-    return queryText;
+    // For any other query, add a general request for completeness
+    return `${queryText} Please provide a comprehensive and complete response without truncation.`;
   };
   
   return {

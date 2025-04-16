@@ -54,19 +54,19 @@ export const useResponseHandling = (
         queryText
       );
 
-      // Advanced retry strategy with up to 3 attempts for financial content
+      // Enhanced aggressive retry strategy with up to 4 attempts for financial content
       let retryCount = 0;
-      const maxRetries = 3;
+      const maxRetries = 4;
       
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with higher token limit`);
         
-        // Exponential increase in token limit with each retry
-        const tokenMultiplier = retryCount === 0 ? 1.5 : (retryCount === 1 ? 2 : 3);
+        // Exponential increase in token limit with each retry - much more aggressive scaling
+        const tokenMultiplier = retryCount === 0 ? 2 : (retryCount === 1 ? 3 : (retryCount === 2 ? 4 : 5));
         const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
         
         // Decrease temperature with each retry for more consistency
-        const temperatureReduction = retryCount === 0 ? 0.8 : (retryCount === 1 ? 0.6 : 0.4);
+        const temperatureReduction = retryCount === 0 ? 0.7 : (retryCount === 1 ? 0.5 : (retryCount === 2 ? 0.3 : 0.1));
         const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
         
         const enhancedParams = {
@@ -79,13 +79,23 @@ export const useResponseHandling = (
         
         try {
           // Special handling for financial comparison queries to ensure completeness
-          if (financialQueryType === 'rights_issue' && 
-              queryText.toLowerCase().includes('difference') && 
+          if ((financialQueryType === 'rights_issue' || 
+              financialQueryType.includes('financial') ||
+              queryText.toLowerCase().includes('difference')) && 
               retryCount === maxRetries - 1) {
             
             // For the final retry of a comparison query, explicitly request conclusion
             enhancedParams.prompt = enhancedParams.prompt + 
-              " Make sure to include a complete conclusion section that summarizes all key differences.";
+              " Make sure to include a complete conclusion section that summarizes all key differences and provide a full analysis without any truncation. Be comprehensive and complete.";
+          }
+          
+          // Special handling for timetable queries on final retry
+          if ((queryText.toLowerCase().includes('timetable') || 
+               queryText.toLowerCase().includes('schedule')) && 
+              retryCount === maxRetries - 1) {
+            
+            enhancedParams.prompt = enhancedParams.prompt + 
+              " Ensure the response contains all dates, trading periods, and a complete timetable without truncation. Be thorough in the response and include all details.";
           }
           
           // Execute retry
