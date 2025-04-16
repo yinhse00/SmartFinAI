@@ -1,3 +1,4 @@
+
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -5,14 +6,14 @@ import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
  * With adjusted maximum token limit and safety checks
  */
 export const getOptimalTokens = (queryType: string, query: string): number => {
-  // Extremely complex rights issue timetables with specific dates
+  // Use reasonable token limits based on query complexity
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 40000000; // Increased from 4,000,000 to 40,000,000
+    return 8000; // Maximum allowed tokens for complex rights issue queries
   }
   
   // Rights issue general queries including comparison queries
@@ -21,9 +22,9 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
         query.toLowerCase().includes('compare') || 
         query.toLowerCase().includes('versus') || 
         query.toLowerCase().includes('vs')) {
-      return 30000000; // Increased from 3,000,000 to 30,000,000
+      return 7000; // High token count for comparison queries
     }
-    return 24000000; // Increased from 2,400,000 to 24,000,000
+    return 6000; // Standard rights issue queries
   }
   
   // Complex query handling for other corporate actions
@@ -35,7 +36,7 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 20000000; // Increased from 2,000,000 to 20,000,000
+    return 6000; // Complex corporate actions
   }
   
   // Comparison queries
@@ -43,18 +44,18 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 20000000; // Increased from 2,000,000 to 20,000,000
+    return 6000; // Comparison queries
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 12000000; // Increased from 1,200,000 to 12,000,000
+    return 5000; // Explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 8000000; // Increased from 800,000 to 8,000,000
+    return 4000; // Connected transactions and takeovers
   }
   
-  return 6000000; // Increased default from 600,000 to 6,000,000
+  return 3000; // Default token count
 };
 
 /**
@@ -101,7 +102,7 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 0.05; // Reduced from 0.1 to 0.05 for maximum precision in comparisons
+    return 0.05; // Low temperature for comparisons
   }
 
   // Rights issue timetable queries need very low temperature for consistency
@@ -109,7 +110,7 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.01; // Keep existing very low temperature for maximum consistency with structured data
+    return 0.01; // Very low temperature for structured data
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
@@ -119,7 +120,7 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.05; // Lower temperature for consistent structured outputs
+    return 0.05; // Low temperature for consistent structured outputs
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
@@ -136,3 +137,4 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
   
   return 0.3;
 };
+
