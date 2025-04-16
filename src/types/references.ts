@@ -15,3 +15,14 @@ export const categoryDisplayNames: Record<DocumentCategory, string> = {
   checklists: 'Checklists, Forms and Templates',
   other: 'Others'
 };
+
+export interface ReferenceDocument {
+  id: string;
+  title: string;
+  description?: string;
+  category: DocumentCategory;
+  file_url: string;
+  file_size: number | null;
+  created_at: string;
+  updated_at?: string;
+}

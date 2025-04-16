@@ -1,5 +1,7 @@
 
-export function determineCategory(filename: string): RegulatoryEntry['category'] {
+import { DocumentCategory } from "@/types/references";
+
+export function determineCategory(filename: string): DocumentCategory {
   const lowerFilename = filename.toLowerCase();
   
   if (lowerFilename.includes('listing') || lowerFilename.includes('listing rules')) {
