@@ -80,8 +80,8 @@ export const grokResponseGenerator = {
       // Get the raw response text
       const responseText = response.choices[0].message.content;
       
-      // Enhance response quality with specialized handling
-      const finalResponse = responseEnhancer.enhanceResponseQuality(responseText, queryType, params.prompt);
+      // Enhance response with metadata
+      const finalResponse = responseEnhancer.enhanceResponse(responseText, queryType, params.prompt);
 
       // Calculate relevance score
       const relevanceScore = responseOptimizer.calculateRelevanceScore(finalResponse, params.prompt, queryType);

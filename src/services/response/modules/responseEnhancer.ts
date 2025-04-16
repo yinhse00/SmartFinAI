@@ -1,8 +1,7 @@
 
 import { GrokResponse } from '@/types/grok';
 import { responseFormatter } from './responseFormatter';
-import { isFinancialExpertResponse } from '@/services/financial/expertiseDetection';
-import { getTradingArrangementInfo } from '@/services/financial/tradingArrangements';
+import { detectFinancialExpertiseArea } from '@/services/financial/expertiseDetection';
 import { getTruncationDiagnostics } from '@/utils/truncation';
 
 /**
@@ -19,8 +18,8 @@ export const responseEnhancer = {
     contextRelevanceScore: number,
     queryText: string
   ): GrokResponse => {
-    const isExpertResponse = isFinancialExpertResponse(text);
-    const tradingInfo = getTradingArrangementInfo(text, queryText);
+    const isExpertResponse = detectFinancialExpertiseArea(queryText) !== 'general';
+    const tradingInfo = isTradingArrangementQuery(queryText);
     const containsTakeoversCode = text.toLowerCase().includes('takeovers code') || 
                                  text.toLowerCase().includes('takeover code');
     const isWhitewashQuery = queryText.toLowerCase().includes('whitewash');
@@ -34,10 +33,28 @@ export const responseEnhancer = {
       queryType || 'general',
       usedContext,
       contextRelevanceScore,
-      tradingInfo !== null,
+      tradingInfo,
       containsTakeoversCode,
       isWhitewashQuery,
       hasRefDocuments
     );
   }
 };
+
+/**
+ * Determine if a query is related to trading arrangements
+ */
+function isTradingArrangementQuery(prompt: string): boolean {
+  const lowerPrompt = prompt.toLowerCase();
+  
+  return lowerPrompt.includes('trading arrangement') || 
+         (lowerPrompt.includes('trading') && lowerPrompt.includes('schedule')) ||
+         ((lowerPrompt.includes('rights issue') || 
+           lowerPrompt.includes('open offer') ||
+           lowerPrompt.includes('share consolidation') ||
+           lowerPrompt.includes('sub-division') ||
+           lowerPrompt.includes('board lot') || 
+           lowerPrompt.includes('company name')) && 
+           (lowerPrompt.includes('timetable') || 
+            lowerPrompt.includes('schedule')));
+}
