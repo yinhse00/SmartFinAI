@@ -17,9 +17,16 @@ export const useQueryLogger = () => {
     console.log('Processing query:', queryText);
   };
   
-  const logContextInfo = (regulatoryContext: string | undefined, reasoning: string | undefined) => {
+  const logContextInfo = (
+    regulatoryContext: string | undefined, 
+    reasoning: string | undefined,
+    queryType: string,
+    contextTime: number
+  ) => {
     console.log('Financial Context Length:', regulatoryContext?.length);
     console.log('Financial Reasoning:', reasoning);
+    console.log('Query Type:', queryType);
+    console.log(`Context fetched in ${contextTime}ms`);
   };
   
   const logQueryParameters = (financialQueryType: string, temperature: number, maxTokens: number) => {
