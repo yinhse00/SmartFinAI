@@ -2,15 +2,15 @@
 /**
  * Type definitions for regulatory database entries
  */
+import { DocumentCategory } from "@/types/references";
 
 export interface RegulatoryEntry {
   id: string;
   title: string;
   content: string;
-  category: 'listing_rules' | 'takeovers' | 'guidance' | 'decisions' | 'checklists' | 'other';
+  category: DocumentCategory;
   source: string;
   section?: string;
   lastUpdated: Date;
   status: 'active' | 'under_review' | 'archived';
 }
-

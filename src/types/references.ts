@@ -1,5 +1,4 @@
 
-
 export type DocumentCategory = 
   | 'listing_rules'
   | 'takeovers'
@@ -27,4 +26,3 @@ export interface ReferenceDocument {
   created_at: string;
   updated_at?: string;
 }
-

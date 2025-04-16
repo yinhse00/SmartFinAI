@@ -1,4 +1,3 @@
-
 /**
  * Service for searching the regulatory database
  */
@@ -124,4 +123,3 @@ export const searchService = {
     };
   }
 };
-

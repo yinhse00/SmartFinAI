@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { categoryDisplayNames, DocumentCategory } from '@/types/references';
 
 interface CategoryTabsProps {
   activeCategory: string;
@@ -10,14 +11,13 @@ interface CategoryTabsProps {
 const CategoryTabs: React.FC<CategoryTabsProps> = ({ activeCategory, setActiveCategory }) => {
   return (
     <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
-      <TabsList className="mb-4 grid grid-cols-4 md:grid-cols-7">
+      <TabsList className="mb-4 flex flex-wrap gap-1">
         <TabsTrigger value="all">All</TabsTrigger>
-        <TabsTrigger value="listing_rules">Listing Rules</TabsTrigger>
-        <TabsTrigger value="takeovers">Takeovers Code</TabsTrigger>
-        <TabsTrigger value="guidance">Interpretation and Guidance</TabsTrigger>
-        <TabsTrigger value="decisions">Listing Review Committee Decisions</TabsTrigger>
-        <TabsTrigger value="checklists">Checklists, Forms and Templates</TabsTrigger>
-        <TabsTrigger value="other">Others</TabsTrigger>
+        {Object.entries(categoryDisplayNames).map(([value, label]) => (
+          <TabsTrigger key={value} value={value}>
+            {label}
+          </TabsTrigger>
+        ))}
       </TabsList>
     </Tabs>
   );
