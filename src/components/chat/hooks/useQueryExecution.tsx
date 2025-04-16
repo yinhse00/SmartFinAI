@@ -8,9 +8,6 @@ import { useQueryLogger } from './useQueryLogger';
 import { useQueryBuilder } from './useQueryBuilder';
 import { Message } from '../ChatMessage';
 
-/**
- * Hook for handling query execution logic with optimized processing times
- */
 export const useQueryExecution = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -28,11 +25,9 @@ export const useQueryExecution = (
   const { setupLogging, logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
   const { buildResponseParams } = useQueryBuilder();
 
-  // Set up logging
   setupLogging();
 
   const processQuery = async (queryText: string) => {
-    
     if (!queryText.trim()) return;
     
     if (!isGrokApiKeySet) {
@@ -58,17 +53,16 @@ export const useQueryExecution = (
     try {
       logQueryStart(queryText);
       
-      // Get optimal parameters for the query with significantly higher token limits
+      // Increase token limits significantly - 10x the original limit
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
-      logQueryParameters(financialQueryType, temperature, maxTokens);
+      const enhancedMaxTokens = maxTokens * 10; // Dramatically increase token limit
       
-      // Optimize context fetching time with more focused approach
-      console.log('Collecting focused regulatory context...');
+      logQueryParameters(financialQueryType, temperature, enhancedMaxTokens);
+      
       const contextStart = Date.now();
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       const contextTime = Date.now() - contextStart;
       
-      // Ensure we pass all 4 required arguments to logContextInfo
       logContextInfo(
         regulatoryContext || '', 
         reasoning || '', 
@@ -76,16 +70,11 @@ export const useQueryExecution = (
         contextTime
       );
       
-      // Update processing stage - now we're actually processing the query
       setProcessingStage('processing');
-      console.log('Processing query with regulatory context...');
       
-      // Build response parameters with massive token limits to reduce truncation
-      // Preemptively use 3x the initial token limit to reduce need for retries
-      const responseParams = buildResponseParams(queryText, temperature, maxTokens * 3);
+      // Build response parameters with massive token limits
+      const responseParams = buildResponseParams(queryText, temperature, enhancedMaxTokens);
       
-      // Handle API response
-      console.log('Generating response...');
       const processingStart = Date.now();
       const result = await handleApiResponse(
         queryText, 
@@ -98,12 +87,10 @@ export const useQueryExecution = (
       const processingTime = Date.now() - processingStart;
       console.log(`Response generated in ${processingTime}ms`);
       
-      // Final processing
       setProcessingStage('finalizing');
-      console.log('Finalizing response...');
       
-      // Ultra-short finalizing stage for better UX
-      await new Promise(resolve => setTimeout(resolve, 300));
+      // Slightly reduced finalizing wait time
+      await new Promise(resolve => setTimeout(resolve, 250));
       
       finishLogging();
     } catch (error) {
@@ -124,3 +111,4 @@ export const useQueryExecution = (
     processQuery
   };
 };
+
