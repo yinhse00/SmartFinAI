@@ -21,13 +21,15 @@ export const responseOptimizer = {
     
     // Get base temperature setting - use lower values to increase accuracy
     const baseTemperature = getOptimalTemperature(queryType, prompt);
-    const temperature = Math.min(0.2, baseTemperature); // Cap at 0.2 to ensure factual accuracy
+    // Cap at 0.2 to ensure factual accuracy while preventing API connection issues
+    const temperature = Math.min(0.2, baseTemperature);
     
     // Smart token allocation based on query complexity
     const baseTokens = getOptimalTokens(queryType, prompt);
+    // Ensure token counts are in a safe range that works in all environments
     const maxTokens = prompt.length > 200 ? 
-      Math.min(4000, baseTokens * 1.2) : // Cap at 4000 to prevent errors
-      baseTokens;
+      Math.min(3500, baseTokens) : // Cap at 3500 to prevent API errors in production
+      Math.min(3000, baseTokens);
     
     console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Simple Query: ${isSimpleQuery}`);
     

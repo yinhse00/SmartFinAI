@@ -29,11 +29,13 @@ export const grokApiService = {
     const apiKey = providedApiKey || getGrokApiKey();
     
     if (!apiKey) {
+      console.error("No API key provided for financial expert access");
       throw new Error("No API key provided for financial expert access");
     }
     
     // Validate API key format (basic validation)
     if (!apiKey.startsWith('xai-')) {
+      console.error("Invalid financial expert API key format");
       throw new Error("Invalid financial expert API key format");
     }
     
@@ -43,50 +45,79 @@ export const grokApiService = {
     console.log("Temperature:", requestBody.temperature);
     console.log("Max tokens:", requestBody.max_tokens);
     
-    // Use a proxy endpoint to avoid CORS issues
-    try {
-      const response = await fetch('/api/grok/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          ...FINANCIAL_EXPERT_HEADERS
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error(`Financial expert API error ${response.status}:`, errorData);
+    // Add retry mechanism with exponential backoff for production resilience
+    let retries = 0;
+    const maxRetries = 2; // Maximum number of retry attempts
+    
+    while (retries <= maxRetries) {
+      try {
+        // Use absolute URL to ensure consistency between development and production
+        let apiEndpoint = '/api/grok/chat/completions';
         
-        // Specific error handling for financial expertise API
-        if (response.status === 401) {
-          throw new Error("Financial expert authentication failed. Please check your API key.");
-        } else if (response.status === 429) {
-          throw new Error("Financial expert rate limit exceeded. Please try again later.");
-        } else if (response.status >= 500) {
-          throw new Error("Financial expert service is currently unavailable. Please try again later.");
-        } else if (response.status === 404) {
-          // Check for specific model-related errors in the response
-          if (errorData.includes("model") && errorData.includes("does not exist")) {
-            throw new Error("The specified financial expert model is not available. Please use a different model.");
-          } else {
-            throw new Error("Financial expert API endpoint not found. Please check the API documentation.");
+        // If we're in production and the relative URL might be different, handle it
+        if (window.location.hostname.includes('lovable') || window.location.hostname.includes('.app')) {
+          // Ensure we're using the correct endpoint in production
+          if (!apiEndpoint.startsWith('/')) {
+            apiEndpoint = '/' + apiEndpoint;
           }
-        } else {
-          throw new Error(`Financial expert API error: ${response.status}`);
         }
+        
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            ...FINANCIAL_EXPERT_HEADERS
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error(`Financial expert API error ${response.status}:`, errorData);
+          
+          // Specific error handling for financial expertise API
+          if (response.status === 401) {
+            throw new Error("Financial expert authentication failed. Please check your API key.");
+          } else if (response.status === 429) {
+            throw new Error("Financial expert rate limit exceeded. Please try again later.");
+          } else if (response.status >= 500) {
+            throw new Error("Financial expert service is currently unavailable. Please try again later.");
+          } else if (response.status === 404) {
+            // Check for specific model-related errors in the response
+            if (errorData.includes("model") && errorData.includes("does not exist")) {
+              throw new Error("The specified financial expert model is not available. Please use a different model.");
+            } else {
+              throw new Error("Financial expert API endpoint not found. Please check the API documentation.");
+            }
+          } else {
+            throw new Error(`Financial expert API error: ${response.status}`);
+          }
+        }
+        
+        const data = await response.json();
+        console.log("Financial expert API response received successfully");
+        console.groupEnd();
+        
+        return data;
+      } catch (error) {
+        retries++;
+        
+        // If we've reached max retries, throw the error
+        if (retries > maxRetries) {
+          console.error("Financial expert API call failed after retries:", error);
+          console.groupEnd();
+          throw error;
+        }
+        
+        // Wait before retrying (exponential backoff)
+        const delay = Math.pow(2, retries) * 500; // 1000ms, 2000ms, 4000ms, etc.
+        console.log(`API call failed, retrying in ${delay}ms (attempt ${retries} of ${maxRetries})...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
       }
-      
-      const data = await response.json();
-      console.log("Financial expert API response received successfully");
-      console.groupEnd();
-      
-      return data;
-    } catch (error) {
-      console.error("Financial expert API call failed:", error);
-      console.groupEnd();
-      throw error;
     }
+    
+    // This shouldn't be reached due to the throw in the retry loop, but TypeScript needs it
+    throw new Error("Failed to call financial expert API after retries");
   }
 };

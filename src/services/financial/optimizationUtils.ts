@@ -22,18 +22,19 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
 
 /**
  * Determine optimal token limit based on query complexity
+ * Production-safe implementation with conservative limits
  */
 export function determineOptimalTokens(queryType: string, prompt: string): number {
   if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 4000; // Reasonable token limit for detailed timetables
+    return 3000; // Reduced from 4000 to 3000 for production stability
   }
   
   if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('detail')) {
-    return 3500; // Reasonable token limit for explanations
+    return 2500; // Reduced from 3500 to 2500 for production stability
   }
   
-  // Default token count - reduced to prevent exceeding limits
-  return 3000; // Reasonable default token limit
+  // Default token count - reduced to prevent exceeding limits in production
+  return 2000; // Reduced from 3000 to 2000 for production stability
 }
 
 /**
