@@ -8,17 +8,16 @@ import { getOptimalTemperature, getOptimalTokens, needsEnhancedTokenSettings } f
 
 export const responseOptimizer = {
   getOptimizedParameters: (queryType: string, prompt: string) => {
-    // Dynamic temperature and token settings based on query complexity and our enhanced parameterUtils
-    const useFineGrainedSettings = needsEnhancedTokenSettings(queryType, prompt);
-    const temperature = useFineGrainedSettings ? 
-      getOptimalTemperature(queryType, prompt) :
-      determineOptimalTemperature(queryType, prompt);
+    // Dynamic temperature and token settings based on query complexity
+    // Always use enhanced settings for completeness
+    const temperature = getOptimalTemperature(queryType, prompt);
     
-    const maxTokens = useFineGrainedSettings ?
-      getOptimalTokens(queryType, prompt) :
-      determineOptimalTokens(queryType, prompt);
+    // Massively increased token limits to prevent truncation
+    // Base token count multiplied by 4 for all queries to prevent truncation
+    const baseTokens = getOptimalTokens(queryType, prompt);
+    const maxTokens = Math.min(4000000, baseTokens * 4); // Cap at 4M but ensure very high limits
     
-    console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Using Enhanced Settings: ${useFineGrainedSettings}`);
+    console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Using Enhanced Settings: true`);
     
     return { temperature, maxTokens };
   },

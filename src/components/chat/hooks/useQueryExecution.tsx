@@ -57,11 +57,11 @@ export const useQueryExecution = (
     try {
       logQueryStart(queryText);
       
-      // Get optimal parameters for the query with much higher token limits
+      // Get optimal parameters for the query with significantly higher token limits
       const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
       logQueryParameters(financialQueryType, temperature, maxTokens);
       
-      // Optimize time by using more focused context fetching
+      // Optimize context fetching time with more focused approach
       console.log('Collecting focused regulatory context...');
       const contextStart = Date.now();
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
@@ -69,12 +69,13 @@ export const useQueryExecution = (
       console.log(`Context fetched in ${contextTime}ms`);
       logContextInfo(regulatoryContext, reasoning);
       
-      // Update processing stage
+      // Update processing stage - now we're actually processing the query
       setProcessingStage('processing');
       console.log('Processing query with regulatory context...');
       
-      // Build response parameters with higher token limits
-      const responseParams = buildResponseParams(queryText, temperature, maxTokens, regulatoryContext);
+      // Build response parameters with massive token limits to reduce truncation
+      // Preemptively use 3x the initial token limit to reduce need for retries
+      const responseParams = buildResponseParams(queryText, temperature, maxTokens * 3);
       
       // Handle API response
       console.log('Generating response...');
@@ -94,8 +95,8 @@ export const useQueryExecution = (
       setProcessingStage('finalizing');
       console.log('Finalizing response...');
       
-      // Shorten the finalizing delay to improve overall responsiveness
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // Ultra-short finalizing stage for better UX
+      await new Promise(resolve => setTimeout(resolve, 300));
       
       finishLogging();
     } catch (error) {

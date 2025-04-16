@@ -32,8 +32,7 @@ export const useResponseHandling = (
       console.log('Calling Grok financial expert API');
       
       // First attempt with significantly increased token limits
-      // Preemptively use 3x the initial token limit to reduce need for retries
-      responseParams.maxTokens = responseParams.maxTokens * 3;
+      // Already using 3x from the calling function
       let response = await grokService.generateResponse(responseParams);
       
       // Check if it's using fallback
@@ -56,21 +55,21 @@ export const useResponseHandling = (
         queryText
       );
 
-      // Ultra-aggressive retry strategy with up to 3 attempts for financial content
-      // But each attempt uses massively increased token limits
+      // Ultra-aggressive retry strategy with up to 2 attempts for financial content
+      // Using fewer but more effective retries to reduce overall processing time
       let retryCount = 0;
-      const maxRetries = 3; // Reduced from 4 to speed up overall processing
+      const maxRetries = 2; // Reduced from 3 to speed up overall processing
       
       while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
         console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with extreme token limit`);
         
         // Super aggressive token scaling for faster convergence to complete responses
-        // Use multipliers of 5x, 8x, and 10x to almost guarantee complete responses
-        const tokenMultiplier = retryCount === 0 ? 5 : (retryCount === 1 ? 8 : 10);
+        // Use multipliers of 6x and 10x to almost guarantee complete responses
+        const tokenMultiplier = retryCount === 0 ? 6 : 10;
         const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
         
         // Aggressive temperature reduction for more reliable outputs
-        const temperatureReduction = retryCount === 0 ? 0.5 : (retryCount === 1 ? 0.3 : 0.1);
+        const temperatureReduction = retryCount === 0 ? 0.5 : 0.2;
         const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
         
         const enhancedParams = {
@@ -102,7 +101,7 @@ export const useResponseHandling = (
               " Ensure the response contains all dates, trading periods, and a complete timetable without truncation. Be thorough in the response and include all details.";
           }
           
-          // Execute retry
+          // Execute retry with higher token limit
           response = await grokService.generateResponse(enhancedParams);
           console.log(`Retry #${retryCount + 1} completed, checking completeness`);
           
