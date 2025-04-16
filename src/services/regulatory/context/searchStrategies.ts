@@ -1,4 +1,3 @@
-
 import { searchService } from '../../databaseService';
 import { isWhitewashWaiverQuery, isGeneralOfferQuery, isTradingArrangementQuery, isCorporateActionQuery } from '../utils/queryDetector';
 import { getWhitewashWaiverFallbackEntry } from '../fallbacks/whitewashFallback';
@@ -69,6 +68,48 @@ export const searchStrategies = {
   },
 
   /**
+   * Execute specialized search for listing rules regarding rights issues
+   */
+  findSpecificRulesDocuments: async (query: string) => {
+    let ruleResults = [];
+    
+    // Check for specific rule references
+    const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?|10\.29|7\.19A?)/i);
+    
+    if (ruleMatches) {
+      const ruleNumber = ruleMatches[1];
+      console.log(`Found reference to Rule ${ruleNumber}, searching specifically`);
+      
+      // Search for the exact rule number
+      ruleResults = await searchService.search(`rule ${ruleNumber}`, 'listing_rules');
+      
+      // If found specific rule references, return immediately
+      if (ruleResults.length > 0) {
+        return ruleResults;
+      }
+    }
+    
+    // Special case for aggregation requirements in rights issues
+    if ((query.toLowerCase().includes('aggregate') || query.toLowerCase().includes('aggregation')) && 
+        (query.toLowerCase().includes('rights issue') || query.toLowerCase().includes('rights issues'))) {
+      
+      console.log('Rights issue aggregation requirements query detected, searching for specific rules');
+      
+      // First try with rule 7.19A specifically
+      const specificResults = await searchService.search('rule 7.19A aggregate requirements', 'listing_rules');
+      
+      if (specificResults.length > 0) {
+        return specificResults;
+      }
+      
+      // Then try broader search for rights issue with aggregation
+      return await searchService.search('rights issue aggregate independent shareholders', 'listing_rules');
+    }
+    
+    return ruleResults;
+  },
+
+  /**
    * Execute fallback search for timetables
    */
   findTimetableDocuments: async (query: string, isGeneralOffer: boolean) => {
@@ -99,6 +140,19 @@ export const searchStrategies = {
         result.content.toLowerCase().includes('whitewash'))) {
       console.log("Adding specific whitewash waiver dealing requirements");
       enhancedResults.push(getWhitewashWaiverFallbackEntry());
+    }
+    
+    // Special case for rights issue aggregate requirement fallback
+    if (query.toLowerCase().includes('rights issue') && 
+        (query.toLowerCase().includes('aggregate') || query.toLowerCase().includes('aggregation')) &&
+        enhancedResults.length < 2) {
+      console.log("Adding fallback for rights issue aggregation requirements");
+      enhancedResults.push({
+        title: "Rights Issue Aggregation Requirements",
+        source: "Listing Rules Rule 7.19A",
+        content: "Under Listing Rule 7.19A(1), if a rights issue, when aggregated with any other rights issues, open offers, and specific mandate placings announced by the issuer within the previous 12 months, would increase the number of issued shares by more than 50%, the rights issue must be made conditional on approval by shareholders at general meeting by resolution on which any controlling shareholders shall abstain from voting in favor. Where there is no controlling shareholder, directors and chief executive must abstain from voting in favor. Aggregation applies to multiple corporate actions within a 12-month period.",
+        category: "listing_rules"
+      });
     }
     
     // Special case for general offer timetable - add fallback if needed

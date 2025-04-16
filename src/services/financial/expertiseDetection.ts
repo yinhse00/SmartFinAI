@@ -12,6 +12,18 @@ export function detectFinancialExpertiseArea(prompt: string): string {
     return FINANCIAL_EXPERTISES.CONVERSATIONAL;
   }
   
+  // Special handling for specific rule references in listing rules
+  const specificRulePattern = /rule\s+(\d+\.\d+[A-Z]?|10\.29|7\.19A?)/i;
+  if (specificRulePattern.test(lowerPrompt)) {
+    return FINANCIAL_EXPERTISES.LISTING_RULES;
+  }
+  
+  // Special handling for aggregate or aggregation requirements in rights issues
+  if ((lowerPrompt.includes('aggregate') || lowerPrompt.includes('aggregation')) && 
+      (lowerPrompt.includes('rights issue') || lowerPrompt.includes('rights issues'))) {
+    return FINANCIAL_EXPERTISES.RIGHTS_ISSUE;
+  }
+  
   // First check for trading arrangement related queries
   if (isTradingArrangementQuery(prompt)) {
     const tradingType = determineTradingArrangementType(prompt);
@@ -84,6 +96,18 @@ export function isSimpleConversationalQuery(prompt: string): boolean {
   // Check if it's a greeting or very short query
   if (lowerPrompt.length < 15) {
     return true;
+  }
+  
+  // Don't treat specific rule references as conversational
+  if (/(rule\s+\d+\.\d+[A-Z]?|rule\s+\d+)/i.test(prompt)) {
+    return false;
+  }
+  
+  // Don't treat rights issue with independent shareholders' approval as conversational
+  if (lowerPrompt.includes('rights issue') && 
+      (lowerPrompt.includes('independent') || lowerPrompt.includes('shareholder') || 
+       lowerPrompt.includes('approval') || lowerPrompt.includes('aggregate'))) {
+    return false;
   }
   
   // Common conversational patterns

@@ -35,6 +35,13 @@ export const contextService = {
         console.log('Identified as whitewash waiver query - specifically searching for related documents');
       }
       
+      // Check for specific rule references first - this takes priority
+      const specificRuleResults = await searchStrategies.findSpecificRulesDocuments(normalizedQuery);
+      
+      if (specificRuleResults.length > 0) {
+        console.log(`Found ${specificRuleResults.length} results specifically matching rule references`);
+      }
+      
       // Determine if this is a general offer query (takeovers code)
       const isGeneralOffer = isGeneralOfferQuery(normalizedQuery, isWhitewashQuery);
       
@@ -63,6 +70,9 @@ export const contextService = {
       // Regular search in appropriate category
       let searchResults = await searchService.search(normalizedQuery, searchCategory);
       console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
+      
+      // Start with specific rule results (highest priority)
+      searchResults = [...specificRuleResults, ...searchResults];
       
       // Prioritize results based on query type
       if (isGeneralOffer) {
@@ -147,6 +157,15 @@ export const contextService = {
       const normalizedQuery = query.toLowerCase()
         .replace('right issue', 'rights issue')
         .replace('rights issues', 'rights issue');
+      
+      // Check for specific rule references first
+      const specificRuleResults = await searchStrategies.findSpecificRulesDocuments(normalizedQuery);
+      
+      if (specificRuleResults.length > 0) {
+        console.log(`Found ${specificRuleResults.length} results specifically matching rule references`);
+        const ruleContext = contextFormatter.formatEntriesToContext(specificRuleResults);
+        return ruleContext;
+      }
       
       // Perform a search across the database with financial terms prioritization
       let searchResults = await searchService.search(normalizedQuery, 'listing_rules');

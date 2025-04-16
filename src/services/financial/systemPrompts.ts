@@ -1,4 +1,3 @@
-
 /**
  * Create system prompt tailored to specific financial expertise areas with enhanced trading arrangement knowledge
  */
@@ -21,7 +20,9 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Specify exact regulatory requirements for each step with rule references
 - Include notes on underwriting requirements, connected person implications, and disclosure obligations
 - Address practical considerations on pricing, excess applications, and compensatory arrangements
-- For trading arrangements, clearly distinguish between last day for cum-rights trading, ex-date, nil-paid rights trading period, and new share listing date`;
+- For trading arrangements, clearly distinguish between last day for cum-rights trading, ex-date, nil-paid rights trading period, and new share listing date
+- For aggregation requirements under Rule 7.19A, explain precisely how to calculate the 50% threshold and when independent shareholders' approval is required
+- For multiple rights issues within 12 months, clearly explain how the aggregation requirements apply`;
 
     case 'open_offer':
       return basePrompt + `For open offer inquiries:
@@ -72,6 +73,17 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Specify exact timing requirements and documentation needs
 - When discussing whitewash waivers, include the dealing requirements for the applicant
 - Address practical considerations on compliance and implementation`;
+
+    case 'listing_rules':
+      return basePrompt + `For listing rule inquiries:
+- Cite the exact rule numbers and paragraphs that apply to the query
+- Explain precisely how the rules are interpreted by HKEX in practice
+- Include relevant guidance letters or listing decisions that clarify the rule
+- Address any exceptions or waivers that might apply
+- For rules like 7.19A(1) and 10.29(1) regarding rights issues and open offers, explain the aggregation requirements clearly
+- When discussing the 50% threshold in Rule 7.19A, clarify how to calculate this and apply it across multiple transactions
+- For shareholder approval requirements, specify which shareholders can vote and which must abstain
+- Explain the practical implications and procedural requirements for compliance`;
 
     default:
       return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications.`;
