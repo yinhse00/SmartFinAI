@@ -80,26 +80,20 @@ export const grokResponseGenerator = {
       // Get the raw response text
       const responseText = response.choices[0].message.content;
       
+      // Calculate relevance score for context
+      const relevanceScore = responseOptimizer.calculateRelevanceScore(responseText, params.prompt, queryType);
+      
       // Enhance response with metadata
-      const finalResponse = responseEnhancer.enhanceResponse(responseText, queryType, params.prompt);
-
-      // Calculate relevance score
-      const relevanceScore = responseOptimizer.calculateRelevanceScore(finalResponse, params.prompt, queryType);
-
-      // Format the final response with metadata
-      const formattedResponse = responseFormatter.formatResponse(
-        finalResponse,
-        queryType,
-        !!params.regulatoryContext,
-        relevanceScore,
-        hasTradeArrangementInfo,
-        hasTakeoversCode,
-        isWhitewashQuery,
-        params.regulatoryContext?.includes('Reference Document') || false
+      const finalResponse = responseEnhancer.enhanceResponse(
+        responseText, 
+        queryType, 
+        !!params.regulatoryContext, 
+        relevanceScore, 
+        params.prompt
       );
 
       console.groupEnd();
-      return formattedResponse;
+      return finalResponse;
 
     } catch (error) {
       console.error('Hong Kong Financial Expert Response Error:', error);
