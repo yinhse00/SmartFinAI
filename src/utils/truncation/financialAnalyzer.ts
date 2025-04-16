@@ -31,35 +31,111 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     
     // Rights Issue specific checks
     if (financialQueryType.includes('rights_issue')) {
-      const mandatoryKeywords = [
-        'ex-rights', 
-        'nil-paid rights', 
-        'trading period', 
-        'record date', 
-        'acceptance deadline'
-      ];
+      const lowerContent = content.toLowerCase();
       
-      const missingKeywords = mandatoryKeywords.filter(
-        keyword => !content.toLowerCase().includes(keyword)
-      );
-      
-      if (missingKeywords.length > 0) {
-        analysis.isComplete = false;
-        analysis.missingElements.push(
-          ...missingKeywords.map(k => `Missing key rights issue concept: ${k}`)
+      // For comparison queries, check for both key concepts being compared
+      if (lowerContent.includes('difference between') || 
+          lowerContent.includes('compare') || 
+          lowerContent.includes('versus') || 
+          lowerContent.includes('vs')) {
+            
+        // Check for both rights issue and open offer concepts
+        if (lowerContent.includes('rights issue') && lowerContent.includes('open offer')) {
+          const mandatoryRightsIssueTerms = ['nil-paid rights', 'ex-rights'];
+          const mandatoryOpenOfferTerms = ['no nil-paid', 'ex-entitlement'];
+          
+          // Check for missing terms in the comparison
+          const missingRightsTerms = mandatoryRightsIssueTerms.filter(term => !lowerContent.includes(term));
+          const missingOpenOfferTerms = mandatoryOpenOfferTerms.filter(term => 
+            !lowerContent.includes(term) && !lowerContent.includes(term.replace('-', ' ')));
+          
+          if (missingRightsTerms.length > 0) {
+            analysis.isComplete = false;
+            missingRightsTerms.forEach(term => {
+              analysis.missingElements.push(`Missing key rights issue term: ${term}`);
+            });
+          }
+          
+          if (missingOpenOfferTerms.length > 0) {
+            analysis.isComplete = false;
+            missingOpenOfferTerms.forEach(term => {
+              analysis.missingElements.push(`Missing key open offer term: ${term}`);
+            });
+          }
+        } else {
+          // Standard rights issue query
+          const mandatoryKeywords = [
+            'ex-rights', 
+            'nil-paid rights', 
+            'trading period', 
+            'record date', 
+            'acceptance deadline'
+          ];
+          
+          const missingKeywords = mandatoryKeywords.filter(
+            keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
+          );
+          
+          if (missingKeywords.length > 0) {
+            analysis.isComplete = false;
+            analysis.missingElements.push(
+              ...missingKeywords.map(k => `Missing key rights issue concept: ${k}`)
+            );
+          }
+        }
+      } else {
+        // Standard rights issue checks
+        const mandatoryKeywords = [
+          'ex-rights', 
+          'nil-paid rights', 
+          'trading period', 
+          'record date', 
+          'acceptance deadline'
+        ];
+        
+        const missingKeywords = mandatoryKeywords.filter(
+          keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
         );
+        
+        if (missingKeywords.length > 0) {
+          analysis.isComplete = false;
+          analysis.missingElements.push(
+            ...missingKeywords.map(k => `Missing key rights issue concept: ${k}`)
+          );
+        }
       }
       
       // Check for sufficient date information
       const dateMatches = content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || [];
-      if (dateMatches.length < 5) {
+      if (dateMatches.length < 5 && content.toLowerCase().includes('timetable')) {
         analysis.isComplete = false;
         analysis.missingElements.push(`Insufficient key dates (found ${dateMatches.length})`);
       }
     }
     
-    // Similar detailed checks can be added for other financial query types
-    // like takeovers, open offers, etc.
+    // Open offer checks
+    if (financialQueryType.includes('open_offer')) {
+      const mandatoryKeywords = ['ex-entitlement', 'record date', 'acceptance period', 'payment date'];
+      const lowerContent = content.toLowerCase();
+      
+      const missingKeywords = mandatoryKeywords.filter(
+        keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
+      );
+      
+      if (missingKeywords.length > 0) {
+        analysis.isComplete = false;
+        analysis.missingElements.push(
+          ...missingKeywords.map(k => `Missing key open offer concept: ${k}`)
+        );
+      }
+    }
+    
+    // Ensure response explicitly mentions key listing rules for both
+    if ((financialQueryType.includes('rights_issue') || financialQueryType.includes('open_offer')) &&
+        !content.match(/rule\s+[0-9.]+|chapter\s+[0-9]+/i)) {
+      analysis.isComplete = false;
+      analysis.missingElements.push("Missing listing rule references");
+    }
   }
   
   // Log if the response is not complete

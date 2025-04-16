@@ -56,19 +56,28 @@ export const detectTruncationComprehensive = (content: string): boolean => {
     content.toLowerCase().includes('timetable') && 
     (content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || []).length < 5,
     
-    // New: Content that ends with an opening quote
+    // Content that ends with an opening quote
     content.trim().endsWith('"') && 
     ((content.match(/"/g) || []).length % 2 !== 0),
     
-    // New: Content that ends with a bullet point but no text after it
+    // Content that ends with a bullet point but no text after it
     /[\n\r]\s*[-*•]\s*$/.test(content),
     
-    // New: Content has HTML tags but they're not properly closed
+    // Content has HTML tags but they're not properly closed
     (() => {
       const openingTags = (content.match(/<[a-z][^>]*>/gi) || []).length;
       const closingTags = (content.match(/<\/[a-z][^>]*>/gi) || []).length;
       return openingTags > closingTags;
-    })()
+    })(),
+    
+    // Missing complete conclusion 
+    !content.toLowerCase().includes('in conclusion') && 
+    !content.toLowerCase().includes('to summarize') &&
+    !content.toLowerCase().includes('in summary') &&
+    content.length > 4000,
+    
+    // Ends with "For more" or "For additional" suggesting incomplete guidance
+    /\b(for more|for additional|for further)\s*$/i.test(content.trim())
   ];
   
   for (let i = 0; i < advancedTruncationIndicators.length; i++) {

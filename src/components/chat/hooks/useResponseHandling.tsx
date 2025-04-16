@@ -30,8 +30,11 @@ export const useResponseHandling = (
   ) => {
     try {
       console.log('Calling Grok financial expert API');
-      const response = await grokService.generateResponse(responseParams);
       
+      // First attempt
+      let response = await grokService.generateResponse(responseParams);
+      
+      // Check if it's using fallback
       const isUsingFallback = response.text.includes("Based on your query about") || 
                              response.text.includes("Regarding your query about") ||
                              response.text.includes("In response to your query");
@@ -43,9 +46,6 @@ export const useResponseHandling = (
       // Get basic diagnostics
       const diagnostics = getTruncationDiagnostics(response.text);
       
-      // Format the bot message
-      const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
-      
       // Do comprehensive completeness check
       const completenessCheck = isResponseComplete(
         response.text, 
@@ -53,12 +53,53 @@ export const useResponseHandling = (
         financialQueryType, 
         queryText
       );
+
+      // If detected as incomplete on first pass, try once more with higher token limit
+      if (!completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
+        console.log('Initial response appears incomplete, retrying with higher token limit');
+        
+        // Increase token limit by 50% and try again
+        const increasedTokens = Math.floor(responseParams.maxTokens * 1.5);
+        const enhancedParams = {
+          ...responseParams,
+          maxTokens: increasedTokens,
+          temperature: Math.max(0.01, responseParams.temperature * 0.8) // Lower temperature slightly
+        };
+        
+        console.log(`Retrying with increased tokens: ${increasedTokens}`);
+        
+        // Second attempt with increased tokens
+        try {
+          response = await grokService.generateResponse(enhancedParams);
+          console.log('Auto-retry completed, checking completeness of new response');
+          
+          // Re-check completeness
+          const newDiagnostics = getTruncationDiagnostics(response.text);
+          const newCompletenessCheck = isResponseComplete(
+            response.text,
+            newDiagnostics,
+            financialQueryType,
+            queryText
+          );
+          
+          // Update our references to use the latest response data
+          completenessCheck.isComplete = newCompletenessCheck.isComplete;
+          completenessCheck.reasons = newCompletenessCheck.reasons;
+          completenessCheck.financialAnalysis = newCompletenessCheck.financialAnalysis;
+          
+          console.log(`Auto-retry result - Complete: ${newCompletenessCheck.isComplete}`);
+        } catch (retryError) {
+          console.error('Auto-retry failed:', retryError);
+          // Continue with original response if retry fails
+        }
+      }
       
-      // If not complete, mark as truncated
+      // Format the bot message
+      const botMessage = formatBotMessage(response, regulatoryContext, reasoning, isUsingFallback);
+      
+      // If not complete after retry attempts, mark as truncated
       if (!completenessCheck.isComplete) {
         console.log('Incomplete response detected:', {
-          basicTruncation: diagnostics.isTruncated,
-          diagnostics: diagnostics,
           reasons: completenessCheck.reasons,
           financialAnalysisMissingElements: completenessCheck.financialAnalysis.missingElements
         });

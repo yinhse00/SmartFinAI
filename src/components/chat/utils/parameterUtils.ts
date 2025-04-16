@@ -12,18 +12,15 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 250000; // Increased from 150,000 to 250,000 for extremely detailed queries
+    return 400000; // Increased from 250,000 to 400,000 for extremely detailed queries
   }
   
-  // Previous high-complexity scenarios
-  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
-      (query.toLowerCase().includes('timetable') || 
-       query.toLowerCase().includes('trading arrangement') || 
-       query.toLowerCase().includes('schedule'))) {
-    return 100000; // Increased from 50,000 to 100,000 for regular timetable queries
+  // Rights issue general queries (including comparisons with other corporate actions)
+  if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE) {
+    return 200000; // Increased from 100,000 to 200,000 for all rights issue queries
   }
   
-  // Complex query handling
+  // Complex query handling for other corporate actions
   if ([
     FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
     FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
@@ -32,18 +29,26 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 50000; // Increased from 15,000 to 50,000 for trading arrangements
+    return 150000; // Increased from 50,000 to 150,000 for trading arrangements
+  }
+  
+  // Comparison queries (like "what is the difference between X and Y")
+  if (query.toLowerCase().includes('difference between') || 
+      query.toLowerCase().includes('compare') || 
+      query.toLowerCase().includes('versus') || 
+      query.toLowerCase().includes('vs')) {
+    return 100000; // New specific setting for comparison queries
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 20000; // Increased from 10,000 to 20,000 for explanations
+    return 50000; // Increased from 20,000 to 50,000 for explanations
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 15000; // Increased from 8,000 to 15,000 for complex topics
+    return 30000; // Increased from 15,000 to 30,000 for complex topics
   }
   
-  return 10000; // Increased default tokens from 6,000 to 10,000
+  return 20000; // Increased default tokens from 10,000 to 20,000
 };
 
 /**
@@ -85,12 +90,20 @@ export const needsEnhancedTokenSettings = (queryType: string, query: string): bo
 };
 
 export const getOptimalTemperature = (queryType: string, query: string): number => {
+  // Comparison queries need more balance between creativity and precision
+  if (query.toLowerCase().includes('difference between') || 
+      query.toLowerCase().includes('compare') || 
+      query.toLowerCase().includes('versus') || 
+      query.toLowerCase().includes('vs')) {
+    return 0.2; // Balanced temperature for comparison queries
+  }
+
   // Rights issue timetable queries need very low temperature for consistency
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.01; // Even lower temperature for maximum consistency with structured data
+    return 0.01; // Keep existing low temperature for maximum consistency with structured data
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
