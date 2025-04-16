@@ -1,6 +1,5 @@
-
 import { GrokResponse } from '@/types/grok';
-import { getTruncationDiagnostics } from '@/utils/truncationUtils';
+import { getTruncationDiagnostics } from '@/utils/truncation';
 
 /**
  * Service for formatting final responses

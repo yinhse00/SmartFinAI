@@ -11,7 +11,7 @@ import {
   isTradingArrangementComplete, 
   getTruncationDiagnostics,
   analyzeFinancialResponse
-} from '@/utils/truncationUtils';
+} from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
 import { needsEnhancedTokenSettings } from './utils/parameterUtils';

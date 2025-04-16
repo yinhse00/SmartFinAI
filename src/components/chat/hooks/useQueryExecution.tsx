@@ -5,7 +5,7 @@ import { grokService } from '@/services/grokService';
 import { contextService } from '@/services/regulatory/contextService';
 import { useQueryParameters } from './useQueryParameters';
 import { useResponseHandling } from './useResponseHandling';
-import { setTruncationLogLevel, LogLevel } from '@/utils/truncationUtils';
+import { setTruncationLogLevel, LogLevel } from '@/utils/truncation';
 import { Message } from '../ChatMessage';
 
 /**

@@ -2,7 +2,11 @@
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { extractReferences } from '@/services/contextUtils';
-import { getTruncationDiagnostics, analyzeFinancialResponse, isTradingArrangementComplete } from '@/utils/truncationUtils';
+import { 
+  getTruncationDiagnostics, 
+  analyzeFinancialResponse, 
+  isTradingArrangementComplete 
+} from '@/utils/truncation';
 import { Message } from '../ChatMessage';
 import { Button } from '@/components/ui/button';
 import { RefreshCw } from 'lucide-react';
