@@ -1,4 +1,3 @@
-
 import { searchService } from '../databaseService';
 import { extractFinancialTerms } from './utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from './utils/resultProcessors';
@@ -17,6 +16,16 @@ export const contextService = {
     try {
       console.group('Retrieving Specialized Financial Context');
       console.log('Original Query:', query);
+      
+      // Check if this is a rights issue aggregation query
+      const isAggregationQuery = query.toLowerCase().includes('rights issue') && 
+        (query.toLowerCase().includes('aggregate') || 
+         query.toLowerCase().includes('within 12 months') ||
+         query.toLowerCase().includes('previous'));
+      
+      if (isAggregationQuery) {
+        console.log('Detected rights issue aggregation query, prioritizing Rule 7.19A information');
+      }
       
       // Specialized query processing for financial terms
       const financialTerms = extractFinancialTerms(query);
@@ -40,6 +49,23 @@ export const contextService = {
       
       if (specificRuleResults.length > 0) {
         console.log(`Found ${specificRuleResults.length} results specifically matching rule references`);
+      }
+      
+      // For Rule 7.19A aggregation queries, ensure we have that specific rule information
+      let aggregationResults = [];
+      if (isAggregationQuery) {
+        aggregationResults = await searchService.search('rule 7.19A aggregation requirements', 'listing_rules');
+        console.log(`Found ${aggregationResults.length} results for Rule 7.19A aggregation`);
+        
+        // If no specific results found, add fallback
+        if (aggregationResults.length === 0) {
+          aggregationResults = [{
+            title: "Rights Issue Aggregation Requirements",
+            source: "Listing Rules Rule 7.19A",
+            content: "Under Listing Rule 7.19A(1), if a rights issue, when aggregated with any other rights issues, open offers, and specific mandate placings announced by the issuer within the previous 12 months, would increase the number of issued shares by more than 50%, the rights issue must be made conditional on approval by shareholders at general meeting by resolution on which any controlling shareholders shall abstain from voting in favor. Where there is no controlling shareholder, directors and chief executive must abstain from voting in favor. The 50% threshold applies to the aggregate increase over the 12-month period, not to each individual corporate action.",
+            category: "listing_rules"
+          }];
+        }
       }
       
       // Determine if this is a general offer query (takeovers code)
@@ -71,7 +97,12 @@ export const contextService = {
       let searchResults = await searchService.search(normalizedQuery, searchCategory);
       console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
       
-      // Start with specific rule results (highest priority)
+      // Start with aggregation results for rights issue aggregation queries
+      if (isAggregationQuery) {
+        searchResults = [...aggregationResults, ...searchResults];
+      }
+      
+      // Add specific rule results (high priority)
       searchResults = [...specificRuleResults, ...searchResults];
       
       // Prioritize results based on query type

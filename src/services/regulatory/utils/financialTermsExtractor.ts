@@ -8,7 +8,9 @@ export function extractFinancialTerms(query: string): string[] {
     'mandatory offer', 'disclosure', 'prospectus', 'SFC', 'HKEX', 'offering',
     'waiver', 'circular', 'public float', 'placing', 'subscription', 'underwriting',
     'timetable', 'schedule', 'timeline', 'whitewash', 'share buy back', 'dealing requirements',
-    'rule 7.19', 'rule 7.19A', 'rule 10.29', 'independent shareholders approval', 'aggregate', 'aggregation'
+    'rule 7.19', 'rule 7.19A', 'rule 10.29', 'independent shareholders approval', 'aggregate', 'aggregation',
+    'mb rule', 'gem rule', 'shareholders approval', 'independent shareholders', '7.19A(1)', '10.29(1)',
+    'within 12 months', 'previous'
   ];
   
   const lowerQuery = query.toLowerCase();
@@ -19,12 +21,29 @@ export function extractFinancialTerms(query: string): string[] {
   );
   
   // Special handling for specific rule references
-  const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?)/i) || 
-                     query.match(/rule\s+(\d+\.\d+)/i) ||
-                     query.match(/rule\s+(\d+)/i);
+  const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i) || 
+                     query.match(/rule\s+(\d+\.\d+[A-Z]?)/i) ||
+                     query.match(/rule\s+(\d+)/i) ||
+                     query.match(/mb\s+rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i) ||
+                     query.match(/gem\s+rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i);
   
   if (ruleMatches && !foundTerms.some(term => term.includes(ruleMatches[1].toLowerCase()))) {
     foundTerms.push(`rule ${ruleMatches[1]}`);
+  }
+  
+  // Handle aggregation requirements specifically for rights issues
+  if (lowerQuery.includes('aggregate') || lowerQuery.includes('previous') && 
+      lowerQuery.includes('within 12 months') && 
+      (lowerQuery.includes('rights issue') || lowerQuery.includes('right issue'))) {
+    if (!foundTerms.includes('aggregate')) {
+      foundTerms.push('aggregate');
+    }
+    if (!foundTerms.includes('rights issue') && !foundTerms.includes('right issue')) {
+      foundTerms.push('rights issue');
+    }
+    if (!foundTerms.some(term => term.includes('7.19A'))) {
+      foundTerms.push('rule 7.19A');
+    }
   }
   
   // If no direct matches found but contains date references, add rights issue timetable

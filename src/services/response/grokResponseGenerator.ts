@@ -1,3 +1,4 @@
+
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { contextService } from '../regulatory/contextService';
 import { grokApiService } from '../api/grokApiService';
@@ -59,11 +60,10 @@ export const grokResponseGenerator = {
         return {
           text: responseText,
           queryType: 'conversational',
-          // Use metadata instead of hasContext
           metadata: {
-            contextUsed: false
-          },
-          relevanceScore: 1.0
+            contextUsed: false,
+            relevanceScore: 1.0
+          }
         };
       }
 

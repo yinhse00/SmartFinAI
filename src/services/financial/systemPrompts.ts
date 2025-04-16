@@ -1,3 +1,4 @@
+
 /**
  * Create system prompt tailored to specific financial expertise areas with enhanced trading arrangement knowledge
  */
@@ -22,7 +23,10 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Address practical considerations on pricing, excess applications, and compensatory arrangements
 - For trading arrangements, clearly distinguish between last day for cum-rights trading, ex-date, nil-paid rights trading period, and new share listing date
 - For aggregation requirements under Rule 7.19A, explain precisely how to calculate the 50% threshold and when independent shareholders' approval is required
-- For multiple rights issues within 12 months, clearly explain how the aggregation requirements apply`;
+- For multiple rights issues within 12 months, clearly explain how the aggregation requirements apply
+- When discussing Rule 7.19A(1) aggregation, provide detailed analysis of whether previous rights issues count toward the 50% threshold
+- Explain whether shareholder approval for one rights issue exempts subsequent rights issues from requiring approval
+- For MB Rule 7.19A(1) and GEM Rule 10.29(1), specify that aggregation applies to multiple corporate actions within 12 months when calculating the 50% threshold`;
 
     case 'open_offer':
       return basePrompt + `For open offer inquiries:
@@ -83,7 +87,8 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - For rules like 7.19A(1) and 10.29(1) regarding rights issues and open offers, explain the aggregation requirements clearly
 - When discussing the 50% threshold in Rule 7.19A, clarify how to calculate this and apply it across multiple transactions
 - For shareholder approval requirements, specify which shareholders can vote and which must abstain
-- Explain the practical implications and procedural requirements for compliance`;
+- Explain the practical implications and procedural requirements for compliance
+- For any rights issue aggregation query under MB Rule 7.19A(1) or GEM Rule 10.29(1), specify that rights issues within 12 months are aggregated when calculating the 50% threshold`;
 
     default:
       return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications.`;

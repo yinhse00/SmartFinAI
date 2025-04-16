@@ -11,9 +11,13 @@ export const contextEnhancer = {
    */
   enhanceWithRuleContext: async (params: GrokRequestParams): Promise<GrokRequestParams> => {
     // Check if the query contains references to specific rules or chapters
-    const ruleMatches = params.prompt.match(/rule\s+(\d+(\.\d+)*)/i) || 
+    const ruleMatches = params.prompt.match(/rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i) || 
+                       params.prompt.match(/rule\s+(\d+\.\d+[A-Z]?)/i) || 
+                       params.prompt.match(/rule\s+(\d+)/i) ||
                        params.prompt.match(/chapter\s+(\d+)/i) || 
-                       params.prompt.match(/lb_chapter\s+(\d+)/i);
+                       params.prompt.match(/lb_chapter\s+(\d+)/i) ||
+                       params.prompt.match(/mb\s+rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i) ||
+                       params.prompt.match(/gem\s+rule\s+(\d+\.\d+[A-Z]?\(\d+\)?)/i);
     
     if (ruleMatches) {
       // Extract the rule or chapter number
@@ -24,8 +28,8 @@ export const contextEnhancer = {
       const comprehensiveResults = await searchService.searchComprehensive(ruleNumber);
       
       // If we found matching reference documents, add their content to the context
-      if (comprehensiveResults.referenceDocuments.length > 0) {
-        console.log(`Found ${comprehensiveResults.referenceDocuments.length} reference documents matching Rule/Chapter ${ruleNumber}`);
+      if (comprehensiveResults.referenceDocuments.length > 0 || comprehensiveResults.databaseEntries.length > 0) {
+        console.log(`Found ${comprehensiveResults.referenceDocuments.length} reference documents and ${comprehensiveResults.databaseEntries.length} database entries matching Rule/Chapter ${ruleNumber}`);
         
         // Extract additional context from reference documents
         const referenceContext = comprehensiveResults.referenceDocuments
@@ -50,6 +54,46 @@ export const contextEnhancer = {
                           referenceContext;
                           
         params.regulatoryContext = fullContext;
+      }
+    }
+    
+    // Special handling for rights issue aggregation questions
+    if (params.prompt.toLowerCase().includes('rights issue') && 
+        (params.prompt.toLowerCase().includes('aggregate') || 
+         params.prompt.toLowerCase().includes('within 12 months') ||
+         params.prompt.toLowerCase().includes('previous'))) {
+      
+      console.log('Detected rights issue aggregation query, enhancing context with Rule 7.19A information');
+      
+      // Specifically search for Rule 7.19A
+      const aggregationResults = await searchService.search('rule 7.19A aggregation requirements', 'listing_rules');
+      
+      if (aggregationResults.length > 0) {
+        console.log(`Found ${aggregationResults.length} results for Rule 7.19A aggregation`);
+        
+        // Create enhanced context specifically for aggregation
+        const aggregationContext = aggregationResults
+          .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
+          .join('\n\n---\n\n');
+          
+        // Add aggregation context to existing context or create new context
+        if (params.regulatoryContext) {
+          params.regulatoryContext = aggregationContext + '\n\n---\n\n' + params.regulatoryContext;
+        } else {
+          params.regulatoryContext = aggregationContext;
+        }
+        
+        // Add fallback information for Rule 7.19A if not found in results
+        if (!params.regulatoryContext.includes('7.19A')) {
+          const rule719aFallback = `[Rights Issue Aggregation Requirements | Listing Rules Rule 7.19A]:
+Under Listing Rule 7.19A(1), if a rights issue, when aggregated with any other rights issues, open offers, and specific mandate placings announced by the issuer within the previous 12 months, would increase the number of issued shares by more than 50%, the rights issue must be made conditional on approval by shareholders at general meeting by resolution on which any controlling shareholders shall abstain from voting in favor. Where there is no controlling shareholder, directors and chief executive must abstain from voting in favor. The 50% threshold applies to the aggregate increase over the 12-month period, not to each individual corporate action.`;
+          
+          if (params.regulatoryContext) {
+            params.regulatoryContext = rule719aFallback + '\n\n---\n\n' + params.regulatoryContext;
+          } else {
+            params.regulatoryContext = rule719aFallback;
+          }
+        }
       }
     }
     
