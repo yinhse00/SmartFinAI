@@ -36,10 +36,10 @@ const MetadataForm: React.FC<MetadataFormProps> = ({
           <SelectContent>
             <SelectItem value="listing_rules">Listing Rules</SelectItem>
             <SelectItem value="takeovers">Takeovers Code</SelectItem>
-            <SelectItem value="guidance">Guidance Notes</SelectItem>
-            <SelectItem value="decisions">Executive Decisions</SelectItem>
-            <SelectItem value="precedents">Precedent Cases</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
+            <SelectItem value="guidance">Interpretation and Guidance</SelectItem>
+            <SelectItem value="decisions">Listing Review Committee Decisions</SelectItem>
+            <SelectItem value="checklists">Checklists, Forms and Templates</SelectItem>
+            <SelectItem value="other">Others</SelectItem>
           </SelectContent>
         </Select>
       </div>

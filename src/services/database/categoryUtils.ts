@@ -1,13 +1,4 @@
 
-/**
- * Utilities for working with regulatory categories
- */
-
-import { RegulatoryEntry } from "./types";
-
-/**
- * Helper function to determine category from filename
- */
 export function determineCategory(filename: string): RegulatoryEntry['category'] {
   const lowerFilename = filename.toLowerCase();
   
@@ -19,14 +10,17 @@ export function determineCategory(filename: string): RegulatoryEntry['category']
     return 'takeovers';
   }
   
-  if (lowerFilename.includes('guidance') || lowerFilename.includes('note')) {
+  if (lowerFilename.includes('guidance') || lowerFilename.includes('note') || lowerFilename.includes('interpretation')) {
     return 'guidance';
   }
   
-  if (lowerFilename.includes('precedent') || lowerFilename.includes('case')) {
-    return 'precedents';
+  if (lowerFilename.includes('decision') || lowerFilename.includes('review committee')) {
+    return 'decisions';
+  }
+  
+  if (lowerFilename.includes('checklist') || lowerFilename.includes('form') || lowerFilename.includes('template')) {
+    return 'checklists';
   }
   
   return 'other';
 }
-
