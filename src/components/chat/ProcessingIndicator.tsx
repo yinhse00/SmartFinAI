@@ -4,7 +4,7 @@ import { Progress } from '@/components/ui/progress';
 
 interface ProcessingIndicatorProps {
   isVisible: boolean;
-  stage: 'preparing' | 'processing' | 'finalizing';
+  stage: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
 }
 
 const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => {
@@ -21,7 +21,8 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
     
     // More realistic timeframes based on actual processing times from logs
     const totalTimeEstimate = stage === 'preparing' ? 5 : 
-                             stage === 'processing' ? 20 : 10;
+                             stage === 'processing' ? 20 : 
+                             stage === 'reviewing' ? 8 : 10;
     
     const timer = setInterval(() => {
       const newElapsedTime = Math.floor((Date.now() - startTime) / 1000);
@@ -54,6 +55,14 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
           'Extracting relevant context...',
           'Preparing contextual information...',
           'Setting up financial regulatory framework...'
+        ];
+      case 'reviewing':
+        return [
+          'Reviewing comprehensive database...',
+          'Cross-referencing regulatory documents...',
+          'Checking FAQ and guidance documents...',
+          'Verifying against 10.4 FAQ Continuing Obligations...',
+          'Ensuring all relevant information is consulted...'
         ];
       case 'processing':
         return [
@@ -122,6 +131,7 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
       <div className="flex justify-between mb-2">
         <div className="font-medium text-finance-dark-blue dark:text-finance-accent-blue">
           {stage === 'preparing' && 'Preparing regulatory context...'}
+          {stage === 'reviewing' && 'Reviewing database for accuracy...'}
           {stage === 'processing' && 'Generating comprehensive financial response...'}
           {stage === 'finalizing' && 'Finalizing and validating response...'}
         </div>
@@ -141,19 +151,26 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
         {/* Enhanced visual flow chart representation */}
         <div className="flex items-center justify-between text-xs">
           <div className={`flex flex-col items-center ${stage === 'preparing' ? 'text-finance-medium-blue font-medium' : 'text-gray-500'}`}>
-            <div className={`w-4 h-4 rounded-full mb-1 ${stage === 'preparing' ? 'bg-finance-medium-blue animate-pulse' : stage === 'processing' || stage === 'finalizing' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
-              {(stage === 'processing' || stage === 'finalizing') && <span className="text-white flex items-center justify-center h-full text-[10px]">✓</span>}
+            <div className={`w-4 h-4 rounded-full mb-1 ${stage === 'preparing' ? 'bg-finance-medium-blue animate-pulse' : (stage === 'reviewing' || stage === 'processing' || stage === 'finalizing') ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+              {(stage === 'reviewing' || stage === 'processing' || stage === 'finalizing') && <span className="text-white flex items-center justify-center h-full text-[10px]">✓</span>}
             </div>
             <span>Context</span>
           </div>
-          <div className="h-px w-[30%] bg-gray-300 dark:bg-gray-700 self-center mt-1"></div>
+          <div className="h-px w-[20%] bg-gray-300 dark:bg-gray-700 self-center mt-1"></div>
+          <div className={`flex flex-col items-center ${stage === 'reviewing' ? 'text-finance-medium-blue font-medium' : 'text-gray-500'}`}>
+            <div className={`w-4 h-4 rounded-full mb-1 ${stage === 'reviewing' ? 'bg-finance-medium-blue animate-pulse' : (stage === 'processing' || stage === 'finalizing') ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
+              {(stage === 'processing' || stage === 'finalizing') && <span className="text-white flex items-center justify-center h-full text-[10px]">✓</span>}
+            </div>
+            <span>Review</span>
+          </div>
+          <div className="h-px w-[20%] bg-gray-300 dark:bg-gray-700 self-center mt-1"></div>
           <div className={`flex flex-col items-center ${stage === 'processing' ? 'text-finance-medium-blue font-medium' : 'text-gray-500'}`}>
             <div className={`w-4 h-4 rounded-full mb-1 ${stage === 'processing' ? 'bg-finance-medium-blue animate-pulse' : stage === 'finalizing' ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-700'}`}>
               {stage === 'finalizing' && <span className="text-white flex items-center justify-center h-full text-[10px]">✓</span>}
             </div>
             <span>Generate</span>
           </div>
-          <div className="h-px w-[30%] bg-gray-300 dark:bg-gray-700 self-center mt-1"></div>
+          <div className="h-px w-[20%] bg-gray-300 dark:bg-gray-700 self-center mt-1"></div>
           <div className={`flex flex-col items-center ${stage === 'finalizing' ? 'text-finance-medium-blue font-medium' : 'text-gray-500'}`}>
             <div className={`w-4 h-4 rounded-full mb-1 ${stage === 'finalizing' ? 'bg-finance-medium-blue animate-pulse' : 'bg-gray-300 dark:bg-gray-700'}`}></div>
             <span>Deliver</span>
@@ -167,6 +184,12 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
         
         {/* Additional processing details */}
         <div className="text-xs text-gray-500 dark:text-gray-400 italic">
+          {stage === 'reviewing' && 
+            <div className="mt-1 flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-finance-medium-blue animate-pulse"></div>
+              <span>Checking database for accurate information...</span>
+            </div>
+          }
           {stage === 'processing' && progress > 50 && 
             <div className="mt-1 flex items-center gap-1">
               <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
