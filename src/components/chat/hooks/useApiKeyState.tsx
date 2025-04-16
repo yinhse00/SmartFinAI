@@ -13,11 +13,16 @@ export const useApiKeyState = () => {
   const { toast } = useToast();
 
   useEffect(() => {
+    // Save the API key provided in the code if no key is set yet
+    const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+    
     const hasGrokKey = hasGrokApiKey();
     setIsGrokApiKeySet(hasGrokKey);
     
     if (!hasGrokKey) {
-      setApiKeyDialogOpen(true);
+      setGrokApiKey(defaultApiKey);
+      setIsGrokApiKeySet(true);
+      console.log('Default Grok API key set');
     }
   }, []);
 

@@ -4,13 +4,14 @@ export interface GrokRequestParams {
   temperature?: number;
   maxTokens?: number;
   regulatoryContext?: string;
+  apiKey?: string;
 }
 
 export interface GrokResponse {
   text: string;
   queryType?: string;
-  hasContext?: boolean; // Add the missing property
-  relevanceScore?: number; // Added this to match the implementation in grokResponseGenerator.ts
+  hasContext?: boolean;
+  relevanceScore?: number;
   metadata?: {
     contextUsed?: boolean;
     relevanceScore?: number;

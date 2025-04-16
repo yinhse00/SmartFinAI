@@ -25,8 +25,8 @@ export const grokApiService = {
   /**
    * Make a specialized financial expert request to the Grok API
    */
-  callChatCompletions: async (requestBody: GrokChatRequestBody): Promise<any> => {
-    const apiKey = getGrokApiKey();
+  callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
+    const apiKey = providedApiKey || getGrokApiKey();
     
     if (!apiKey) {
       throw new Error("No API key provided for financial expert access");

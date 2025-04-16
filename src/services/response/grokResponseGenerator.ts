@@ -1,9 +1,11 @@
+
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { contextService } from '../regulatory/contextService';
 import { grokApiService } from '../api/grokApiService';
 import { createFinancialExpertSystemPrompt } from '../financial/systemPrompts';
 import { detectFinancialExpertiseArea, isSimpleConversationalQuery } from '../financial/expertiseDetection';
 import { generateFallbackResponse } from '../fallbackResponseService';
+import { getGrokApiKey } from '../apiKeyService';
 
 // Import refactored modules
 import { contextEnhancer } from './modules/contextEnhancer';
@@ -18,9 +20,12 @@ export const grokResponseGenerator = {
       console.group('Hong Kong Financial Expert Response Generation');
       console.log('Input Query:', params.prompt);
 
+      // Use provided API key or get from local storage
+      const apiKey = params.apiKey || getGrokApiKey();
+
       // Enhanced logging for fallback detection
       const fallbackLogging = {
-        apiKeyAvailable: !!params.apiKey,
+        apiKeyAvailable: !!apiKey,
         queryType: '',
         contextAvailable: !!params.regulatoryContext,
         fallbackReason: ''
@@ -51,7 +56,7 @@ export const grokResponseGenerator = {
         };
         
         // Make API call with simpler configuration for conversational queries
-        const response = await grokApiService.callChatCompletions(requestBody);
+        const response = await grokApiService.callChatCompletions(requestBody, apiKey);
         
         // Get the raw response text
         const responseText = response.choices[0].message.content;
@@ -69,6 +74,7 @@ export const grokResponseGenerator = {
 
       // For financial/regulatory queries, continue with standard processing flow
       const queryType = detectFinancialExpertiseArea(params.prompt);
+      fallbackLogging.queryType = queryType;
       console.log('Detected Financial Expertise Area:', queryType);
 
       // Enhance context with rule or chapter specific information
@@ -116,7 +122,7 @@ export const grokResponseGenerator = {
       };
 
       // Make API call with professional financial expertise configuration
-      const response = await grokApiService.callChatCompletions(requestBody);
+      const response = await grokApiService.callChatCompletions(requestBody, apiKey);
       
       // Get the raw response text
       const responseText = response.choices[0].message.content;

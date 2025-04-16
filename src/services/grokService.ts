@@ -26,6 +26,11 @@ export const grokService = {
    * Enhanced professional financial response generation with advanced context handling
    */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
+    // Get API key from local storage if not provided in params
+    if (!params.apiKey) {
+      params.apiKey = getGrokApiKey();
+    }
+    
     // Use the enhanced grokResponseGenerator service
     return await grokResponseGenerator.generateResponse(params);
   },
