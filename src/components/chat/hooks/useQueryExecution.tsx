@@ -3,20 +3,10 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { contextService } from '@/services/regulatory/contextService';
-import { extractReferences } from '@/services/contextUtils';
-import { identifyFinancialQueryType, isTradingArrangementRelated } from '../utils/queryTypeUtils';
-import { getOptimalTemperature, getOptimalTokens } from '../utils/parameterUtils';
-import { 
-  detectTruncationComprehensive, 
-  isTradingArrangementComplete,
-  getTruncationDiagnostics,
-  analyzeFinancialResponse,
-  LogLevel,
-  setTruncationLogLevel
-} from '@/utils/truncationUtils';
+import { useQueryParameters } from './useQueryParameters';
+import { useResponseHandling } from './useResponseHandling';
+import { setTruncationLogLevel, LogLevel } from '@/utils/truncationUtils';
 import { Message } from '../ChatMessage';
-import { RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 /**
  * Hook for handling query execution logic
@@ -32,6 +22,8 @@ export const useQueryExecution = (
 ) => {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { determineQueryParameters } = useQueryParameters();
+  const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
 
   // Enable debug logging for truncation detection in development
   if (process.env.NODE_ENV === 'development') {
@@ -55,44 +47,16 @@ export const useQueryExecution = (
       timestamp: new Date(),
     };
     
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
     setInput('');
     setIsLoading(true);
 
     try {
       console.group('Financial Query Processing');
       
-      const financialQueryType = identifyFinancialQueryType(queryText);
-      console.log('Financial Query Type:', financialQueryType);
-      
-      // Optimized parameters for preventing truncation
-      let maxTokens = getOptimalTokens(financialQueryType, queryText);
-      let temperature = getOptimalTemperature(financialQueryType, queryText);
-      
-      // Special case for trading arrangements for various corporate actions
-      if ((financialQueryType === 'rights_issue' || 
-           financialQueryType === 'open_offer' || 
-           financialQueryType === 'share_consolidation' || 
-           financialQueryType === 'board_lot_change' || 
-           financialQueryType === 'company_name_change') && 
-          (queryText.toLowerCase().includes('timetable') || 
-           queryText.toLowerCase().includes('trading arrangement') || 
-           queryText.toLowerCase().includes('schedule'))) {
-        
-        // Fine-tuned parameters based on corporate action type
-        console.log(`Processing ${financialQueryType} trading arrangement query`);
-        
-        // Set even more precise parameters for rights issue timetables
-        if (financialQueryType === 'rights_issue') {
-          maxTokens = 250000; // Increased token limit for rights issue timetables 
-          temperature = 0.01; // Very precise temperature for structured output
-        } else {
-          maxTokens = 30000; // Increased from 15,000 to 30,000 for other corporate actions
-          temperature = 0.03; // Lower temperature for consistent output
-        }
-      }
-      
-      console.log(`Using specialized parameters - Temperature: ${temperature}, Tokens: ${maxTokens}`);
+      // Get optimal parameters for the query
+      const { financialQueryType, temperature, maxTokens } = determineQueryParameters(queryText);
       
       const responseParams: any = {
         prompt: queryText,
@@ -100,13 +64,22 @@ export const useQueryExecution = (
         maxTokens: maxTokens
       };
       
+      // Get regulatory context
       const { context: regulatoryContext, reasoning } = await contextService.getRegulatoryContextWithReasoning(queryText);
       responseParams.regulatoryContext = regulatoryContext;
       
       console.log('Financial Context Length:', regulatoryContext?.length);
       console.log('Financial Reasoning:', reasoning);
       
-      await handleApiResponse(queryText, responseParams, regulatoryContext, reasoning, financialQueryType);
+      // Handle API response
+      await handleApiResponse(
+        queryText, 
+        responseParams, 
+        regulatoryContext, 
+        reasoning, 
+        financialQueryType,
+        updatedMessages
+      );
       
       console.groupEnd();
     } catch (error) {
@@ -118,119 +91,6 @@ export const useQueryExecution = (
       });
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleApiResponse = async (
-    queryText: string,
-    responseParams: any,
-    regulatoryContext: string | undefined,
-    reasoning: string | undefined,
-    financialQueryType: string
-  ) => {
-    try {
-      console.log('Calling Grok financial expert API');
-      const response = await grokService.generateResponse(responseParams);
-      
-      const isUsingFallback = response.text.includes("Based on your query about") || 
-                             response.text.includes("Regarding your query about") ||
-                             response.text.includes("In response to your query");
-      
-      if (isUsingFallback && isGrokApiKeySet) {
-        console.log('Using fallback response - API connection issue');
-        toast({
-          title: "Financial Expert Connection Issue",
-          description: "Could not connect to financial expertise service. Using fallback response.",
-          variant: "destructive"
-        });
-      }
-      
-      const references = extractReferences(regulatoryContext);
-      
-      // Enhanced truncation detection with multiple methods
-      const diagnostics = getTruncationDiagnostics(response.text);
-      const isTruncated = diagnostics.isTruncated;
-      
-      // Financial content-specific analysis
-      const financialAnalysis = analyzeFinancialResponse(response.text, financialQueryType);
-      
-      // Only check for trading arrangement truncation if not already detected
-      const isTradingArrangementTruncated = !isTruncated && 
-                                         isTradingArrangementRelated(queryText) && 
-                                         !isTradingArrangementComplete(response.text, financialQueryType);
-      
-      const isResponseIncomplete = isTruncated || 
-                                isTradingArrangementTruncated || 
-                                !financialAnalysis.isComplete;
-                                
-      if (isResponseIncomplete) {
-        console.log('Incomplete response detected:', {
-          basicTruncation: isTruncated,
-          diagnostics: diagnostics,
-          tradingArrangementTruncated: isTradingArrangementTruncated,
-          financialAnalysisMissingElements: financialAnalysis.missingElements
-        });
-      }
-      
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.text,
-        sender: 'bot',
-        timestamp: new Date(),
-        references: references,
-        isUsingFallback: isUsingFallback,
-        reasoning: reasoning,
-        queryType: response.queryType,
-        isTruncated: isResponseIncomplete
-      };
-      
-      setMessages(prev => [...prev, botMessage]);
-      console.log('Response delivered successfully');
-      
-      if (botMessage.isTruncated) {
-        console.log('Response appears to be truncated, showing retry option');
-        
-        // Show toast with more detailed reason for truncation
-        let truncationReason = "The response appears to have been cut off.";
-        
-        if (diagnostics.reasons.length > 0) {
-          truncationReason = `The response appears incomplete: ${diagnostics.reasons[0]}`;
-        } else if (financialAnalysis.missingElements.length > 0) {
-          truncationReason = `Financial content incomplete: ${financialAnalysis.missingElements[0]}`;
-        }
-        
-        toast({
-          title: "Incomplete Response",
-          description: truncationReason + " You can retry your query to get a complete answer.",
-          duration: 10000,
-          action: <Button 
-                   onClick={retryLastQuery}
-                   variant="outline"
-                   size="sm" 
-                   className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
-                  >
-                    <RefreshCw size={14} />
-                    Retry Query
-                  </Button>
-        });
-      }
-    } catch (error) {
-      console.error("Error generating financial expert response:", error);
-      toast({
-        title: "Expert Response Error",
-        description: "Failed to generate a financial expert response. Please check your API key and try again.",
-        variant: "destructive"
-      });
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'm sorry, I encountered an error while analyzing your financial query. Please check your API key or try rephrasing your question.",
-        sender: 'bot',
-        timestamp: new Date(),
-        isError: true
-      };
-      
-      setMessages(prev => [...prev, errorMessage]);
     }
   };
 

@@ -1,10 +1,10 @@
-import { databaseService, searchService, RegulatoryEntry } from '../databaseService';
-import { QUERY_TYPE_TO_CATEGORY } from '../constants/financialConstants';
+
+import { searchService } from '../databaseService';
 import { extractFinancialTerms } from './utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from './utils/resultProcessors';
-import { generateContextReasoning } from './utils/contextReasoningGenerator';
 import { isWhitewashWaiverQuery, isGeneralOfferQuery, isTradingArrangementQuery, isCorporateActionQuery } from './utils/queryDetector';
-import { getWhitewashWaiverFallbackEntry } from './fallbacks/whitewashFallback';
+import { searchStrategies } from './context/searchStrategies';
+import { contextFormatter } from './context/contextFormatter';
 
 /**
  * Financial regulatory context service - specialized for Hong Kong corporate finance
@@ -41,34 +41,7 @@ export const contextService = {
       // For general offer queries, specifically search for takeovers code documents
       let takeoversResults = [];
       if (isGeneralOffer) {
-        console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
-        
-        // First, specifically check for the takeovers and mergers code PDF
-        const takeoversCodeResults = await searchService.searchByTitle("codes on takeovers and mergers and share buy backs");
-        if (takeoversCodeResults.length > 0) {
-          console.log('Found specific "codes on takeovers and mergers and share buy backs.pdf" document');
-          takeoversResults = [...takeoversCodeResults];
-        }
-        
-        // Direct search in takeovers category
-        const categoryResults = await searchService.search(normalizedQuery, 'takeovers');
-        console.log(`Found ${categoryResults.length} Takeovers Code documents by category search`);
-        takeoversResults = [...takeoversResults, ...categoryResults];
-        
-        // If direct search didn't yield results, try content search with specific terms
-        if (takeoversResults.length === 0) {
-          takeoversResults = await searchService.search("general offer mandatory takeovers code", "takeovers");
-          console.log(`Found ${takeoversResults.length} results from takeovers keyword search`);
-        }
-        
-        // Special handling for whitewash waiver queries
-        if (isWhitewashQuery) {
-          const whitewashResults = await searchService.search("whitewash waiver dealing requirements", "takeovers");
-          console.log(`Found ${whitewashResults.length} whitewash waiver specific results`);
-          
-          // Add whitewash-specific documents to results
-          takeoversResults = [...takeoversResults, ...whitewashResults];
-        }
+        takeoversResults = await searchStrategies.findGeneralOfferDocuments(normalizedQuery, isWhitewashQuery);
       }
       
       // Check for Trading Arrangement documents for corporate actions
@@ -78,22 +51,7 @@ export const contextService = {
       // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
       let tradingArrangementsResults = [];
       if (isTradingArrangement) {
-        if (isCorporateAction) {
-          console.log('Identified as corporate action trading arrangement query');
-          
-          // Direct search for Trading Arrangement document by title
-          tradingArrangementsResults = await searchService.searchByTitle("Trading Arrangements");
-          console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
-          
-          // If title search didn't yield results, try content search
-          if (tradingArrangementsResults.length === 0) {
-            tradingArrangementsResults = await searchService.search("trading arrangement corporate action", "listing_rules");
-            console.log(`Found ${tradingArrangementsResults.length} results from trading arrangement keyword search`);
-          }
-        } else if (isGeneralOffer) {
-          console.log('Identified as general offer timetable query');
-          // No specific search needed here as we already searched for takeovers documents
-        }
+        tradingArrangementsResults = await searchStrategies.findTradingArrangementDocuments(normalizedQuery, isCorporateAction);
       }
       
       // Determine the appropriate category based on query content
@@ -134,17 +92,8 @@ export const contextService = {
             query.toLowerCase().includes('schedule') || 
             query.toLowerCase().includes('timeline')) {
             
-          if (isGeneralOffer) {
-            // Special handling for general offer timetable requests
-            const timetableResults = await searchService.search('general offer timetable takeovers', 'takeovers');
-            console.log(`Found ${timetableResults.length} results using 'general offer timetable' keyword`);
-            searchResults = [...searchResults, ...timetableResults];
-          } else {
-            // Default to rights issue timetable info for other timetable requests
-            const timetableResults = await searchService.search('rights issue timetable', 'listing_rules');
-            console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
-            searchResults = [...searchResults, ...timetableResults];
-          }
+          const timetableResults = await searchStrategies.findTimetableDocuments(query, isGeneralOffer);
+          searchResults = [...searchResults, ...timetableResults];
         } else {
           // General financial term search across all categories
           const generalResults = await searchService.search(financialTerms[0] || normalizedQuery);
@@ -153,13 +102,13 @@ export const contextService = {
         }
       }
       
-      // For whitewash waiver queries, ensure we have dealing requirements information
-      if (isWhitewashQuery && !searchResults.some(result => 
-          result.content.toLowerCase().includes('dealing') && 
-          result.content.toLowerCase().includes('whitewash'))) {
-        console.log("Adding specific whitewash waiver dealing requirements");
-        searchResults.push(getWhitewashWaiverFallbackEntry());
-      }
+      // Add any necessary fallback documents
+      searchResults = searchStrategies.addFallbackDocumentsIfNeeded(
+        searchResults, 
+        query, 
+        isWhitewashQuery, 
+        isGeneralOffer
+      );
       
       // Ensure we have unique results
       const uniqueResults = removeDuplicateResults(searchResults);
@@ -167,51 +116,17 @@ export const contextService = {
       // Combine and prioritize results with financial relevance scoring
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
-      // Special case for general offer timetable - add fallback if needed
-      if (isGeneralOffer && 
-          (query.toLowerCase().includes('timetable') || 
-           query.toLowerCase().includes('schedule') ||
-           query.toLowerCase().includes('timeline')) &&
-          prioritizedResults.length < 2) {
-        console.log("Enhancing general offer timetable context with fallback information");
-        prioritizedResults.push({
-          title: "General Offer Timetable",
-          source: "Takeovers Code Rule 15",
-          content: "A general offer timetable under the Takeovers Code begins with the Rule 3.5 announcement and must specify a closing date not less than 21 days from the date the offer document is posted. All conditions must be satisfied within 60 days from the offer document posting, unless extended by the Executive.",
-          category: "takeovers"
-        });
-      }
-      // Special case for rights issue timetables if needed
-      else if (query.toLowerCase().includes('rights issue') && 
-          (query.toLowerCase().includes('timetable') || 
-           query.toLowerCase().includes('schedule') ||
-           query.toLowerCase().includes('timeline')) &&
-          prioritizedResults.length < 2) {
-        console.log("Enhancing rights issue timetable context with fallback information");
-        prioritizedResults.push({
-          title: "Rights Issue Timetable",
-          source: "Listing Rules Chapter 10",
-          content: "Rights issue timetables typically follow a structured timeline from announcement to dealing day. Key dates include record date, PAL dispatch, rights trading period, and acceptance deadline.",
-          category: "listing_rules"
-        });
-      }
-      
       // Format context with section headings and regulatory citations
-      const context = prioritizedResults
-        .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
-        .join('\n\n---\n\n');
+      const context = contextFormatter.formatEntriesToContext(prioritizedResults);
       
       // Generate reasoning that explains why these specific regulations are relevant
-      const reasoning = generateContextReasoning(prioritizedResults, query, financialTerms);
+      const reasoning = contextFormatter.generateReasoning(prioritizedResults, query, financialTerms);
       
       console.log('Context Length:', context.length);
       console.log('Reasoning:', reasoning);
       console.groupEnd();
       
-      return {
-        context: context || 'No specific Hong Kong financial regulatory information found.',
-        reasoning: reasoning
-      };
+      return contextFormatter.createContextResponse(context, reasoning);
     } catch (error) {
       console.error('Error retrieving specialized financial context:', error);
       return {
@@ -222,7 +137,7 @@ export const contextService = {
   },
 
   /**
-   * Get regulatory context for a given financial query
+   * Get regulatory context for a given financial query (simplified version)
    */
   getRegulatoryContext: async (query: string): Promise<string> => {
     try {
@@ -247,9 +162,7 @@ export const contextService = {
       }
       
       // Combine and format results with Hong Kong regulatory citations
-      const context = searchResults
-        .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
-        .join('\n\n---\n\n');
+      const context = contextFormatter.formatEntriesToContext(searchResults);
       
       return context || 'No specific Hong Kong financial regulatory information found.';
     } catch (error) {
