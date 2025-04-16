@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { Message } from '../ChatMessage';
@@ -38,7 +37,7 @@ export const useResponseHandling = (
       const isSimpleQuery = isQuerySimple(queryText);
       
       // Boost token limit based on query complexity
-      const baseTokenMultiplier = isSimpleQuery ? 4 : 8;
+      const baseTokenMultiplier = isSimpleQuery ? 40 : 80;
       responseParams.maxTokens = responseParams.maxTokens * baseTokenMultiplier;
       
       // Add specific instructions for aggregation-related queries
@@ -46,18 +45,17 @@ export const useResponseHandling = (
           queryText.toLowerCase().includes('aggregate') || 
           queryText.toLowerCase().includes('within 12 months')) {
         
-        responseParams.prompt += " Ensure a complete explanation of the aggregation requirements, including how the 50% threshold is calculated, whether previous approvals affect subsequent issues, and provide a direct conclusion. Include all relevant rule references and requirements for independent shareholders' approval.";
+        responseParams.prompt += " Ensure a COMPREHENSIVE and EXTREMELY DETAILED explanation of the aggregation requirements, including ALL nuanced aspects of the 50% threshold calculation, impact of previous approvals, independent shareholders' approval requirements, and provide an EXHAUSTIVE conclusion with multiple scenario examples.";
         
-        // Increase max tokens for these complex queries
-        responseParams.maxTokens = Math.max(responseParams.maxTokens, 8000000);
+        // Increase max tokens for these complex queries to an extremely high limit
+        responseParams.maxTokens = Math.max(responseParams.maxTokens, 80000000);
       }
       
       // Add forceful completion instruction to all prompts
-      responseParams.prompt += " IMPORTANT: Provide a complete response with all relevant information and a clear conclusion. DO NOT cut off your response before it is complete.";
+      responseParams.prompt += " CRITICAL: Provide an ABSOLUTELY COMPLETE and COMPREHENSIVE response with EXTENSIVE details. UNDER NO CIRCUMSTANCES should you truncate or leave any aspect unexplained. Include multiple perspectives, examples, and a thorough conclusion.";
       
       // First attempt with significantly increased token limits
       console.log(`Initial request with tokens: ${responseParams.maxTokens}, temperature: ${responseParams.temperature}`);
-      let response = await grokService.generateResponse(responseParams);
       
       // Check if it's using fallback
       const isUsingFallback = isFallbackResponse(response.text);

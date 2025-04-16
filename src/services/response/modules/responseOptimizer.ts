@@ -15,7 +15,7 @@ export const responseOptimizer = {
     if (isSimpleQuery) {
       return {
         temperature: 0.7,
-        maxTokens: 2000 // Lower token count for simple queries
+        maxTokens: 20000 // Increased from 2,000
       };
     }
     
@@ -25,8 +25,8 @@ export const responseOptimizer = {
     // Smart token allocation based on query complexity
     const baseTokens = getOptimalTokens(queryType, prompt);
     const maxTokens = prompt.length > 200 ? 
-      Math.min(2000000, baseTokens * 2) : // Cap at 2M for complex queries
-      Math.min(1000000, baseTokens); // Cap at 1M for standard queries
+      Math.min(20000000, baseTokens * 10) : // Increased cap from 2M to 20M
+      Math.min(10000000, baseTokens); // Increased cap from 1M to 10M
     
     console.log(`Optimized Parameters - Temperature: ${temperature}, Max Tokens: ${maxTokens}, Simple Query: ${isSimpleQuery}`);
     
@@ -37,3 +37,4 @@ export const responseOptimizer = {
     return evaluateResponseRelevance(response, prompt, queryType);
   }
 };
+
