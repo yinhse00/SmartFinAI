@@ -1,4 +1,3 @@
-
 /**
  * Utilities for optimizing parameters for corporate action queries
  */
@@ -14,12 +13,12 @@ export const getCorporateActionParameters = (
   queryText: string
 ): { maxTokens: number; temperature: number } => {
   // Default values for most corporate actions
-  let maxTokens = 30000;
+  let maxTokens = 50000; // Increased from 30,000
   let temperature = 0.03;
 
   // Set even more precise parameters for rights issue timetables
   if (financialQueryType === 'rights_issue') {
-    maxTokens = 250000; // Increased token limit for rights issue timetables 
+    maxTokens = 350000; // Increased from 250,000 
     temperature = 0.01; // Very precise temperature for structured output
   }
 
