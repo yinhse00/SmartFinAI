@@ -28,7 +28,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
 
   return (
-    <ScrollArea className="h-full pb-6" ref={scrollAreaRef}>
+    <ScrollArea className="h-full pb-6" ref={scrollAreaRef} type="always">
       <div className="py-4 space-y-4 px-4">
         {hasTruncatedMessages && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center">
