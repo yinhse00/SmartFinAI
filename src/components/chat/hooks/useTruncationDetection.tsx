@@ -1,6 +1,6 @@
 
 import { logTruncation, LogLevel } from '@/utils/truncation';
-import { detectTruncation, checkUnbalancedConstructs } from './basicDetection';
+import { detectTruncation, checkUnbalancedConstructs } from '@/utils/truncation/basicDetection';
 
 /**
  * Hook for specialized truncation detection
@@ -121,7 +121,15 @@ export function isTradingArrangementRelated(queryText: string): boolean {
          normalizedQuery.includes('schedule');
 }
 
-// Import at the top to avoid reference errors
+// Helper function to check if trading arrangement content is complete
+function isTradingArrangementComplete(content: string, queryType: string): boolean {
+  // Simple implementation to prevent errors
+  return content.toLowerCase().includes('timetable') && 
+         content.toLowerCase().includes('ex-date') && 
+         content.toLowerCase().includes('record date');
+}
+
+// Mock implementation to prevent errors
 function analyzeFinancialResponse(content: string, queryType: string) {
   // Simple mock implementation to prevent errors
   return {
@@ -131,12 +139,4 @@ function analyzeFinancialResponse(content: string, queryType: string) {
     missingElements: [],
     confidence: 'high'
   };
-}
-
-// Helper function to check if trading arrangement content is complete
-function isTradingArrangementComplete(content: string, queryType: string): boolean {
-  // Simple implementation to prevent errors
-  return content.toLowerCase().includes('timetable') && 
-         content.toLowerCase().includes('ex-date') && 
-         content.toLowerCase().includes('record date');
 }
