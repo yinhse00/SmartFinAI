@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -15,7 +15,7 @@ const ReferenceDocumentsList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   
-  // Use a more aggressive refetching strategy
+  // Use our hook with optimized refetching strategy
   const { 
     data: documents, 
     isLoading, 
@@ -23,16 +23,19 @@ const ReferenceDocumentsList: React.FC = () => {
     refetch 
   } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
   
-  // Ensure we update current page when category changes or documents are deleted
+  // Reset to page 1 when category changes or document count changes
   React.useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, documents?.length]);
   
-  // Handle explicit refetch
-  const handleRefetchDocuments = () => {
+  // Explicit refetch function with debounce protection
+  const handleRefetchDocuments = useCallback(() => {
     console.log('Manual refetch triggered');
-    refetch();
-  };
+    // Use setTimeout to ensure we don't have multiple rapid refetches
+    setTimeout(() => {
+      refetch();
+    }, 100);
+  }, [refetch]);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 

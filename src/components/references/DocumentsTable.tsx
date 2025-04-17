@@ -27,6 +27,9 @@ interface DocumentsTableProps {
 }
 
 const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocuments }) => {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [documentToDelete, setDocumentToDelete] = React.useState<{id: string, title: string} | null>(null);
+
   const handleDownload = async (doc: ReferenceDocument) => {
     try {
       // Create a temporary anchor element to trigger download
@@ -52,15 +55,18 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
     }
   };
   
-  const handleDelete = async (documentId: string, title: string) => {
+  const handleDelete = async () => {
+    if (!documentToDelete) return;
+    
     try {
-      console.log('Attempting to delete document:', documentId);
+      setIsDeleting(true);
+      console.log('Attempting to delete document:', documentToDelete.id);
       
       // Perform Supabase delete operation
       const { error } = await supabase
         .from('reference_documents')
         .delete()
-        .eq('id', documentId);
+        .eq('id', documentToDelete.id);
         
       if (error) {
         console.error('Supabase delete error:', error);
@@ -72,14 +78,19 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
       // Show success toast
       toast({
         title: "Document Deleted",
-        description: `${title} has been removed from the database.`,
+        description: `${documentToDelete.title} has been removed from the database.`,
       });
       
-      // Force immediate refetch rather than waiting for a timeout
+      // Reset state
+      setDocumentToDelete(null);
+      setIsDeleting(false);
+      
+      // Force immediate refetch
       refetchDocuments();
       
     } catch (error) {
       console.error('Delete error:', error);
+      setIsDeleting(false);
       toast({
         title: "Delete Failed",
         description: "Failed to delete the document. Please try again.",
@@ -99,95 +110,93 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
   }
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Document</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Size</TableHead>
-          <TableHead>Uploaded</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {documents.map((doc) => (
-          <TableRow key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
-            <TableCell className="font-medium">
-              <div className="flex items-center gap-2">
-                <DocumentCategoryIcon category={doc.category} />
-                <div>
-                  <div className="font-medium">{doc.title}</div>
-                  {doc.description && (
-                    <div className="text-xs text-gray-500">{doc.description}</div>
-                  )}
-                </div>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Badge variant="outline">
-                {categoryDisplayNames[doc.category]}
-              </Badge>
-            </TableCell>
-            <TableCell>{formatFileSize(doc.file_size)}</TableCell>
-            <TableCell>{formatDate(doc.created_at)}</TableCell>
-            <TableCell>
-              <div className="flex gap-2">
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => window.open(doc.file_url, '_blank')}
-                >
-                  <Eye size={16} className="text-gray-500 hover:text-gray-700" />
-                </Button>
-                <Button 
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDownload(doc)}
-                >
-                  <Download size={16} className="text-finance-medium-blue hover:text-finance-dark-blue" />
-                </Button>
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button 
-                      variant="ghost"
-                      size="icon"
-                    >
-                      <Trash2 size={16} className="text-red-500 hover:text-red-700" />
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Delete Document</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        Are you sure you want to delete "{doc.title}"? This action cannot be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction
-                        className="bg-red-500 hover:bg-red-600 text-white"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          // Close the dialog first before deleting
-                          const closeButton = document.querySelector('[data-state="open"] button[data-state="closed"]');
-                          if (closeButton && 'click' in closeButton) {
-                            (closeButton as HTMLElement).click();
-                          }
-                          // Then handle the deletion
-                          handleDelete(doc.id, doc.title);
-                        }}
-                      >
-                        Delete
-                      </AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              </div>
-            </TableCell>
+    <>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Document</TableHead>
+            <TableHead>Category</TableHead>
+            <TableHead>Size</TableHead>
+            <TableHead>Uploaded</TableHead>
+            <TableHead>Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {documents.map((doc) => (
+            <TableRow key={doc.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
+              <TableCell className="font-medium">
+                <div className="flex items-center gap-2">
+                  <DocumentCategoryIcon category={doc.category} />
+                  <div>
+                    <div className="font-medium">{doc.title}</div>
+                    {doc.description && (
+                      <div className="text-xs text-gray-500">{doc.description}</div>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline">
+                  {categoryDisplayNames[doc.category]}
+                </Badge>
+              </TableCell>
+              <TableCell>{formatFileSize(doc.file_size)}</TableCell>
+              <TableCell>{formatDate(doc.created_at)}</TableCell>
+              <TableCell>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => window.open(doc.file_url, '_blank')}
+                  >
+                    <Eye size={16} className="text-gray-500 hover:text-gray-700" />
+                  </Button>
+                  <Button 
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleDownload(doc)}
+                  >
+                    <Download size={16} className="text-finance-medium-blue hover:text-finance-dark-blue" />
+                  </Button>
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button 
+                        variant="ghost"
+                        size="icon"
+                      >
+                        <Trash2 size={16} className="text-red-500 hover:text-red-700" />
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Document</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to delete "{doc.title}"? This action cannot be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          disabled={isDeleting}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setDocumentToDelete({ id: doc.id, title: doc.title });
+                            handleDelete();
+                          }}
+                        >
+                          {isDeleting ? 'Deleting...' : 'Delete'}
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </>
   );
 };
 
