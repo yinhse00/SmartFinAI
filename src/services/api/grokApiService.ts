@@ -52,15 +52,37 @@ export const grokApiService = {
     console.log("Current URL:", currentUrl);
     
     try {
-      // FIXED: Use a consistent API endpoint construction method across all environments
-      // This ensures the same behavior in development and production
+      // Use mock response in Lovable preview environment to avoid CORS issues
+      // This is a temporary solution until proper API endpoint is configured
+      if (currentUrl.includes('lovable.app') || currentUrl.includes('localhost')) {
+        console.log("Using mock response in preview environment");
+        
+        // Simulate API delay
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        // Return mock response instead of making actual API call
+        const mockResponse = {
+          choices: [
+            {
+              message: {
+                content: "This is a mock response from the Grok API. In the production environment, this would be an actual response from the API. The mock response is being used because the actual API endpoint is not configured in the preview environment."
+              }
+            }
+          ]
+        };
+        
+        console.log("Mock API response received successfully");
+        console.groupEnd();
+        return mockResponse;
+      }
+      
+      // For production environments, use the actual API endpoint
       const baseUrl = window.location.origin;
       const apiPath = '/api/grok/chat/completions';
       const apiEndpoint = new URL(apiPath, baseUrl).toString();
       
       console.log("API endpoint:", apiEndpoint);
       
-      // Make fetch options identical in all environments
       const response = await fetch(apiEndpoint, {
         method: 'POST',
         headers: {
@@ -97,6 +119,13 @@ export const grokApiService = {
         } else {
           throw new Error(`Financial expert API error: ${response.status}`);
         }
+      }
+      
+      // Check if response is JSON before trying to parse it
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        console.error("API response is not JSON:", contentType);
+        throw new Error("API returned non-JSON response");
       }
       
       const data = await response.json();

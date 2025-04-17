@@ -38,7 +38,7 @@ export const useContextRetrieval = () => {
       contextTime = Date.now() - contextStart;
       
       // For FAQ queries, ensure we've searched across multiple potential sources
-      if (isFaqQuery) {
+      if (isFaqQuery === true) {
         console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
         
         // If initial search didn't yield strong FAQ content, try multiple search strategies

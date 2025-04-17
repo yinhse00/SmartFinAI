@@ -49,15 +49,23 @@ export const responseEnhancer = {
 function isTradingArrangementQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase();
   
-  // Ensure explicit boolean return
-  return !!(lowerPrompt.includes('trading arrangement') || 
-         (lowerPrompt.includes('trading') && lowerPrompt.includes('schedule')) ||
-         ((lowerPrompt.includes('rights issue') || 
-           lowerPrompt.includes('open offer') ||
-           lowerPrompt.includes('share consolidation') ||
-           lowerPrompt.includes('sub-division') ||
-           lowerPrompt.includes('board lot') || 
-           lowerPrompt.includes('company name')) && 
-           (lowerPrompt.includes('timetable') || 
-            lowerPrompt.includes('schedule'))));
+  // Check for trading arrangement indicators in the prompt
+  const hasTradingArrangement = lowerPrompt.includes('trading arrangement');
+  const hasTradingSchedule = lowerPrompt.includes('trading') && lowerPrompt.includes('schedule');
+  
+  // Check for corporate actions with timetables
+  const hasCorporateAction = 
+    lowerPrompt.includes('rights issue') || 
+    lowerPrompt.includes('open offer') ||
+    lowerPrompt.includes('share consolidation') ||
+    lowerPrompt.includes('sub-division') ||
+    lowerPrompt.includes('board lot') || 
+    lowerPrompt.includes('company name');
+    
+  const hasTimeReference = 
+    lowerPrompt.includes('timetable') || 
+    lowerPrompt.includes('schedule');
+  
+  // Return true if any of the conditions are met
+  return hasTradingArrangement || hasTradingSchedule || (hasCorporateAction && hasTimeReference);
 }

@@ -73,7 +73,7 @@ export const useQueryExecution = (
       console.log("Step 3: Retrieving relevant regulatory context with optimized search");
       const { regulatoryContext, reasoning, contextTime, usedSummaryIndex } = await retrieveRegulatoryContext(
         queryText, 
-        !!isFaqQuery // Explicit boolean conversion
+        Boolean(isFaqQuery) // Explicit boolean conversion
       );
       
       // Log context info
