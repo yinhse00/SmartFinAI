@@ -1,3 +1,4 @@
+
 import { GrokResponse } from '@/types/grok';
 import { responseFormatter } from './responseFormatter';
 import { detectFinancialExpertiseArea } from '@/services/financial/expertiseDetection';
@@ -16,7 +17,7 @@ export const responseEnhancer = {
     usedContext: boolean,
     contextRelevanceScore: number,
     queryText: string,
-    isBackupResponse?: boolean  // Added optional parameter
+    isBackupResponse?: boolean
   ): GrokResponse => {
     const isExpertResponse = detectFinancialExpertiseArea(queryText) !== 'general';
     const tradingInfo = isTradingArrangementQuery(queryText);
@@ -37,7 +38,7 @@ export const responseEnhancer = {
       containsTakeoversCode,
       isWhitewashQuery,
       hasRefDocuments,
-      isBackupResponse  // Pass the parameter
+      isBackupResponse
     );
   }
 };
