@@ -46,7 +46,8 @@ export const useResponseAnalysis = () => {
     
     // Check for incomplete sentences at the end
     // Fix: Properly convert RegExp match result to boolean
-    const endsWithCompleteSentence = responseText.trim().match(/[.!?。]\s*$/) !== null;
+    const matchResult = responseText.trim().match(/[.!?。]\s*$/);
+    const endsWithCompleteSentence = matchResult !== null;
     const lastSentenceIncomplete = !endsWithCompleteSentence;
     const isLongResponse = responseText.length > 1000;
     
