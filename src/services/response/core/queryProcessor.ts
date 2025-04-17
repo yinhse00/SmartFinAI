@@ -27,7 +27,7 @@ export const queryProcessor = {
     // Check if this might be FAQ related
     const isFaqQuery = params.prompt.toLowerCase().includes('faq') || 
                      params.prompt.toLowerCase().includes('continuing obligation') ||
-                     params.prompt.match(/\b10\.4\b/);
+                     !!params.prompt.match(/\b10\.4\b/); // Fixed: Use !! to ensure boolean type
     
     console.log('Detected Financial Expertise Area:', queryType);
     
