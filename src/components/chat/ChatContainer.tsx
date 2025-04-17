@@ -1,10 +1,11 @@
 
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -41,11 +42,16 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       <CardContent 
         className="flex-1 p-0 overflow-hidden max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
       >
-        <ChatHistory 
-          messages={messages} 
-          isLoading={isLoading} 
-          onRetry={retryLastQuery}
-        />
+        <ScrollArea 
+          className="h-full w-full pr-2" 
+          type="always"
+        >
+          <ChatHistory 
+            messages={messages} 
+            isLoading={isLoading} 
+            onRetry={retryLastQuery}
+          />
+        </ScrollArea>
       </CardContent>
       <ChatInput 
         input={input}
