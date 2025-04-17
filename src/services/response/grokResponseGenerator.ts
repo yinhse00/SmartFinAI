@@ -168,7 +168,7 @@ export const grokResponseGenerator = {
             metadata: {
               contextUsed: false,
               relevanceScore: 0.5,
-              isFallback: true
+              isBackupResponse: true  // Changed from isFallback to isBackupResponse to match the type definition
             }
           };
         }
