@@ -1,5 +1,6 @@
 
 import { contextService } from '@/services/regulatory/contextService';
+import { summaryIndexService } from '@/services/database/summaryIndexService';
 
 /**
  * Hook for retrieving regulatory context
@@ -12,12 +13,28 @@ export const useContextRetrieval = () => {
     let regulatoryContext = '';
     let reasoning = '';
     let contextTime = 0;
+    let usedSummaryIndex = false;
     
     try {
       const contextStart = Date.now();
-      const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
-      regulatoryContext = contextResult.context || '';
-      reasoning = contextResult.reasoning || '';
+      
+      // Step 1: Check Summary and Keyword Index first for faster lookup
+      console.log('Checking Summary and Keyword Index for quick matches...');
+      const summaryResult = await summaryIndexService.findRelevantSummary(queryText);
+      
+      if (summaryResult.found) {
+        console.log('Found relevant match in Summary Index');
+        regulatoryContext = summaryResult.context || '';
+        reasoning = 'Retrieved from Summary and Keyword Index for faster processing';
+        usedSummaryIndex = true;
+      } else {
+        // Step 2: If no match in Summary Index, perform comprehensive search
+        console.log('No match in Summary Index, performing comprehensive database search');
+        const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
+        regulatoryContext = contextResult.context || '';
+        reasoning = contextResult.reasoning || '';
+      }
+      
       contextTime = Date.now() - contextStart;
       
       // For FAQ queries, ensure we've searched across multiple potential sources
@@ -59,7 +76,7 @@ export const useContextRetrieval = () => {
       reasoning = 'Failed to retrieve context due to an error';
     }
     
-    return { regulatoryContext, reasoning, contextTime };
+    return { regulatoryContext, reasoning, contextTime, usedSummaryIndex };
   };
 
   return { retrieveRegulatoryContext };

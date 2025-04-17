@@ -50,7 +50,8 @@ export const useQueryExecution = (
       // Start logging
       logQueryStart(queryText);
       
-      // Prepare query parameters and determine query type
+      // Step 1: Prepare query parameters and determine query type (preliminary analysis)
+      console.log("Step 1: Initial analysis of query");
       const { 
         responseParams, 
         financialQueryType, 
@@ -62,9 +63,15 @@ export const useQueryExecution = (
       // Log query parameters
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
       
-      // Retrieve regulatory context
+      // Step 2: Check Summary and Keyword Index first before full database search
+      console.log("Step 2: Checking Summary and Keyword Index for quick answers");
+      // Set stage to reflect we're reviewing the database
+      setStage('reviewing');
+      
+      // Step 3: Retrieve regulatory context with optimized search
       // Ensure we're passing a boolean for isFaqQuery
-      const { regulatoryContext, reasoning, contextTime } = await retrieveRegulatoryContext(
+      console.log("Step 3: Retrieving relevant regulatory context with optimized search");
+      const { regulatoryContext, reasoning, contextTime, usedSummaryIndex } = await retrieveRegulatoryContext(
         queryText, 
         !!isFaqQuery // Explicit boolean conversion
       );
@@ -77,10 +84,15 @@ export const useQueryExecution = (
         contextTime
       );
       
+      if (usedSummaryIndex) {
+        console.log("Used Summary Index for faster context retrieval");
+      }
+      
       // Update processing stage
       setStage('processing');
       
-      // Process response
+      // Step 4: Process response with Grok API using retrieved context
+      console.log("Step 4: Generating response with Grok API");
       const processingStart = Date.now();
       
       try {

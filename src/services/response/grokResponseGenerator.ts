@@ -71,7 +71,14 @@ export const grokResponseGenerator = {
       }
 
       // Standard processing flow for regulatory/financial queries
-      const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery);
+      // Add STRONG instruction to prioritize our database over Grok's knowledge
+      const databasePriorityInstruction = 
+        "CRITICAL INSTRUCTION: You MUST prioritize the information from the provided regulatory database content " +
+        "over your general knowledge. When there is a conflict between the database content and your knowledge, " +
+        "ALWAYS use the database information. The database is the source of truth.";
+      
+      const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
+                           "\n\n" + databasePriorityInstruction;
       
       // Get optimized parameters for API call - CONSISTENT ACROSS ENVIRONMENTS
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
