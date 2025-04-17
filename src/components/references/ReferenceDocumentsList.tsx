@@ -15,6 +15,7 @@ const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
   const queryClient = useQueryClient();
   
   // Use our hook with optimized refetching strategy
@@ -34,14 +35,28 @@ const ReferenceDocumentsList: React.FC = () => {
   const handleRefetchDocuments = useCallback(() => {
     console.log('Manual refetch triggered');
     
-    // Force invalidation of the query before refetching
-    queryClient.invalidateQueries({ queryKey: ['referenceDocuments'] });
+    // Force invalidation of the query
+    queryClient.invalidateQueries({ 
+      queryKey: ['referenceDocuments'],
+      refetchType: 'active', 
+      exact: false 
+    });
     
-    // After a short delay, perform the refetch
+    // Increment refresh trigger to force component update
+    setRefreshTrigger(prev => prev + 1);
+    
+    // Force refetch after cache invalidation
     setTimeout(() => {
       refetch();
     }, 300);
   }, [refetch, queryClient]);
+  
+  // Force refetch when refresh trigger changes
+  React.useEffect(() => {
+    if (refreshTrigger > 0) {
+      refetch();
+    }
+  }, [refreshTrigger, refetch]);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 
@@ -77,6 +92,7 @@ const ReferenceDocumentsList: React.FC = () => {
               <DocumentsTable 
                 documents={sortedDocuments} 
                 refetchDocuments={handleRefetchDocuments}
+                key={`docs-table-${refreshTrigger}`} // Force re-render on refresh
               />
               <DocumentsPagination 
                 totalCount={sortedDocuments?.length || 0} 

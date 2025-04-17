@@ -34,10 +34,11 @@ export function useReferenceDocuments(category?: string) {
       console.log(`Fetched ${typedData?.length || 0} documents`);
       return typedData || [];
     },
-    refetchOnWindowFocus: false,        // Don't refetch when window regains focus
-    staleTime: 0,                       // Consider data stale immediately
-    refetchInterval: false,             // Don't automatically refetch at intervals
-    retry: 1,                           // Retry failed requests once
-    refetchOnMount: 'always',           // Always refetch when component mounts
+    refetchOnWindowFocus: false,   
+    staleTime: 0,                  // Consider data stale immediately (important for refetching)
+    cacheTime: 0,                  // Don't cache the data at all
+    refetchInterval: false,        
+    retry: 1,                      
+    refetchOnMount: 'always',      // Always refetch when component mounts
   });
 }

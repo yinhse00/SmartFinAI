@@ -56,12 +56,16 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
         description: `${document.title} has been removed from the database.`,
       });
       
-      // Force immediate refetch
-      await refetchDocuments();
-      
-      // Reset state and close dialog
-      setIsDeleting(false);
+      // Close the dialog first
       setIsOpen(false);
+      
+      // Force immediate refetch with a small delay to ensure Supabase has processed the deletion
+      setTimeout(() => {
+        refetchDocuments();
+      }, 300);
+      
+      // Reset state
+      setIsDeleting(false);
       
     } catch (error) {
       console.error('Delete error:', error);
