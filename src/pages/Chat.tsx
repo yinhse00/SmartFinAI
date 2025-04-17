@@ -21,7 +21,18 @@ const Chat = () => {
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
           setGrokApiKey(defaultApiKey);
           console.log('Default API key set for production environment');
-          setDemoMode(false);
+          
+          // Verify key was actually stored by reading it back
+          setTimeout(() => {
+            const storedKey = getGrokApiKey();
+            if (storedKey && storedKey === defaultApiKey) {
+              console.log('API key verification successful');
+              setDemoMode(false);
+            } else {
+              console.warn('API key storage verification failed');
+              setDemoMode(true);
+            }
+          }, 100);
         } catch (error) {
           console.error('Failed to set default API key:', error);
           setDemoMode(true);
@@ -43,11 +54,24 @@ const Chat = () => {
             description: "Your API key appears to be in an invalid format. Please check and update it.",
             duration: 5000,
           });
+        } else {
+          console.log('Valid API key format detected');
         }
       }
     };
     
+    // Execute the check immediately
     checkAndSetApiKey();
+    
+    // Also set up a safety check after a short delay (useful for production environments)
+    const safetyCheck = setTimeout(() => {
+      if (!hasGrokApiKey()) {
+        console.warn('Safety check: No API key detected after initial setup');
+        checkAndSetApiKey();
+      }
+    }, 2000);
+    
+    return () => clearTimeout(safetyCheck);
   }, [toast]);
 
   return (

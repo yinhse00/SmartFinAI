@@ -6,7 +6,7 @@ import { responseGeneratorCore } from './core/responseGeneratorCore';
 import { requestBuilder } from './core/requestBuilder';
 import { queryProcessor } from './core/queryProcessor';
 import { errorHandler } from './core/errorHandler';
-import { responseOptimizer } from './modules/responseOptimizer'; // Add missing import
+import { responseOptimizer } from './modules/responseOptimizer'; // Fixed missing import
 
 /**
  * Main service for generating expert responses

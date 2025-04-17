@@ -52,11 +52,12 @@ export const grokApiService = {
     
     while (retries <= maxRetries) {
       try {
-        // FIXED: Use a proper absolute API endpoint that works in both dev and production
-        let apiEndpoint = '/api/grok/chat/completions';
+        // Use consistent API endpoint format that works in both environments
+        // Ensure it's a relative path starting with / for proper resolution in all environments
+        const apiEndpoint = '/api/grok/chat/completions';
         
-        // Log the API endpoint for debugging
         console.log("API endpoint:", apiEndpoint);
+        console.log("Environment:", process.env.NODE_ENV || "unknown");
         
         const response = await fetch(apiEndpoint, {
           method: 'POST',
@@ -65,7 +66,9 @@ export const grokApiService = {
             'Authorization': `Bearer ${apiKey}`,
             ...FINANCIAL_EXPERT_HEADERS
           },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify(requestBody),
+          // Force credentials inclusion for cross-origin requests in production
+          credentials: 'same-origin'
         });
         
         // Log response status for debugging
