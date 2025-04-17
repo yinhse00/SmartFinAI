@@ -5,7 +5,7 @@ import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export function useReferenceDocuments(category?: string) {
   return useQuery({
-    queryKey: ['referenceDocuments', category],
+    queryKey: ['referenceDocuments', category, Date.now()], // Add timestamp to force new cache entry each time
     queryFn: async (): Promise<ReferenceDocument[]> => {
       console.log('Fetching reference documents for category:', category);
       
@@ -37,8 +37,8 @@ export function useReferenceDocuments(category?: string) {
     refetchOnWindowFocus: true,    // Changed to true to ensure data refresh
     staleTime: 0,                  // Data is immediately stale
     gcTime: 0,                     // Don't cache the data at all
-    refetchInterval: false,        
-    retry: 2,                      // Increased retry attempts
+    refetchInterval: 2000,         // Force refetch every 2 seconds
     refetchOnMount: 'always',      // Always refetch when component mounts
+    refetchOnReconnect: 'always',  // Always refetch when reconnecting
   });
 }

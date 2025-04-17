@@ -25,6 +25,32 @@ interface DeleteDocumentDialogProps {
   refetchDocuments: () => void;
 }
 
+// Add a function to delete all documents that can be called from elsewhere
+export const deleteAllDocuments = async () => {
+  try {
+    console.log('Attempting to delete ALL documents');
+    
+    // Perform Supabase delete operation for all documents
+    const { error } = await supabase
+      .from('reference_documents')
+      .delete()
+      .neq('id', '0'); // This will delete all records
+      
+    if (error) {
+      console.error('Supabase delete all error:', error);
+      throw error;
+    }
+    
+    console.log('All documents deleted successfully from Supabase');
+    
+    // Return success
+    return { success: true };
+  } catch (error) {
+    console.error('Delete all error:', error);
+    return { success: false, error };
+  }
+};
+
 const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({ 
   document, 
   isOpen, 

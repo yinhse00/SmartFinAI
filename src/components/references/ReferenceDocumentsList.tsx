@@ -4,6 +4,7 @@ import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
 
 // Import our components
 import ReferenceSearch from './ReferenceSearch';
