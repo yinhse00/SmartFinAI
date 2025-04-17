@@ -4,7 +4,6 @@ import { Message } from '../ChatMessage';
 
 /**
  * Hook for handling errors during chat operations
- * FIXED: Ensure consistent error handling across environments
  */
 export const useErrorHandling = () => {
   const { toast } = useToast();
@@ -25,14 +24,14 @@ export const useErrorHandling = () => {
     console.log("Current environment:", isProduction ? "production" : "development");
     console.log("Current URL:", window.location.href);
     
-    // FIXED: Use consistent toast appearance across environments
+    // Use consistent toast appearance across environments
     toast({
       title: "SmartFinAI Response Error",
       description: "We encountered an issue processing your request. Showing available information.",
       variant: "destructive"
     });
     
-    // FIXED: Ensure consistent error message format across environments
+    // Ensure consistent error message format across environments
     const errorMessage: Message = {
       id: (Date.now() + 1).toString(),
       content: "I encountered an issue while analyzing your query. Please try again or rephrase your question.",
@@ -47,7 +46,7 @@ export const useErrorHandling = () => {
   const handleFallbackResponse = (isGrokApiKeySet: boolean) => {
     console.log('Using fallback response - API connection issue');
     
-    // FIXED: Use consistent toast appearance across environments
+    // Use consistent toast appearance across environments
     toast({
       title: "Using Fallback Information",
       description: "Could not retrieve complete financial expertise. Showing available information.",
