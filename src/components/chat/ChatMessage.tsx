@@ -24,9 +24,10 @@ export interface Message {
 interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
+  onTypingProgress?: () => void;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingProgress }) => {
   const { 
     sender, 
     content, 
@@ -65,6 +66,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
                 text={content} 
                 className="whitespace-pre-line"
                 onComplete={() => setIsTypingComplete(true)}
+                onProgress={onTypingProgress}
               />
             )}
             

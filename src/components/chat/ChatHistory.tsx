@@ -14,14 +14,24 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change or when loading
+  // Improved auto-scroll logic
+  const scrollToBottom = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  // Auto-scroll on messages change, loading state change, or typing progress
   useEffect(() => {
     // Use requestAnimationFrame to ensure DOM is fully updated before scrolling
-    requestAnimationFrame(() => {
-      if (messagesEndRef.current) {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    });
+    requestAnimationFrame(scrollToBottom);
+    
+    // Set up a periodic scroll check for typing animations
+    const typingScrollInterval = setInterval(scrollToBottom, 500);
+    
+    return () => {
+      clearInterval(typingScrollInterval);
+    };
   }, [messages, isLoading]);
 
   // Check if any messages are truncated
@@ -50,7 +60,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
           <ChatMessage 
             key={message.id} 
             message={message} 
-            onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined} 
+            onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
+            onTypingProgress={scrollToBottom} 
           />
         ))}
         {isLoading && <ChatLoadingIndicator />}
