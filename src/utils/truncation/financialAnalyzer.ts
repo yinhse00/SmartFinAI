@@ -17,31 +17,26 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     diagnostics: {} as any
   };
   
-  // CRITICAL FIX: Less aggressive truncation detection to match both environments
-  // Only detect clear, obvious truncation to avoid false positives
-  if (content.endsWith('...') || content.endsWith('…') || content.endsWith('--') || 
-      content.match(/\.\s*$/m) === null) { // Missing final period
+  // CRITICAL FIX: Much more lenient truncation detection to match both environments
+  // Only detect very obvious truncation patterns
+  if (content.endsWith('...') || 
+      content.endsWith('…') || 
+      (content.length > 0 && content.length < 50)) { // Extremely short responses
     analysis.isTruncated = true;
     analysis.isComplete = false;
     analysis.missingElements.push("Response appears truncated by basic indicators");
-    
-    console.log("Basic truncation detected", {
-      contentLength: content.length,
-      lastChars: content.slice(-30)
-    });
   }
   
-  // More lenient financial analysis - only mark as incomplete for serious issues
-  const financialAnalysis = analyzeFinancialResponseDetails(content, financialQueryType);
-  
-  // Only consider the response incomplete if multiple elements are missing
-  if (financialAnalysis.missingElements.length > 1) {
-    analysis.isComplete = false;
-    analysis.missingElements.push(...financialAnalysis.missingElements);
+  // Only run financial analysis for specific financial query types
+  if (financialQueryType && 
+      ['rights_issue', 'open_offer', 'takeovers', 'listing_rules'].includes(financialQueryType)) {
+    const financialAnalysis = analyzeFinancialResponseDetails(content, financialQueryType);
     
-    console.log("Financial analysis indicates incomplete response", {
-      missingElements: financialAnalysis.missingElements
-    });
+    // Use even more lenient criteria - only mark incomplete for 2+ missing critical elements
+    if (financialAnalysis.missingElements.length > 2) {
+      analysis.isComplete = false;
+      analysis.missingElements.push(...financialAnalysis.missingElements);
+    }
   }
   
   return analysis;

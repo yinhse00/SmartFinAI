@@ -1,7 +1,7 @@
 
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
-import { ExternalLink } from 'lucide-react';
+import { BookOpen } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { hasGrokApiKey, getGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
@@ -16,9 +16,10 @@ const Chat = () => {
       // CRITICAL FIX: Clear any problematic API keys from localStorage to start fresh
       try {
         const currentApiKey = getGrokApiKey();
-        if (currentApiKey && !currentApiKey.startsWith('xai-')) {
+        if (currentApiKey && (!currentApiKey.startsWith('xai-') || currentApiKey.length < 20)) {
           console.warn('Invalid API key format detected, clearing');
           localStorage.removeItem('GROK_API_KEY');
+          localStorage.removeItem('grokApiKey');
         }
       } catch (e) {
         console.error('Error checking existing API key:', e);
@@ -29,13 +30,21 @@ const Chat = () => {
       if (!apiKeyExists) {
         // Try to set a default API key for all environments
         try {
+          // CRITICAL FIX: Use a stable API key format
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
           
-          // CRITICAL FIX: Use multiple storage methods to ensure it works across environments
-          localStorage.setItem('GROK_API_KEY', defaultApiKey);
-          setGrokApiKey(defaultApiKey);
-          
-          console.log('Default API key set');
+          // Use multiple storage methods to ensure it works across environments
+          try {
+            localStorage.setItem('GROK_API_KEY', defaultApiKey);
+            localStorage.setItem('grokApiKey', defaultApiKey); // Alternative name
+            setGrokApiKey(defaultApiKey); // Through service
+            
+            console.log('Default API key set');
+            setDemoMode(false);
+          } catch (e) {
+            console.error('Error setting API key in localStorage:', e);
+            setDemoMode(true);
+          }
           
           // Verify key was actually stored by reading it back
           setTimeout(() => {
@@ -47,44 +56,43 @@ const Chat = () => {
               console.warn('API key storage verification failed');
               setDemoMode(true);
               
-              // Try direct localStorage access as fallback
+              // Try window.localStorage as direct fallback
               try {
-                localStorage.setItem('grokApiKey', defaultApiKey);
-                localStorage.setItem('GROK_API_KEY', defaultApiKey);
-                console.log('Attempted alternative storage methods for API key');
+                window.localStorage.setItem('GROK_API_KEY', defaultApiKey);
+                window.localStorage.setItem('grokApiKey', defaultApiKey);
+                console.log('Attempted global storage methods for API key');
                 
-                // Check if either method worked
-                if (localStorage.getItem('grokApiKey') === defaultApiKey || 
-                    localStorage.getItem('GROK_API_KEY') === defaultApiKey) {
+                if (window.localStorage.getItem('GROK_API_KEY') === defaultApiKey) {
                   setDemoMode(false);
+                  console.log('API key set using window.localStorage');
                 }
               } catch (e) {
-                console.error('localStorage fallback failed:', e);
+                console.error('All localStorage methods failed:', e);
               }
             }
-          }, 100);
+          }, 300); // Longer timeout for verification
         } catch (error) {
           console.error('Failed to set default API key:', error);
           setDemoMode(true);
           toast({
             title: "No API Key Detected",
-            description: "You'll need to set your Grok API key to connect to the service.",
+            description: "You'll need to set your API key to connect to the service.",
             duration: 5000,
           });
         }
       } else {
-        // API key exists, verify it starts with expected prefix
+        // API key exists, verify format
         const apiKey = getGrokApiKey();
-        const isValidFormat = apiKey && apiKey.startsWith('xai-');
+        const isValidFormat = apiKey && apiKey.startsWith('xai-') && apiKey.length >= 20;
         setDemoMode(!isValidFormat);
         
         if (!isValidFormat && apiKey) {
-          console.warn('Invalid API key format detected, attempting to set default key');
-          const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
-          
-          // Try multiple storage methods
+          console.warn('Invalid API key format detected, attempting to fix');
           try {
+            // Try to recover by setting the default key again
+            const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
             localStorage.setItem('GROK_API_KEY', defaultApiKey);
+            localStorage.setItem('grokApiKey', defaultApiKey); 
             setGrokApiKey(defaultApiKey);
             
             // Double check it worked
@@ -93,7 +101,7 @@ const Chat = () => {
                 console.log('Successfully fixed API key format');
                 setDemoMode(false);
               }
-            }, 100);
+            }, 200);
           } catch (e) {
             console.error('Failed to fix API key:', e);
           }
@@ -112,10 +120,10 @@ const Chat = () => {
       }
     }, 2000);
     
-    // CRITICAL FIX: Add periodic check for API key validity
+    // Add periodic check for API key validity
     const intervalCheck = setInterval(() => {
       const key = getGrokApiKey();
-      if (!key || !key.startsWith('xai-')) {
+      if (!key || !key.startsWith('xai-') || key.length < 20) {
         console.warn('Periodic check: API key missing or invalid, attempting to fix');
         checkAndSetApiKey();
       }
@@ -127,12 +135,12 @@ const Chat = () => {
     };
   }, [toast]);
 
-  // CRITICAL FIX: Add debug component that shows current API key status
+  // Debug function for API key status
   const debugApiKey = () => {
     try {
       const key = getGrokApiKey();
       console.log('Current API key:', key ? `${key.substring(0, 8)}...` : 'none');
-      console.log('API key valid format:', key && key.startsWith('xai-'));
+      console.log('API key valid format:', key && key.startsWith('xai-') && key.length >= 20);
       console.log('Environment:', window.location.href.includes('localhost') ? 'development' : 'production');
       console.log('URL:', window.location.href);
       
@@ -148,20 +156,12 @@ const Chat = () => {
   return (
     <MainLayout>
       <div className="mb-4">
-        <h1 className="text-2xl font-bold text-finance-dark-blue dark:text-white">Regulatory Assistant</h1>
+        <h1 className="text-2xl font-bold text-finance-dark-blue dark:text-white">SmartFinAI</h1>
         <p className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
-          Ask questions about Hong Kong listing rules, takeovers code, and compliance requirements.
+          Your expert assistant for Hong Kong listing rules, takeovers code, and compliance requirements.
           {demoMode && (
             <span className="ml-1 text-sm bg-finance-highlight/40 dark:bg-finance-medium-blue/30 px-2 py-0.5 rounded-full flex items-center gap-1">
               Demo Mode
-              <a 
-                href="https://www.grok.x.ai/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-finance-medium-blue dark:text-finance-accent-blue font-medium flex items-center gap-0.5 hover:underline"
-              >
-                Grok AI <ExternalLink size={12} />
-              </a>
             </span>
           )}
           

@@ -2,9 +2,8 @@
 import React, { useState } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TabsContent } from '@/components/ui/tabs';
 
-// Import our new components
+// Import our components
 import ReferenceSearch from './ReferenceSearch';
 import CategoryTabs from './CategoryTabs';
 import ReferencesSkeleton from './ReferencesSkeleton';
@@ -15,7 +14,7 @@ const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const { data: documents, isLoading, error } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
+  const { data: documents, isLoading, error, refetch } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 
@@ -23,6 +22,12 @@ const ReferenceDocumentsList: React.FC = () => {
     doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     (doc.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
   );
+  
+  // Sort documents by date (newest first)
+  const sortedDocuments = filteredDocuments ? 
+    [...filteredDocuments].sort((a, b) => 
+      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    ) : [];
 
   return (
     <Card className="finance-card">
@@ -42,9 +47,12 @@ const ReferenceDocumentsList: React.FC = () => {
             </div>
           ) : (
             <>
-              <DocumentsTable documents={filteredDocuments || []} />
+              <DocumentsTable 
+                documents={sortedDocuments} 
+                refetchDocuments={() => refetch()}
+              />
               <DocumentsPagination 
-                totalCount={filteredDocuments?.length || 0} 
+                totalCount={sortedDocuments?.length || 0} 
                 currentPage={currentPage}
                 onPageChange={setCurrentPage}
               />

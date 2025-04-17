@@ -2,18 +2,15 @@
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { Message } from '../ChatMessage';
-import { useResponseFormatter } from './useResponseFormatter';
 import { useErrorHandling } from './useErrorHandling';
 import { useResponseAnalysis } from './useResponseAnalysis';
-import { useRetryStrategies } from './useRetryStrategies';
 import { useFallbackDetection } from './useFallbackDetection';
 import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
-import { useEnhancedRetryHandling } from './useEnhancedRetryHandling';
 import { useResponseProcessor } from './useResponseProcessor';
 
 /**
- * Hook for handling API responses with massively increased token limits
+ * Hook for handling API responses with consistent behavior across environments
  */
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -22,11 +19,9 @@ export const useResponseHandling = (
 ) => {
   const { toast } = useToast();
   const { handleApiError, handleFallbackResponse } = useErrorHandling();
-  const { analyzeResponseCompleteness, isQuerySimple, isQueryAggregationRelated } = useResponseAnalysis();
-  const { enhanceParamsForRetry, determineMaxRetries } = useRetryStrategies();
+  const { analyzeResponseCompleteness, isQuerySimple } = useResponseAnalysis();
   const { isFallbackResponse } = useFallbackDetection();
   const { enhanceTokenLimits } = useTokenManagement();
-  const { executeRetryWithEnhancedParams } = useEnhancedRetryHandling();
   const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
 
   const handleApiResponse = async (
@@ -38,34 +33,28 @@ export const useResponseHandling = (
     processedMessages: Message[]
   ) => {
     try {
-      console.log('Calling Grok financial expert API');
+      console.log('Calling API for SmartFinAI response');
       
-      // CRITICAL FIX: Add timing logs for debugging
+      // Add timing logs
       const apiCallStartTime = Date.now();
       console.log('API call started at:', new Date(apiCallStartTime).toISOString());
       
-      // Determine if this is a simple conversational query
+      // Determine if this is a simple query
       const isSimpleQuery = isQuerySimple(queryText);
       
-      // Determine if this is an aggregation query for special handling
-      const isAggregationQuery = isQueryAggregationRelated(queryText);
-      
-      // Apply token limits and enhancements - use more conservative limits
+      // Apply conservative token limits for consistency
       const enhancedParams = {
         ...responseParams,
-        temperature: Math.min(0.3, responseParams.temperature || 0.3), // Lower temperature
-        maxTokens: Math.min(2800, responseParams.maxTokens || 2800)    // Conservative token limit
+        temperature: Math.min(0.3, responseParams.temperature || 0.3),
+        maxTokens: Math.min(2500, responseParams.maxTokens || 2500)
       };
       
-      console.log(`Using request parameters: tokens=${enhancedParams.maxTokens}, temperature=${enhancedParams.temperature}`);
-      
-      // CRITICAL FIX: Add environment-specific logging
+      // Log environment info
       const isProduction = !window.location.href.includes('localhost') && 
                          !window.location.href.includes('127.0.0.1');
       console.log("Current environment:", isProduction ? "production" : "development");
-      console.log("Current URL:", window.location.href);
       
-      // Make the initial API call
+      // Make the API call
       let apiResponse: GrokResponse;
       try {
         apiResponse = await grokService.generateResponse(enhancedParams);
@@ -78,15 +67,13 @@ export const useResponseHandling = (
         return errorMessage;
       }
       
-      // Check if it's using fallback
+      // Check for fallback response
       const isUsingFallback = isFallbackResponse(apiResponse.text);
       
-      // CRITICAL FIX: Better debug logging for fallback detection
+      // Better debug logging
       console.log("Fallback detection result:", {
         isUsingFallback,
         responseLength: apiResponse.text.length,
-        firstChars: apiResponse.text.substring(0, 30),
-        lastChars: apiResponse.text.substring(apiResponse.text.length - 30)
       });
       
       if (isUsingFallback && isGrokApiKeySet) {
@@ -94,7 +81,7 @@ export const useResponseHandling = (
         handleFallbackResponse(isGrokApiKeySet);
       }
       
-      // Analyze responseText completeness
+      // Analyze response completeness
       let completenessCheck = analyzeResponseCompleteness(
         apiResponse.text, 
         financialQueryType, 
@@ -102,15 +89,14 @@ export const useResponseHandling = (
         isSimpleQuery
       );
       
-      // Log the completeness check results
-      console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
+      console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
       
-      // CRITICAL FIX: Always show the partial response even if it seems incomplete
+      // CRITICAL FIX: Always show the partial response even if incomplete
       // This ensures consistent behavior between environments
       if (!completenessCheck.isComplete) {
-        console.log("Response appears incomplete, marking as truncated but showing partial response");
+        console.log("Response appears incomplete, showing partial response");
         
-        // Mark response as truncated so UI can show retry option
+        // Mark as truncated for UI
         apiResponse.metadata = {
           ...apiResponse.metadata,
           responseCompleteness: {
@@ -120,15 +106,15 @@ export const useResponseHandling = (
           }
         };
         
-        // Show toast but ALWAYS display the partial response
+        // Show toast but always display the partial response
         toast({
-          title: "Partial Response",
-          description: "The response appears incomplete. You can retry for a more complete answer.",
+          title: "Partial Response Available",
+          description: "The complete answer is not available. Showing partial information.",
           duration: 8000,
         });
       }
       
-      // Process the API response and update the UI
+      // Process and display response
       return processApiResponse(
         apiResponse,
         processedMessages,

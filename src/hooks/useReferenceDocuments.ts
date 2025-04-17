@@ -30,6 +30,9 @@ export function useReferenceDocuments(category?: string) {
       })) as ReferenceDocument[];
       
       return typedData || [];
-    }
+    },
+    refetchOnWindowFocus: false,
+    refetchOnMount: true,
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 }

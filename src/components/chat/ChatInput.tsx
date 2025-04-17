@@ -2,7 +2,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send, Loader2, Info, Calendar, Clock, BookOpen, FileText } from 'lucide-react';
+import { Send, Loader2, Info, Calendar, FileText, BookOpen } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -25,20 +25,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onOpenApiKeyDialog,
   handleKeyDown
 }) => {
-  // Suggestions for specific financial queries
-  const suggestions = [
-    "rights issue timetable with starting date [date]",
-    "connected transaction requirements",
-    "takeovers code Rule 26 explanation",
-    "prospectus disclosure requirements"
-  ];
-
   return (
     <div className="p-4 border-t">
       <div className="flex gap-2">
         <Input
-          className="flex-1"
-          placeholder="Ask about HK listing rules, takeovers, or regulatory requirements..."
+          className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+          placeholder="Ask about HK listing rules, takeovers, or compliance requirements..."
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -57,7 +49,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div className="text-gray-600 dark:text-gray-300 flex items-center gap-1">
           <Info size={12} />
           <span>
-            Using Grok AI for accurate regulatory assistance. Responses include context from our database.
+            SmartFinAI provides Hong Kong regulatory assistance with database-backed responses.
             {!isGrokApiKeySet && (
               <Badge 
                 variant="outline" 

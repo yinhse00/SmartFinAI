@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { CardHeader, CardTitle } from '@/components/ui/card';
-import { Bot, Key, ExternalLink, AlertTriangle } from 'lucide-react';
+import { Bot, Key, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChatHeaderProps {
@@ -14,7 +14,7 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isGrokApiKeySet, onOpenApiKeyDi
     <CardHeader className="pb-3 border-b">
       <CardTitle className="text-lg font-medium flex items-center gap-2">
         <Bot size={18} /> 
-        Regulatory Assistant
+        SmartFinAI
         <div className="ml-auto flex items-center gap-2">
           {!isGrokApiKeySet && (
             <div className="flex items-center space-x-2">
@@ -35,14 +35,6 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ isGrokApiKeySet, onOpenApiKeyDi
               <Key size={14} /> Set API Key
             </Button>
           )}
-          <a 
-            href="https://www.grok.x.ai/"
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-xs text-finance-medium-blue dark:text-finance-accent-blue flex items-center gap-0.5 hover:underline"
-          >
-            About Grok AI <ExternalLink size={10} />
-          </a>
         </div>
       </CardTitle>
     </CardHeader>

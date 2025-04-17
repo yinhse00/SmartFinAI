@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import KnowledgePanel from './KnowledgePanel';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
@@ -8,14 +8,10 @@ import ProcessingIndicator from './ProcessingIndicator';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { 
-  detectTruncationComprehensive, 
-  isTradingArrangementComplete, 
-  getTruncationDiagnostics,
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Database } from 'lucide-react';
-import { needsEnhancedTokenSettings } from './utils/parameterUtils';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -50,40 +46,13 @@ const ChatInterface = () => {
         const content = lastMessage.content;
         const queryType = lastMessage.queryType;
         
-        // Comprehensive truncation detection with detailed diagnostics
-        const diagnostics = getTruncationDiagnostics(content);
-        const isPotentiallyTruncated = diagnostics.isTruncated;
-        
-        // For trading arrangement related queries, perform specialized check
-        const previousUserMessage = messages.length > 1 ? 
-          messages[messages.length - 2].content : '';
-          
-        const isTradingRelated = queryType && 
-          ['rights_issue', 'open_offer', 'share_consolidation', 'board_lot_change', 'company_name_change']
-            .includes(queryType);
-            
-        const isTradingArrangementIncomplete = isTradingRelated && 
-          !isTradingArrangementComplete(content, queryType);
-          
-        // Check for expected content pattern in rights issue responses
-        const isRightsIssueWithMissingContent = queryType === 'rights_issue' && 
-          content.includes('timetable') && 
-          !content.includes('Record Date') && 
-          !content.toLowerCase().includes('ex-rights');
-          
-        // Use enhanced financial response analysis for more accurate detection
+        // Use simplified financial analysis
         const financialAnalysis = analyzeFinancialResponse(content, queryType);
         
-        const isTruncated = isPotentiallyTruncated || 
-                           isTradingArrangementIncomplete || 
-                           isRightsIssueWithMissingContent ||
-                           !financialAnalysis.isComplete;
+        const isTruncated = !financialAnalysis.isComplete;
 
         if (isTruncated) {
           console.log('Response appears incomplete:', {
-            basicTruncation: isPotentiallyTruncated,
-            tradingArrangementIncomplete: isTradingArrangementIncomplete,
-            diagnostics: diagnostics.reasons,
             financialAnalysis: financialAnalysis.missingElements
           });
           
@@ -92,12 +61,10 @@ const ChatInterface = () => {
           updatedMessages[updatedMessages.length - 1].isTruncated = true;
           setMessages(updatedMessages);
           
-          // Show toast with retry option and more specific details
+          // Show toast with retry option
           toast({
             title: "Incomplete Response",
-            description: diagnostics.reasons.length > 0 
-              ? `The response appears incomplete: ${diagnostics.reasons[0]}` 
-              : "The response appears to have been cut off. You can retry your query to get a complete answer.",
+            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
             duration: 15000,
             action: <Button 
                      onClick={retryLastQuery} 
@@ -117,7 +84,7 @@ const ChatInterface = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex-1 flex gap-4">
-        {/* Financial Expert Chat Window */}
+        {/* SmartFinAI Chat Window */}
         <div className="flex-1 flex flex-col">
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
@@ -150,7 +117,7 @@ const ChatInterface = () => {
         <KnowledgePanel />
       </div>
 
-      {/* API Key Dialog for Financial Expert Access */}
+      {/* API Key Dialog */}
       <APIKeyDialog 
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}

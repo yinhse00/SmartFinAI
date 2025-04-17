@@ -25,14 +25,14 @@ export const useErrorHandling = () => {
     console.log("Current URL:", window.location.href);
     
     toast({
-      title: "Expert Response Error",
-      description: "Failed to generate a financial expert response. Will show partial results if available.",
+      title: "SmartFinAI Response Error",
+      description: "We encountered an issue processing your request. Showing available information.",
       variant: "destructive"
     });
     
     const errorMessage: Message = {
       id: (Date.now() + 1).toString(),
-      content: "I encountered an error while analyzing your financial query. I'll try to show partial results if available. You can also try rephrasing your question.",
+      content: "I encountered an issue while analyzing your query. Here's what I was able to process. You can try rephrasing your question if needed.",
       sender: 'bot',
       timestamp: new Date(),
       isError: true
@@ -46,7 +46,7 @@ export const useErrorHandling = () => {
     
     // CRITICAL FIX: Less alarming message for fallback responses
     toast({
-      title: "Partial Response Available",
+      title: "Partial Information Available",
       description: "Could not retrieve complete financial expertise. Showing available information.",
       variant: "default" // Changed from destructive to default
     });

@@ -7,9 +7,9 @@ const References = () => {
   return (
     <MainLayout>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-finance-dark-blue dark:text-white">Reference Management</h1>
+        <h1 className="text-2xl font-bold text-finance-dark-blue dark:text-white">Reference Database</h1>
         <p className="text-gray-600 dark:text-gray-300">
-          Upload and manage regulatory documents to enhance the system's knowledge
+          Upload, download and manage regulatory documents to enhance SmartFinAI's knowledge
         </p>
       </div>
       
