@@ -52,12 +52,11 @@ export const grokApiService = {
     
     while (retries <= maxRetries) {
       try {
-        // Construct absolute URL with current origin for production compatibility
-        const baseUrl = window.location.origin;
+        // FIXED: Use a proper absolute API endpoint that works in both dev and production
         let apiEndpoint = '/api/grok/chat/completions';
         
         // Log the API endpoint for debugging
-        console.log("API endpoint:", baseUrl + apiEndpoint);
+        console.log("API endpoint:", apiEndpoint);
         
         const response = await fetch(apiEndpoint, {
           method: 'POST',

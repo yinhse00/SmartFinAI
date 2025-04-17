@@ -4,24 +4,50 @@ import ChatInterface from '@/components/chat/ChatInterface';
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { hasGrokApiKey } from '@/services/apiKeyService';
+import { hasGrokApiKey, getGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
 
 const Chat = () => {
   const { toast } = useToast();
-  const [demoMode, setDemoMode] = useState(true);
+  const [demoMode, setDemoMode] = useState(false); // Default to production mode
   
-  // Check for Grok API key when the component mounts
+  // Check for Grok API key when the component mounts and set a default if needed
   useEffect(() => {
-    const apiKeyExists = hasGrokApiKey();
-    setDemoMode(!apiKeyExists);
+    const checkAndSetApiKey = () => {
+      const apiKeyExists = hasGrokApiKey();
+      
+      if (!apiKeyExists) {
+        // Try to set a default API key for production environments
+        try {
+          const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+          setGrokApiKey(defaultApiKey);
+          console.log('Default API key set for production environment');
+          setDemoMode(false);
+        } catch (error) {
+          console.error('Failed to set default API key:', error);
+          setDemoMode(true);
+          toast({
+            title: "No API Key Detected",
+            description: "You'll need to set your Grok API key to connect to the service.",
+            duration: 5000,
+          });
+        }
+      } else {
+        // API key exists, verify it starts with expected prefix
+        const apiKey = getGrokApiKey();
+        const isValidFormat = apiKey && apiKey.startsWith('xai-');
+        setDemoMode(!isValidFormat);
+        
+        if (!isValidFormat) {
+          toast({
+            title: "Invalid API Key Format",
+            description: "Your API key appears to be in an invalid format. Please check and update it.",
+            duration: 5000,
+          });
+        }
+      }
+    };
     
-    if (!apiKeyExists) {
-      toast({
-        title: "No API Key Detected",
-        description: "You'll need to set your Grok API key to connect to the service.",
-        duration: 5000,
-      });
-    }
+    checkAndSetApiKey();
   }, [toast]);
 
   return (
