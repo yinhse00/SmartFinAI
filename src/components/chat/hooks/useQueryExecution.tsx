@@ -76,50 +76,57 @@ export const useQueryExecution = (
       
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
       
-      // IMPORTANT CHANGE: Always perform comprehensive context retrieval regardless of query type
+      // IMPORTANT: Always perform comprehensive context retrieval regardless of query type
       // This ensures we always check the database first before answering
       let regulatoryContext = '';
       let reasoning = '';
       let contextTime = 0;
       
       // Always do a comprehensive database review for ALL queries
-      const contextStart = Date.now();
-      const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
-      regulatoryContext = contextResult.context || '';
-      reasoning = contextResult.reasoning || '';
-      contextTime = Date.now() - contextStart;
-      
-      // For FAQ queries, ensure we've searched across multiple potential sources
-      if (isFaqQuery) {
-        console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
+      try {
+        const contextStart = Date.now();
+        const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
+        regulatoryContext = contextResult.context || '';
+        reasoning = contextResult.reasoning || '';
+        contextTime = Date.now() - contextStart;
         
-        // If initial search didn't yield strong FAQ content, try multiple search strategies
-        if (!regulatoryContext.toLowerCase().includes('faq') && 
-            !regulatoryContext.toLowerCase().includes('continuing obligation')) {
-          console.log('Initial search didn\'t find specific FAQ content, trying specialized search');
+        // For FAQ queries, ensure we've searched across multiple potential sources
+        if (isFaqQuery) {
+          console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
           
-          // Try with multiple variants of the FAQ search query
-          const faqSearchQueries = [
-            "10.4 FAQ Continuing Obligations",
-            "FAQ continuing obligations",
-            "continuing obligations FAQ",
-            "10.4 FAQ"
-          ];
-          
-          for (const faqQuery of faqSearchQueries) {
-            console.log(`Trying specialized FAQ search with query: ${faqQuery}`);
-            const faqContextResult = await contextService.getRegulatoryContextWithReasoning(faqQuery);
+          // If initial search didn't yield strong FAQ content, try multiple search strategies
+          if (!regulatoryContext.toLowerCase().includes('faq') && 
+              !regulatoryContext.toLowerCase().includes('continuing obligation')) {
+            console.log('Initial search didn\'t find specific FAQ content, trying specialized search');
             
-            if (faqContextResult.context && 
-               (faqContextResult.context.toLowerCase().includes('faq') || 
-                faqContextResult.context.toLowerCase().includes('continuing obligation'))) {
-              console.log('Found FAQ content in specialized search, using this context');
-              regulatoryContext = faqContextResult.context;
-              reasoning = "This context is from the '10.4 FAQ Continuing Obligations' document which contains the exact wording needed for accurate answers.";
-              break;
+            // Try with multiple variants of the FAQ search query
+            const faqSearchQueries = [
+              "10.4 FAQ Continuing Obligations",
+              "FAQ continuing obligations",
+              "continuing obligations FAQ",
+              "10.4 FAQ"
+            ];
+            
+            for (const faqQuery of faqSearchQueries) {
+              console.log(`Trying specialized FAQ search with query: ${faqQuery}`);
+              const faqContextResult = await contextService.getRegulatoryContextWithReasoning(faqQuery);
+              
+              if (faqContextResult.context && 
+                (faqContextResult.context.toLowerCase().includes('faq') || 
+                  faqContextResult.context.toLowerCase().includes('continuing obligation'))) {
+                console.log('Found FAQ content in specialized search, using this context');
+                regulatoryContext = faqContextResult.context;
+                reasoning = "This context is from the '10.4 FAQ Continuing Obligations' document which contains the exact wording needed for accurate answers.";
+                break;
+              }
             }
           }
         }
+      } catch (contextError) {
+        // If context retrieval fails, log it but continue with empty context
+        console.error("Error retrieving context:", contextError);
+        regulatoryContext = '';
+        reasoning = 'Failed to retrieve context due to an error';
       }
       
       // Log context info
@@ -148,16 +155,32 @@ export const useQueryExecution = (
       responseParams.prompt += " CRITICAL: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the database, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
       
       const processingStart = Date.now();
-      const result = await handleApiResponse(
-        queryText, 
-        responseParams, 
-        regulatoryContext,
-        reasoning,
-        financialQueryType || 'unspecified',
-        updatedMessages
-      );
-      const processingTime = Date.now() - processingStart;
-      console.log(`Response generated in ${processingTime}ms`);
+      
+      try {
+        const result = await handleApiResponse(
+          queryText, 
+          responseParams, 
+          regulatoryContext,
+          reasoning,
+          financialQueryType || 'unspecified',
+          updatedMessages
+        );
+        const processingTime = Date.now() - processingStart;
+        console.log(`Response generated in ${processingTime}ms`);
+      } catch (responseError) {
+        console.error("Error generating response:", responseError);
+        
+        // Add a partial response message if the API call failed
+        const errorMessage: Message = {
+          id: Date.now().toString(),
+          content: "I apologize, but I encountered an issue while processing your request. Please try again or rephrase your question.",
+          sender: 'bot',
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        setMessages([...updatedMessages, errorMessage]);
+      }
       
       setProcessingStage('finalizing');
       
@@ -168,6 +191,18 @@ export const useQueryExecution = (
       finishLogging();
     } catch (error) {
       console.error("Error in financial chat process:", error);
+      
+      // Add a fallback message even if overall process fails
+      const fallbackMessage: Message = {
+        id: Date.now().toString(),
+        content: "I'm sorry, something went wrong. Please try again in a moment.",
+        sender: 'bot',
+        timestamp: new Date(),
+        isError: true
+      };
+      
+      setMessages([...updatedMessages, fallbackMessage]);
+      
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",

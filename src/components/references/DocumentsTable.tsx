@@ -54,6 +54,7 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
   
   const handleDelete = async (documentId: string, title: string) => {
     try {
+      // Perform Supabase delete operation
       const { error } = await supabase
         .from('reference_documents')
         .delete()
@@ -63,13 +64,18 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
         throw error;
       }
       
+      // Show success toast
       toast({
         title: "Document Deleted",
         description: `${title} has been removed from the database.`,
       });
       
-      // Refresh the documents list
-      refetchDocuments();
+      // Important: Wait a brief moment before refetching to ensure Supabase has processed the delete
+      setTimeout(() => {
+        // Refresh the documents list to remove the deleted item from UI
+        refetchDocuments();
+      }, 300);
+      
     } catch (error) {
       console.error('Delete error:', error);
       toast({
@@ -158,7 +164,13 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
                       <AlertDialogCancel>Cancel</AlertDialogCancel>
                       <AlertDialogAction
                         className="bg-red-500 hover:bg-red-600 text-white"
-                        onClick={() => handleDelete(doc.id, doc.title)}
+                        onClick={(e) => {
+                          // Stop propagation to prevent the dialog from closing before the deletion is complete
+                          e.preventDefault();
+                          handleDelete(doc.id, doc.title);
+                          // Close the dialog manually
+                          document.querySelector('[data-state="open"] button[data-state="open"]')?.click();
+                        }}
                       >
                         Delete
                       </AlertDialogAction>

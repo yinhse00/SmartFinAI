@@ -26,15 +26,6 @@ const Navbar = () => {
           <Link to="/references" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             References
           </Link>
-          <Link to="/history" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
-            History
-          </Link>
-           <Link to="/database" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
-            Database
-          </Link>
-          <Link to="/documents" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
-            Documents
-          </Link>
           <Button variant="ghost" size="icon" onClick={() => setTheme(mounted && document.documentElement.classList.contains("dark") ? "light" : "dark")}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
