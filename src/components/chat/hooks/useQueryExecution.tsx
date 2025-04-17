@@ -63,7 +63,11 @@ export const useQueryExecution = (
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
       
       // Retrieve regulatory context
-      const { regulatoryContext, reasoning, contextTime } = await retrieveRegulatoryContext(queryText, isFaqQuery);
+      // Ensure we're passing a boolean for isFaqQuery
+      const { regulatoryContext, reasoning, contextTime } = await retrieveRegulatoryContext(
+        queryText, 
+        !!isFaqQuery // Explicit boolean conversion
+      );
       
       // Log context info
       logContextInfo(

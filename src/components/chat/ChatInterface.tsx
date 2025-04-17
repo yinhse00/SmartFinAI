@@ -43,12 +43,13 @@ const ChatInterface = () => {
           !lastMessage.isTruncated) {
         
         const content = lastMessage.content;
-        const queryType = lastMessage.queryType;
+        const queryType = lastMessage.queryType || '';
         
         // Use simplified financial analysis
         const financialAnalysis = analyzeFinancialResponse(content, queryType);
         
-        const isTruncated = !financialAnalysis.isComplete;
+        // Ensure explicit boolean handling
+        const isTruncated = financialAnalysis.isComplete === false;
 
         if (isTruncated) {
           console.log('Response appears incomplete:', {

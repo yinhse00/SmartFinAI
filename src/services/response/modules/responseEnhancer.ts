@@ -49,7 +49,8 @@ export const responseEnhancer = {
 function isTradingArrangementQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase();
   
-  return lowerPrompt.includes('trading arrangement') || 
+  // Ensure explicit boolean return
+  return !!(lowerPrompt.includes('trading arrangement') || 
          (lowerPrompt.includes('trading') && lowerPrompt.includes('schedule')) ||
          ((lowerPrompt.includes('rights issue') || 
            lowerPrompt.includes('open offer') ||
@@ -58,5 +59,5 @@ function isTradingArrangementQuery(prompt: string): boolean {
            lowerPrompt.includes('board lot') || 
            lowerPrompt.includes('company name')) && 
            (lowerPrompt.includes('timetable') || 
-            lowerPrompt.includes('schedule')));
+            lowerPrompt.includes('schedule'))));
 }
