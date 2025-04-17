@@ -36,7 +36,7 @@ export function useReferenceDocuments(category?: string) {
     },
     refetchOnWindowFocus: false,   
     staleTime: 0,                  // Consider data stale immediately (important for refetching)
-    cacheTime: 0,                  // Don't cache the data at all
+    gcTime: 0,                     // Don't cache the data at all (renamed from cacheTime in v5)
     refetchInterval: false,        
     retry: 1,                      
     refetchOnMount: 'always',      // Always refetch when component mounts
