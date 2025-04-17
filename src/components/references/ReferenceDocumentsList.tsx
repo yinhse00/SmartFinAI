@@ -16,7 +16,7 @@ const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
   const queryClient = useQueryClient();
   
   // Use our hook with optimized refetching strategy
@@ -33,18 +33,30 @@ const ReferenceDocumentsList: React.FC = () => {
     setCurrentPage(1);
   }, [activeCategory, documents?.length]);
 
-  // Force refetch when component mounts or activeCategory changes
+  // Force refetch when component mounts or activeCategory changes or refreshKey changes
   useEffect(() => {
-    console.log('Initial fetch of documents');
+    console.log('Initial fetch of documents, refresh key:', refreshKey);
     handleRefetchDocuments();
-  }, [activeCategory]); // Depend only on activeCategory
+  }, [activeCategory, refreshKey]); 
+  
+  // Handle category change
+  const handleCategoryChange = useCallback((category: string) => {
+    console.log('Category changed to:', category);
+    setActiveCategory(category);
+    
+    // Force cache reset on category change
+    queryClient.removeQueries({
+      queryKey: ['referenceDocuments'],
+      exact: false
+    });
+    
+    // Generate new refresh key to force re-render and refetch
+    setRefreshKey(prev => prev + 1);
+  }, [queryClient]);
   
   // Explicit refetch function with forced invalidation
   const handleRefetchDocuments = useCallback(() => {
-    console.log('Manual refetch triggered');
-    
-    // Increment refresh trigger to force component update
-    setRefreshTrigger(prev => prev + 1);
+    console.log('Manual refetch triggered, refresh key:', refreshKey);
     
     // Force invalidation of the query
     queryClient.invalidateQueries({ 
@@ -64,7 +76,7 @@ const ReferenceDocumentsList: React.FC = () => {
         variant: "destructive"
       });
     });
-  }, [refetch, queryClient]);
+  }, [refetch, queryClient, refreshKey]);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 
@@ -86,7 +98,10 @@ const ReferenceDocumentsList: React.FC = () => {
         <ReferenceSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
       </CardHeader>
       <CardContent>
-        <CategoryTabs activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
+        <CategoryTabs 
+          activeCategory={activeCategory} 
+          setActiveCategory={handleCategoryChange}
+        />
         
         <div className="mt-2">
           {isLoading || isRefetching ? (
@@ -94,13 +109,20 @@ const ReferenceDocumentsList: React.FC = () => {
           ) : error ? (
             <div className="py-8 text-center">
               <p className="text-red-500">Error loading documents. Please try again.</p>
+              <Button 
+                variant="outline" 
+                className="mt-2" 
+                onClick={handleRefetchDocuments}
+              >
+                Retry
+              </Button>
             </div>
           ) : (
             <>
               <DocumentsTable 
                 documents={sortedDocuments} 
                 refetchDocuments={handleRefetchDocuments}
-                key={`docs-table-${refreshTrigger}`} // Force re-render on refresh
+                key={`docs-table-${refreshKey}`} // Force re-render on refresh
               />
               <DocumentsPagination 
                 totalCount={sortedDocuments?.length || 0} 

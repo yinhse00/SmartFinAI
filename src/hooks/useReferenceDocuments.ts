@@ -34,11 +34,11 @@ export function useReferenceDocuments(category?: string) {
       console.log(`Fetched ${typedData?.length || 0} documents`);
       return typedData || [];
     },
-    refetchOnWindowFocus: false,   
-    staleTime: 0,                  // Consider data stale immediately
-    gcTime: 0,                     // Don't cache the data at all (renamed from cacheTime in v5)
+    refetchOnWindowFocus: true,    // Changed to true to ensure data refresh
+    staleTime: 0,                  // Data is immediately stale
+    gcTime: 0,                     // Don't cache the data at all
     refetchInterval: false,        
-    retry: 1,                      
+    retry: 2,                      // Increased retry attempts
     refetchOnMount: 'always',      // Always refetch when component mounts
   });
 }

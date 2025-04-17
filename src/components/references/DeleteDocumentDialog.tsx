@@ -61,6 +61,15 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
       // Close the dialog first
       setIsOpen(false);
       
+      // Complete cache reset approach
+      console.log('Invalidating and removing all reference document queries');
+      
+      // Remove all query cache related to reference documents
+      queryClient.removeQueries({
+        queryKey: ['referenceDocuments'],
+        exact: false
+      });
+      
       // Force invalidate all queries related to reference documents
       queryClient.invalidateQueries({
         queryKey: ['referenceDocuments'],
@@ -68,20 +77,21 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
         refetchType: 'all'
       });
       
-      // Force immediate refetch with a small delay to ensure Supabase has processed the deletion
+      // Force immediate refetch
+      refetchDocuments();
+      
+      // Additional refetch after a delay to ensure UI is updated
       setTimeout(() => {
+        console.log('Performing delayed refetch to ensure data consistency');
         refetchDocuments();
         
-        // Double-check after a longer delay to ensure UI is updated
-        setTimeout(() => {
-          queryClient.invalidateQueries({
-            queryKey: ['referenceDocuments'],
-            exact: false,
-            refetchType: 'all'
-          });
-          refetchDocuments();
-        }, 1000);
-      }, 300);
+        // Refresh the entire query cache as a last resort
+        queryClient.refetchQueries({
+          queryKey: ['referenceDocuments'],
+          exact: false,
+          type: 'all'
+        });
+      }, 500);
       
     } catch (error) {
       console.error('Delete error:', error);
