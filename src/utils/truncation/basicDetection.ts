@@ -14,7 +14,7 @@ export const detectTruncation = (content: string): boolean => {
     !/[.!?:]$/.test(content) && content.length > 200,
     
     // Uneven number of code blocks (opening without closing)
-    (content.match(/```/g) || []).length % 2 !== 0,
+    ((content.match(/```/g) || []).length % 2 !== 0),
     
     // Message ending with list indicators
     content.trim().endsWith('-') || content.trim().endsWith('*'),
@@ -33,7 +33,7 @@ export const detectTruncation = (content: string): boolean => {
     (content.includes('|') && !content.includes('---'))
   ];
 
-  const isTruncated = truncationIndicators.some(indicator => indicator);
+  const isTruncated = truncationIndicators.some(indicator => indicator === true);
   
   if (isTruncated) {
     logTruncation(
