@@ -33,6 +33,7 @@ export const detectTruncation = (content: string): boolean => {
     (content.includes('|') && !content.includes('---'))
   ];
 
+  // Explicitly check if any indicator is true (ensures boolean type)
   const isTruncated = truncationIndicators.some(indicator => indicator === true);
   
   if (isTruncated) {

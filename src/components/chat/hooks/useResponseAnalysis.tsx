@@ -46,7 +46,7 @@ export const useResponseAnalysis = () => {
     
     // Check for incomplete sentences at the end
     const matchResult = responseText.trim().match(/[.!?。]\s*$/);
-    // Explicitly convert to boolean to ensure type safety
+    // Force explicit boolean conversion to fix type issues
     const endsWithCompleteSentence = matchResult !== null ? true : false;
     const lastSentenceIncomplete = !endsWithCompleteSentence;
     const isLongResponse = responseText.length > 1000;
