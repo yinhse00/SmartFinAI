@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ReferenceDocument } from '@/types/references';
+import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export function useReferenceDocuments(category?: string) {
   return useQuery({
