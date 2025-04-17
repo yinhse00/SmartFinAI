@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { contextFormatter } from './contextFormatter';
 
@@ -38,7 +39,7 @@ export const faqSearchService = {
 /**
  * Find FAQ-related documents
  */
-export const findFAQDocuments = async (query: string) => {
+export const findFAQDocuments = async (query: string): Promise<RegulatoryEntry[]> => {
   // Check if query might be related to continuing obligations or FAQs
   const isFaqRelated = query.toLowerCase().includes('continuing obligation') || 
                       query.toLowerCase().includes('faq') ||

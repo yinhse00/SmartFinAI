@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { findFAQDocuments } from './faqSearchService';
 
@@ -9,8 +10,8 @@ export const specificRuleSearchService = {
   /**
    * Find documents related to specific rules
    */
-  findSpecificRulesDocuments: async (query: string) => {
-    let ruleResults = [];
+  findSpecificRulesDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
+    let ruleResults: RegulatoryEntry[] = [];
     
     // Check for specific rule references
     const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?|10\.29|7\.19A?)/i);

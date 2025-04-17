@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from '../utils/resultProcessors';
@@ -26,7 +27,7 @@ export const contextSearchOrchestrator = {
       // Check if this might be FAQ related
       const isFaqQuery = query.toLowerCase().includes('faq') || 
                          query.toLowerCase().includes('continuing obligation') ||
-                         query.match(/\b10\.4\b/);
+                         Boolean(query.match(/\b10\.4\b/));
                          
       if (isFaqQuery) {
         console.log('Detected FAQ/continuing obligations query, prioritizing relevant documents');
@@ -66,7 +67,7 @@ export const contextSearchOrchestrator = {
       const isGeneralOffer = isGeneralOfferQuery(normalizedQuery, isWhitewashQuery);
       
       // For general offer queries, specifically search for takeovers code documents
-      let takeoversResults = [];
+      let takeoversResults: RegulatoryEntry[] = [];
       if (isGeneralOffer) {
         takeoversResults = await takeoversSearchService.findGeneralOfferDocuments(normalizedQuery, isWhitewashQuery);
       }
@@ -76,7 +77,7 @@ export const contextSearchOrchestrator = {
       const isCorporateAction = isCorporateActionQuery(normalizedQuery);
       
       // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
-      let tradingArrangementsResults = [];
+      let tradingArrangementsResults: RegulatoryEntry[] = [];
       if (isTradingArrangement) {
         tradingArrangementsResults = await tradingArrangementsService.findTradingArrangementDocuments(normalizedQuery, isCorporateAction);
       }

@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 
 /**
@@ -8,8 +9,8 @@ export const tradingArrangementsService = {
   /**
    * Find documents related to trading arrangements
    */
-  findTradingArrangementDocuments: async (normalizedQuery: string, isCorporateAction: boolean) => {
-    let tradingArrangementsResults = [];
+  findTradingArrangementDocuments: async (normalizedQuery: string, isCorporateAction: boolean): Promise<RegulatoryEntry[]> => {
+    let tradingArrangementsResults: RegulatoryEntry[] = [];
     
     if (isCorporateAction) {
       console.log('Identified as corporate action trading arrangement query');
@@ -31,8 +32,8 @@ export const tradingArrangementsService = {
   /**
    * Find timetable-related documents
    */
-  findTimetableDocuments: async (query: string, isGeneralOffer: boolean) => {
-    let timetableResults = [];
+  findTimetableDocuments: async (query: string, isGeneralOffer: boolean): Promise<RegulatoryEntry[]> => {
+    let timetableResults: RegulatoryEntry[] = [];
     
     if (isGeneralOffer) {
       // Special handling for general offer timetable requests
@@ -50,7 +51,7 @@ export const tradingArrangementsService = {
   /**
    * Add rights issue timetable fallback if necessary
    */
-  addRightsIssueTimetableFallback: (results: any[], query: string) => {
+  addRightsIssueTimetableFallback: (results: RegulatoryEntry[], query: string): RegulatoryEntry[] => {
     let enhancedResults = [...results];
     
     // Special case for rights issue timetables if needed
@@ -61,10 +62,13 @@ export const tradingArrangementsService = {
         enhancedResults.length < 2) {
       console.log("Enhancing rights issue timetable context with fallback information");
       enhancedResults.push({
+        id: 'fallback-rights-issue-timetable',
         title: "Rights Issue Timetable",
         source: "Listing Rules Chapter 10",
         content: "Rights issue timetables typically follow a structured timeline from announcement to dealing day. Key dates include record date, PAL dispatch, rights trading period, and acceptance deadline.",
-        category: "listing_rules"
+        category: "listing_rules",
+        lastUpdated: new Date(),
+        status: 'active'
       });
     }
     

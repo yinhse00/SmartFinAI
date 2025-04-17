@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { getWhitewashWaiverFallbackEntry } from '../fallbacks/whitewashFallback';
 
@@ -9,8 +10,8 @@ export const takeoversSearchService = {
   /**
    * Find documents related to general offers
    */
-  findGeneralOfferDocuments: async (normalizedQuery: string, isWhitewashQuery: boolean) => {
-    let takeoversResults = [];
+  findGeneralOfferDocuments: async (normalizedQuery: string, isWhitewashQuery: boolean): Promise<RegulatoryEntry[]> => {
+    let takeoversResults: RegulatoryEntry[] = [];
 
     console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
     
@@ -47,7 +48,7 @@ export const takeoversSearchService = {
   /**
    * Add whitewash-specific fallback if necessary
    */
-  addWhitewashFallbackIfNeeded: (results: any[], isWhitewashQuery: boolean) => {
+  addWhitewashFallbackIfNeeded: (results: RegulatoryEntry[], isWhitewashQuery: boolean): RegulatoryEntry[] => {
     let enhancedResults = [...results];
     
     // For whitewash waiver queries, ensure we have dealing requirements information
@@ -64,7 +65,7 @@ export const takeoversSearchService = {
   /**
    * Add general offer timetable fallback if necessary
    */
-  addGeneralOfferTimetableFallback: (results: any[], query: string, isGeneralOffer: boolean) => {
+  addGeneralOfferTimetableFallback: (results: RegulatoryEntry[], query: string, isGeneralOffer: boolean): RegulatoryEntry[] => {
     let enhancedResults = [...results];
     
     // Special case for general offer timetable - add fallback if needed
@@ -75,10 +76,13 @@ export const takeoversSearchService = {
         enhancedResults.length < 2) {
       console.log("Enhancing general offer timetable context with fallback information");
       enhancedResults.push({
+        id: 'fallback-general-offer-timetable',
         title: "General Offer Timetable",
         source: "Takeovers Code Rule 15",
         content: "A general offer timetable under the Takeovers Code begins with the Rule 3.5 announcement and must specify a closing date not less than 21 days from the date the offer document is posted. All conditions must be satisfied within 60 days from the offer document posting, unless extended by the Executive.",
-        category: "takeovers"
+        category: "takeovers",
+        lastUpdated: new Date(),
+        status: 'active'
       });
     }
     

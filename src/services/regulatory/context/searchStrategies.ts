@@ -1,6 +1,7 @@
 
 /**
- * This file is now deprecated. Functionality has been moved to dedicated service files:
+ * @deprecated This module only exists for backward compatibility.
+ * Please use the dedicated service files directly:
  * - faqSearchService.ts
  * - specificRuleSearchService.ts
  * - takeoversSearchService.ts
@@ -10,7 +11,7 @@
  * - contextSearchOrchestrator.ts
  */
 
-// Re-export functionality from new service files for backward compatibility
+// Re-export functionality from service files for backward compatibility
 import { findFAQDocuments } from './faqSearchService';
 import { specificRuleSearchService } from './specificRuleSearchService';
 import { takeoversSearchService } from './takeoversSearchService';

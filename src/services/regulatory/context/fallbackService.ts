@@ -1,4 +1,5 @@
 
+import { RegulatoryEntry } from '../../database/types';
 import { aggregationSearchService } from './aggregationSearchService';
 import { takeoversSearchService } from './takeoversSearchService';
 import { tradingArrangementsService } from './tradingArrangementsService';
@@ -10,7 +11,7 @@ export const fallbackService = {
   /**
    * Add special fallback documents when necessary
    */
-  addFallbackDocumentsIfNeeded: (results: any[], query: string, isWhitewashQuery: boolean, isGeneralOffer: boolean) => {
+  addFallbackDocumentsIfNeeded: async (results: RegulatoryEntry[], query: string, isWhitewashQuery: boolean, isGeneralOffer: boolean): Promise<RegulatoryEntry[]> => {
     let enhancedResults = [...results];
     
     // Add whitewash fallback if needed
