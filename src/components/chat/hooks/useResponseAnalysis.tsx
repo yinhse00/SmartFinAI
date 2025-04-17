@@ -45,8 +45,9 @@ export const useResponseAnalysis = () => {
     const diagnostics = getTruncationDiagnostics(responseText);
     
     // Check for incomplete sentences at the end
-    // Fix: Ensure we're returning a boolean by using Boolean() or !!
-    const lastSentenceIncomplete = !responseText.trim().match(/[.!?。]\s*$/) !== null;
+    // Fix: Properly convert RegExp match result to boolean
+    const endsWithCompleteSentence = responseText.trim().match(/[.!?。]\s*$/) !== null;
+    const lastSentenceIncomplete = !endsWithCompleteSentence;
     const isLongResponse = responseText.length > 1000;
     
     if (lastSentenceIncomplete && isLongResponse) {
