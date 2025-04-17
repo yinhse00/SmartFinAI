@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import ChatMessage, { Message } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -13,11 +13,11 @@ interface ChatHistoryProps {
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const autoScrollEnabledRef = useRef<boolean>(true);
+  const [autoScroll, setAutoScroll] = useState(true);
 
-  // Improved auto-scroll logic with user override detection
+  // Improved auto-scroll logic with user override capability
   const scrollToBottom = () => {
-    if (messagesEndRef.current && autoScrollEnabledRef.current) {
+    if (messagesEndRef.current && autoScroll) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
@@ -25,30 +25,30 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   // Handle user manual scrolling
   const handleUserScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
-    const isScrolledToBottom = Math.abs(
+    const isScrolledNearBottom = Math.abs(
       element.scrollHeight - element.scrollTop - element.clientHeight
     ) < 50;
     
-    // Only change auto-scroll state when manually scrolled away from bottom
-    autoScrollEnabledRef.current = isScrolledToBottom;
+    // Only update auto-scroll state when the user manually scrolls
+    setAutoScroll(isScrolledNearBottom);
   };
 
-  // Auto-scroll on messages change, loading state change, or typing progress
+  // Auto-scroll on messages change or loading state change
   useEffect(() => {
     // Use requestAnimationFrame to ensure DOM is fully updated before scrolling
     requestAnimationFrame(scrollToBottom);
     
-    // Set up a periodic scroll check for typing animations
+    // Set up a more frequent scroll check for typing animations (200ms)
     const typingScrollInterval = setInterval(() => {
-      if (autoScrollEnabledRef.current) {
+      if (autoScroll) {
         scrollToBottom();
       }
-    }, 500);
+    }, 200);
     
     return () => {
       clearInterval(typingScrollInterval);
     };
-  }, [messages, isLoading]);
+  }, [messages, isLoading, autoScroll]);
 
   // Check if any messages are truncated
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
@@ -58,7 +58,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
       <ScrollArea 
         className="h-full pb-6 flex-1" 
         ref={scrollAreaRef} 
-        type="always"
+        type="always" 
         onScroll={handleUserScroll}
       >
         <div className="py-4 space-y-4 px-4">
@@ -85,7 +85,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
               onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
               onTypingProgress={() => {
                 // When receiving responses, check if we should auto-scroll
-                if (autoScrollEnabledRef.current) {
+                if (autoScroll) {
                   scrollToBottom();
                 }
               }} 

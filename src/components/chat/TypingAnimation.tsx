@@ -11,7 +11,7 @@ interface TypingAnimationProps {
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({ 
   text, 
-  speed = 30, 
+  speed = 10, // Changed from 30 to 10 (3x faster)
   className = "", 
   onComplete,
   onProgress
@@ -33,8 +33,8 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
         setDisplayedText(prev => prev + text[currentIndex]);
         setCurrentIndex(prevIndex => prevIndex + 1);
         
-        // Notify parent about typing progress
-        if (onProgress && currentIndex % 5 === 0) {
+        // Notify parent about typing progress more frequently
+        if (onProgress && currentIndex % 3 === 0) { // Changed from 5 to 3 for more frequent updates
           onProgress();
         }
       }, speed);
