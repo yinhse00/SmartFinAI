@@ -2,7 +2,7 @@
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from '@/hooks/use-toast';
 
 import FileDropZone from './FileDropZone';
 import FileList from './FileList';
@@ -15,7 +15,11 @@ interface FileWithError extends File {
   error?: string;
 }
 
-const ReferenceUploader = () => {
+interface ReferenceUploaderProps {
+  onUploadComplete?: () => void;
+}
+
+const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete }) => {
   const [files, setFiles] = useState<FileWithError[]>([]);
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
@@ -108,6 +112,11 @@ const ReferenceUploader = () => {
         setFiles([]);
         setCategory('');
         setDescription('');
+        
+        // Notify parent component that upload is complete
+        if (onUploadComplete) {
+          onUploadComplete();
+        }
       } else {
         console.error('Upload failed:', result.error || result.message);
         setUploadError(result.message);
@@ -129,7 +138,7 @@ const ReferenceUploader = () => {
     } finally {
       setIsUploading(false);
     }
-  }, [files, category, description, validateFiles]);
+  }, [files, category, description, validateFiles, onUploadComplete]);
 
   // Check for invalid files
   const hasInvalidFiles = !validateFiles();

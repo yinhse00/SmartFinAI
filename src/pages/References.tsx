@@ -6,8 +6,15 @@ import ReferenceDocumentsList from '@/components/references/ReferenceDocumentsLi
 import { useQueryClient } from '@tanstack/react-query';
 
 const References = () => {
-  const [refreshKey, setRefreshKey] = useState(0);
   const queryClient = useQueryClient();
+
+  // Every time a file is uploaded, we'll invalidate the documents cache
+  const handleDocumentsChanged = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['referenceDocuments'],
+      exact: false
+    });
+  };
 
   return (
     <MainLayout>
@@ -20,10 +27,10 @@ const References = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2">
-          <ReferenceDocumentsList key={`documents-list-${refreshKey}`} />
+          <ReferenceDocumentsList />
         </div>
         <div>
-          <ReferenceUploader />
+          <ReferenceUploader onUploadComplete={handleDocumentsChanged} />
         </div>
       </div>
     </MainLayout>

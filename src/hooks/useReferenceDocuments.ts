@@ -5,7 +5,7 @@ import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export function useReferenceDocuments(category?: string) {
   return useQuery({
-    queryKey: ['referenceDocuments', category, Date.now()], // Add timestamp to force new cache entry each time
+    queryKey: ['referenceDocuments', category],
     queryFn: async (): Promise<ReferenceDocument[]> => {
       console.log('Fetching reference documents for category:', category);
       
@@ -31,14 +31,11 @@ export function useReferenceDocuments(category?: string) {
         category: item.category as DocumentCategory
       })) as ReferenceDocument[];
       
-      console.log(`Fetched ${typedData?.length || 0} documents`);
+      console.log(`Fetched ${typedData?.length || 0} documents for category "${category || 'all'}":`, typedData);
       return typedData || [];
     },
-    refetchOnWindowFocus: true,    // Changed to true to ensure data refresh
-    staleTime: 0,                  // Data is immediately stale
-    gcTime: 0,                     // Don't cache the data at all
-    refetchInterval: 0,            // Don't auto-refetch
-    refetchOnMount: 'always',      // Always refetch when component mounts
-    refetchOnReconnect: 'always',  // Always refetch when reconnecting
+    staleTime: 30000, // Data stays fresh for 30 seconds
+    refetchOnMount: true,
+    refetchOnWindowFocus: false,
   });
 }
