@@ -14,7 +14,7 @@ const ScrollArea = React.forwardRef<
     type={type}
     {...props}
   >
-    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit] overflow-y-auto">
+    <ScrollAreaPrimitive.Viewport className="h-full w-full rounded-[inherit]">
       {children}
     </ScrollAreaPrimitive.Viewport>
     <ScrollBar />
@@ -33,19 +33,19 @@ const ScrollBar = React.forwardRef<
     className={cn(
       "flex touch-none select-none transition-colors",
       orientation === "vertical" &&
-        "h-full w-3 border-l border-l-transparent p-[1px] hover:w-4 transition-all duration-200",
+        "h-full w-4 border-l border-l-transparent p-[1px]",
       orientation === "horizontal" &&
-        "h-3 flex-col border-t border-t-transparent p-[1px] hover:h-4 transition-all duration-200",
-      "!opacity-100", // Always show scrollbar
+        "h-4 flex-col border-t border-t-transparent p-[1px]",
+      "opacity-100", // Always show scrollbar
       className
     )}
     {...props}
   >
     <ScrollAreaPrimitive.ScrollAreaThumb 
       className={cn(
-        "relative flex-1 rounded-full opacity-80 hover:opacity-100",
-        "bg-finance-medium-blue/40 hover:bg-finance-medium-blue/70 dark:bg-finance-accent-blue/40 dark:hover:bg-finance-accent-blue/70",
-        "transition-colors duration-200"
+        "relative flex-1 rounded-full",
+        "bg-finance-medium-blue/60 hover:bg-finance-medium-blue/80 dark:bg-finance-accent-blue/60 dark:hover:bg-finance-accent-blue/80",
+        "opacity-100"
       )} 
     />
   </ScrollAreaPrimitive.ScrollAreaScrollbar>

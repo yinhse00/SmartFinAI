@@ -17,57 +17,57 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   const [userScrolling, setUserScrolling] = useState(false);
   const lastScrollPosition = useRef(0);
 
-  // Improved auto-scroll logic with user override capability
+  // Scroll to bottom function
   const scrollToBottom = () => {
     if (messagesEndRef.current && autoScroll && !userScrolling) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
-  // Enhanced user scroll detection with better sensitivity
+  // Improved scroll detection
   const handleUserScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
     const currentScrollTop = element.scrollTop;
     
-    // Detect any scroll movement as user-initiated
-    const isUserInitiatedScroll = Math.abs(currentScrollTop - lastScrollPosition.current) > 3;
+    // Detect scroll movement with very low threshold
+    const isUserScrolling = Math.abs(currentScrollTop - lastScrollPosition.current) > 1;
     
-    if (isUserInitiatedScroll) {
+    if (isUserScrolling) {
       setUserScrolling(true);
       
-      // Give users plenty of time to read before re-enabling auto-scroll
+      // Clear any existing timeout
       clearTimeout((window as any).scrollTimeout);
+      
+      // Set a longer timeout to allow users to read without auto-scrolling interruption
       (window as any).scrollTimeout = setTimeout(() => {
         setUserScrolling(false);
-      }, 5000); // 5 seconds of no scrolling before auto-scroll can resume
+      }, 8000); // 8 seconds without scrolling before auto-scroll resumes
     }
     
-    // Check if we're near the bottom to resume auto-scroll
-    const isScrolledNearBottom = Math.abs(
-      element.scrollHeight - element.scrollTop - element.clientHeight
-    ) < 50;
+    // Check if user has scrolled to bottom (or very close)
+    const isNearBottom = 
+      element.scrollHeight - element.scrollTop - element.clientHeight < 30;
     
-    // Update auto-scroll state
-    setAutoScroll(isScrolledNearBottom);
+    // Only update auto-scroll if we detect we're at the bottom
+    setAutoScroll(isNearBottom);
     
-    // Update last scroll position
+    // Update last position
     lastScrollPosition.current = currentScrollTop;
   };
 
-  // Auto-scroll on messages change or loading state change
+  // Auto-scroll on new messages
   useEffect(() => {
-    // Only auto-scroll when new messages arrive or loading state changes
-    if (autoScroll && !userScrolling) {
-      // Use requestAnimationFrame to ensure DOM is fully updated before scrolling
+    if (autoScroll && !userScrolling && messages.length > 0) {
+      // Use requestAnimationFrame for smoother scrolling
       requestAnimationFrame(scrollToBottom);
     }
     
-    // Set up frequent scroll check for typing animations
+    // Also set up frequent scroll checks for typing animations
     const typingScrollInterval = setInterval(() => {
       if (autoScroll && !userScrolling) {
         scrollToBottom();
       }
-    }, 100);
+    }, 200);
     
     return () => {
       clearInterval(typingScrollInterval);
@@ -78,11 +78,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
 
   return (
-    <div className="h-full overflow-hidden flex flex-col">
+    <div className="h-full flex flex-col">
       <ScrollArea 
-        className="h-full pb-6 flex-1" 
+        className="h-full flex-1 overflow-auto" 
         ref={scrollAreaRef} 
-        type="always" // Always show scrollbar
+        type="always"
         onScroll={handleUserScroll}
       >
         <div className="py-4 space-y-4 px-4">
@@ -108,7 +108,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
               message={message} 
               onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
               onTypingProgress={() => {
-                // When receiving responses, check if we should auto-scroll
                 if (autoScroll && !userScrolling) {
                   scrollToBottom();
                 }
