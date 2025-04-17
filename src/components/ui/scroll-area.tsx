@@ -33,17 +33,18 @@ const ScrollBar = React.forwardRef<
     className={cn(
       "flex touch-none select-none transition-colors",
       orientation === "vertical" &&
-        "h-full w-2.5 border-l border-l-transparent p-[1px] hover:w-3.5 transition-all duration-200",
+        "h-full w-3 border-l border-l-transparent p-[1px] hover:w-4 transition-all duration-200",
       orientation === "horizontal" &&
-        "h-2.5 flex-col border-t border-t-transparent p-[1px] hover:h-3.5 transition-all duration-200",
+        "h-3 flex-col border-t border-t-transparent p-[1px] hover:h-4 transition-all duration-200",
+      "!opacity-100", // Always show scrollbar
       className
     )}
     {...props}
   >
     <ScrollAreaPrimitive.ScrollAreaThumb 
       className={cn(
-        "relative flex-1 rounded-full opacity-70 hover:opacity-100",
-        "bg-border hover:bg-finance-medium-blue/60 dark:hover:bg-finance-accent-blue/50",
+        "relative flex-1 rounded-full opacity-80 hover:opacity-100",
+        "bg-finance-medium-blue/40 hover:bg-finance-medium-blue/70 dark:bg-finance-accent-blue/40 dark:hover:bg-finance-accent-blue/70",
         "transition-colors duration-200"
       )} 
     />

@@ -24,22 +24,22 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
     }
   };
 
-  // Completely revamped user scroll detection
+  // Enhanced user scroll detection with better sensitivity
   const handleUserScroll = (event: React.UIEvent<HTMLDivElement>) => {
     const element = event.currentTarget;
     const currentScrollTop = element.scrollTop;
     
-    // Detect if user is actively scrolling with higher sensitivity
-    const isUserInitiatedScroll = Math.abs(currentScrollTop - lastScrollPosition.current) > 5;
+    // Detect any scroll movement as user-initiated
+    const isUserInitiatedScroll = Math.abs(currentScrollTop - lastScrollPosition.current) > 3;
     
     if (isUserInitiatedScroll) {
       setUserScrolling(true);
       
-      // Reset auto-scrolling timer - give users more time to read
+      // Give users plenty of time to read before re-enabling auto-scroll
       clearTimeout((window as any).scrollTimeout);
       (window as any).scrollTimeout = setTimeout(() => {
         setUserScrolling(false);
-      }, 3000); // Increased from 1500ms to 3000ms
+      }, 5000); // 5 seconds of no scrolling before auto-scroll can resume
     }
     
     // Check if we're near the bottom to resume auto-scroll
@@ -82,7 +82,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
       <ScrollArea 
         className="h-full pb-6 flex-1" 
         ref={scrollAreaRef} 
-        type="auto" 
+        type="always" // Always show scrollbar
         onScroll={handleUserScroll}
       >
         <div className="py-4 space-y-4 px-4">

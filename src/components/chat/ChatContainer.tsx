@@ -39,7 +39,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
       <CardContent 
-        className="flex-1 overflow-hidden p-0 max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col" 
+        className="flex-1 overflow-hidden p-0 max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col relative" 
         ref={chatHistoryRef}
       >
         <ChatHistory 
