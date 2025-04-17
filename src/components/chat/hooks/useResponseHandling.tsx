@@ -40,25 +40,57 @@ export const useResponseHandling = (
     try {
       console.log('Calling Grok financial expert API');
       
+      // CRITICAL FIX: Add timing logs for debugging
+      const apiCallStartTime = Date.now();
+      console.log('API call started at:', new Date(apiCallStartTime).toISOString());
+      
       // Determine if this is a simple conversational query
       const isSimpleQuery = isQuerySimple(queryText);
       
       // Determine if this is an aggregation query for special handling
       const isAggregationQuery = isQueryAggregationRelated(queryText);
       
-      // Apply token limits and enhancements
-      const enhancedParams = enhanceTokenLimits(queryText, responseParams, isSimpleQuery, isAggregationQuery);
+      // Apply token limits and enhancements - use more conservative limits
+      const enhancedParams = {
+        ...responseParams,
+        temperature: Math.min(0.3, responseParams.temperature || 0.3), // Lower temperature
+        maxTokens: Math.min(2800, responseParams.maxTokens || 2800)    // Conservative token limit
+      };
       
-      // First attempt with significantly increased token limits
-      console.log(`Initial request with tokens: ${enhancedParams.maxTokens}, temperature: ${enhancedParams.temperature}`);
+      console.log(`Using request parameters: tokens=${enhancedParams.maxTokens}, temperature=${enhancedParams.temperature}`);
+      
+      // CRITICAL FIX: Add environment-specific logging
+      const isProduction = !window.location.href.includes('localhost') && 
+                         !window.location.href.includes('127.0.0.1');
+      console.log("Current environment:", isProduction ? "production" : "development");
+      console.log("Current URL:", window.location.href);
       
       // Make the initial API call
-      let apiResponse: GrokResponse = await grokService.generateResponse(enhancedParams);
+      let apiResponse: GrokResponse;
+      try {
+        apiResponse = await grokService.generateResponse(enhancedParams);
+        const apiCallDuration = Date.now() - apiCallStartTime;
+        console.log(`API call completed in ${apiCallDuration}ms`);
+      } catch (error) {
+        console.error("Initial API call failed:", error);
+        const errorMessage = handleApiError(error, processedMessages);
+        setMessages([...processedMessages, errorMessage]);
+        return errorMessage;
+      }
       
       // Check if it's using fallback
       const isUsingFallback = isFallbackResponse(apiResponse.text);
       
+      // CRITICAL FIX: Better debug logging for fallback detection
+      console.log("Fallback detection result:", {
+        isUsingFallback,
+        responseLength: apiResponse.text.length,
+        firstChars: apiResponse.text.substring(0, 30),
+        lastChars: apiResponse.text.substring(apiResponse.text.length - 30)
+      });
+      
       if (isUsingFallback && isGrokApiKeySet) {
+        console.log("Fallback response detected despite valid API key");
         handleFallbackResponse(isGrokApiKeySet);
       }
       
@@ -70,18 +102,14 @@ export const useResponseHandling = (
         isSimpleQuery
       );
       
-      // Determine maximum retries based on query complexity
-      const maxRetries = determineMaxRetries(isSimpleQuery, isAggregationQuery);
-      let retryCount = 0;
-      
       // Log the completeness check results
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
       
-      // CRITICAL CHANGE: Make behavior consistent between environments
-      // Never retry for incomplete responses, just show the partial response with truncation UI
-      // This ensures production and development behave the same way
-      if (!completenessCheck.isComplete && !isUsingFallback) {
-        console.log("Response appears incomplete, using partial response for consistent behavior");
+      // CRITICAL FIX: Always show the partial response even if it seems incomplete
+      // This ensures consistent behavior between environments
+      if (!completenessCheck.isComplete) {
+        console.log("Response appears incomplete, marking as truncated but showing partial response");
+        
         // Mark response as truncated so UI can show retry option
         apiResponse.metadata = {
           ...apiResponse.metadata,
@@ -92,6 +120,7 @@ export const useResponseHandling = (
           }
         };
         
+        // Show toast but ALWAYS display the partial response
         toast({
           title: "Partial Response",
           description: "The response appears incomplete. You can retry for a more complete answer.",
@@ -110,6 +139,7 @@ export const useResponseHandling = (
       );
       
     } catch (error) {
+      console.error("Unhandled error in response handling:", error);
       const errorMessage = handleApiError(error, processedMessages);
       setMessages([...processedMessages, errorMessage]);
       return errorMessage;

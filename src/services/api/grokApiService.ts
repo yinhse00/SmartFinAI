@@ -3,7 +3,6 @@
  * Service for handling Grok API communications for financial expertise
  */
 import { getGrokApiKey } from '../apiKeyService';
-import { generateFallbackResponse } from '../fallbackResponseService';
 
 interface GrokChatRequestBody {
   messages: {
@@ -45,22 +44,28 @@ export const grokApiService = {
     console.log("Temperature:", requestBody.temperature);
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
-    console.log("Environment:", process.env.NODE_ENV || "unknown");
+    
+    // CRITICAL FIX: Add better environment detection and logging
+    const currentUrl = window.location.href;
+    const isProduction = !currentUrl.includes('localhost') && !currentUrl.includes('127.0.0.1');
+    console.log("Environment:", isProduction ? "production" : "development");
+    console.log("Current URL:", currentUrl);
     
     // Add retry mechanism with exponential backoff for production resilience
     let retries = 0;
-    const maxRetries = 3; // Increased maximum retries for production resilience
+    const maxRetries = 3;
     
     while (retries <= maxRetries) {
       try {
-        // Use consistent API endpoint format that works in both environments
-        // CRITICAL FIX: Using absolute URL beginning with / to ensure proper resolution
-        // This is crucial for production environments
-        const apiEndpoint = '/api/grok/chat/completions';
+        // CRITICAL FIX: Use URL constructor to ensure proper path resolution
+        // This is critical for production environments where path resolution can differ
+        const baseUrl = window.location.origin;
+        const apiPath = '/api/grok/chat/completions';
+        const apiEndpoint = new URL(apiPath, baseUrl).toString();
         
         console.log("API endpoint:", apiEndpoint);
         
-        // CRITICAL FIX: Make fetch options identical in both environments
+        // CRITICAL FIX: Make fetch options identical in all environments
         const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
@@ -69,9 +74,7 @@ export const grokApiService = {
             ...FINANCIAL_EXPERT_HEADERS
           },
           body: JSON.stringify(requestBody),
-          // CRITICAL FIX: Always use same-origin credentials in both environments
           credentials: 'same-origin',
-          // Add explicit cache control to prevent caching issues
           cache: 'no-store'
         });
         
@@ -79,8 +82,16 @@ export const grokApiService = {
         console.log("API response status:", response.status);
         
         if (!response.ok) {
-          const errorData = await response.text();
-          console.error(`Financial expert API error ${response.status}:`, errorData);
+          const errorText = await response.text();
+          console.error(`Financial expert API error ${response.status}:`, errorText);
+          
+          // Enhanced error logging for debugging
+          console.error("Request details:", {
+            apiEndpoint,
+            model: requestBody.model,
+            temperature: requestBody.temperature,
+            maxTokens: requestBody.max_tokens
+          });
           
           if (response.status === 401) {
             throw new Error("Financial expert authentication failed. Please check your API key.");
@@ -118,7 +129,6 @@ export const grokApiService = {
       }
     }
     
-    // This shouldn't be reached due to the throw in the retry loop, but TypeScript needs it
     throw new Error("Failed to call financial expert API after retries");
   }
 };

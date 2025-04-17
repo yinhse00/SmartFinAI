@@ -13,7 +13,16 @@ export const responseGeneratorCore = {
    */
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      return await grokApiService.callChatCompletions(requestBody, apiKey);
+      console.log("Making primary API call with standard parameters");
+      const response = await grokApiService.callChatCompletions(requestBody, apiKey);
+      
+      // CRITICAL FIX: Always validate response to ensure it's properly structured
+      if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
+        console.error("API returned invalid response structure:", response);
+        throw new Error("Invalid API response structure");
+      }
+      
+      return response;
     } catch (error) {
       console.error('API call failed:', error);
       throw error;
@@ -41,14 +50,19 @@ export const responseGeneratorCore = {
         max_tokens: 2000
       };
       
-      // CRITICAL FIX: Use same API call method as primary to ensure consistency
+      // CRITICAL FIX: Use setTimeout to break potential error loops in production
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      console.log("Making backup API call");
       const backupResponse = await grokApiService.callChatCompletions(backupRequestBody, apiKey);
       const backupText = backupResponse.choices[0].message.content;
+      
+      console.log("Backup API call successful, response length:", backupText.length);
       
       // Check if the response appears complete before returning
       const diagnostics = getTruncationDiagnostics(backupText);
       
-      // CONSISTENCY FIX: Don't treat truncated backup responses differently - show partial response
+      // CRITICAL FIX: Return partial response instead of fallback
       // This ensures consistent behavior between environments
       const enhancedResponse = responseEnhancer.enhanceResponse(
         backupText,
@@ -75,6 +89,14 @@ export const responseGeneratorCore = {
       
     } catch (backupError) {
       console.error('Backup API call failed:', backupError);
+      
+      // CRITICAL FIX: Add additional debugging info
+      console.error('Backup API call details:', {
+        apiKeyValid: !!apiKey,
+        apiKeyFormat: apiKey ? apiKey.substring(0, 4) + '...' : 'none',
+        queryType: queryType,
+        promptLength: prompt.length
+      });
       
       // Generate a fallback response since both attempts failed
       return responseEnhancer.enhanceResponse(

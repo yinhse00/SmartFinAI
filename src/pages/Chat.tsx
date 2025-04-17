@@ -8,20 +8,34 @@ import { hasGrokApiKey, getGrokApiKey, setGrokApiKey } from '@/services/apiKeySe
 
 const Chat = () => {
   const { toast } = useToast();
-  const [demoMode, setDemoMode] = useState(false); // Default to production mode
+  const [demoMode, setDemoMode] = useState(false);
   
   // Check for Grok API key when the component mounts and set a default if needed
   useEffect(() => {
     const checkAndSetApiKey = () => {
+      // CRITICAL FIX: Clear any problematic API keys from localStorage to start fresh
+      try {
+        const currentApiKey = getGrokApiKey();
+        if (currentApiKey && !currentApiKey.startsWith('xai-')) {
+          console.warn('Invalid API key format detected, clearing');
+          localStorage.removeItem('GROK_API_KEY');
+        }
+      } catch (e) {
+        console.error('Error checking existing API key:', e);
+      }
+      
       const apiKeyExists = hasGrokApiKey();
       
       if (!apiKeyExists) {
-        // Try to set a default API key for production environments
+        // Try to set a default API key for all environments
         try {
-          // CONSISTENCY FIX: Always use a properly formatted API key
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+          
+          // CRITICAL FIX: Use multiple storage methods to ensure it works across environments
+          localStorage.setItem('GROK_API_KEY', defaultApiKey);
           setGrokApiKey(defaultApiKey);
-          console.log('Default API key set for production environment');
+          
+          console.log('Default API key set');
           
           // Verify key was actually stored by reading it back
           setTimeout(() => {
@@ -33,9 +47,20 @@ const Chat = () => {
               console.warn('API key storage verification failed');
               setDemoMode(true);
               
-              // Try one more time with another method
-              localStorage.setItem('grokApiKey', defaultApiKey);
-              console.log('Attempted alternative storage method for API key');
+              // Try direct localStorage access as fallback
+              try {
+                localStorage.setItem('grokApiKey', defaultApiKey);
+                localStorage.setItem('GROK_API_KEY', defaultApiKey);
+                console.log('Attempted alternative storage methods for API key');
+                
+                // Check if either method worked
+                if (localStorage.getItem('grokApiKey') === defaultApiKey || 
+                    localStorage.getItem('GROK_API_KEY') === defaultApiKey) {
+                  setDemoMode(false);
+                }
+              } catch (e) {
+                console.error('localStorage fallback failed:', e);
+              }
             }
           }, 100);
         } catch (error) {
@@ -53,19 +78,25 @@ const Chat = () => {
         const isValidFormat = apiKey && apiKey.startsWith('xai-');
         setDemoMode(!isValidFormat);
         
-        // CONSISTENCY FIX: If key doesn't have valid format, try to fix it
         if (!isValidFormat && apiKey) {
           console.warn('Invalid API key format detected, attempting to set default key');
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
-          setGrokApiKey(defaultApiKey);
           
-          // Double check it worked
-          setTimeout(() => {
-            if (getGrokApiKey() === defaultApiKey) {
-              console.log('Successfully fixed API key format');
-              setDemoMode(false);
-            }
-          }, 100);
+          // Try multiple storage methods
+          try {
+            localStorage.setItem('GROK_API_KEY', defaultApiKey);
+            setGrokApiKey(defaultApiKey);
+            
+            // Double check it worked
+            setTimeout(() => {
+              if (getGrokApiKey() === defaultApiKey) {
+                console.log('Successfully fixed API key format');
+                setDemoMode(false);
+              }
+            }, 100);
+          } catch (e) {
+            console.error('Failed to fix API key:', e);
+          }
         }
       }
     };
@@ -73,7 +104,7 @@ const Chat = () => {
     // Execute the check immediately
     checkAndSetApiKey();
     
-    // Also set up a safety check after a short delay (useful for production environments)
+    // Also set up a safety check after a short delay
     const safetyCheck = setTimeout(() => {
       if (!hasGrokApiKey()) {
         console.warn('Safety check: No API key detected after initial setup');
@@ -81,8 +112,38 @@ const Chat = () => {
       }
     }, 2000);
     
-    return () => clearTimeout(safetyCheck);
+    // CRITICAL FIX: Add periodic check for API key validity
+    const intervalCheck = setInterval(() => {
+      const key = getGrokApiKey();
+      if (!key || !key.startsWith('xai-')) {
+        console.warn('Periodic check: API key missing or invalid, attempting to fix');
+        checkAndSetApiKey();
+      }
+    }, 30000);
+    
+    return () => {
+      clearTimeout(safetyCheck);
+      clearInterval(intervalCheck);
+    };
   }, [toast]);
+
+  // CRITICAL FIX: Add debug component that shows current API key status
+  const debugApiKey = () => {
+    try {
+      const key = getGrokApiKey();
+      console.log('Current API key:', key ? `${key.substring(0, 8)}...` : 'none');
+      console.log('API key valid format:', key && key.startsWith('xai-'));
+      console.log('Environment:', window.location.href.includes('localhost') ? 'development' : 'production');
+      console.log('URL:', window.location.href);
+      
+      toast({
+        title: "API Key Status",
+        description: key ? "API key is set" : "No API key found",
+      });
+    } catch (e) {
+      console.error('Error checking API key:', e);
+    }
+  };
 
   return (
     <MainLayout>
@@ -103,6 +164,14 @@ const Chat = () => {
               </a>
             </span>
           )}
+          
+          {/* Hidden link for debug purposes */}
+          <span 
+            onClick={debugApiKey}
+            className="ml-2 opacity-0 hover:opacity-100 cursor-pointer text-xs text-gray-400"
+          >
+            debug
+          </span>
         </p>
       </div>
       

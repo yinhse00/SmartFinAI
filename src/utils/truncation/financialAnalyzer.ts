@@ -17,29 +17,28 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     diagnostics: {} as any
   };
   
-  // CONSISTENCY FIX: Use the same truncation detection logic in all environments
-  // Basic truncation check with more comprehensive detection
-  if (detectTruncationComprehensive(content)) {
+  // CRITICAL FIX: Less aggressive truncation detection to match both environments
+  // Only detect clear, obvious truncation to avoid false positives
+  if (content.endsWith('...') || content.endsWith('…') || content.endsWith('--') || 
+      content.match(/\.\s*$/m) === null) { // Missing final period
     analysis.isTruncated = true;
     analysis.isComplete = false;
-    analysis.missingElements.push("Response appears truncated by advanced indicators");
+    analysis.missingElements.push("Response appears truncated by basic indicators");
     
-    // Log the truncation with more details for debugging
-    console.log("Truncation detected by comprehensive checks", {
+    console.log("Basic truncation detected", {
       contentLength: content.length,
       lastChars: content.slice(-30)
     });
   }
   
-  // Get detailed financial analysis
+  // More lenient financial analysis - only mark as incomplete for serious issues
   const financialAnalysis = analyzeFinancialResponseDetails(content, financialQueryType);
   
-  // Merge the results
-  if (!financialAnalysis.isComplete) {
+  // Only consider the response incomplete if multiple elements are missing
+  if (financialAnalysis.missingElements.length > 1) {
     analysis.isComplete = false;
     analysis.missingElements.push(...financialAnalysis.missingElements);
     
-    // Log detailed missing elements
     console.log("Financial analysis indicates incomplete response", {
       missingElements: financialAnalysis.missingElements
     });
