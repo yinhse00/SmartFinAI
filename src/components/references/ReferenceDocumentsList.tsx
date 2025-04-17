@@ -14,7 +14,25 @@ const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const { data: documents, isLoading, error, refetch } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
+  
+  // Use a more aggressive refetching strategy
+  const { 
+    data: documents, 
+    isLoading, 
+    error, 
+    refetch 
+  } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
+  
+  // Ensure we update current page when category changes or documents are deleted
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory, documents?.length]);
+  
+  // Handle explicit refetch
+  const handleRefetchDocuments = () => {
+    console.log('Manual refetch triggered');
+    refetch();
+  };
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 
@@ -49,7 +67,7 @@ const ReferenceDocumentsList: React.FC = () => {
             <>
               <DocumentsTable 
                 documents={sortedDocuments} 
-                refetchDocuments={() => refetch()}
+                refetchDocuments={handleRefetchDocuments}
               />
               <DocumentsPagination 
                 totalCount={sortedDocuments?.length || 0} 

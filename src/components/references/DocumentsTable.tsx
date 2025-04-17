@@ -75,12 +75,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
         description: `${title} has been removed from the database.`,
       });
       
-      // Important: Wait a brief moment before refetching to ensure Supabase has processed the delete
-      setTimeout(() => {
-        // Refresh the documents list to remove the deleted item from UI
-        console.log('Refetching documents after delete');
-        refetchDocuments();
-      }, 500); // Increased timeout for better reliability
+      // Force immediate refetch rather than waiting for a timeout
+      refetchDocuments();
       
     } catch (error) {
       console.error('Delete error:', error);
@@ -172,11 +168,13 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
                         className="bg-red-500 hover:bg-red-600 text-white"
                         onClick={(e) => {
                           e.preventDefault();
-                          handleDelete(doc.id, doc.title);
-                          const closeButton = document.querySelector('[data-state="open"] button[data-state="open"]');
+                          // Close the dialog first before deleting
+                          const closeButton = document.querySelector('[data-state="open"] button[data-state="closed"]');
                           if (closeButton && 'click' in closeButton) {
                             (closeButton as HTMLElement).click();
                           }
+                          // Then handle the deletion
+                          handleDelete(doc.id, doc.title);
                         }}
                       >
                         Delete

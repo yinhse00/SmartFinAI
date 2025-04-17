@@ -31,8 +31,7 @@ export function useReferenceDocuments(category?: string) {
       
       return typedData || [];
     },
-    refetchOnWindowFocus: false,
-    refetchOnMount: true,
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    refetchOnWindowFocus: true, // Enable refetching when window gains focus
+    staleTime: 0, // Consider data stale immediately to force refresh
   });
 }
