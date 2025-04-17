@@ -10,7 +10,7 @@ export const useTruncationDetection = () => {
    */
   const isResponseComplete = (
     content: string,
-    diagnosticsResult: { isTruncated: boolean },
+    diagnosticsResult: { isTruncated: boolean; reasons: string[] },
     queryType: string,
     queryText: string
   ): { 
@@ -20,7 +20,7 @@ export const useTruncationDetection = () => {
   } => {
     // Initial state assumes completeness unless proven otherwise
     let isComplete = !diagnosticsResult.isTruncated;
-    const reasons: string[] = [];
+    const reasons: string[] = [...diagnosticsResult.reasons];
     
     // Check for critical financial requirements
     const isAggregationQuery = queryText.toLowerCase().includes('aggregate') || 
@@ -70,7 +70,10 @@ export const useTruncationDetection = () => {
     // Collect reasons for incompleteness
     if (diagnosticsResult.isTruncated) {
       isComplete = false;
-      reasons.push("Response appears truncated by advanced indicators");
+      // No need to add this reason if it's already in the reasons array
+      if (!reasons.includes("Response appears truncated by advanced indicators")) {
+        reasons.push("Response appears truncated by advanced indicators");
+      }
     }
     
     if (isTradingArrangementTruncated) {
