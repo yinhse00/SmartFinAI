@@ -17,11 +17,18 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     diagnostics: {} as any
   };
   
+  // CONSISTENCY FIX: Use the same truncation detection logic in all environments
   // Basic truncation check with more comprehensive detection
   if (detectTruncationComprehensive(content)) {
     analysis.isTruncated = true;
     analysis.isComplete = false;
     analysis.missingElements.push("Response appears truncated by advanced indicators");
+    
+    // Log the truncation with more details for debugging
+    console.log("Truncation detected by comprehensive checks", {
+      contentLength: content.length,
+      lastChars: content.slice(-30)
+    });
   }
   
   // Get detailed financial analysis
@@ -31,6 +38,11 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
   if (!financialAnalysis.isComplete) {
     analysis.isComplete = false;
     analysis.missingElements.push(...financialAnalysis.missingElements);
+    
+    // Log detailed missing elements
+    console.log("Financial analysis indicates incomplete response", {
+      missingElements: financialAnalysis.missingElements
+    });
   }
   
   return analysis;

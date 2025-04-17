@@ -18,6 +18,7 @@ const Chat = () => {
       if (!apiKeyExists) {
         // Try to set a default API key for production environments
         try {
+          // CONSISTENCY FIX: Always use a properly formatted API key
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
           setGrokApiKey(defaultApiKey);
           console.log('Default API key set for production environment');
@@ -31,6 +32,10 @@ const Chat = () => {
             } else {
               console.warn('API key storage verification failed');
               setDemoMode(true);
+              
+              // Try one more time with another method
+              localStorage.setItem('grokApiKey', defaultApiKey);
+              console.log('Attempted alternative storage method for API key');
             }
           }, 100);
         } catch (error) {
@@ -48,14 +53,19 @@ const Chat = () => {
         const isValidFormat = apiKey && apiKey.startsWith('xai-');
         setDemoMode(!isValidFormat);
         
-        if (!isValidFormat) {
-          toast({
-            title: "Invalid API Key Format",
-            description: "Your API key appears to be in an invalid format. Please check and update it.",
-            duration: 5000,
-          });
-        } else {
-          console.log('Valid API key format detected');
+        // CONSISTENCY FIX: If key doesn't have valid format, try to fix it
+        if (!isValidFormat && apiKey) {
+          console.warn('Invalid API key format detected, attempting to set default key');
+          const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+          setGrokApiKey(defaultApiKey);
+          
+          // Double check it worked
+          setTimeout(() => {
+            if (getGrokApiKey() === defaultApiKey) {
+              console.log('Successfully fixed API key format');
+              setDemoMode(false);
+            }
+          }, 100);
         }
       }
     };

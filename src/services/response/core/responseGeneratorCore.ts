@@ -41,33 +41,38 @@ export const responseGeneratorCore = {
         max_tokens: 2000
       };
       
+      // CRITICAL FIX: Use same API call method as primary to ensure consistency
       const backupResponse = await grokApiService.callChatCompletions(backupRequestBody, apiKey);
       const backupText = backupResponse.choices[0].message.content;
       
       // Check if the response appears complete before returning
       const diagnostics = getTruncationDiagnostics(backupText);
       
-      if (diagnostics.isTruncated) {
-        console.warn('Backup response also appears to be truncated, using fallback');
-        return responseEnhancer.enhanceResponse(
-          generateFallbackResponse(prompt).text,
-          queryType,
-          false,
-          0.5,
-          prompt,
-          true // Mark as backup response
-        );
-      }
-      
-      // Return the enhanced backup response
-      return responseEnhancer.enhanceResponse(
+      // CONSISTENCY FIX: Don't treat truncated backup responses differently - show partial response
+      // This ensures consistent behavior between environments
+      const enhancedResponse = responseEnhancer.enhanceResponse(
         backupText,
         queryType,
         false,
         0.5,
         prompt,
-        false // Not a fallback, just a backup API response
+        false // Not marking as fallback, just as potentially truncated
       );
+      
+      // If diagnosed as truncated, add that to metadata
+      if (diagnostics.isTruncated) {
+        enhancedResponse.metadata = {
+          ...enhancedResponse.metadata,
+          responseCompleteness: {
+            isComplete: false,
+            confidence: diagnostics.confidence,
+            reasons: diagnostics.reasons
+          }
+        };
+      }
+      
+      return enhancedResponse;
+      
     } catch (backupError) {
       console.error('Backup API call failed:', backupError);
       

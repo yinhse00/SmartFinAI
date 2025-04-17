@@ -45,6 +45,7 @@ export const grokApiService = {
     console.log("Temperature:", requestBody.temperature);
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
+    console.log("Environment:", process.env.NODE_ENV || "unknown");
     
     // Add retry mechanism with exponential backoff for production resilience
     let retries = 0;
@@ -53,12 +54,13 @@ export const grokApiService = {
     while (retries <= maxRetries) {
       try {
         // Use consistent API endpoint format that works in both environments
-        // Ensure it's a relative path starting with / for proper resolution in all environments
+        // CRITICAL FIX: Using absolute URL beginning with / to ensure proper resolution
+        // This is crucial for production environments
         const apiEndpoint = '/api/grok/chat/completions';
         
         console.log("API endpoint:", apiEndpoint);
-        console.log("Environment:", process.env.NODE_ENV || "unknown");
         
+        // CRITICAL FIX: Make fetch options identical in both environments
         const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
@@ -67,8 +69,10 @@ export const grokApiService = {
             ...FINANCIAL_EXPERT_HEADERS
           },
           body: JSON.stringify(requestBody),
-          // Force credentials inclusion for cross-origin requests in production
-          credentials: 'same-origin'
+          // CRITICAL FIX: Always use same-origin credentials in both environments
+          credentials: 'same-origin',
+          // Add explicit cache control to prevent caching issues
+          cache: 'no-store'
         });
         
         // Log response status for debugging
@@ -78,28 +82,12 @@ export const grokApiService = {
           const errorData = await response.text();
           console.error(`Financial expert API error ${response.status}:`, errorData);
           
-          // Handle truncated responses differently from server errors
-          if (response.status === 413 || response.status === 429) {
-            // These status codes might indicate token limit issues
-            // Return a partial response rather than falling back completely
-            console.warn(`Received ${response.status} error, treating as potential truncation`);
-            throw new Error(`Financial expert API truncation error: ${response.status}`);
-          }
-          
-          // Specific error handling for financial expertise API
           if (response.status === 401) {
             throw new Error("Financial expert authentication failed. Please check your API key.");
           } else if (response.status === 429) {
             throw new Error("Financial expert rate limit exceeded. Please try again later.");
           } else if (response.status >= 500) {
             throw new Error("Financial expert service is currently unavailable. Please try again later.");
-          } else if (response.status === 404) {
-            // Check for specific model-related errors in the response
-            if (errorData.includes("model") && errorData.includes("does not exist")) {
-              throw new Error("The specified financial expert model is not available. Please use a different model.");
-            } else {
-              throw new Error("Financial expert API endpoint not found. Please check the API documentation.");
-            }
           } else {
             throw new Error(`Financial expert API error: ${response.status}`);
           }

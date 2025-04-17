@@ -27,7 +27,7 @@ export const useEnhancedRetryHandling = () => {
       // Track this retry attempt
       setRetryCount(currentRetryCount + 1);
       
-      // Enhance parameters for this retry attempt
+      // Enhance parameters for this retry attempt - use local enhanceParamsForRetry that takes only needed parameters
       const retryParams = enhanceParamsForRetry(enhancedParams, currentRetryCount);
       
       // Log retry information

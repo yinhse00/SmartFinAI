@@ -77,11 +77,11 @@ export const useResponseHandling = (
       // Log the completeness check results
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
       
-      // Make behavior consistent between dev and prod:
-      // If response is incomplete but not using fallback, still show the partial response
-      // rather than trying to retry, which often leads to fallbacks in production
-      if (!completenessCheck.isComplete && !isUsingFallback && !isSimpleQuery) {
-        console.log("Response appears incomplete, but using partial response for consistent behavior");
+      // CRITICAL CHANGE: Make behavior consistent between environments
+      // Never retry for incomplete responses, just show the partial response with truncation UI
+      // This ensures production and development behave the same way
+      if (!completenessCheck.isComplete && !isUsingFallback) {
+        console.log("Response appears incomplete, using partial response for consistent behavior");
         // Mark response as truncated so UI can show retry option
         apiResponse.metadata = {
           ...apiResponse.metadata,
@@ -97,37 +97,6 @@ export const useResponseHandling = (
           description: "The response appears incomplete. You can retry for a more complete answer.",
           duration: 8000,
         });
-      } else {
-        // Retry logic for incomplete responses - more aggressive approach
-        while (retryCount < maxRetries && !completenessCheck.isComplete && !isUsingFallback && isGrokApiKeySet) {
-          console.log(`Response appears incomplete (attempt ${retryCount + 1}/${maxRetries}), retrying with enhanced parameters`);
-          
-          // Execute retry with enhanced parameters
-          const retryResult = await executeRetryWithEnhancedParams(
-            enhancedParams,
-            retryCount,
-            maxRetries,
-            enhanceParamsForRetry,
-            isAggregationQuery,
-            financialQueryType,
-            queryText,
-            analyzeResponseCompleteness
-          );
-          
-          // If retry was successful and returned a valid response, update apiResponse and completenessCheck
-          if (retryResult.retryAttempted && retryResult.apiResponse) {
-            apiResponse = retryResult.apiResponse;
-            completenessCheck = retryResult.completenessCheck;
-            
-            // If complete, break out of retry loop immediately to save time
-            if (completenessCheck.isComplete) {
-              console.log('Received complete response, breaking retry loop');
-              break;
-            }
-          }
-          
-          retryCount++;
-        }
       }
       
       // Process the API response and update the UI

@@ -5,10 +5,7 @@
 export const useRetryStrategies = () => {
   const enhanceParamsForRetry = (
     responseParams: any, 
-    retryCount: number, 
-    isAggregationQuery: boolean,
-    financialQueryType: string,
-    queryText: string
+    retryCount: number
   ) => {
     // More reasonable token scaling for faster convergence
     const tokenMultiplier = retryCount === 0 ? 1.5 : (retryCount === 1 ? 2 : 3);
@@ -26,17 +23,24 @@ export const useRetryStrategies = () => {
       prompt: responseParams.prompt + " CRITICAL: You MUST provide a complete response with all necessary information and a clear conclusion. DO NOT truncate your response."
     };
     
+    // Check if this is an aggregation query from the query text itself
+    const isAggregationQuery = responseParams.prompt && 
+                               (responseParams.prompt.toLowerCase().includes('aggregate') && 
+                               (responseParams.prompt.toLowerCase().includes('rights issue') || 
+                                responseParams.prompt.toLowerCase().includes('rule 7.19a')));
+    
     // For rights issue aggregation queries, add specific instructions
     if (isAggregationQuery && retryCount === 0) {
       enhancedParams.prompt += " IMPORTANT: Fully explain Rule 7.19A aggregation requirements and 50% threshold calculation across multiple rights issues within 12 months. Address shareholder approval requirements directly and provide a clear conclusion.";
     }
     
     // Special handling for financial comparison queries to ensure completeness
-    if ((financialQueryType === 'rights_issue' || 
-         financialQueryType.includes('financial') ||
-         queryText.toLowerCase().includes('difference')) && 
-         retryCount === 1) {  // On second retry
-      
+    const isFinancialComparisonQuery = responseParams.prompt && 
+                                      ((responseParams.prompt.toLowerCase().includes('rights_issue') || 
+                                        responseParams.prompt.toLowerCase().includes('financial')) && 
+                                        responseParams.prompt.toLowerCase().includes('difference'));
+    
+    if (isFinancialComparisonQuery && retryCount === 1) {  // On second retry
       // For the final retry of a comparison query, explicitly request conclusion
       enhancedParams.prompt = enhancedParams.prompt + 
         " Ensure your response includes a complete conclusion section summarizing key differences and recommendations.";
