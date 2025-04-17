@@ -1,4 +1,3 @@
-
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -6,28 +5,28 @@ import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
  * With adjusted maximum token limit and safety checks
  */
 export const getOptimalTokens = (queryType: string, query: string): number => {
-  // Use reasonable token limits based on query complexity
+  // Rights issue and complex timetable queries now get up to 24000 tokens (3x the previous 8000)
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 8000; // Maximum allowed tokens for complex rights issue queries
+    return 24000; // Increased from 8000
   }
   
-  // Rights issue general queries including comparison queries
+  // Rights issue comparison queries now get up to 21000 tokens
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE) {
     if (query.toLowerCase().includes('difference between') || 
         query.toLowerCase().includes('compare') || 
         query.toLowerCase().includes('versus') || 
         query.toLowerCase().includes('vs')) {
-      return 7000; // High token count for comparison queries
+      return 21000; // Increased from 7000
     }
-    return 6000; // Standard rights issue queries
+    return 18000; // Increased from 6000
   }
   
-  // Complex query handling for other corporate actions
+  // Complex corporate actions now get up to 18000 tokens
   if ([
     FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
     FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
@@ -36,26 +35,26 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 6000; // Complex corporate actions
+    return 18000; // Increased from 6000
   }
   
-  // Comparison queries
+  // Comparison queries now get up to 18000 tokens
   if (query.toLowerCase().includes('difference between') || 
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 6000; // Comparison queries
+    return 18000; // Increased from 6000
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 5000; // Explanations
+    return 15000; // Increased from 5000
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 4000; // Connected transactions and takeovers
+    return 12000; // Increased from 4000
   }
   
-  return 3000; // Default token count
+  return 9000; // Increased from 3000
 };
 
 /**
@@ -137,4 +136,3 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
   
   return 0.3;
 };
-
