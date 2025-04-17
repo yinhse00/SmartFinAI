@@ -2,9 +2,10 @@
 import { searchService } from '../../databaseService';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from '../utils/resultProcessors';
-import { isWhitewashWaiverQuery, isGeneralOfferQuery, isTradingArrangementQuery, isCorporateActionQuery } from '../utils/queryDetector';
-import { searchStrategies } from './searchStrategies';
+import { isWhitewashWaiverQuery, isGeneralOfferQuery } from '../utils/queryDetector';
 import { contextFormatter } from './contextFormatter';
+import { findFAQDocuments } from './faqSearchService';
+import { specificRuleSearchService } from './specificRuleSearchService';
 
 /**
  * Core functionality for contextService
@@ -24,7 +25,7 @@ export const contextServiceCore = {
       
       if (isFaqQuery) {
         // Get FAQ documents first
-        const faqResults = await searchStrategies.findFAQDocuments(query);
+        const faqResults = await findFAQDocuments(query);
         
         if (faqResults.length > 0) {
           console.log(`Found ${faqResults.length} FAQ documents to prioritize`);
@@ -38,7 +39,7 @@ export const contextServiceCore = {
         .replace('rights issues', 'rights issue');
       
       // Check for specific rule references first
-      const specificRuleResults = await searchStrategies.findSpecificRulesDocuments(normalizedQuery);
+      const specificRuleResults = await specificRuleSearchService.findSpecificRulesDocuments(normalizedQuery);
       
       if (specificRuleResults.length > 0) {
         console.log(`Found ${specificRuleResults.length} results specifically matching rule references`);
