@@ -27,20 +27,20 @@ interface DocumentsTableProps {
 }
 
 const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocuments }) => {
-  const handleDownload = async (document: ReferenceDocument) => {
+  const handleDownload = async (doc: ReferenceDocument) => {
     try {
       // Create a temporary anchor element to trigger download
-      const downloadLink = document.file_url;
-      const link = document.createElement('a');
+      const downloadLink = doc.file_url;
+      const link = window.document.createElement('a');
       link.href = downloadLink;
-      link.download = document.title;
-      document.body.appendChild(link);
+      link.download = doc.title;
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       
       toast({
         title: "Download Started",
-        description: `Downloading ${document.title}`,
+        description: `Downloading ${doc.title}`,
       });
     } catch (error) {
       console.error('Download error:', error);
