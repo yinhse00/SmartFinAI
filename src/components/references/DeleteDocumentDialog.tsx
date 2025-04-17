@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Trash2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +32,7 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
   refetchDocuments 
 }) => {
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const queryClient = useQueryClient();
 
   const handleDelete = async () => {
     try {
@@ -59,13 +61,27 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
       // Close the dialog first
       setIsOpen(false);
       
+      // Force invalidate all queries related to reference documents
+      queryClient.invalidateQueries({
+        queryKey: ['referenceDocuments'],
+        exact: false,
+        refetchType: 'all'
+      });
+      
       // Force immediate refetch with a small delay to ensure Supabase has processed the deletion
       setTimeout(() => {
         refetchDocuments();
+        
+        // Double-check after a longer delay to ensure UI is updated
+        setTimeout(() => {
+          queryClient.invalidateQueries({
+            queryKey: ['referenceDocuments'],
+            exact: false,
+            refetchType: 'all'
+          });
+          refetchDocuments();
+        }, 1000);
       }, 300);
-      
-      // Reset state
-      setIsDeleting(false);
       
     } catch (error) {
       console.error('Delete error:', error);
@@ -75,6 +91,8 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
         description: "Failed to delete the document. Please try again.",
         variant: "destructive"
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 

@@ -1,7 +1,9 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from '@/hooks/use-toast';
 
 // Import our components
 import ReferenceSearch from './ReferenceSearch';
@@ -9,13 +11,12 @@ import CategoryTabs from './CategoryTabs';
 import ReferencesSkeleton from './ReferencesSkeleton';
 import DocumentsTable from './DocumentsTable';
 import DocumentsPagination from './DocumentsPagination';
-import { useQueryClient } from '@tanstack/react-query';
 
 const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [refreshTrigger, setRefreshTrigger] = useState(0); // Add a refresh trigger
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const queryClient = useQueryClient();
   
   // Use our hook with optimized refetching strategy
@@ -23,40 +24,47 @@ const ReferenceDocumentsList: React.FC = () => {
     data: documents, 
     isLoading, 
     error,
-    refetch 
+    refetch,
+    isRefetching
   } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
   
   // Reset to page 1 when category changes or document count changes
-  React.useEffect(() => {
+  useEffect(() => {
     setCurrentPage(1);
   }, [activeCategory, documents?.length]);
+
+  // Force refetch when component mounts or activeCategory changes
+  useEffect(() => {
+    console.log('Initial fetch of documents');
+    handleRefetchDocuments();
+  }, [activeCategory]); // Depend only on activeCategory
   
   // Explicit refetch function with forced invalidation
   const handleRefetchDocuments = useCallback(() => {
     console.log('Manual refetch triggered');
     
-    // Force invalidation of the query
-    queryClient.invalidateQueries({ 
-      queryKey: ['referenceDocuments'],
-      refetchType: 'active', 
-      exact: false 
-    });
-    
     // Increment refresh trigger to force component update
     setRefreshTrigger(prev => prev + 1);
     
-    // Force refetch after cache invalidation
-    setTimeout(() => {
-      refetch();
-    }, 300);
+    // Force invalidation of the query
+    queryClient.invalidateQueries({ 
+      queryKey: ['referenceDocuments'],
+      refetchType: 'all', 
+      exact: false 
+    });
+    
+    // Force refetch
+    refetch().then(() => {
+      console.log('Refetch completed successfully');
+    }).catch(err => {
+      console.error('Refetch failed:', err);
+      toast({
+        title: "Refresh Failed",
+        description: "Could not refresh document list. Please try again.",
+        variant: "destructive"
+      });
+    });
   }, [refetch, queryClient]);
-  
-  // Force refetch when refresh trigger changes
-  React.useEffect(() => {
-    if (refreshTrigger > 0) {
-      refetch();
-    }
-  }, [refreshTrigger, refetch]);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 
@@ -81,7 +89,7 @@ const ReferenceDocumentsList: React.FC = () => {
         <CategoryTabs activeCategory={activeCategory} setActiveCategory={setActiveCategory} />
         
         <div className="mt-2">
-          {isLoading ? (
+          {isLoading || isRefetching ? (
             <ReferencesSkeleton />
           ) : error ? (
             <div className="py-8 text-center">

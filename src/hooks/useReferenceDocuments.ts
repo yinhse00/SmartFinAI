@@ -35,7 +35,7 @@ export function useReferenceDocuments(category?: string) {
       return typedData || [];
     },
     refetchOnWindowFocus: false,   
-    staleTime: 0,                  // Consider data stale immediately (important for refetching)
+    staleTime: 0,                  // Consider data stale immediately
     gcTime: 0,                     // Don't cache the data at all (renamed from cacheTime in v5)
     refetchInterval: false,        
     retry: 1,                      
