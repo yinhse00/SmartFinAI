@@ -1,64 +1,98 @@
 
 import { GrokResponse } from '@/types/grok';
+import { useState, useCallback } from 'react';
 import { grokService } from '@/services/grokService';
+import { useFallbackDetection } from './useFallbackDetection';
+import { useToast } from '@/hooks/use-toast';
 
 /**
- * Hook for handling retries with progressively enhanced parameters
+ * Hook for enhanced retry handling with improved context and token management
  */
 export const useEnhancedRetryHandling = () => {
-  const executeRetryWithEnhancedParams = async (
-    responseParams: any,
-    retryCount: number,
+  const [retryCount, setRetryCount] = useState(0);
+  const { isFallbackResponse } = useFallbackDetection();
+  const { toast } = useToast();
+  
+  const executeRetryWithEnhancedParams = useCallback(async (
+    enhancedParams: any,
+    currentRetryCount: number,
     maxRetries: number,
-    enhanceParamsForRetry: (params: any, retryCount: number, isAggregationQuery: boolean, financialQueryType: string, queryText: string) => any,
+    enhanceParamsForRetry: (params: any, retryCount: number) => any,
     isAggregationQuery: boolean,
     financialQueryType: string,
     queryText: string,
-    analyzeResponseCompleteness: (text: string, financialQueryType: string, queryText: string, isSimpleQuery: boolean) => any
-  ): Promise<{
-    apiResponse: GrokResponse;
-    completenessCheck: any;
-    retryAttempted: boolean;
-  }> => {
-    let apiResponse: GrokResponse | null = null;
-    let completenessCheck = { isComplete: false, reasons: [], financialAnalysis: { missingElements: [] } };
-    let retryAttempted = false;
-    
+    analyzeResponseCompleteness: (text: string, type: string, query: string, isSimple: boolean) => any
+  ) => {
     try {
-      // Get enhanced parameters for this retry attempt with more aggressive settings
-      const enhancedParams = enhanceParamsForRetry(
-        responseParams, 
-        retryCount, 
-        isAggregationQuery,
+      // Track this retry attempt
+      setRetryCount(currentRetryCount + 1);
+      
+      // Enhance parameters for this retry attempt
+      const retryParams = enhanceParamsForRetry(enhancedParams, currentRetryCount);
+      
+      // Log retry information
+      console.log(`Retry attempt ${currentRetryCount + 1}/${maxRetries} with ${retryParams.maxTokens} tokens and temperature ${retryParams.temperature}`);
+      
+      // Make the API call with enhanced parameters
+      const retryResponse: GrokResponse = await grokService.generateResponse(retryParams);
+      
+      // Check if this is a fallback response
+      const isUsingFallback = isFallbackResponse(retryResponse.text);
+      
+      if (isUsingFallback) {
+        console.log('Retry resulted in fallback response, not using');
+        
+        // Make the fallback visible in both environments for consistency
+        toast({
+          title: "Enhanced Response Failed",
+          description: "Couldn't generate a complete response. Using available information.",
+          variant: "destructive"
+        });
+        
+        // Return that we attempted but don't use the fallback response
+        return {
+          retryAttempted: true,
+          apiResponse: null,
+          completenessCheck: { 
+            isComplete: false, 
+            reasons: ['Retry resulted in fallback response'],
+            financialAnalysis: { isComplete: false, missingElements: ['Complete response unavailable'] }
+          }
+        };
+      }
+      
+      // Check if the retry response is complete
+      const retryCompletenessCheck = analyzeResponseCompleteness(
+        retryResponse.text,
         financialQueryType,
-        queryText
+        queryText,
+        false // Never treat retries as simple queries
       );
       
-      console.log(`Retry #${retryCount + 1} with tokens: ${enhancedParams.maxTokens}, temperature: ${enhancedParams.temperature}`);
+      console.log(`Retry completeness check - Complete: ${retryCompletenessCheck.isComplete}, Reasons: ${retryCompletenessCheck.reasons.join(', ')}`);
       
-      // Execute retry with enhanced parameters
-      apiResponse = await grokService.generateResponse(enhancedParams);
-      retryAttempted = true;
-      console.log(`Retry #${retryCount + 1} completed, checking completeness`);
+      return {
+        retryAttempted: true,
+        apiResponse: retryResponse,
+        completenessCheck: retryCompletenessCheck
+      };
+    } catch (error) {
+      console.error('Error during retry attempt:', error);
       
-      // Re-analyze completeness with stricter criteria on each retry
-      completenessCheck = analyzeResponseCompleteness(
-        apiResponse.text, 
-        financialQueryType, 
-        queryText, 
-        false // Force full analysis on retries
-      );
-      
-      console.log(`Retry #${retryCount + 1} result - Complete: ${completenessCheck.isComplete}, Reasons: ${completenessCheck.reasons.join(', ')}`);
-    } catch (retryError) {
-      console.error(`Retry #${retryCount + 1} failed:`, retryError);
-      // Return null response if retry fails
+      return {
+        retryAttempted: true,
+        apiResponse: null,
+        completenessCheck: { 
+          isComplete: false, 
+          reasons: ['Error during retry attempt'],
+          financialAnalysis: { isComplete: false, missingElements: ['Error during retry'] }
+        }
+      };
     }
-    
-    return { apiResponse, completenessCheck, retryAttempted };
-  };
-
+  }, [toast, isFallbackResponse]);
+  
   return {
+    retryCount,
     executeRetryWithEnhancedParams
   };
 };

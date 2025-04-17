@@ -78,6 +78,14 @@ export const grokApiService = {
           const errorData = await response.text();
           console.error(`Financial expert API error ${response.status}:`, errorData);
           
+          // Handle truncated responses differently from server errors
+          if (response.status === 413 || response.status === 429) {
+            // These status codes might indicate token limit issues
+            // Return a partial response rather than falling back completely
+            console.warn(`Received ${response.status} error, treating as potential truncation`);
+            throw new Error(`Financial expert API truncation error: ${response.status}`);
+          }
+          
           // Specific error handling for financial expertise API
           if (response.status === 401) {
             throw new Error("Financial expert authentication failed. Please check your API key.");

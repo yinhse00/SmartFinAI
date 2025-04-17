@@ -44,7 +44,11 @@ export const useFallbackDetection = () => {
     // Check if any fallback pattern matches
     const hasPattern = fallbackPatterns.some(pattern => pattern.test(responseText));
     
-    return hasIndicator || hasPattern;
+    // Check for metadata flag indicating this is a fallback response
+    const hasFallbackMetadata = responseText.includes('"isBackupResponse": true') || 
+                              responseText.includes('"isBackupResponse":true');
+    
+    return hasIndicator || hasPattern || hasFallbackMetadata;
   };
 
   return {

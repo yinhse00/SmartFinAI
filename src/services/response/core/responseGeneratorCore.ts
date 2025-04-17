@@ -1,74 +1,85 @@
 
-import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
-import { getGrokApiKey } from '../../apiKeyService';
+import { getTruncationDiagnostics } from '@/utils/truncation';
+import { responseEnhancer } from '../modules/responseEnhancer';
 
 /**
- * Core functionality for generating responses
+ * Core response generation functionality
  */
 export const responseGeneratorCore = {
   /**
-   * Make API call with parameters
+   * Make API call with proper error handling
    */
-  makeApiCall: async (
-    requestBody: any,
-    apiKey?: string,
-    isRetry: boolean = false
-  ): Promise<any> => {
+  makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
       return await grokApiService.callChatCompletions(requestBody, apiKey);
-    } catch (apiError) {
-      console.error(`API call ${isRetry ? '(retry)' : ''} failed:`, apiError);
-      throw apiError;
+    } catch (error) {
+      console.error('API call failed:', error);
+      throw error;
     }
   },
-
+  
   /**
-   * Make a backup API call with simplified parameters
+   * Make backup API call with simplified parameters
    */
-  makeBackupApiCall: async (
-    prompt: string,
-    queryType: string,
-    apiKey?: string
-  ): Promise<GrokResponse> => {
+  makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
-      console.log("Attempting backup API call with simplified parameters");
+      console.log('Attempting backup API call with simplified parameters');
       
-      // Use more conservative parameters for backup attempt
+      // Create a simplified request body for backup attempts
       const backupRequestBody = {
         messages: [
-          { role: 'system', content: "You are a Hong Kong financial regulations expert. Provide accurate information based on Hong Kong listing rules, takeovers code, and corporate finance regulations." },
+          {
+            role: 'system',
+            content: 'You are a helpful assistant with knowledge of Hong Kong financial regulations.'
+          },
           { role: 'user', content: prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: 0.1,  // Very low temperature for factual accuracy
-        max_tokens: 2000,  // Conservative token limit
+        temperature: 0.5,
+        max_tokens: 2000
       };
       
       const backupResponse = await grokApiService.callChatCompletions(backupRequestBody, apiKey);
+      const backupText = backupResponse.choices[0].message.content;
       
-      const backupResponseText = backupResponse.choices[0].message.content;
+      // Check if the response appears complete before returning
+      const diagnostics = getTruncationDiagnostics(backupText);
       
-      return {
-        text: backupResponseText,
-        queryType: queryType || 'general',
-        metadata: {
-          contextUsed: false,
-          relevanceScore: 0.8,
-          isBackupResponse: true
-        }
-      };
+      if (diagnostics.isTruncated) {
+        console.warn('Backup response also appears to be truncated, using fallback');
+        return responseEnhancer.enhanceResponse(
+          generateFallbackResponse(prompt).text,
+          queryType,
+          false,
+          0.5,
+          prompt,
+          true // Mark as backup response
+        );
+      }
+      
+      // Return the enhanced backup response
+      return responseEnhancer.enhanceResponse(
+        backupText,
+        queryType,
+        false,
+        0.5,
+        prompt,
+        false // Not a fallback, just a backup API response
+      );
     } catch (backupError) {
       console.error('Backup API call failed:', backupError);
-      throw backupError;
+      
+      // Generate a fallback response since both attempts failed
+      return responseEnhancer.enhanceResponse(
+        generateFallbackResponse(prompt).text,
+        queryType,
+        false,
+        0.5,
+        prompt,
+        true // Mark as backup response
+      );
     }
-  },
-
-  /**
-   * Generate a fallback response when all API calls fail
-   */
-  generateFallback: (prompt: string, errorMessage: string): GrokResponse => {
-    return generateFallbackResponse(prompt, errorMessage);
   }
 };
