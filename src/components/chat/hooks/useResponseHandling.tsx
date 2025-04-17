@@ -42,11 +42,11 @@ export const useResponseHandling = (
       // Determine if this is a simple query
       const isSimpleQuery = isQuerySimple(queryText);
       
-      // Apply conservative token limits for consistency
+      // FIXED: Apply conservative token limits for consistency across environments
       const enhancedParams = {
         ...responseParams,
         temperature: Math.min(0.3, responseParams.temperature || 0.3),
-        maxTokens: Math.min(2500, responseParams.maxTokens || 2500)
+        maxTokens: Math.min(1500, responseParams.maxTokens || 1500)
       };
       
       // Log environment info
@@ -67,18 +67,28 @@ export const useResponseHandling = (
         return errorMessage;
       }
       
-      // Check for fallback response
+      // FIXED: Use consistent fallback detection across environments
       const isUsingFallback = isFallbackResponse(apiResponse.text);
       
       // Better debug logging
       console.log("Fallback detection result:", {
         isUsingFallback,
         responseLength: apiResponse.text.length,
+        responseFirstChars: apiResponse.text.substring(0, 50) + '...',
+        hasBackupMetadata: apiResponse.metadata && apiResponse.metadata.isBackupResponse
       });
       
-      if (isUsingFallback && isGrokApiKeySet) {
-        console.log("Fallback response detected despite valid API key");
+      // FIXED: Apply consistent fallback handling
+      if (isUsingFallback) {
+        console.log("Fallback response detected");
         handleFallbackResponse(isGrokApiKeySet);
+        
+        // Ensure the response is properly marked as fallback for UI display
+        if (apiResponse.metadata) {
+          apiResponse.metadata.isBackupResponse = true;
+        } else {
+          apiResponse.metadata = { isBackupResponse: true };
+        }
       }
       
       // Analyze response completeness
@@ -91,10 +101,9 @@ export const useResponseHandling = (
       
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
       
-      // CRITICAL FIX: Always show the partial response even if incomplete
-      // This ensures consistent behavior between environments
+      // FIXED: Always show the partial response with proper truncation marking
       if (!completenessCheck.isComplete) {
-        console.log("Response appears incomplete, showing partial response");
+        console.log("Response appears incomplete, marking as truncated");
         
         // Mark as truncated for UI
         apiResponse.metadata = {

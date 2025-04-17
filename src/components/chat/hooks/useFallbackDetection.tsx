@@ -9,27 +9,32 @@ export const useFallbackDetection = () => {
       return true;
     }
     
-    // CRITICAL FIX: Only detect explicit fallback phrases
-    // Use minimal set of indicators to prevent false positives in production
+    // Use consistent fallback indicators across all environments
     const fallbackIndicators = [
       "Cannot connect to financial expertise service",
       "Failed to connect to financial expertise service",
       "database connection failed",
       "connection issue",
-      "Unable to access financial database"
+      "Unable to access financial database",
+      "I'm currently experiencing some technical difficulties",
+      "technical difficulties accessing my full knowledge database",
+      "I apologize, but I encountered an issue",
+      "Please try your query again in a few moments"
     ];
     
-    // Look for exact fallback phrases only
-    const hasExactIndicator = fallbackIndicators.some(indicator => 
+    // Check for any fallback indicators
+    const hasIndicator = fallbackIndicators.some(indicator => 
       responseText.toLowerCase().includes(indicator.toLowerCase())
     );
     
-    // Check metadata - this is reliable across environments
+    // Check metadata - ensure this is consistent across environments
     const hasFallbackMetadata = responseText.includes('"isBackupResponse": true') || 
                               responseText.includes('"isBackupResponse":true') ||
-                              responseText.includes('"fallback": true');
+                              responseText.includes('"fallback": true') ||
+                              responseText.includes('"isBackupResponse":true') ||
+                              responseText.includes('"isBackupResponse": true');
     
-    return hasExactIndicator || hasFallbackMetadata;
+    return hasIndicator || hasFallbackMetadata;
   };
 
   return {

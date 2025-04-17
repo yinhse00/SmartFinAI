@@ -15,7 +15,7 @@ export const responseGeneratorCore = {
       console.log("Making primary API call with standard parameters");
       const response = await grokApiService.callChatCompletions(requestBody, apiKey);
       
-      // Validate response structure
+      // Validate response structure consistently across environments
       if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
         console.error("API returned invalid response structure");
         throw new Error("Invalid API response structure");
@@ -30,12 +30,13 @@ export const responseGeneratorCore = {
   
   /**
    * Make backup API call with simplified parameters
+   * FIXED: Ensure consistent parameters across environments
    */
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
       console.log('Attempting backup API call with simplified parameters');
       
-      // Create a simplified request body
+      // Create a simplified request body - CONSISTENT across environments
       const backupRequestBody = {
         messages: [
           {
@@ -45,11 +46,11 @@ export const responseGeneratorCore = {
           { role: 'user', content: prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: 0.5,
-        max_tokens: 1500
+        temperature: 0.3, // FIXED: Use consistent temperature
+        max_tokens: 1500  // FIXED: Use consistent token limit
       };
       
-      // Add delay to avoid rate limiting
+      // Add consistent delay across environments
       await new Promise(resolve => setTimeout(resolve, 500));
       
       console.log("Making backup API call");
@@ -58,14 +59,14 @@ export const responseGeneratorCore = {
       
       console.log("Backup API call successful, response length:", backupText.length);
       
-      // Return partial response with enhanced metadata
+      // Return response with metadata - CONSISTENTLY marked as backup response
       return responseEnhancer.enhanceResponse(
         backupText,
         queryType,
         false,
         0.5,
         prompt,
-        false // Not marking as fallback
+        true // Always mark as backup response for consistent detection
       );
       
     } catch (backupError) {
@@ -76,17 +77,17 @@ export const responseGeneratorCore = {
         apiKeyValid: !!apiKey,
         apiKeyFormat: apiKey ? `${apiKey.substring(0, 4)}...` : 'none',
         queryType: queryType,
-        promptLength: prompt.length
+        promptLength: prompt ? prompt.length : 0
       });
       
-      // Generate a fallback response as last resort
+      // Generate a fallback response as last resort - CONSISTENTLY formatted
       return responseEnhancer.enhanceResponse(
         generateFallbackResponse(prompt).text,
         queryType,
         false,
         0.5,
         prompt,
-        true // Mark as backup response
+        true // Always mark as backup/fallback for consistent detection
       );
     }
   }

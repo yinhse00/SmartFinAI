@@ -71,10 +71,9 @@ export const grokResponseGenerator = {
       }
 
       // Standard processing flow for regulatory/financial queries
-      // Build system message with enhanced context awareness
       const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery);
       
-      // Get optimized parameters for API call
+      // Get optimized parameters for API call - CONSISTENT ACROSS ENVIRONMENTS
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
         queryType, 
         params.prompt, 
@@ -82,43 +81,19 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // Prepare request body with consistent parameters across environments
+      // FIXED: Ensure consistent parameters across all environments
+      // Use the same temperature and token limits in both development and production
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
-        Math.min(0.3, temperature), // Ensure consistent temperature
-        Math.min(3000, maxTokens)   // Cap token limit for consistent behavior
+        Math.min(0.3, temperature), // Cap temperature for consistency
+        Math.min(2000, maxTokens)   // Cap tokens for consistency
       );
 
       try {
-        // Make primary API call with additional error handling
-        console.log(`Making API call with tokens: ${maxTokens}, temperature: ${temperature}`);
-        
-        // Add retry mechanism for API call failures
-        let response;
-        let retryCount = 0;
-        const maxRetries = 2;
-        
-        while (retryCount <= maxRetries) {
-          try {
-            response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
-            break; // Success, exit the retry loop
-          } catch (retryError) {
-            retryCount++;
-            console.error(`API call attempt ${retryCount} failed:`, retryError);
-            
-            if (retryCount <= maxRetries) {
-              console.log(`Retrying API call in ${retryCount * 500}ms...`);
-              await new Promise(resolve => setTimeout(resolve, retryCount * 500));
-            } else {
-              throw retryError; // Max retries reached, propagate the error
-            }
-          }
-        }
-        
-        if (!response) {
-          throw new Error("Failed to get API response after retries");
-        }
+        // Make primary API call
+        console.log(`Making API call with tokens: ${Math.min(2000, maxTokens)}, temperature: ${Math.min(0.3, temperature)}`);
+        const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
         
         // Get the raw response text
         const responseText = response.choices[0].message.content;
@@ -142,9 +117,10 @@ export const grokResponseGenerator = {
         console.groupEnd();
         return finalResponse;
       } catch (primaryApiError) {
-        // If first attempt fails, try backup approach
+        // If first attempt fails, try backup approach with IDENTICAL parameters
+        console.error("Primary API call failed, attempting backup approach:", primaryApiError);
+        
         try {
-          console.error("Primary API call failed, attempting backup approach:", primaryApiError);
           const backupResponse = await responseGeneratorCore.makeBackupApiCall(
             enhancedParams.prompt, 
             queryType, 
@@ -158,7 +134,7 @@ export const grokResponseGenerator = {
           console.error('Both API attempts failed, using fallback:', backupError);
           console.groupEnd();
           
-          // Generate a better fallback response that appears more natural
+          // FIXED: Use consistent fallback response format across environments
           return {
             text: "I'm currently experiencing some technical difficulties accessing my full knowledge database. Based on what I can access, here's what I can provide about your query:\n\n" + 
                   "For questions about Hong Kong listing rules, takeovers code, and compliance requirements, I normally provide detailed information from regulatory sources. " +
@@ -168,7 +144,7 @@ export const grokResponseGenerator = {
             metadata: {
               contextUsed: false,
               relevanceScore: 0.5,
-              isBackupResponse: true  // Changed from isFallback to isBackupResponse to match the type definition
+              isBackupResponse: true
             }
           };
         }
