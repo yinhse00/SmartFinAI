@@ -1,11 +1,10 @@
 
-import React, { useRef, useEffect } from 'react';
+import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -30,9 +29,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onOpenApiKeyDialog,
   retryLastQuery
 }) => {
-  // Ref for chat history container
-  const chatHistoryRef = useRef<HTMLDivElement>(null);
-
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
@@ -40,18 +36,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
       <CardContent 
-        className="flex-1 p-0 overflow-hidden max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
+        className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
       >
-        <ScrollArea 
-          className="h-full w-full pr-2" 
-          type="always"
-        >
-          <ChatHistory 
-            messages={messages} 
-            isLoading={isLoading} 
-            onRetry={retryLastQuery}
-          />
-        </ScrollArea>
+        <ChatHistory 
+          messages={messages} 
+          isLoading={isLoading} 
+          onRetry={retryLastQuery}
+        />
       </CardContent>
       <ChatInput 
         input={input}
