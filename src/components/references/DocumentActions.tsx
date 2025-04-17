@@ -17,12 +17,12 @@ const DocumentActions: React.FC<DocumentActionsProps> = ({ document, refetchDocu
   const handleDownload = async (doc: ReferenceDocument) => {
     try {
       const downloadLink = doc.file_url;
-      const link = document.createElement('a');
+      const link = window.document.createElement('a');
       link.href = downloadLink;
       link.download = doc.title;
-      document.body.appendChild(link);
+      window.document.body.appendChild(link);
       link.click();
-      document.body.removeChild(link);
+      window.document.body.removeChild(link);
       
       toast({
         title: "Download Started",
