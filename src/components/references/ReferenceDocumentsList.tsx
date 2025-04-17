@@ -9,17 +9,19 @@ import CategoryTabs from './CategoryTabs';
 import ReferencesSkeleton from './ReferencesSkeleton';
 import DocumentsTable from './DocumentsTable';
 import DocumentsPagination from './DocumentsPagination';
+import { useQueryClient } from '@tanstack/react-query';
 
 const ReferenceDocumentsList: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const queryClient = useQueryClient();
   
   // Use our hook with optimized refetching strategy
   const { 
     data: documents, 
     isLoading, 
-    error, 
+    error,
     refetch 
   } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
   
@@ -28,14 +30,18 @@ const ReferenceDocumentsList: React.FC = () => {
     setCurrentPage(1);
   }, [activeCategory, documents?.length]);
   
-  // Explicit refetch function with debounce protection
+  // Explicit refetch function with forced invalidation
   const handleRefetchDocuments = useCallback(() => {
     console.log('Manual refetch triggered');
-    // Use setTimeout to ensure we don't have multiple rapid refetches
+    
+    // Force invalidation of the query before refetching
+    queryClient.invalidateQueries({ queryKey: ['referenceDocuments'] });
+    
+    // After a short delay, perform the refetch
     setTimeout(() => {
       refetch();
-    }, 100);
-  }, [refetch]);
+    }, 300);
+  }, [refetch, queryClient]);
   
   // Filter documents based on search query
   const filteredDocuments = documents?.filter(doc => 

@@ -7,6 +7,8 @@ export function useReferenceDocuments(category?: string) {
   return useQuery({
     queryKey: ['referenceDocuments', category],
     queryFn: async (): Promise<ReferenceDocument[]> => {
+      console.log('Fetching reference documents for category:', category);
+      
       let query = supabase
         .from('reference_documents')
         .select('*')
@@ -29,11 +31,13 @@ export function useReferenceDocuments(category?: string) {
         category: item.category as DocumentCategory
       })) as ReferenceDocument[];
       
+      console.log(`Fetched ${typedData?.length || 0} documents`);
       return typedData || [];
     },
-    refetchOnWindowFocus: true,          // Refetch when window regains focus
-    staleTime: 0,                        // Consider data stale immediately
-    refetchInterval: false,              // Don't automatically refetch at intervals
+    refetchOnWindowFocus: false,        // Don't refetch when window regains focus
+    staleTime: 0,                       // Consider data stale immediately
+    refetchInterval: false,             // Don't automatically refetch at intervals
     retry: 1,                           // Retry failed requests once
+    refetchOnMount: 'always',           // Always refetch when component mounts
   });
 }

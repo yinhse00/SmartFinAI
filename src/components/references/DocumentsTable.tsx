@@ -29,6 +29,7 @@ interface DocumentsTableProps {
 const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocuments }) => {
   const [isDeleting, setIsDeleting] = React.useState(false);
   const [documentToDelete, setDocumentToDelete] = React.useState<{id: string, title: string} | null>(null);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
 
   const handleDownload = async (doc: ReferenceDocument) => {
     try {
@@ -81,12 +82,13 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
         description: `${documentToDelete.title} has been removed from the database.`,
       });
       
-      // Reset state
+      // Force immediate refetch before closing dialog
+      await refetchDocuments();
+      
+      // Reset state and close dialog
       setDocumentToDelete(null);
       setIsDeleting(false);
-      
-      // Force immediate refetch
-      refetchDocuments();
+      setDialogOpen(false);
       
     } catch (error) {
       console.error('Delete error:', error);
@@ -158,11 +160,15 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
                   >
                     <Download size={16} className="text-finance-medium-blue hover:text-finance-dark-blue" />
                   </Button>
-                  <AlertDialog>
+                  <AlertDialog open={dialogOpen && documentToDelete?.id === doc.id} onOpenChange={setDialogOpen}>
                     <AlertDialogTrigger asChild>
                       <Button 
                         variant="ghost"
                         size="icon"
+                        onClick={() => {
+                          setDocumentToDelete({ id: doc.id, title: doc.title });
+                          setDialogOpen(true);
+                        }}
                       >
                         <Trash2 size={16} className="text-red-500 hover:text-red-700" />
                       </Button>
@@ -175,13 +181,17 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogCancel onClick={() => {
+                          setDialogOpen(false);
+                          setDocumentToDelete(null);
+                        }}>
+                          Cancel
+                        </AlertDialogCancel>
                         <AlertDialogAction
                           className="bg-red-500 hover:bg-red-600 text-white"
                           disabled={isDeleting}
                           onClick={(e) => {
                             e.preventDefault();
-                            setDocumentToDelete({ id: doc.id, title: doc.title });
                             handleDelete();
                           }}
                         >
