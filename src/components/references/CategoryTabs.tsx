@@ -9,10 +9,16 @@ interface CategoryTabsProps {
 }
 
 const CategoryTabs: React.FC<CategoryTabsProps> = ({ activeCategory, setActiveCategory }) => {
+  // Get first category as default if none is selected
+  const firstCategoryKey = Object.keys(categoryDisplayNames)[0] as DocumentCategory;
+  
   return (
-    <Tabs defaultValue="all" value={activeCategory} onValueChange={setActiveCategory}>
+    <Tabs 
+      defaultValue={firstCategoryKey} 
+      value={activeCategory} 
+      onValueChange={setActiveCategory}
+    >
       <TabsList className="mb-4 flex flex-wrap gap-1">
-        <TabsTrigger value="all">All</TabsTrigger>
         {Object.entries(categoryDisplayNames).map(([value, label]) => (
           <TabsTrigger key={value} value={value}>
             {label}

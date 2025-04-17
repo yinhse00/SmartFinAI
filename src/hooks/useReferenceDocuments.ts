@@ -1,7 +1,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { ReferenceDocument, DocumentCategory } from '@/types/references';
+import { ReferenceDocument } from '@/types/references';
 
 export function useReferenceDocuments(category?: string) {
   return useQuery({
@@ -14,7 +14,7 @@ export function useReferenceDocuments(category?: string) {
         .select('*')
         .order('created_at', { ascending: false });
       
-      if (category && category !== 'all') {
+      if (category) {
         query = query.eq('category', category);
       }
       
@@ -37,7 +37,7 @@ export function useReferenceDocuments(category?: string) {
     refetchOnWindowFocus: true,    // Changed to true to ensure data refresh
     staleTime: 0,                  // Data is immediately stale
     gcTime: 0,                     // Don't cache the data at all
-    refetchInterval: 2000,         // Force refetch every 2 seconds
+    refetchInterval: 0,            // Don't auto-refetch
     refetchOnMount: 'always',      // Always refetch when component mounts
     refetchOnReconnect: 'always',  // Always refetch when reconnecting
   });

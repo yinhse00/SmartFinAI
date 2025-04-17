@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useEffect } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,9 +11,12 @@ import CategoryTabs from './CategoryTabs';
 import ReferencesSkeleton from './ReferencesSkeleton';
 import DocumentsTable from './DocumentsTable';
 import DocumentsPagination from './DocumentsPagination';
+import { DocumentCategory, categoryDisplayNames } from '@/types/references';
 
 const ReferenceDocumentsList: React.FC = () => {
-  const [activeCategory, setActiveCategory] = useState<string>('all');
+  // Get first category key as default
+  const firstCategoryKey = Object.keys(categoryDisplayNames)[0] as DocumentCategory;
+  const [activeCategory, setActiveCategory] = useState<string>(firstCategoryKey);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -27,7 +29,7 @@ const ReferenceDocumentsList: React.FC = () => {
     error,
     refetch,
     isRefetching
-  } = useReferenceDocuments(activeCategory === 'all' ? undefined : activeCategory);
+  } = useReferenceDocuments(activeCategory);
   
   // Reset to page 1 when category changes or document count changes
   useEffect(() => {
