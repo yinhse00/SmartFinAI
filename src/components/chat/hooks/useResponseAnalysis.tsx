@@ -30,7 +30,7 @@ export const useResponseAnalysis = () => {
                               responseText.includes('I will continue') ||
                               responseText.includes('In the next part') ||
                               responseText.includes('to be continued') ||
-                              responseText.endsWith('will explain');
+                              responseText.includes('will explain');
                               
     if (hasObviousTruncation) {
       return {
@@ -45,7 +45,8 @@ export const useResponseAnalysis = () => {
     const diagnostics = getTruncationDiagnostics(responseText);
     
     // Check for incomplete sentences at the end
-    const lastSentenceIncomplete = !responseText.trim().match(/[.!?。]\s*$/);
+    // Fix: Ensure we're returning a boolean by using Boolean() or !!
+    const lastSentenceIncomplete = !responseText.trim().match(/[.!?。]\s*$/) !== null;
     const isLongResponse = responseText.length > 1000;
     
     if (lastSentenceIncomplete && isLongResponse) {
