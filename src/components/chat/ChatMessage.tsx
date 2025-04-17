@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Info, RefreshCw } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
+import TypingAnimation from './TypingAnimation';
 
 export interface Message {
   id: string;
@@ -37,6 +38,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
     isTruncated 
   } = message;
   
+  const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
+  
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
       <div className={`flex items-start gap-3 max-w-[80%] ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -55,9 +58,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
                 ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
                 : 'bg-gray-50 dark:bg-gray-800'
           }`}>
-            <div className="whitespace-pre-line">{content}</div>
+            {sender === 'user' ? (
+              <div className="whitespace-pre-line">{content}</div>
+            ) : (
+              <TypingAnimation 
+                text={content} 
+                className="whitespace-pre-line"
+                onComplete={() => setIsTypingComplete(true)}
+              />
+            )}
             
-            {isTruncated && sender === 'bot' && onRetry && (
+            {isTruncated && sender === 'bot' && onRetry && isTypingComplete && (
               <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
                 <div className="flex items-center justify-between">
                   <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">This response appears to be incomplete</p>
@@ -75,7 +86,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
             )}
             
             {/* Display reasoning information if available */}
-            {reasoning && (
+            {reasoning && isTypingComplete && (
               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
                 <details className="text-sm">
                   <summary className="font-medium cursor-pointer flex items-center gap-1 text-finance-medium-blue dark:text-finance-accent-blue">
@@ -92,7 +103,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
             )}
           </Card>
           
-          {references && references.length > 0 && (
+          {references && references.length > 0 && isTypingComplete && (
             <div className="flex flex-wrap gap-1">
               {references.map((ref, i) => (
                 <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">
@@ -102,7 +113,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
             </div>
           )}
           
-          {isUsingFallback && (
+          {isUsingFallback && isTypingComplete && (
             <div className="text-xs text-yellow-600 dark:text-yellow-400 flex items-center">
               <Info size={12} className="mr-1" />
               Using fallback response

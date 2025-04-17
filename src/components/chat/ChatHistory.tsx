@@ -12,6 +12,7 @@ interface ChatHistoryProps {
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -24,8 +25,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
 
   return (
-    <ScrollArea className="h-full pr-4 pb-6">
-      <div className="py-4 space-y-4">
+    <ScrollArea className="h-full pb-6" ref={scrollAreaRef}>
+      <div className="py-4 space-y-4 px-4">
         {hasTruncatedMessages && (
           <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center">
             <div className="text-sm text-amber-800 dark:text-amber-300">

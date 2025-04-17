@@ -75,6 +75,20 @@
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Custom scrollbar styling */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-gray-700 rounded-full hover:bg-finance-medium-blue/60 dark:hover:bg-finance-accent-blue/50 transition-colors duration-200;
+  }
 }
 
 @layer components {
@@ -84,5 +98,15 @@
   
   .finance-card {
     @apply bg-white dark:bg-finance-dark-blue border border-finance-highlight dark:border-finance-medium-blue rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300;
+  }
+  
+  .typing-cursor {
+    @apply inline-block w-1.5 h-4 ml-0.5 bg-finance-medium-blue dark:bg-finance-accent-blue;
+    animation: blink 0.8s infinite;
+  }
+  
+  @keyframes blink {
+    0%, 100% { opacity: 0; }
+    50% { opacity: 1; }
   }
 }
