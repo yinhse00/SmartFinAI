@@ -31,12 +31,12 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
     try {
       // Create a temporary anchor element to trigger download
       const downloadLink = doc.file_url;
-      const link = window.document.createElement('a');
+      const link = document.createElement('a');
       link.href = downloadLink;
       link.download = doc.title;
-      window.document.body.appendChild(link);
+      document.body.appendChild(link);
       link.click();
-      window.document.body.removeChild(link);
+      document.body.removeChild(link);
       
       toast({
         title: "Download Started",
@@ -54,6 +54,8 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
   
   const handleDelete = async (documentId: string, title: string) => {
     try {
+      console.log('Attempting to delete document:', documentId);
+      
       // Perform Supabase delete operation
       const { error } = await supabase
         .from('reference_documents')
@@ -61,8 +63,11 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
         .eq('id', documentId);
         
       if (error) {
+        console.error('Supabase delete error:', error);
         throw error;
       }
+      
+      console.log('Document deleted successfully from Supabase');
       
       // Show success toast
       toast({
@@ -73,8 +78,9 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
       // Important: Wait a brief moment before refetching to ensure Supabase has processed the delete
       setTimeout(() => {
         // Refresh the documents list to remove the deleted item from UI
+        console.log('Refetching documents after delete');
         refetchDocuments();
-      }, 300);
+      }, 500); // Increased timeout for better reliability
       
     } catch (error) {
       console.error('Delete error:', error);
@@ -165,11 +171,12 @@ const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocum
                       <AlertDialogAction
                         className="bg-red-500 hover:bg-red-600 text-white"
                         onClick={(e) => {
-                          // Stop propagation to prevent the dialog from closing before the deletion is complete
                           e.preventDefault();
                           handleDelete(doc.id, doc.title);
-                          // Close the dialog manually
-                          document.querySelector('[data-state="open"] button[data-state="open"]')?.click();
+                          const closeButton = document.querySelector('[data-state="open"] button[data-state="open"]');
+                          if (closeButton && 'click' in closeButton) {
+                            (closeButton as HTMLElement).click();
+                          }
                         }}
                       >
                         Delete

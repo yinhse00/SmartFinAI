@@ -13,40 +13,40 @@ const Chat = () => {
   // Check for Grok API key when the component mounts and set a default if needed
   useEffect(() => {
     const checkAndSetApiKey = () => {
-      // CRITICAL FIX: Clear any problematic API keys from localStorage to start fresh
       try {
+        // First, check if a valid key already exists
         const currentApiKey = getGrokApiKey();
+        const isValidKey = currentApiKey && 
+                          currentApiKey.startsWith('xai-') && 
+                          currentApiKey.length >= 20;
+        
+        if (isValidKey) {
+          console.log('Valid API key already exists');
+          setDemoMode(false);
+          return;
+        }
+        
+        // Clear any problematic API keys
         if (currentApiKey && (!currentApiKey.startsWith('xai-') || currentApiKey.length < 20)) {
           console.warn('Invalid API key format detected, clearing');
           localStorage.removeItem('GROK_API_KEY');
           localStorage.removeItem('grokApiKey');
         }
-      } catch (e) {
-        console.error('Error checking existing API key:', e);
-      }
-      
-      const apiKeyExists = hasGrokApiKey();
-      
-      if (!apiKeyExists) {
+        
         // Try to set a default API key for all environments
         try {
-          // CRITICAL FIX: Use a stable API key format
+          // Use a stable API key format
           const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
           
-          // Use multiple storage methods to ensure it works across environments
-          try {
-            localStorage.setItem('GROK_API_KEY', defaultApiKey);
-            localStorage.setItem('grokApiKey', defaultApiKey); // Alternative name
-            setGrokApiKey(defaultApiKey); // Through service
-            
-            console.log('Default API key set');
-            setDemoMode(false);
-          } catch (e) {
-            console.error('Error setting API key in localStorage:', e);
-            setDemoMode(true);
-          }
+          // Use multiple storage methods
+          localStorage.setItem('GROK_API_KEY', defaultApiKey);
+          localStorage.setItem('grokApiKey', defaultApiKey); // Alternative name
+          setGrokApiKey(defaultApiKey); // Through service
           
-          // Verify key was actually stored by reading it back
+          console.log('Default API key set');
+          setDemoMode(false);
+          
+          // Verify key was stored by reading it back
           setTimeout(() => {
             const storedKey = getGrokApiKey();
             if (storedKey && storedKey === defaultApiKey) {
@@ -56,11 +56,10 @@ const Chat = () => {
               console.warn('API key storage verification failed');
               setDemoMode(true);
               
-              // Try window.localStorage as direct fallback
+              // Try direct fallback
               try {
                 window.localStorage.setItem('GROK_API_KEY', defaultApiKey);
                 window.localStorage.setItem('grokApiKey', defaultApiKey);
-                console.log('Attempted global storage methods for API key');
                 
                 if (window.localStorage.getItem('GROK_API_KEY') === defaultApiKey) {
                   setDemoMode(false);
@@ -70,49 +69,25 @@ const Chat = () => {
                 console.error('All localStorage methods failed:', e);
               }
             }
-          }, 300); // Longer timeout for verification
+          }, 500); // Longer timeout for verification
         } catch (error) {
           console.error('Failed to set default API key:', error);
           setDemoMode(true);
           toast({
-            title: "No API Key Detected",
-            description: "You'll need to set your API key to connect to the service.",
+            title: "API Key Issue",
+            description: "Unable to configure the API key. Some features may be limited.",
             duration: 5000,
           });
         }
-      } else {
-        // API key exists, verify format
-        const apiKey = getGrokApiKey();
-        const isValidFormat = apiKey && apiKey.startsWith('xai-') && apiKey.length >= 20;
-        setDemoMode(!isValidFormat);
-        
-        if (!isValidFormat && apiKey) {
-          console.warn('Invalid API key format detected, attempting to fix');
-          try {
-            // Try to recover by setting the default key again
-            const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
-            localStorage.setItem('GROK_API_KEY', defaultApiKey);
-            localStorage.setItem('grokApiKey', defaultApiKey); 
-            setGrokApiKey(defaultApiKey);
-            
-            // Double check it worked
-            setTimeout(() => {
-              if (getGrokApiKey() === defaultApiKey) {
-                console.log('Successfully fixed API key format');
-                setDemoMode(false);
-              }
-            }, 200);
-          } catch (e) {
-            console.error('Failed to fix API key:', e);
-          }
-        }
+      } catch (e) {
+        console.error('Error in API key handling:', e);
       }
     };
     
     // Execute the check immediately
     checkAndSetApiKey();
     
-    // Also set up a safety check after a short delay
+    // Also set up a safety check after a delay
     const safetyCheck = setTimeout(() => {
       if (!hasGrokApiKey()) {
         console.warn('Safety check: No API key detected after initial setup');
@@ -127,31 +102,13 @@ const Chat = () => {
         console.warn('Periodic check: API key missing or invalid, attempting to fix');
         checkAndSetApiKey();
       }
-    }, 30000);
+    }, 60000); // Check every minute to ensure key persistence
     
     return () => {
       clearTimeout(safetyCheck);
       clearInterval(intervalCheck);
     };
   }, [toast]);
-
-  // Debug function for API key status
-  const debugApiKey = () => {
-    try {
-      const key = getGrokApiKey();
-      console.log('Current API key:', key ? `${key.substring(0, 8)}...` : 'none');
-      console.log('API key valid format:', key && key.startsWith('xai-') && key.length >= 20);
-      console.log('Environment:', window.location.href.includes('localhost') ? 'development' : 'production');
-      console.log('URL:', window.location.href);
-      
-      toast({
-        title: "API Key Status",
-        description: key ? "API key is set" : "No API key found",
-      });
-    } catch (e) {
-      console.error('Error checking API key:', e);
-    }
-  };
 
   return (
     <MainLayout>
@@ -164,14 +121,6 @@ const Chat = () => {
               Demo Mode
             </span>
           )}
-          
-          {/* Hidden link for debug purposes */}
-          <span 
-            onClick={debugApiKey}
-            className="ml-2 opacity-0 hover:opacity-100 cursor-pointer text-xs text-gray-400"
-          >
-            debug
-          </span>
         </p>
       </div>
       

@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
-import KnowledgePanel from './KnowledgePanel';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import ProcessingIndicator from './ProcessingIndicator';
@@ -83,8 +82,8 @@ const ChatInterface = () => {
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
-      <div className="flex-1 flex gap-4">
-        {/* SmartFinAI Chat Window */}
+      <div className="flex-1">
+        {/* SmartFinAI Chat Window - Now takes full width */}
         <div className="flex-1 flex flex-col">
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
@@ -112,9 +111,6 @@ const ChatInterface = () => {
             retryLastQuery={retryLastQuery}
           />
         </div>
-
-        {/* Hong Kong Financial Knowledge Panel */}
-        <KnowledgePanel />
       </div>
 
       {/* API Key Dialog */}

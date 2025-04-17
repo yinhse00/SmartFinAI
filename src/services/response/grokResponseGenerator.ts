@@ -6,7 +6,7 @@ import { responseGeneratorCore } from './core/responseGeneratorCore';
 import { requestBuilder } from './core/requestBuilder';
 import { queryProcessor } from './core/queryProcessor';
 import { errorHandler } from './core/errorHandler';
-import { responseOptimizer } from './modules/responseOptimizer'; // Fixed missing import
+import { responseOptimizer } from './modules/responseOptimizer';
 
 /**
  * Main service for generating expert responses
@@ -82,18 +82,43 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // Prepare request body
+      // Prepare request body with consistent parameters across environments
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
-        temperature,
-        maxTokens
+        Math.min(0.3, temperature), // Ensure consistent temperature
+        Math.min(3000, maxTokens)   // Cap token limit for consistent behavior
       );
 
       try {
-        // Make primary API call
+        // Make primary API call with additional error handling
         console.log(`Making API call with tokens: ${maxTokens}, temperature: ${temperature}`);
-        const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
+        
+        // Add retry mechanism for API call failures
+        let response;
+        let retryCount = 0;
+        const maxRetries = 2;
+        
+        while (retryCount <= maxRetries) {
+          try {
+            response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
+            break; // Success, exit the retry loop
+          } catch (retryError) {
+            retryCount++;
+            console.error(`API call attempt ${retryCount} failed:`, retryError);
+            
+            if (retryCount <= maxRetries) {
+              console.log(`Retrying API call in ${retryCount * 500}ms...`);
+              await new Promise(resolve => setTimeout(resolve, retryCount * 500));
+            } else {
+              throw retryError; // Max retries reached, propagate the error
+            }
+          }
+        }
+        
+        if (!response) {
+          throw new Error("Failed to get API response after retries");
+        }
         
         // Get the raw response text
         const responseText = response.choices[0].message.content;
@@ -133,7 +158,19 @@ export const grokResponseGenerator = {
           console.error('Both API attempts failed, using fallback:', backupError);
           console.groupEnd();
           
-          return errorHandler.createFallbackResponse(enhancedParams.prompt, primaryApiError);
+          // Generate a better fallback response that appears more natural
+          return {
+            text: "I'm currently experiencing some technical difficulties accessing my full knowledge database. Based on what I can access, here's what I can provide about your query:\n\n" + 
+                  "For questions about Hong Kong listing rules, takeovers code, and compliance requirements, I normally provide detailed information from regulatory sources. " +
+                  "At the moment, I can only offer general guidance based on my core knowledge.\n\n" +
+                  "Please try your query again in a few moments, or consider rephrasing your question to focus on fundamental aspects of Hong Kong financial regulations.",
+            queryType: queryType || 'general',
+            metadata: {
+              contextUsed: false,
+              relevanceScore: 0.5,
+              isFallback: true
+            }
+          };
         }
       }
     } catch (error) {
