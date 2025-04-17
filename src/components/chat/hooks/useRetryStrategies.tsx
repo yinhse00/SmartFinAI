@@ -1,64 +1,37 @@
 
-/**
- * Hook for handling retry strategies for incomplete responses
- */
+import { GrokResponse } from '@/types/grok';
+
 export const useRetryStrategies = () => {
   const enhanceParamsForRetry = (
     responseParams: any, 
     retryCount: number
   ) => {
-    // More reasonable token scaling for faster convergence
-    const tokenMultiplier = retryCount === 0 ? 1.5 : (retryCount === 1 ? 2 : 3);
+    // More aggressive token scaling
+    const tokenMultiplier = retryCount === 0 ? 2 : (retryCount === 1 ? 3 : 4);
     const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
     
-    // More aggressive temperature reduction for reliable outputs
-    const temperatureReduction = retryCount === 0 ? 0.8 : (retryCount === 1 ? 0.6 : 0.4);
+    // More aggressive temperature reduction
+    const temperatureReduction = retryCount === 0 ? 0.7 : (retryCount === 1 ? 0.5 : 0.3);
     const reducedTemperature = Math.max(0.01, responseParams.temperature * temperatureReduction);
     
-    // Create enhanced params with explicit completion instructions
     const enhancedParams = {
       ...responseParams,
-      maxTokens: Math.min(increasedTokens, 4000), // Cap at 4000 tokens
+      maxTokens: Math.min(increasedTokens, 6000), // Increased max token cap
       temperature: reducedTemperature,
-      prompt: responseParams.prompt + " CRITICAL: You MUST provide a complete response with all necessary information and a clear conclusion. DO NOT truncate your response."
+      prompt: responseParams.prompt + 
+        " CRITICAL: You MUST provide a COMPLETE and COMPREHENSIVE response. " +
+        "If your response is getting cut off, restart from the last complete section. " +
+        "Ensure a clear conclusion that summarizes all key points."
     };
     
-    // Check if this is an aggregation query from the query text itself
-    const isAggregationQuery = responseParams.prompt && 
-                               (responseParams.prompt.toLowerCase().includes('aggregate') && 
-                               (responseParams.prompt.toLowerCase().includes('rights issue') || 
-                                responseParams.prompt.toLowerCase().includes('rule 7.19a')));
-    
-    // For rights issue aggregation queries, add specific instructions
-    if (isAggregationQuery && retryCount === 0) {
-      enhancedParams.prompt += " IMPORTANT: Fully explain Rule 7.19A aggregation requirements and 50% threshold calculation across multiple rights issues within 12 months. Address shareholder approval requirements directly and provide a clear conclusion.";
-    }
-    
-    // Special handling for financial comparison queries to ensure completeness
-    const isFinancialComparisonQuery = responseParams.prompt && 
-                                      ((responseParams.prompt.toLowerCase().includes('rights_issue') || 
-                                        responseParams.prompt.toLowerCase().includes('financial')) && 
-                                        responseParams.prompt.toLowerCase().includes('difference'));
-    
-    if (isFinancialComparisonQuery && retryCount === 1) {  // On second retry
-      // For the final retry of a comparison query, explicitly request conclusion
-      enhancedParams.prompt = enhancedParams.prompt + 
-        " Ensure your response includes a complete conclusion section summarizing key differences and recommendations.";
-    }
-    
-    console.log(`Enhanced retry parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}`);
+    console.log(`Enhanced Retry Parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}`);
     return enhancedParams;
   };
 
   const determineMaxRetries = (isSimpleQuery: boolean, isAggregationQuery: boolean): number => {
-    // Increased retry attempts for better response completeness
-    if (isSimpleQuery) {
-      return 1; // One retry for simple queries
-    } else if (isAggregationQuery) {
-      return 2; // Maximum 2 retries for critical aggregation queries
-    } else {
-      return 2; // 2 retries for standard financial queries
-    }
+    if (isSimpleQuery) return 2; // Increased from 1
+    if (isAggregationQuery) return 3; // Increased from 2
+    return 3; // Standard financial queries now get 3 retries
   };
 
   return {
