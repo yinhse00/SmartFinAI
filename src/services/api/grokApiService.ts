@@ -45,28 +45,30 @@ export const grokApiService = {
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
     
-    // Add environment detection and logging
-    const currentUrl = window.location.href;
-    const isProduction = !currentUrl.includes('localhost') && 
-                        !currentUrl.includes('127.0.0.1') &&
-                        !currentUrl.includes('lovable.app'); // Add explicit check for preview env
-    console.log("Environment:", isProduction ? "production" : "development/preview");
-    console.log("Current URL:", currentUrl);
+    // Improved environment detection logic that works consistently across all environments
+    const isProductionEnvironment = () => {
+      const url = window.location.href;
+      // Check for production domains and explicitly exclude development/preview domains
+      return !url.includes('localhost') && 
+             !url.includes('127.0.0.1') && 
+             !url.includes('lovable.app') && 
+             !url.includes('lovableproject.com/dev');
+    };
+    
+    const environment = isProductionEnvironment() ? "production" : "development/preview";
+    console.log("Environment detection:", environment);
+    console.log("Current URL:", window.location.href);
     
     try {
-      // FIXED: More reliable preview environment detection
-      // Use mock response in preview or development environment to avoid CORS issues
-      if (currentUrl.includes('lovable.app') || 
-          currentUrl.includes('localhost') || 
-          currentUrl.includes('lovableproject.com') ||
-          !isProduction) {
-        console.log("Using mock response in preview/development environment");
+      // Use mock response in non-production environments
+      // This provides consistent behavior across all preview/development environments
+      if (!isProductionEnvironment()) {
+        console.log("Using mock response in non-production environment");
         
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // FIXED: Return consistent mock response format across environments
-        // Mark mock responses explicitly as backup responses for consistent detection
+        // Return consistent mock response format with explicit backup response marker
         const mockResponse = {
           choices: [
             {
@@ -90,7 +92,7 @@ export const grokApiService = {
       const apiPath = '/api/grok/chat/completions';
       const apiEndpoint = new URL(apiPath, baseUrl).toString();
       
-      console.log("API endpoint:", apiEndpoint);
+      console.log("Production API endpoint:", apiEndpoint);
       
       const response = await fetch(apiEndpoint, {
         method: 'POST',

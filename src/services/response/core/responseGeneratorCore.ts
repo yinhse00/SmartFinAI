@@ -17,11 +17,11 @@ export const responseGeneratorCore = {
       
       // Validate response structure consistently across environments
       if (!response || !response.choices || !response.choices[0] || !response.choices[0].message) {
-        console.error("API returned invalid response structure");
+        console.error("API returned invalid response structure:", response);
         throw new Error("Invalid API response structure");
       }
       
-      // FIXED: Check if the response is a mock/backup response and properly mark it
+      // Check if the response is a mock/backup response and properly mark it
       if (response.metadata && response.metadata.isBackupResponse) {
         console.log("Detected mock/backup response from API service");
         // Ensure the response content reflects this is a backup
@@ -39,7 +39,7 @@ export const responseGeneratorCore = {
   
   /**
    * Make backup API call with simplified parameters
-   * FIXED: Ensure consistent parameters and response format across environments
+   * Uses consistent parameters and response format across environments
    */
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
@@ -55,8 +55,8 @@ export const responseGeneratorCore = {
           { role: 'user', content: prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: 0.3, // FIXED: Use consistent temperature
-        max_tokens: 1500  // FIXED: Use consistent token limit
+        temperature: 0.3, // Use consistent temperature
+        max_tokens: 1500  // Use consistent token limit
       };
       
       // Add consistent delay across environments
@@ -85,7 +85,6 @@ export const responseGeneratorCore = {
         prompt,
         true // Always mark as backup response for consistent detection
       );
-      
     } catch (backupError) {
       console.error('Backup API call failed:', backupError);
       
