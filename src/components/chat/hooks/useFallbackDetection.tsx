@@ -46,17 +46,25 @@ export const useFallbackDetection = () => {
       responseText.includes('mock response') ||
       responseText.includes('backup response');
     
+    // Enhanced fallback detection with more specific indicators
+    const hasObviousFallbackMarkers =
+      responseText.includes('I can only offer general guidance') ||
+      responseText.includes('based on my core knowledge') ||
+      (responseText.includes('technical difficulties') && responseText.includes('try again')) ||
+      responseText.includes('I\'m currently using a fallback response mode');
+    
     // Log detection results for debugging
-    if (hasIndicator || hasFallbackMetadata) {
+    if (hasIndicator || hasFallbackMetadata || hasObviousFallbackMarkers) {
       console.log("Fallback response detected:", {
         hasIndicator,
         hasFallbackMetadata,
+        hasObviousFallbackMarkers,
         responseLength: responseText.length,
         responseSnippet: responseText.substring(0, 50) + "..."
       });
     }
     
-    return hasIndicator || hasFallbackMetadata;
+    return hasIndicator || hasFallbackMetadata || hasObviousFallbackMarkers;
   };
 
   return {

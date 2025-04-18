@@ -45,23 +45,23 @@ export const grokApiService = {
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
     
-    // Improved environment detection logic that works consistently across all environments
+    // More robust environment detection that uses hostname rather than URL
+    // This ensures consistent behavior in production vs preview environments
     const isProductionEnvironment = () => {
-      const url = window.location.href;
+      const hostname = window.location.hostname;
       // Check for production domains and explicitly exclude development/preview domains
-      return !url.includes('localhost') && 
-             !url.includes('127.0.0.1') && 
-             !url.includes('lovable.app') && 
-             !url.includes('lovableproject.com/dev');
+      return !hostname.includes('localhost') && 
+             !hostname.includes('127.0.0.1') && 
+             !hostname.includes('lovableproject.com');
     };
     
     const environment = isProductionEnvironment() ? "production" : "development/preview";
     console.log("Environment detection:", environment);
+    console.log("Current hostname:", window.location.hostname);
     console.log("Current URL:", window.location.href);
     
     try {
       // Use mock response in non-production environments
-      // This provides consistent behavior across all preview/development environments
       if (!isProductionEnvironment()) {
         console.log("Using mock response in non-production environment");
         

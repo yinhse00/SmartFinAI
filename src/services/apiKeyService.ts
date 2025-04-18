@@ -44,11 +44,18 @@ export const getGrokApiKey = (): string => {
       }
     }
     
+    // Log what's actually in storage for debugging
+    console.log('Storage state:', {
+      primaryKey: primaryValue ? `${primaryValue.substring(0, 4)}...` : 'none',
+      backupKey: backupValue ? `${backupValue.substring(0, 4)}...` : 'none'
+    });
+    
     // Always return default deployment key if localStorage access fails
     // This ensures all environments have a working key
     console.log('No valid API key found in storage, using default deployment key');
     
     try {
+      // Attempt to store the default key for future use
       localStorage.setItem(PRIMARY_KEY, DEFAULT_DEPLOYMENT_KEY);
       localStorage.setItem(BACKUP_KEY, DEFAULT_DEPLOYMENT_KEY);
       console.log('Set default deployment API key');
@@ -79,12 +86,14 @@ export const setGrokApiKey = (key: string): void => {
     // Try to store in both locations for redundancy
     try {
       localStorage.setItem(PRIMARY_KEY, key);
+      console.log('Successfully set primary API key');
     } catch (e) {
       console.warn('Failed to set primary API key', e);
     }
     
     try {
       localStorage.setItem(BACKUP_KEY, key);
+      console.log('Successfully set backup API key');
     } catch (e) {
       console.warn('Failed to set backup API key', e);
     }
@@ -92,11 +101,19 @@ export const setGrokApiKey = (key: string): void => {
     // Verify storage was successful
     try {
       const storedKey = localStorage.getItem(PRIMARY_KEY);
+      const backupStoredKey = localStorage.getItem(BACKUP_KEY);
+      
+      console.log('API key storage verification:', {
+        primaryKeySet: !!storedKey,
+        primaryKeyMatches: storedKey === key,
+        backupKeySet: !!backupStoredKey,
+        backupKeyMatches: backupStoredKey === key
+      });
+      
       if (storedKey !== key) {
         console.warn('API key storage verification failed - primary key');
       }
       
-      const backupStoredKey = localStorage.getItem(BACKUP_KEY);
       if (backupStoredKey !== key) {
         console.warn('API key storage verification failed - backup key');
       }
@@ -114,7 +131,15 @@ export const setGrokApiKey = (key: string): void => {
 export const hasGrokApiKey = (): boolean => {
   try {
     const key = getGrokApiKey();
-    return !!key && key.length > 10 && key.startsWith('xai-'); // Enhanced validation
+    const isValid = !!key && key.length > 10 && key.startsWith('xai-');
+    
+    console.log('API key validation check:', {
+      hasKey: !!key,
+      isValid: isValid,
+      keyStart: key ? key.substring(0, 6) : 'none'
+    });
+    
+    return isValid;
   } catch (error) {
     console.error('Error checking for API key:', error);
     // If any errors occur, assume we have a key (the default one)

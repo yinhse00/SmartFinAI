@@ -41,24 +41,28 @@ const Chat = () => {
         const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
         
         try {
-          // Use both direct localStorage and service method
+          // Use both direct localStorage and service method for maximum compatibility
           localStorage.setItem('GROK_API_KEY', defaultApiKey);
           localStorage.setItem('grokApiKey', defaultApiKey);
           setGrokApiKey(defaultApiKey);
           
           console.log('Default API key set');
-          setDemoMode(false);
           
-          // Verify key was stored
+          // Force a delay before checking to ensure storage has completed
           setTimeout(() => {
-            try {
-              const storedKey = getGrokApiKey();
-              if (!storedKey || storedKey !== defaultApiKey) {
-                console.warn('API key storage verification failed');
-                setDemoMode(true);
-              }
-            } catch (e) {
-              console.error('API key verification failed', e);
+            // Double-check that the key was actually stored
+            const storedKey = getGrokApiKey();
+            console.log('API Key verification:', {
+              keySet: !!storedKey,
+              keyValid: storedKey && storedKey.startsWith('xai-') && storedKey.length >= 20,
+              keyMatches: storedKey === defaultApiKey
+            });
+            
+            if (!storedKey || storedKey !== defaultApiKey) {
+              console.warn('API key storage verification failed');
+              setDemoMode(true);
+            } else {
+              setDemoMode(false);
             }
           }, 300);
         } catch (error) {

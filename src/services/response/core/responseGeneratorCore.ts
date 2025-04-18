@@ -22,12 +22,19 @@ export const responseGeneratorCore = {
       }
       
       // Check if the response is a mock/backup response and properly mark it
-      if (response.metadata && response.metadata.isBackupResponse) {
+      const isMockResponse = 
+        (response.metadata && response.metadata.isBackupResponse) ||
+        (response.choices[0].message.content && 
+         response.choices[0].message.content.includes('mock response from the Grok API'));
+      
+      if (isMockResponse) {
         console.log("Detected mock/backup response from API service");
         // Ensure the response content reflects this is a backup
-        response.choices[0].message.content = 
-          "I'm currently using a fallback response mode. " + 
-          response.choices[0].message.content;
+        if (!response.metadata) {
+          response.metadata = { isBackupResponse: true };
+        } else {
+          response.metadata.isBackupResponse = true;
+        }
       }
       
       return response;
