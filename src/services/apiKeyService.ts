@@ -15,19 +15,43 @@ export const getGrokApiKey = (): string => {
     // Try primary key first
     const primaryValue = localStorage.getItem(PRIMARY_KEY);
     if (primaryValue) {
-      return primaryValue;
+      // Validate format before returning
+      if (primaryValue.startsWith('xai-') && primaryValue.length >= 20) {
+        return primaryValue;
+      } else {
+        console.warn('Invalid API key format found in primary storage');
+      }
     }
     
     // Try backup key
     const backupValue = localStorage.getItem(BACKUP_KEY);
     if (backupValue) {
-      // Sync to primary key for future use
-      try {
-        localStorage.setItem(PRIMARY_KEY, backupValue);
-      } catch (e) {
-        console.warn('Failed to sync backup key to primary key', e);
+      // Validate format before returning
+      if (backupValue.startsWith('xai-') && backupValue.length >= 20) {
+        // Sync to primary key for future use
+        try {
+          localStorage.setItem(PRIMARY_KEY, backupValue);
+        } catch (e) {
+          console.warn('Failed to sync backup key to primary key', e);
+        }
+        return backupValue;
+      } else {
+        console.warn('Invalid API key format found in backup storage');
       }
-      return backupValue;
+    }
+    
+    // Check for deployment environment default key
+    // This ensures published environments have a working key
+    if (window.location.href.includes('lovableproject.com')) {
+      const defaultDeploymentKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+      try {
+        localStorage.setItem(PRIMARY_KEY, defaultDeploymentKey);
+        localStorage.setItem(BACKUP_KEY, defaultDeploymentKey);
+        console.log('Set default deployment API key');
+        return defaultDeploymentKey;
+      } catch (e) {
+        console.error('Failed to set default deployment key', e);
+      }
     }
     
     return '';
@@ -42,6 +66,12 @@ export const getGrokApiKey = (): string => {
  */
 export const setGrokApiKey = (key: string): void => {
   try {
+    // Validate key format before storing
+    if (!key.startsWith('xai-') || key.length < 20) {
+      console.error('Invalid API key format, not saving');
+      return;
+    }
+    
     // Try to store in both locations for redundancy
     localStorage.setItem(PRIMARY_KEY, key);
     localStorage.setItem(BACKUP_KEY, key);
@@ -68,7 +98,7 @@ export const setGrokApiKey = (key: string): void => {
 export const hasGrokApiKey = (): boolean => {
   try {
     const key = getGrokApiKey();
-    return !!key && key.length > 10; // Basic validation - must be non-empty and reasonable length
+    return !!key && key.length > 10 && key.startsWith('xai-'); // Enhanced validation
   } catch (error) {
     console.error('Error checking for API key:', error);
     return false;

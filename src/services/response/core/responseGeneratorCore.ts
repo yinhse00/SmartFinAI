@@ -21,6 +21,15 @@ export const responseGeneratorCore = {
         throw new Error("Invalid API response structure");
       }
       
+      // FIXED: Check if the response is a mock/backup response and properly mark it
+      if (response.metadata && response.metadata.isBackupResponse) {
+        console.log("Detected mock/backup response from API service");
+        // Ensure the response content reflects this is a backup
+        response.choices[0].message.content = 
+          "I'm currently using a fallback response mode. " + 
+          response.choices[0].message.content;
+      }
+      
       return response;
     } catch (error) {
       console.error('API call failed:', error);
@@ -30,7 +39,7 @@ export const responseGeneratorCore = {
   
   /**
    * Make backup API call with simplified parameters
-   * FIXED: Ensure consistent parameters across environments
+   * FIXED: Ensure consistent parameters and response format across environments
    */
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
@@ -55,7 +64,15 @@ export const responseGeneratorCore = {
       
       console.log("Making backup API call");
       const backupResponse = await grokApiService.callChatCompletions(backupRequestBody, apiKey);
-      const backupText = backupResponse.choices[0].message.content;
+      
+      // Handle both structured and unstructured responses
+      let backupText;
+      if (backupResponse.choices && backupResponse.choices[0] && backupResponse.choices[0].message) {
+        backupText = backupResponse.choices[0].message.content;
+      } else {
+        console.error("Backup response has unexpected structure:", backupResponse);
+        backupText = "Error: Received unexpected response structure from backup API call.";
+      }
       
       console.log("Backup API call successful, response length:", backupText.length);
       

@@ -47,28 +47,37 @@ export const grokApiService = {
     
     // Add environment detection and logging
     const currentUrl = window.location.href;
-    const isProduction = !currentUrl.includes('localhost') && !currentUrl.includes('127.0.0.1');
-    console.log("Environment:", isProduction ? "production" : "development");
+    const isProduction = !currentUrl.includes('localhost') && 
+                        !currentUrl.includes('127.0.0.1') &&
+                        !currentUrl.includes('lovable.app'); // Add explicit check for preview env
+    console.log("Environment:", isProduction ? "production" : "development/preview");
     console.log("Current URL:", currentUrl);
     
     try {
-      // Use mock response in Lovable preview environment to avoid CORS issues
-      // This is a temporary solution until proper API endpoint is configured
-      if (currentUrl.includes('lovable.app') || currentUrl.includes('localhost')) {
-        console.log("Using mock response in preview environment");
+      // FIXED: More reliable preview environment detection
+      // Use mock response in preview or development environment to avoid CORS issues
+      if (currentUrl.includes('lovable.app') || 
+          currentUrl.includes('localhost') || 
+          currentUrl.includes('lovableproject.com') ||
+          !isProduction) {
+        console.log("Using mock response in preview/development environment");
         
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 800));
         
-        // Return mock response instead of making actual API call
+        // FIXED: Return consistent mock response format across environments
+        // Mark mock responses explicitly as backup responses for consistent detection
         const mockResponse = {
           choices: [
             {
               message: {
-                content: "This is a mock response from the Grok API. In the production environment, this would be an actual response from the API. The mock response is being used because the actual API endpoint is not configured in the preview environment."
+                content: "This is a mock response from the Grok API. In the production environment, this would be an actual response from the API. The mock response is being used because the actual API endpoint is not configured in this environment."
               }
             }
-          ]
+          ],
+          metadata: {
+            isBackupResponse: true  // Explicitly mark as backup for consistent detection
+          }
         };
         
         console.log("Mock API response received successfully");
@@ -110,15 +119,7 @@ export const grokApiService = {
           maxTokens: requestBody.max_tokens
         });
         
-        if (response.status === 401) {
-          throw new Error("Financial expert authentication failed. Please check your API key.");
-        } else if (response.status === 429) {
-          throw new Error("Financial expert rate limit exceeded. Please try again later.");
-        } else if (response.status >= 500) {
-          throw new Error("Financial expert service is currently unavailable. Please try again later.");
-        } else {
-          throw new Error(`Financial expert API error: ${response.status}`);
-        }
+        throw new Error(`Financial expert API error: ${response.status}`);
       }
       
       // Check if response is JSON before trying to parse it
