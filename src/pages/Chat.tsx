@@ -78,6 +78,7 @@ const Chat = () => {
     
     // Execute the check immediately and after a safety delay
     checkAndSetApiKey();
+    setTimeout(checkAndSetApiKey, 500); // Additional check after a delay
     
     // Add periodic checks for API key validity
     const intervalCheck = setInterval(() => {
