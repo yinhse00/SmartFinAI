@@ -19,6 +19,12 @@ export function checkOpenOfferResponse(content: string) {
     return result;
   }
   
+  // CRITICAL CHECK: Must identify open offer as Listing Rules corporate action
+  if (!lowerContent.includes('corporate action') && !lowerContent.includes('capital raising')) {
+    result.isComplete = false;
+    result.missingElements.push("CRITICAL: Missing identification of Open Offer as a corporate action under Listing Rules");
+  }
+  
   // Check for Listing Rules references - MANDATORY for open offers
   if (!lowerContent.includes('listing rule') && !lowerContent.includes('chapter 7') && 
       !lowerContent.includes('rule 7.') && !lowerContent.includes('rule 7 ')) {
@@ -35,6 +41,16 @@ export function checkOpenOfferResponse(content: string) {
     result.missingElements.push("CRITICAL ERROR: Incorrectly references Takeovers Code for Open Offer (corporate action under Listing Rules)");
   }
   
+  // ENHANCED: Check for more explicit regulatory misclassification
+  if (lowerContent.includes('acquisition') || 
+      lowerContent.includes('control threshold') || 
+      lowerContent.includes('30% threshold') ||
+      lowerContent.includes('acquiring')) {
+    result.isComplete = false;
+    result.missingElements.push("CRITICAL ERROR: Incorrectly describes Open Offer using acquisition terminology (belongs to Takeovers Code)");
+  }
+  
+  // Check for key open offer components
   const mandatoryKeywords = ['ex-entitlement', 'record date', 'acceptance period', 'payment date', 'corporate action'];
   
   const missingKeywords = mandatoryKeywords.filter(
@@ -79,4 +95,23 @@ export function isComparisonQuery(content: string): boolean {
          lowerContent.includes('compare') || 
          lowerContent.includes('versus') || 
          lowerContent.includes('vs');
+}
+
+/**
+ * Check for regulatory framework confusion in the query
+ */
+export function checkRegulatoryFrameworkClarity(content: string): { isConfused: boolean, explanation: string } {
+  const lowerContent = content.toLowerCase();
+  
+  // Check if open offers are incorrectly described using takeovers terminology
+  if ((lowerContent.includes('open offer') || lowerContent.includes('corporate action')) &&
+      (lowerContent.includes('takeover') || lowerContent.includes('rule 26') || 
+       lowerContent.includes('mandatory offer'))) {
+    return {
+      isConfused: true,
+      explanation: "CRITICAL: Response incorrectly mixes Open Offers (Listing Rules corporate action) with Takeovers Code concepts"
+    };
+  }
+  
+  return { isConfused: false, explanation: "" };
 }

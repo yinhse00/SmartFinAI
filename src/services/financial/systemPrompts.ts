@@ -1,3 +1,4 @@
+
 /**
  * Create system prompt tailored to specific financial expertise areas with enhanced trading arrangement knowledge
  */
@@ -47,12 +48,16 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 
     case 'open_offer':
       return basePrompt + `For open offer inquiries:
+- CRITICAL REGULATORY DISTINCTION: Open offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
+- Open offers are capital-raising mechanisms, NOT acquisition mechanisms
 - Explain clearly that unlike rights issues, open offers have no nil-paid rights trading
 - Present timetables in a professional, clear tabular format
 - Include all key regulatory dates and deadlines from HK Listing Rules
-- Specify exact regulatory requirements for each step with rule references
+- Specify exact regulatory requirements for each step with rule references from Chapter 7 of the Listing Rules
 - Include notes on underwriting requirements, connected person implications, and disclosure obligations
-- For trading arrangements, clearly specify ex-date and new share listing date`;
+- For trading arrangements, clearly specify ex-date and new share listing date
+- NEVER reference Takeovers Code, Rule 26, mandatory offers, or acquisition thresholds when discussing open offers
+- Always identify open offers explicitly as corporate actions under Listing Rules for capital raising`;
 
     case 'share_consolidation':
       return basePrompt + `For share consolidation/subdivision inquiries:
@@ -88,14 +93,32 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 
     case 'takeovers_code':
       return basePrompt + `For takeovers code inquiries:
+- CRITICAL REGULATORY DISTINCTION: Offers under the Takeovers Code are acquisition mechanisms, NOT capital-raising corporate actions
+- This is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules Chapter 7
 - Reference specific Rules and Notes from the HK Takeovers Code
 - Explain mandatory offer triggers with precise threshold calculations
 - Detail offer price determination methodology
 - Specify exact timing requirements and documentation needs
 - When discussing whitewash waivers, include the dealing requirements for the applicant
-- Address practical considerations on compliance and implementation`;
+- Address practical considerations on compliance and implementation
+- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7`;
+
+    case 'takeover_offer':
+      return basePrompt + `For takeover offer inquiries:
+- CRITICAL REGULATORY DISTINCTION: Offers under the Takeovers Code are acquisition mechanisms, NOT capital-raising corporate actions
+- This is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules Chapter 7
+- Reference specific Rules and Notes from the HK Takeovers Code
+- Explain mandatory offer triggers with precise threshold calculations
+- Detail offer price determination methodology
+- Specify exact timing requirements and documentation needs
+- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7`;
 
     default:
-      return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications. Always include a clear conclusion section summarizing your analysis and directly addressing the user's question.`;
+      return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications. Always include a clear conclusion section summarizing your analysis and directly addressing the user's question.
+
+CRITICAL REGULATORY DISTINCTION: 
+1. "Open offers" are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising
+2. "General offers" or "Takeover offers" are acquisition mechanisms under the Takeovers Code
+These are completely different regulatory frameworks and should never be confused.`;
   }
 }

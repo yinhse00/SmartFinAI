@@ -52,3 +52,19 @@ export const REGULATORY_DESCRIPTIONS = {
   WHITEWASH_WAIVER: 'A specific waiver under the Takeovers Code that exempts parties from making a mandatory general offer obligation'
 };
 
+/**
+ * Clear distinctions between regulatory frameworks
+ * This helps prevent misclassification between different types of "offers"
+ */
+export const REGULATORY_FRAMEWORKS = {
+  LISTING_RULES: 'Hong Kong Listing Rules - governs listed companies including corporate actions like open offers and rights issues',
+  TAKEOVERS_CODE: 'Hong Kong Codes on Takeovers and Mergers - governs acquisitions and takeovers including general offers',
+};
+
+/**
+ * Framework-specific terminology to avoid confusion
+ */
+export const FRAMEWORK_TERMINOLOGY = {
+  LISTING_RULES: ['open offer', 'rights issue', 'corporate action', 'capital raising', 'chapter 7'],
+  TAKEOVERS_CODE: ['general offer', 'takeover offer', 'mandatory offer', 'voluntary offer', 'rule 26']
+};

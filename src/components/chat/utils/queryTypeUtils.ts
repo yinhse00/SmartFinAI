@@ -1,11 +1,13 @@
-
-
 /**
  * Utilities for identifying financial query types with enhanced regulatory nuance
  */
 
-import { FINANCIAL_EXPERTISES } from '@/services/constants/financialConstants';
-import { isOpenOfferQuery, isGeneralOfferQuery } from '@/services/regulatory/utils/queryDetector';
+import { FINANCIAL_EXPERTISES, FRAMEWORK_TERMINOLOGY } from '@/services/constants/financialConstants';
+import { 
+  isOpenOfferQuery, 
+  isGeneralOfferQuery, 
+  isTakeoversCodeQuery 
+} from '@/services/regulatory/utils/queryDetector';
 
 export const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
@@ -27,13 +29,23 @@ export const FINANCIAL_QUERY_TYPES = {
 export const identifyFinancialQueryType = (query: string): string => {
   const lowerQuery = query.toLowerCase();
   
+  // CRITICAL: First check - explicitly look for "open offer" as corporate action
   // Open Offer Detection (Listing Rules corporate action)
   if (isOpenOfferQuery(query)) {
+    // This is a corporate action under Listing Rules Chapter 7
+    console.log("Identified as OPEN OFFER - corporate action under Listing Rules");
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
+  }
+  
+  // CRITICAL: Second check - explicitly look for takeovers code terms
+  if (isTakeoversCodeQuery(query)) {
+    console.log("Identified as TAKEOVER_OFFER - under Takeovers Code");
+    return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
   }
   
   // Takeover Offer Detection (Takeovers Code specific)
   if (isGeneralOfferQuery(query)) {
+    console.log("Identified as TAKEOVER_OFFER through general offer check");
     return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
   }
   
@@ -85,4 +97,28 @@ export const isTradingArrangementRelated = (query: string): boolean => {
            lowerQuery.includes('consolidation') || 
            lowerQuery.includes('lot size') || 
            lowerQuery.includes('name change')));
+};
+
+/**
+ * Check if query appears to conflate different regulatory frameworks
+ * This helps detect when a user might be confusing open offers with takeover offers
+ */
+export const detectRegulatoryFrameworkConfusion = (query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  
+  // Check if query mentions both listing rules and takeovers code terms
+  const hasListingRulesTerms = FRAMEWORK_TERMINOLOGY.LISTING_RULES.some(term => 
+    lowerQuery.includes(term)
+  );
+  
+  const hasTakeoversCodeTerms = FRAMEWORK_TERMINOLOGY.TAKEOVERS_CODE.some(term => 
+    lowerQuery.includes(term)
+  );
+  
+  // Check specifically for "open offer" alongside takeovers terminology
+  const potentialConfusion = 
+    (lowerQuery.includes('open offer') && hasTakeoversCodeTerms) ||
+    (lowerQuery.includes('takeover') && lowerQuery.includes('open offer'));
+  
+  return potentialConfusion;
 };

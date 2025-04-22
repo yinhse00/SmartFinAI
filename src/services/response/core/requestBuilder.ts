@@ -13,7 +13,7 @@ export const requestBuilder = {
     queryType: string, 
     regulatoryContext?: string, 
     isFaqQuery: boolean = false
-  ): string => {
+  ): string {
     // Create a professional financial system message based on expertise area
     let systemMessage = createFinancialExpertSystemPrompt(queryType, regulatoryContext);
     
@@ -34,16 +34,21 @@ export const requestBuilder = {
       "5. Explanation of nil-paid rights trading (not applicable for open offers)\n" +
       "6. Specific listing rule references (e.g., Rule 7.24, Chapter 7)\n" +
       "7. A clear conclusion summarizing the key dates and actions\n\n" +
-      "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.";
+      "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.\n\n" +
+      
+      "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code.";
     }
     
     // Add special instructions for takeover offers to distinguish from open offers
-    if (queryType === 'takeover_offer') {
+    if (queryType === 'takeover_offer' || queryType === 'takeovers_code' || queryType === 'takeovers') {
       systemMessage += "\n\nCRITICAL REGULATORY DISTINCTION: A 'takeover offer' or 'general offer' is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules. It is fundamentally different from an 'open offer' which is a CORPORATE ACTION for capital-raising under Listing Rules Chapter 7. When discussing takeover offers:\n" +
-      "1. Always reference the Takeovers Code, not Listing Rules\n" +
+      "1. Always reference the Takeovers Code, not Listing Rules Chapter 7\n" +
       "2. Focus exclusively on acquisition of control aspects, not capital raising\n" +
       "3. Include relevant Takeovers Code references (e.g., Rule 26, Rule 30)\n" +
-      "4. Distinguish between mandatory and voluntary offers where appropriate\n";
+      "4. Distinguish between mandatory and voluntary offers where appropriate\n" +
+      "5. NEVER confuse with 'open offers' which are corporate actions under Listing Rules\n\n" +
+      
+      "CRITICAL: Takeover offers are about acquisition of control, not capital raising. Open offers are about capital raising, not acquisition of control. These are completely different regulatory concepts governed by different regulatory frameworks.";
     }
     
     // Add stronger instructions to use database content

@@ -60,26 +60,48 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       }
     }
     
-    // CRITICAL: Special check for regulatory framework confusion
-    // Ensure open offer responses NEVER reference Takeovers Code
-    if (financialQueryType === 'open_offer' && 
-        (content.toLowerCase().includes('takeover') || content.toLowerCase().includes('rule 26'))) {
-      analysis.isComplete = false;
-      analysis.missingElements.push("CRITICAL: Open offer response incorrectly references Takeovers Code. Open offers are CORPORATE ACTIONS under Listing Rules.");
+    // CRITICAL: Enhanced check for regulatory framework confusion
+    
+    // For open offers, MUST be under Listing Rules and NEVER reference Takeovers Code
+    if (financialQueryType === 'open_offer') {
+      // Check for Listing Rules references
+      if (!content.toLowerCase().includes('listing rule') && 
+          !content.toLowerCase().includes('chapter 7')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL: Open offer response missing Listing Rules references");
+      }
+      
+      // Check for incorrect Takeovers Code references
+      if (content.toLowerCase().includes('takeover') || 
+          content.toLowerCase().includes('rule 26') ||
+          content.toLowerCase().includes('mandatory offer')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL ERROR: Open offer response incorrectly references Takeovers Code concepts");
+      }
+      
+      // Check for capital raising purpose (essential for corporate actions)
+      if (!content.toLowerCase().includes('capital') && 
+          !content.toLowerCase().includes('fundraising')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL: Missing capital-raising purpose for Open Offer corporate action");
+      }
     }
     
-    // Ensure takeover offer responses NEVER reference Listing Rules Chapter 7
-    if (financialQueryType === 'takeover_offer' && 
-        (content.toLowerCase().includes('chapter 7') || content.toLowerCase().includes('rule 7.'))) {
-      analysis.isComplete = false;
-      analysis.missingElements.push("CRITICAL: Takeover offer response incorrectly references Listing Rules Chapter 7. Takeover offers are governed by Takeovers Code.");
-    }
-    
-    // Check for listing rules references
-    if ((financialQueryType.includes('rights_issue') || financialQueryType.includes('open_offer')) &&
-        !content.match(/rule\s+[0-9.]+|chapter\s+[0-9]+/i)) {
-      analysis.isComplete = false;
-      analysis.missingElements.push("Missing listing rule references");
+    // For takeover offers, MUST be under Takeovers Code and NEVER reference Listing Rules Chapter 7
+    if (financialQueryType === 'takeover_offer') {
+      // Check for Takeovers Code references
+      if (!content.toLowerCase().includes('takeover') && 
+          !content.toLowerCase().includes('code on takeover')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL: Takeover offer response missing Takeovers Code references");
+      }
+      
+      // Check for incorrect Listing Rules Chapter 7 references
+      if (content.toLowerCase().includes('chapter 7') || 
+          content.toLowerCase().includes('rule 7.')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL ERROR: Takeover offer response incorrectly references Listing Rules Chapter 7");
+      }
     }
   }
   
