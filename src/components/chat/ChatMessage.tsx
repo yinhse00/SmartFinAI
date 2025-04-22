@@ -102,7 +102,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
                 />
               )}
               
-              <style jsx>{`
+              <style>{`
                 .grok-message {
                   opacity: ${isTypingComplete ? 1 : 0};
                   height: ${isTypingComplete ? 'auto' : 0};
