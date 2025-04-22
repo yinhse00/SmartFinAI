@@ -104,7 +104,7 @@ export const contextSearchOrchestrator = {
       // For FAQ queries, prioritize FAQ content
       if (query.toLowerCase().includes('faq') || query.toLowerCase().includes('frequently asked')) {
         console.log('FAQ query detected, searching for FAQ documents');
-        const faqResults = await faqSearchService.findFAQDocuments(query);
+        const faqResults = await findFAQDocuments(query);
         searchResults = [...faqResults, ...searchResults];
       }
       
