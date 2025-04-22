@@ -5,13 +5,14 @@ import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import ProcessingIndicator from './ProcessingIndicator';
 import ApiConnectionStatus from './ApiConnectionStatus';
+import { StyledTable } from '@/components/ui/styled-table';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { 
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Database } from 'lucide-react';
+import { RefreshCw, Database, Table as TableIcon } from 'lucide-react';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -33,54 +34,38 @@ const ChatInterface = () => {
     retryLastQuery
   } = useChatLogic();
 
+  // State to manage table view for results
+  const [tableResults, setTableResults] = useState<{
+    headers: string[];
+    rows: (string | number)[][];
+  } | null>(null);
+
   // Enhanced truncation detection for incomplete responses
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       
-      // Only check bot messages that aren't already marked as truncated
-      if (lastMessage.sender === 'bot' && 
-          lastMessage.content && 
-          !lastMessage.isTruncated) {
-        
-        const content = lastMessage.content;
-        const queryType = lastMessage.queryType || '';
-        
-        // Use simplified financial analysis
-        const financialAnalysis = analyzeFinancialResponse(content, queryType);
-        
-        // Ensure explicit boolean handling
-        const isTruncated = financialAnalysis.isComplete === false;
+      // Check if the last message contains tabular data
+      if (lastMessage.sender === 'bot' && lastMessage.content) {
+        // Basic table detection (you might want to improve this detection logic)
+        const tableMatch = lastMessage.content.match(/\|(.*)\|(.*)\|/);
+        if (tableMatch) {
+          try {
+            // Simple parsing of markdown-like table
+            const lines = lastMessage.content.split('\n').filter(line => line.includes('|'));
+            const headers = lines[0].split('|').filter(h => h.trim()).map(h => h.trim());
+            const rows = lines.slice(2).map(line => 
+              line.split('|').filter(cell => cell.trim()).map(cell => cell.trim())
+            );
 
-        if (isTruncated) {
-          console.log('Response appears incomplete:', {
-            financialAnalysis: financialAnalysis.missingElements
-          });
-          
-          // Mark the message as truncated
-          const updatedMessages = [...messages];
-          updatedMessages[updatedMessages.length - 1].isTruncated = true;
-          setMessages(updatedMessages);
-          
-          // Show toast with retry option
-          toast({
-            title: "Incomplete Response",
-            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
-            duration: 15000,
-            action: <Button 
-                     onClick={retryLastQuery} 
-                     variant="outline"
-                     size="sm"
-                     className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
-                    >
-                      <RefreshCw size={14} />
-                      Retry query
-                    </Button>
-          });
+            setTableResults({ headers, rows });
+          } catch (error) {
+            console.error('Failed to parse table', error);
+          }
         }
       }
     }
-  }, [messages, toast, retryLastQuery, setMessages]);
+  }, [messages]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
@@ -93,14 +78,27 @@ const ChatInterface = () => {
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
           
-          {/* Enhanced database review status indicator */}
-          {isLoading && processingStage === 'reviewing' && (
-            <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue dark:text-finance-light-blue">
-              <Database size={14} className="animate-pulse" />
-              <span className="font-medium">Reviewing database for accurate information...</span>
-              <span className="text-[10px] bg-finance-light-blue/20 dark:bg-finance-medium-blue/30 px-1.5 py-0.5 rounded-full">
-                Consulting HK regulatory database
-              </span>
+          {/* Table Results Display */}
+          {tableResults && (
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <TableIcon className="h-5 w-5 text-finance-medium-blue" />
+                  Query Results
+                </h3>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => setTableResults(null)}
+                >
+                  Hide Table
+                </Button>
+              </div>
+              <StyledTable 
+                headers={tableResults.headers} 
+                rows={tableResults.rows} 
+                sortable={true}
+              />
             </div>
           )}
           
