@@ -1,6 +1,6 @@
 
 // Re-export types from main types file
-export { GrokRequestParams, GrokResponse } from '@/types/grok';
+export type { GrokRequestParams, GrokResponse } from '@/types/grok';
 
 export interface GrokChatRequestBody {
   messages: {
