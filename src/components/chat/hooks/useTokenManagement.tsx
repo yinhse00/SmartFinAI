@@ -5,8 +5,8 @@ import { GrokResponse } from '@/types/grok';
  * Hook for managing token limits and parameters for API requests
  */
 export const useTokenManagement = () => {
-  // Lower maximum token limit to ensure complete responses
-  const MAX_TOKENS = 3000;  // Reduced from 4000 for better reliability
+  // Increase maximum token limit for better response completeness
+  const MAX_TOKENS = 4000;  // Increased from 3000 to allow for more comprehensive responses
   
   const enhanceTokenLimits = (
     queryText: string,
@@ -14,16 +14,26 @@ export const useTokenManagement = () => {
     isSimpleQuery: boolean,
     isAggregationQuery: boolean
   ) => {
-    // Use more conservative multipliers to avoid truncation
-    const baseTokenMultiplier = isSimpleQuery ? 1.0 : 1.2; // Reduced from 1.2/1.5
+    // Use more generous multipliers for definition queries
+    const isDefinitionQuery = queryText.toLowerCase().includes('what is') || 
+                             queryText.toLowerCase().includes('definition of');
     
-    // Calculate tokens with a safer maximum
+    // Higher multiplier for definition queries to ensure completeness
+    const baseTokenMultiplier = isDefinitionQuery ? 2.0 : 
+                               isSimpleQuery ? 1.0 : 1.2;
+    
+    // Calculate tokens with an appropriate maximum
     const calculatedTokens = Math.min(
       responseParams.maxTokens * baseTokenMultiplier, 
       MAX_TOKENS
     );
     
     responseParams.maxTokens = calculatedTokens;
+    
+    // Add specific instructions for definition-related queries
+    if (isDefinitionQuery) {
+      responseParams.prompt += " For this definition query, provide a comprehensive explanation with relevant regulatory context. Include the formal definition AND practical implications.";
+    }
     
     // Add specific instructions for aggregation-related queries
     if (queryText.toLowerCase().includes('rule 7.19a') || 

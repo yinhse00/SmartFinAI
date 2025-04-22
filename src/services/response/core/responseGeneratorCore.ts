@@ -3,8 +3,8 @@ import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 
-// Lower maximum token limit from Grok API for better reliability
-const MAX_TOKEN_LIMIT = 2500; // Reduced from 131072 to ensure complete responses
+// Set appropriate maximum token limit for Grok API for better coverage
+const MAX_TOKEN_LIMIT = 3500; // Increased from 2500 for more comprehensive responses
 
 /**
  * Core response generation functionality
@@ -15,12 +15,27 @@ export const responseGeneratorCore = {
    */
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      console.log("Making primary API call with conservative parameters");
+      console.log("Making primary API call with optimized parameters");
       
-      // Enforce lower token limit to avoid truncation
-      if (requestBody.max_tokens && requestBody.max_tokens > MAX_TOKEN_LIMIT) {
-        console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${MAX_TOKEN_LIMIT}, capping at limit`);
-        requestBody.max_tokens = MAX_TOKEN_LIMIT;
+      // Special handling for definition queries to ensure completeness
+      const userMessage = requestBody.messages.find((m: any) => m.role === 'user')?.content || '';
+      const isDefinitionQuery = userMessage.toLowerCase().includes('what is') || 
+                               userMessage.toLowerCase().includes('definition');
+      
+      // Allow higher token limits for definition queries
+      const effectiveTokenLimit = isDefinitionQuery ? Math.max(MAX_TOKEN_LIMIT, 4000) : MAX_TOKEN_LIMIT;
+      
+      // Enforce appropriate token limit based on query type
+      if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
+        console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${effectiveTokenLimit}, capping at limit`);
+        requestBody.max_tokens = effectiveTokenLimit;
+      }
+      
+      // For connected person queries, ensure we have sufficient tokens
+      if (userMessage.toLowerCase().includes('connected person') || 
+         userMessage.toLowerCase().includes('connected transaction')) {
+        console.log("Connected person/transaction query detected, ensuring sufficient tokens");
+        requestBody.max_tokens = Math.max(requestBody.max_tokens, 3500);
       }
       
       return await grokApiService.callChatCompletions(requestBody, apiKey);
@@ -38,18 +53,24 @@ export const responseGeneratorCore = {
     try {
       console.log('Attempting backup API call with simplified parameters');
       
+      // Check for definition queries
+      const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
+                               prompt.toLowerCase().includes('definition');
+      
+      // For definition queries, use more specialized system prompt
+      const systemPrompt = isDefinitionQuery 
+        ? 'You are a financial regulatory expert specializing in Hong Kong listing rules. Provide comprehensive definitions with all relevant details from Chapter 14A for connected persons/transactions queries.'
+        : 'You are a helpful assistant with knowledge of Hong Kong financial regulations.';
+      
       // Use a much simpler system prompt and model configuration for better reliability
       const backupRequestBody = {
         messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant with knowledge of Hong Kong financial regulations.'
-          },
+          { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
         model: "grok-3-mini-beta",
         temperature: 0.2,  // Lower temperature for more predictable responses
-        max_tokens: 1500    // Much lower token limit to ensure complete responses
+        max_tokens: isDefinitionQuery ? 3000 : 1500  // Higher limit for definitions
       };
       
       // Add a short delay before the retry to prevent rate limiting issues
