@@ -72,33 +72,40 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       return <ChatTableMessage content={message.content} />;
     }
 
-    // Enhanced formatting to improve paragraph separation and readability
-    const formattedContent = message.content
-      // Handle code blocks first
-      .replace(/```([^`]+)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded my-3 overflow-x-auto"><code>$1</code></pre>')
-      // Handle inline code
-      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
-      // Handle bold text
-      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-      // Handle italic text
-      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      // Enhanced paragraph handling with better spacing
-      .split('\n\n')  // Split on double newlines to create paragraphs
-      .map(paragraph => 
-        `<p class="mb-4">${
-          paragraph
-            .trim()
-            .replace(/\n/g, '<br />')  // Single newlines become line breaks within paragraphs
-        }</p>`
-      )
-      .join('');  // Join paragraphs together
-
+    // More aggressive paragraph formatting for better readability
+    const paragraphs = message.content.split('\n\n');
+    
     return (
       <div className="prose dark:prose-invert break-words max-w-full">
-        <div 
-          dangerouslySetInnerHTML={{ __html: formattedContent }} 
-          className="space-y-2"
-        />
+        {paragraphs.map((paragraph, idx) => {
+          // Skip empty paragraphs
+          if (!paragraph.trim()) return null;
+          
+          // Handle code blocks
+          if (paragraph.startsWith('```') && paragraph.endsWith('```')) {
+            const codeContent = paragraph.substring(3, paragraph.length - 3);
+            return (
+              <pre key={idx} className="bg-gray-100 dark:bg-gray-800 p-3 rounded my-4 overflow-x-auto">
+                <code>{codeContent}</code>
+              </pre>
+            );
+          }
+          
+          // Format normal paragraphs
+          const formattedPara = paragraph
+            .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+            .replace(/\n/g, '<br />');
+          
+          return (
+            <p 
+              key={idx} 
+              className="mb-5 mt-2" 
+              dangerouslySetInnerHTML={{ __html: formattedPara }}
+            />
+          );
+        })}
       </div>
     );
   }
