@@ -17,7 +17,7 @@ const Navbar = () => {
     <nav className="bg-white dark:bg-finance-dark-blue border-b border-gray-200 dark:border-finance-medium-blue">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
         <Link to="/" className="text-xl font-bold text-finance-dark-blue dark:text-white">
-          FinanceGrok
+          SmartFinAI
         </Link>
         <div className="flex items-center space-x-4">
           <Link to="/chat" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">

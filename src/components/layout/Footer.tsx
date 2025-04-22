@@ -5,7 +5,7 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-center">
           <p className="text-xs text-gray-600 dark:text-gray-400">
-            FinanceGrok
+            
           </p>
         </div>
       </div>

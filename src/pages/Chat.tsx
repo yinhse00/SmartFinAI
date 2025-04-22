@@ -83,10 +83,6 @@ const Chat = () => {
 
   return (
     <MainLayout>
-      <div className="mb-2">
-        <h1 className="text-xl font-bold text-finance-dark-blue dark:text-white">SmartFinAI</h1>
-      </div>
-      
       <ChatInterface />
     </MainLayout>
   );
