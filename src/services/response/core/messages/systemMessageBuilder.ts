@@ -32,6 +32,12 @@ export const systemMessageBuilder = {
       "8. Specific listing rule references (e.g., Rule 7.24, Rule 7.26A for excess applications)\n" +
       "9. An explicit citation of the Guide on Trading Arrangements for Selected Types of Corporate Actions\n" +
       "10. A clear conclusion summarizing the key dates and actions\n\n" +
+      
+      "STANDARD FORMAT FOR TIMETABLE ENTRIES:\n" +
+      "- For each day in the timetable, use the format: '[Actual Date] ([T+/-X]) - [Event Name]: [Description]'\n" +
+      "- Always explicitly state that the timetable follows the HKEX Guide on Trading Arrangements\n" +
+      "- Clarify that no nil-paid rights trading occurs in open offers (critical distinction from rights issues)\n\n" +
+      
       "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.\n\n" +
       
       "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code. Regulated by: " + REGULATORY_AUTHORITIES.LISTING_RULES;
@@ -55,21 +61,69 @@ export const systemMessageBuilder = {
 
   buildTradingArrangementsMessage(queryType: string): string {
     let guideReference = "";
+    let timetableInstructions = "";
+    
     switch (queryType) {
       case 'rights_issue':
         guideReference = CORPORATE_ACTION_GUIDES.RIGHTS_ISSUE;
+        timetableInstructions = `
+CRITICAL RIGHTS ISSUE TIMETABLE REQUIREMENTS:
+1. Last cum-rights trading day (T-2)
+2. Ex-rights date (T-1)
+3. Record date (T)
+4. Posting of PAL/EAF documents (T+3)
+5. First day of nil-paid rights trading (T+3)
+6. Last day of nil-paid rights trading (T+13)
+7. Latest time for acceptance and payment (T+15)
+8. Result announcement date (T+18)
+9. Refund cheques dispatch date (T+19)
+10. New shares listing date (T+21)`;
         break;
       case 'open_offer':
         guideReference = CORPORATE_ACTION_GUIDES.OPEN_OFFER;
+        timetableInstructions = `
+CRITICAL OPEN OFFER TIMETABLE REQUIREMENTS:
+1. Last cum-entitlement trading day (T-2)
+2. Ex-entitlement date (T-1)
+3. Record date for entitlements (T)
+4. Application form dispatch date (T+5)
+5. Latest date for acceptance/payment (T+14)
+6. Result announcement date (T+17)
+7. Refund cheque dispatch date (if applicable) (T+18)
+8. New shares listing date (T+21)
+9. CRITICAL DISTINCTION: UNLIKE rights issues, open offers have NO nil-paid rights trading`;
         break;
       case 'share_consolidation':
         guideReference = CORPORATE_ACTION_GUIDES.SHARE_CONSOLIDATION;
+        timetableInstructions = `
+CRITICAL SHARE CONSOLIDATION TIMETABLE REQUIREMENTS:
+1. Last day for trading in pre-consolidated shares (T-2)
+2. Effective date of consolidation/sub-division (T-1)
+3. First day of trading in consolidated/subdivided shares (T)
+4. Free exchange of share certificates begins (T)
+5. Last day for free exchange of share certificates (T+30)`;
         break;
       case 'board_lot_change':
         guideReference = CORPORATE_ACTION_GUIDES.BOARD_LOT_CHANGE;
+        timetableInstructions = `
+CRITICAL BOARD LOT CHANGE TIMETABLE REQUIREMENTS:
+1. Announcement of board lot change date (≥T-10)
+2. Original board lot trading ends (T-1)
+3. New board lot size effective date (T)
+4. Parallel trading begins (optional) (T)
+5. Parallel trading ends (if applicable) (T+25)`;
         break;
       case 'company_name_change':
         guideReference = CORPORATE_ACTION_GUIDES.COMPANY_NAME_CHANGE;
+        timetableInstructions = `
+CRITICAL COMPANY NAME CHANGE TIMETABLE REQUIREMENTS:
+1. Effective date of name change (T-27)
+2. Last day of trading under old name (T-1)
+3. Trading under new name begins (T)
+4. Free exchange of share certificates begins (T)
+5. Parallel trading begins (if applicable) (T)
+6. Parallel trading ends (if applicable) (T+20)
+7. Last day for free exchange of share certificates (T+30)`;
         break;
     }
     
@@ -82,11 +136,17 @@ export const systemMessageBuilder = {
       
       "REFERENCE: " + guideReference + "\n\n" +
       
+      timetableInstructions + "\n\n" +
+      
       "EXECUTION PROCESS FOR THIS CORPORATE ACTION:\n" +
       "1. Pre-announcement phase: " + EXECUTION_TIMELINES.LISTING_RULES.PRE_ANNOUNCEMENT + "\n" +
       "2. Circular preparation phase: " + EXECUTION_TIMELINES.LISTING_RULES.CIRCULAR_PREPARATION + "\n" +
       "3. Shareholders' approval as required by Listing Rules\n" +
       "4. Implementation of trading timetable according to the Guide\n\n" +
+      
+      "STANDARD FORMAT FOR TIMETABLE ENTRIES:\n" +
+      "- For each day in the timetable, use the format: '[Actual Date] ([T+/-X]) - [Event Name]: [Description]'\n" +
+      "- Always explicitly state that the timetable follows the HKEX Guide on Trading Arrangements\n\n" +
       
       "ENSURE COMPLETENESS: Your response MUST include ALL key components of the trading arrangements as specified in the Guide. Always reference the Guide explicitly in your response.";
   }

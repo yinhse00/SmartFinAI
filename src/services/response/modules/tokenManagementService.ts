@@ -1,15 +1,18 @@
+
 import React from 'react';
 
 /**
  * Constants for token limits across different query types and scenarios
+ * Significantly increased limits to prevent truncation in financial regulatory responses
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 500000,  // Increased from 4000
-  RETRY: 600000,    // Increased from 6000
-  RIGHTS_ISSUE_TIMETABLE: 550000,  // Increased from 5000
-  DEFINITION_QUERY: 500000,  // Increased from 4500
-  CONNECTED_TRANSACTION: 500000,  // Increased from 4500
-  SIMPLE_QUERY: 300000,  // Increased from 2000
+  DEFAULT: 800000,      // Increased from 500000
+  RETRY: 1000000,       // Increased from 600000
+  RIGHTS_ISSUE_TIMETABLE: 1200000, // Increased from 550000
+  OPEN_OFFER_TIMETABLE: 1200000,   // Added specifically for open offers
+  DEFINITION_QUERY: 700000,   // Increased from 500000
+  CONNECTED_TRANSACTION: 700000,  // Increased from 500000
+  SIMPLE_QUERY: 400000,  // Increased from 300000
 } as const;
 
 /**
@@ -32,10 +35,19 @@ export const tokenManagementService = {
       return TOKEN_LIMITS.RETRY;
     }
 
+    // Open offer timetable queries need higher limits
+    if (queryType === 'open_offer' && 
+        (prompt.toLowerCase().includes('timetable') || 
+         prompt.toLowerCase().includes('schedule') ||
+         prompt.toLowerCase().includes('trading arrangement'))) {
+      return TOKEN_LIMITS.OPEN_OFFER_TIMETABLE;
+    }
+
     // Rights issue timetable queries need higher limits
     if (queryType === 'rights_issue' && 
         (prompt.toLowerCase().includes('timetable') || 
-         prompt.toLowerCase().includes('schedule'))) {
+         prompt.toLowerCase().includes('schedule') ||
+         prompt.toLowerCase().includes('trading arrangement'))) {
       return TOKEN_LIMITS.RIGHTS_ISSUE_TIMETABLE;
     }
 
@@ -71,14 +83,15 @@ export const tokenManagementService = {
 
     // Use very low temperature for retries
     if (isRetryAttempt) {
-      return 0.1;
+      return 0.05; // Reduced from 0.1 for more deterministic output
     }
 
-    // Rights issue timetables need very low temperature
-    if (queryType === 'rights_issue' && 
+    // Trading arrangement timetables need extremely low temperature for maximum accuracy
+    if ((queryType === 'rights_issue' || queryType === 'open_offer') && 
         (prompt.toLowerCase().includes('timetable') || 
-         prompt.toLowerCase().includes('schedule'))) {
-      return 0.05;
+         prompt.toLowerCase().includes('schedule') ||
+         prompt.toLowerCase().includes('trading arrangement'))) {
+      return 0.02; // Even lower temperature for critical regulatory information
     }
 
     // Definition queries need low temperature

@@ -61,53 +61,12 @@ const Index = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="finance-card p-6 rounded-lg finance-gradient text-white">
-          <h3 className="text-xl font-semibold mb-3">New to FinanceGrok?</h3>
-          <p className="mb-4">Learn how our AI-powered system can help streamline your regulatory compliance workflow.</p>
-          <Button variant="secondary" asChild>
-            <Link to="/tutorial">
-              Start Tutorial <ArrowRight size={16} className="ml-2" />
-            </Link>
-          </Button>
-        </div>
-        <div className="finance-card p-6 rounded-lg">
-          <h3 className="text-xl font-semibold mb-3">Regulatory Updates</h3>
-          <div className="space-y-4">
-            <div className="flex gap-3">
-              <div className="mt-0.5">
-                <BookOpen size={16} className="text-finance-medium-blue dark:text-finance-accent-blue" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium">SFC Updates Takeovers Code Exemptions</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">New guidance effective from June 1, 2023</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="mt-0.5">
-                <BookOpen size={16} className="text-finance-medium-blue dark:text-finance-accent-blue" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium">HKEx Revises Connected Transaction Rules</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Updated Chapter 14A with new thresholds</p>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <div className="mt-0.5">
-                <BookOpen size={16} className="text-finance-medium-blue dark:text-finance-accent-blue" />
-              </div>
-              <div>
-                <h4 className="text-sm font-medium">New ESG Disclosure Requirements</h4>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Enhanced reporting standards from Q4 2023</p>
-              </div>
-            </div>
-          </div>
-          <div className="mt-4 text-right">
-            <Button variant="link" className="text-finance-medium-blue dark:text-finance-accent-blue p-0">
-              View all updates <ArrowRight size={14} className="ml-1" />
-            </Button>
-          </div>
-        </div>
+      <div className="mb-4 text-center">
+        <Button asChild variant="default" className="bg-finance-medium-blue hover:bg-finance-dark-blue">
+          <Link to="/chat">
+            Begin Regulatory Query
+          </Link>
+        </Button>
       </div>
     </MainLayout>
   );

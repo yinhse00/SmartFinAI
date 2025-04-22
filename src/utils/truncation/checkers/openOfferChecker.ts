@@ -31,7 +31,7 @@ export function checkOpenOfferResponse(content: string) {
     result.isComplete = false;
     result.missingElements.push("Missing Listing Rules references for Open Offer");
   }
-  
+
   // Check for incorrect regulatory framework references - MUST flag any takeover code mentions
   if (lowerContent.includes('takeovers code') || 
       lowerContent.includes('takeover code') ||
@@ -75,6 +75,22 @@ export function checkOpenOfferResponse(content: string) {
     result.isComplete = false;
     result.missingElements.push("CRITICAL: Missing key open offer distinction (no nil-paid rights trading)");
   }
+
+  // Check for capital-raising purpose
+  if (!lowerContent.includes('capital raising') && !lowerContent.includes('raise capital') &&
+      !lowerContent.includes('fundraising') && !lowerContent.includes('raise funds')) {
+    result.isComplete = false;
+    result.missingElements.push("CRITICAL: Missing capital-raising purpose for Open Offer corporate action");
+  }
+  
+  // Check for a complete conclusion section
+  if (content.length > 1500 && 
+      !lowerContent.includes('conclusion') && 
+      !lowerContent.includes('in summary') && 
+      !lowerContent.includes('to summarize')) {
+    result.isComplete = false;
+    result.missingElements.push("Missing conclusion or summary section");
+  }
   
   return result;
 }
@@ -102,7 +118,7 @@ export function checkRegulatoryFrameworkClarity(content: string): { isConfused: 
        lowerContent.includes('mandatory offer'))) {
     return {
       isConfused: true,
-      explanation: "CRITICAL: Response incorrectly mixes Open Offers (Listing Rules corporate action) with Takeovers Code concepts"
+      explanation: "CRITICAL ERROR: Open offer response incorrectly references Takeovers Code concepts"
     };
   }
   
