@@ -2,14 +2,14 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Globe } from 'lucide-react';
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { grokService } from '@/services/grokService';
 import { hasGrokApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
+import LanguageSelector from '../translation/LanguageSelector';
+import TranslationInput from '../translation/TranslationInput';
+import TranslationOutput from '../translation/TranslationOutput';
 
 const TranslationWidget = () => {
   const [content, setContent] = useState<string>('');
@@ -20,23 +20,6 @@ const TranslationWidget = () => {
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const navigate = useNavigate();
 
-  const handleDragEnter = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  };
-  
-  const handleDragLeave = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  };
-  
-  const handleDragOver = (e: React.DragEvent<HTMLTextAreaElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-  
   const handleDrop = (e: React.DragEvent<HTMLTextAreaElement>) => {
     e.preventDefault();
     e.stopPropagation();
@@ -45,7 +28,6 @@ const TranslationWidget = () => {
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       const file = e.dataTransfer.files[0];
       
-      // Check if the file is text
       if (file.type === 'text/plain') {
         const reader = new FileReader();
         reader.onload = (event) => {
@@ -62,7 +44,6 @@ const TranslationWidget = () => {
         });
       }
     } else if (e.dataTransfer.getData('text')) {
-      // Handle dropped text
       setContent(e.dataTransfer.getData('text'));
     }
   };
@@ -99,7 +80,6 @@ const TranslationWidget = () => {
     setTranslatedContent(null);
 
     try {
-      // Use actual content without any prefixes
       const contentToTranslate = content.trim();
       
       const response = await grokService.translateContent({
@@ -125,10 +105,6 @@ const TranslationWidget = () => {
     }
   };
 
-  const handleFullTranslator = () => {
-    navigate('/documents');
-  };
-
   return (
     <Card className="finance-card">
       <CardHeader>
@@ -139,67 +115,48 @@ const TranslationWidget = () => {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex flex-row gap-4 items-center">
-          <div>
-            <Label>From:</Label>
-            <RadioGroup 
-              value={sourceLanguage} 
-              onValueChange={(value) => setSourceLanguage(value as 'en' | 'zh')}
-              className="flex space-x-4 mt-1"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="en" id="source-en" />
-                <Label htmlFor="source-en" className="cursor-pointer">English</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="zh" id="source-zh" />
-                <Label htmlFor="source-zh" className="cursor-pointer">Chinese</Label>
-              </div>
-            </RadioGroup>
-          </div>
-          <div>
-            <Label>To:</Label>
-            <RadioGroup 
-              value={targetLanguage} 
-              onValueChange={(value) => setTargetLanguage(value as 'zh' | 'en')}
-              className="flex space-x-4 mt-1"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="en" id="target-en" />
-                <Label htmlFor="target-en" className="cursor-pointer">English</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="zh" id="target-zh" />
-                <Label htmlFor="target-zh" className="cursor-pointer">Chinese</Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </div>
-
-        <div>
-          <Textarea 
-            placeholder="Enter text to translate or drop a text file..."
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className={`resize-none ${isDragging ? 'border-finance-medium-blue bg-gray-50 dark:bg-finance-dark-blue/20' : ''}`}
-            rows={2}
-            onDragEnter={handleDragEnter}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-            onDrop={handleDrop}
+          <LanguageSelector
+            label="From:"
+            value={sourceLanguage}
+            onChange={setSourceLanguage}
+            id="source"
+          />
+          <LanguageSelector
+            label="To:"
+            value={targetLanguage}
+            onChange={setTargetLanguage}
+            id="target"
           />
         </div>
 
-        {translatedContent && (
-          <div className="p-3 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm whitespace-pre-line">
-            {translatedContent}
-          </div>
-        )}
+        <TranslationInput
+          content={content}
+          onChange={setContent}
+          isDragging={isDragging}
+          onDragEnter={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(true);
+          }}
+          onDragOver={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setIsDragging(false);
+          }}
+          onDrop={handleDrop}
+        />
+
+        <TranslationOutput translatedContent={translatedContent} />
       </CardContent>
       <CardFooter className="flex justify-between">
         <Button 
           variant="outline" 
           size="sm"
-          onClick={handleFullTranslator}
+          onClick={() => navigate('/documents')}
         >
           Full Translator
         </Button>
