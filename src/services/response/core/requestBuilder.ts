@@ -1,5 +1,7 @@
+
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { responseOptimizer } from '../modules/responseOptimizer';
+import { REGULATORY_FRAMEWORKS, EXECUTION_TIMELINES } from '../../constants/financialConstants';
 
 /**
  * Builds appropriate API requests based on query type and context
@@ -25,6 +27,12 @@ export const requestBuilder = {
       "4. Highlight that unlike rights issues, open offers do not have tradable nil-paid rights\n" +
       "5. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n\n" +
       
+      "EXECUTION PROCESS FOR OPEN OFFERS:\n" +
+      "1. Pre-announcement phase: " + EXECUTION_TIMELINES.LISTING_RULES.PRE_ANNOUNCEMENT + "\n" +
+      "2. Circular preparation phase: " + EXECUTION_TIMELINES.LISTING_RULES.CIRCULAR_PREPARATION + "\n" +
+      "3. Shareholders' approval if required under Rule 7.24\n" +
+      "4. Implementation of trading timetable (ex-entitlement, acceptance period, etc.)\n\n" +
+      
       "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
       "1. Ex-entitlement date\n" +
       "2. Record date\n" +
@@ -35,7 +43,7 @@ export const requestBuilder = {
       "7. A clear conclusion summarizing the key dates and actions\n\n" +
       "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.\n\n" +
       
-      "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code.";
+      "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code. Regulated by: " + REGULATORY_AUTHORITIES.LISTING_RULES;
     }
     
     // Add special instructions for takeover offers to distinguish from open offers
@@ -47,7 +55,12 @@ export const requestBuilder = {
       "4. Distinguish between mandatory and voluntary offers where appropriate\n" +
       "5. NEVER confuse with 'open offers' which are corporate actions under Listing Rules\n\n" +
       
-      "CRITICAL: Takeover offers are about acquisition of control, not capital raising. Open offers are about capital raising, not acquisition of control. These are completely different regulatory concepts governed by different regulatory frameworks.";
+      "EXECUTION PROCESS FOR TAKEOVER OFFERS:\n" +
+      "1. Pre-announcement phase: " + EXECUTION_TIMELINES.TAKEOVERS_CODE.PRE_ANNOUNCEMENT + "\n" +
+      "2. Offer document preparation: " + EXECUTION_TIMELINES.TAKEOVERS_CODE.OFFER_DOCUMENT + "\n" +
+      "3. Offer timeline: " + EXECUTION_TIMELINES.TAKEOVERS_CODE.OFFER_TIMELINE + "\n\n" +
+      
+      "CRITICAL: Takeover offers are about acquisition of control, not capital raising. Open offers are about capital raising, not acquisition of control. These are completely different regulatory concepts governed by different regulatory frameworks. Regulated by: " + REGULATORY_AUTHORITIES.TAKEOVERS_CODE;
     }
     
     // Add stronger instructions to use database content
@@ -63,6 +76,9 @@ export const requestBuilder = {
     
     // Add special instruction for rights issue timetables
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR RIGHTS ISSUES: When asked about rights issue timetables, provide ALL key dates and actions including: board meeting date, announcement date, circular dispatch, EGM date, record date, commencement of dealings in nil-paid rights, last day for splitting, last day for acceptance and payment, results announcement date, refund date, and dispatch date of share certificates. Include ALL key information and ensure the response is COMPLETE.";
+    
+    // Add special instruction for execution processes
+    systemMessage += "\n\nSPECIAL INSTRUCTION FOR EXECUTION PROCESSES: When explaining execution processes for any corporate action or takeover offer, always include the full timeline from preparation to implementation. For Listing Rules corporate actions, include preparation phase (2-3 days), HKEX vetting (2-10 days), circular preparation (3-10 days), HKEX circular vetting (5-20 days), shareholders' approval if required, and implementation timeline. For Takeover Code offers, include SFC-specific timelines and requirements.";
     
     // Add special instruction for completeness and brevity to avoid truncation
     systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Be CONCISE and direct. Prioritize including all key points over lengthy explanations. If discussing a procedure with multiple steps, include ALL steps but explain each briefly. Format information efficiently. Focus on providing complete information rather than verbose explanations.";
@@ -91,6 +107,14 @@ export const requestBuilder = {
       enhancedPrompt += " Please ensure to include a clear conclusion or summary section at the end of your response that ties everything together. Your response must be complete and well-structured. Please provide a comprehensive response with a clear conclusion section that summarizes all key points.";
     } else {
       enhancedPrompt += " Please provide a complete but concise response covering all key points.";
+    }
+    
+    // For execution process queries, add specific instructions
+    if (prompt.toLowerCase().includes('execution') || 
+        prompt.toLowerCase().includes('process') || 
+        prompt.toLowerCase().includes('timeline') ||
+        prompt.toLowerCase().includes('working')) {
+      enhancedPrompt += " Please include all steps in the execution process from preparation through implementation, with appropriate regulatory authority steps and timelines.";
     }
     
     // For retry attempts, use higher token limits and lower temperature
@@ -130,9 +154,15 @@ export const requestBuilder = {
                            (prompt.toLowerCase().includes('timetable') || 
                             prompt.toLowerCase().includes('schedule'));
     
-    // For timetable queries, use specialized settings
-    if (isTimetableQuery) {
-      console.log(`${queryType} timetable query detected - using specialized parameters`);
+    // For execution process queries, also use specialized settings
+    const isExecutionProcessQuery = prompt.toLowerCase().includes('execution') || 
+                                   prompt.toLowerCase().includes('process') || 
+                                   prompt.toLowerCase().includes('timeline') ||
+                                   prompt.toLowerCase().includes('working');
+    
+    // For timetable or execution process queries, use specialized settings
+    if (isTimetableQuery || isExecutionProcessQuery) {
+      console.log(`${queryType} timetable/process query detected - using specialized parameters`);
       return {
         temperature: 0.1,  // Very low temperature for deterministic results
         maxTokens: 10000   // Much higher token limit for comprehensive timetables
@@ -171,3 +201,6 @@ export const requestBuilder = {
     return { temperature: actualTemperature, maxTokens: safeMaxTokens };
   }
 };
+
+// Import this at the top of the file
+import { REGULATORY_AUTHORITIES } from '../../constants/financialConstants';

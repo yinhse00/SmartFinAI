@@ -27,7 +27,15 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - When discussing Rule 7.19A(1) aggregation, provide detailed analysis of whether previous rights issues count toward the 50% threshold
 - Explain whether shareholder approval for one rights issue exempts subsequent rights issues from requiring approval within the 12-month period
 - For MB Rule 7.19A(1) and GEM Rule 10.29(1), specify that the 50% threshold applies to the aggregate increase from multiple corporate actions within 12 months
-- Always conclude with a clear summary that directly answers the user's question regarding rights issue requirements`;
+- Always conclude with a clear summary that directly answers the user's question regarding rights issue requirements
+
+EXECUTION PROCESS:
+When explaining rights issue execution process, always include:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting)
+3. Shareholders' approval requirements and meeting logistics
+4. Trading timeline with precise dates (cum-rights, ex-rights, nil-paid trading, etc.)
+Always specify that rights issues are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising purposes.`;
 
     case 'listing_rules':
       return basePrompt + `For listing rule inquiries:
@@ -44,12 +52,19 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
   2. The requirement for independent shareholders' approval applies to the aggregate, not each individual issue
   3. Previous approval does not exempt subsequent rights issues from the aggregation calculation
   4. All rights issues within 12 months must be counted toward the 50% threshold
-- Always provide a clear conclusion that directly answers whether approval is required or not`;
+- Always provide a clear conclusion that directly answers whether approval is required or not
+
+EXECUTION PROCESS:
+For any Listing Rules corporate action execution inquiry, clearly outline:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting) 
+3. Shareholders' approval requirements and meeting arrangements
+4. Implementation timeline specific to the corporate action type`;
 
     case 'open_offer':
       return basePrompt + `For open offer inquiries:
 - CRITICAL REGULATORY DISTINCTION: Open offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
-- Open offers are capital-raising mechanisms, NOT acquisition mechanisms
+- Open offers are capital-raising mechanisms for listed companies, NOT acquisition mechanisms
 - Explain clearly that unlike rights issues, open offers have no nil-paid rights trading
 - Present timetables in a professional, clear tabular format
 - Include all key regulatory dates and deadlines from HK Listing Rules
@@ -57,7 +72,15 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Include notes on underwriting requirements, connected person implications, and disclosure obligations
 - For trading arrangements, clearly specify ex-date and new share listing date
 - NEVER reference Takeovers Code, Rule 26, mandatory offers, or acquisition thresholds when discussing open offers
-- Always identify open offers explicitly as corporate actions under Listing Rules for capital raising`;
+- Always identify open offers explicitly as corporate actions under Listing Rules for capital raising
+
+EXECUTION PROCESS:
+When explaining open offer execution process, always include:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting)
+3. Shareholders' approval requirements and meeting logistics
+4. Trading timeline (cum-entitlement, ex-entitlement, acceptance period, etc.)
+Always specify that open offers are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising purposes and NOT to be confused with offers under the Takeovers Code.`;
 
     case 'share_consolidation':
       return basePrompt + `For share consolidation/subdivision inquiries:
@@ -65,7 +88,14 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Include all key regulatory dates and deadlines
 - Detail the approval process including shareholder approvals
 - Address the handling of odd lots resulting from the consolidation/subdivision
-- For trading arrangements, clearly distinguish between last trading day for old shares and first trading day for new shares`;
+- For trading arrangements, clearly distinguish between last trading day for old shares and first trading day for new shares
+
+EXECUTION PROCESS:
+When explaining share consolidation execution process, always include:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting)
+3. Shareholders' approval requirements (always required for share consolidation)
+4. Trading timeline with precise dates (last day for old shares, first day for new shares, etc.)`;
 
     case 'board_lot_change':
       return basePrompt + `For board lot size change inquiries:
@@ -73,7 +103,14 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Present timetables in a professional, clear tabular format
 - Detail the odd lot arrangements and matching services
 - Explain the free exchange period for share certificates
-- For trading arrangements, clearly specify when parallel trading begins and ends`;
+- For trading arrangements, clearly specify when parallel trading begins and ends
+
+EXECUTION PROCESS:
+When explaining board lot change execution process, always include:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting if required)
+2. No circular or shareholders' approval typically required
+3. Implementation timeline with precise dates for parallel trading period
+4. Odd lot trading arrangements with specific broker details if available`;
 
     case 'company_name_change':
       return basePrompt + `For company name change inquiries:
@@ -81,7 +118,14 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Detail the approval process including shareholder approvals
 - Explain that existing share certificates remain valid
 - Specify when trading under the new stock short name begins
-- For trading arrangements, clearly explain the continuity of trading during the name change process`;
+- For trading arrangements, clearly explain the continuity of trading during the name change process
+
+EXECUTION PROCESS:
+When explaining company name change execution process, always include:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting if required)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting)
+3. Shareholders' approval requirements (always required for name changes)
+4. Implementation timeline with precise dates for certificate issuance and stock short name change`;
 
     case 'connected_transactions':
       return basePrompt + `For connected transaction analysis:
@@ -101,7 +145,14 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Specify exact timing requirements and documentation needs
 - When discussing whitewash waivers, include the dealing requirements for the applicant
 - Address practical considerations on compliance and implementation
-- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7`;
+- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7
+
+EXECUTION PROCESS:
+When explaining takeover offer execution process, always include:
+1. Pre-announcement phase (3 days preparation + 2-10 days SFC vetting)
+2. Offer document preparation phase (3-10 days preparation + 5-20 days SFC vetting)
+3. Offer timeline governed by Takeovers Code rules with specific deadlines
+4. Post-offer requirements and restrictions`;
 
     case 'takeover_offer':
       return basePrompt + `For takeover offer inquiries:
@@ -111,14 +162,34 @@ Always cite specific rule numbers, regulations, and regulatory guidance in your 
 - Explain mandatory offer triggers with precise threshold calculations
 - Detail offer price determination methodology
 - Specify exact timing requirements and documentation needs
-- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7`;
+- NEVER confuse offers under the Takeovers Code with "open offers" which are corporate actions under Listing Rules Chapter 7
+
+EXECUTION PROCESS:
+When explaining takeover offer execution process, always include:
+1. Pre-announcement phase (3 days preparation + 2-10 days SFC vetting)
+2. Offer document preparation phase (3-10 days preparation + 5-20 days SFC vetting) 
+3. Offer timeline governed by specific Takeovers Code rules (Rule 15.1 for minimum offer period, etc.)
+4. Requirements for offer to become or be declared unconditional (Rule 15.5)
+5. Clarify that this is governed by the Takeovers Code, NOT Listing Rules Chapter 7`;
 
     default:
       return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications. Always include a clear conclusion section summarizing your analysis and directly addressing the user's question.
 
 CRITICAL REGULATORY DISTINCTION: 
-1. "Open offers" are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising
-2. "General offers" or "Takeover offers" are acquisition mechanisms under the Takeovers Code
-These are completely different regulatory frameworks and should never be confused.`;
+1. "Open offers" are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising by listed companies
+2. "General offers" or "Takeover offers" are acquisition mechanisms under the Takeovers Code for acquiring control
+These are completely different regulatory frameworks and should never be confused.
+
+EXECUTION PROCESSES:
+For corporate actions under Listing Rules, the typical process involves:
+1. Pre-announcement phase (2-3 days preparation + 2-10 days HKEX vetting)
+2. Circular preparation phase (3-10 days preparation + 5-20 days HKEX vetting)
+3. Shareholders' approval if required
+4. Implementation timeline specific to the corporate action type
+
+For takeover offers under the Takeovers Code, the typical process involves:
+1. Pre-announcement phase (3 days preparation + 2-10 days SFC vetting)
+2. Offer document preparation (3-10 days preparation + 5-20 days SFC vetting)
+3. Offer timeline as specified in the Takeovers Code with specific deadlines`;
   }
 }

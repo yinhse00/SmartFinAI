@@ -7,6 +7,7 @@ import {
   isComparisonQuery 
 } from './checkers';
 import { hasConclusion } from './utils/contentHelpers';
+import { FRAMEWORK_TERMINOLOGY } from '@/services/constants/financialConstants';
 
 /**
  * Analyzes a financial response for completeness
@@ -62,6 +63,16 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     
     // CRITICAL: Enhanced check for regulatory framework confusion
     
+    // Check for execution process completeness
+    if (isExecutionProcessContent(content)) {
+      const executionProcessResult = checkExecutionProcessCompleteness(content, financialQueryType);
+      
+      if (!executionProcessResult.isComplete) {
+        analysis.isComplete = false;
+        analysis.missingElements.push(...executionProcessResult.missingElements);
+      }
+    }
+    
     // For open offers, MUST be under Listing Rules and NEVER reference Takeovers Code
     if (financialQueryType === 'open_offer') {
       // Check for Listing Rules references
@@ -102,6 +113,13 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL ERROR: Takeover offer response incorrectly references Listing Rules Chapter 7");
       }
+      
+      // Check for acquisition purpose (essential for takeover offers)
+      if (!content.toLowerCase().includes('acquisition') && 
+          !content.toLowerCase().includes('control')) {
+        analysis.isComplete = false;
+        analysis.missingElements.push("CRITICAL: Missing acquisition/control purpose for Takeover offer under Takeovers Code");
+      }
     }
   }
   
@@ -119,3 +137,102 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
   
   return analysis;
 };
+
+/**
+ * Checks if content is about execution process
+ */
+function isExecutionProcessContent(content: string): boolean {
+  const executionTerms = [
+    'execution process', 
+    'working process', 
+    'execution timeline', 
+    'preparation steps',
+    'execution steps',
+    'timetable execution'
+  ];
+  
+  const normalizedContent = content.toLowerCase();
+  
+  return executionTerms.some(term => normalizedContent.includes(term));
+}
+
+/**
+ * Checks execution process response completeness
+ */
+function checkExecutionProcessCompleteness(content: string, queryType: string): { isComplete: boolean, missingElements: string[] } {
+  const result = {
+    isComplete: true,
+    missingElements: [] as string[]
+  };
+  
+  const normalizedContent = content.toLowerCase();
+  
+  // Check for key preparation phases
+  if (!normalizedContent.includes('preparation') && !normalizedContent.includes('drafting')) {
+    result.isComplete = false;
+    result.missingElements.push("Missing preparation phase details");
+  }
+  
+  // Check for regulatory vetting details
+  if (!normalizedContent.includes('vetting')) {
+    result.isComplete = false;
+    result.missingElements.push("Missing regulatory vetting details");
+  }
+  
+  // Check for specific timeframes
+  if (!hasTimeframes(normalizedContent)) {
+    result.isComplete = false;
+    result.missingElements.push("Missing specific timeframes for steps");
+  }
+  
+  // Check for regulatory authority references
+  if (queryType === 'open_offer' || queryType === 'rights_issue') {
+    // Listing Rules authority check
+    if (!normalizedContent.includes('hkex') && !normalizedContent.includes('stock exchange')) {
+      result.isComplete = false;
+      result.missingElements.push("Missing Stock Exchange (HKEX) regulatory authority reference");
+    }
+  } else if (queryType === 'takeover_offer' || queryType === 'takeovers_code') {
+    // Takeovers Code authority check
+    if (!normalizedContent.includes('sfc') && !normalizedContent.includes('securities and futures commission')) {
+      result.isComplete = false;
+      result.missingElements.push("Missing Securities and Futures Commission (SFC) regulatory authority reference");
+    }
+  }
+  
+  // Check for correct regulatory framework references
+  if (queryType === 'open_offer' || queryType === 'rights_issue') {
+    // Should reference Listing Rules concepts
+    const hasListingRulesTerms = 
+      FRAMEWORK_TERMINOLOGY.LISTING_RULES.some(term => normalizedContent.includes(term));
+    
+    if (!hasListingRulesTerms) {
+      result.isComplete = false;
+      result.missingElements.push("Missing Listing Rules framework references");
+    }
+  } else if (queryType === 'takeover_offer' || queryType === 'takeovers_code') {
+    // Should reference Takeovers Code concepts
+    const hasTakeoversCodeTerms = 
+      FRAMEWORK_TERMINOLOGY.TAKEOVERS_CODE.some(term => normalizedContent.includes(term));
+    
+    if (!hasTakeoversCodeTerms) {
+      result.isComplete = false;
+      result.missingElements.push("Missing Takeovers Code framework references");
+    }
+  }
+  
+  return result;
+}
+
+/**
+ * Helper function to check for timeframes in content
+ */
+function hasTimeframes(content: string): boolean {
+  // Check for day ranges like "2-3 days" or "5-20 business days"
+  const dayRangeRegex = /\d+\s*-\s*\d+\s*(days|business days)/i;
+  
+  // Check for specific day references like "Day 21" or "Day 60"
+  const specificDayRegex = /day\s+\d+/i;
+  
+  return dayRangeRegex.test(content) || specificDayRegex.test(content);
+}

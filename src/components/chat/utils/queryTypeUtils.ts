@@ -1,8 +1,9 @@
+
 /**
  * Utilities for identifying financial query types with enhanced regulatory nuance
  */
 
-import { FINANCIAL_EXPERTISES, FRAMEWORK_TERMINOLOGY } from '@/services/constants/financialConstants';
+import { FINANCIAL_EXPERTISES, FRAMEWORK_TERMINOLOGY, REGULATORY_FRAMEWORKS } from '@/services/constants/financialConstants';
 import { 
   isOpenOfferQuery, 
   isGeneralOfferQuery, 
@@ -29,7 +30,28 @@ export const FINANCIAL_QUERY_TYPES = {
 export const identifyFinancialQueryType = (query: string): string => {
   const lowerQuery = query.toLowerCase();
   
-  // CRITICAL: First check - explicitly look for "open offer" as corporate action
+  // CRITICAL: First check - explicitly look for process/timetable/execution terms
+  // Execution process detection
+  if (isExecutionProcessQuery(query)) {
+    console.log("Identified as EXECUTION PROCESS query");
+    
+    // Determine if it's Listing Rules or Takeovers Code related
+    if (hasTakeoversTerms(query)) {
+      // Takeovers Code execution process
+      console.log("Identified as TAKEOVER_OFFER execution process");
+      return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
+    } else if (lowerQuery.includes('open offer')) {
+      // Open Offer execution process
+      console.log("Identified as OPEN_OFFER execution process");
+      return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
+    } else if (lowerQuery.includes('rights issue')) {
+      // Rights Issue execution process
+      console.log("Identified as RIGHTS_ISSUE execution process");
+      return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
+    }
+  }
+  
+  // CRITICAL: Second check - explicitly look for "open offer" as corporate action
   // Open Offer Detection (Listing Rules corporate action)
   if (isOpenOfferQuery(query)) {
     // This is a corporate action under Listing Rules Chapter 7
@@ -37,7 +59,7 @@ export const identifyFinancialQueryType = (query: string): string => {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
   }
   
-  // CRITICAL: Second check - explicitly look for takeovers code terms
+  // CRITICAL: Third check - explicitly look for takeovers code terms
   if (isTakeoversCodeQuery(query)) {
     console.log("Identified as TAKEOVER_OFFER - under Takeovers Code");
     return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
@@ -50,7 +72,6 @@ export const identifyFinancialQueryType = (query: string): string => {
   }
   
   // Additional checks for other financial query types
-  // IMPORTANT: Only check for "open offer" after the more specific isOpenOfferQuery check above
   if (lowerQuery.includes('share consolidation') || 
       lowerQuery.includes('sub-division') || 
       lowerQuery.includes('subdivision')) {
@@ -80,6 +101,44 @@ export const identifyFinancialQueryType = (query: string): string => {
   }
   
   return FINANCIAL_QUERY_TYPES.GENERAL;
+};
+
+/**
+ * Check if query is about execution process, timetable or working procedure
+ */
+export const isExecutionProcessQuery = (query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  
+  const executionTerms = [
+    'execution', 
+    'process', 
+    'timeline', 
+    'working', 
+    'procedure', 
+    'steps',
+    'timetable execution',
+    'working process'
+  ];
+  
+  return executionTerms.some(term => lowerQuery.includes(term));
+};
+
+/**
+ * Check if a query contains Takeovers Code terms
+ */
+export const hasTakeoversTerms = (query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  
+  return FRAMEWORK_TERMINOLOGY.TAKEOVERS_CODE.some(term => lowerQuery.includes(term));
+};
+
+/**
+ * Check if a query contains Listing Rules terms
+ */
+export const hasListingRulesTerms = (query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  
+  return FRAMEWORK_TERMINOLOGY.LISTING_RULES.some(term => lowerQuery.includes(term));
 };
 
 /**
@@ -121,4 +180,28 @@ export const detectRegulatoryFrameworkConfusion = (query: string): boolean => {
     (lowerQuery.includes('takeover') && lowerQuery.includes('open offer'));
   
   return potentialConfusion;
+};
+
+/**
+ * Get explanatory text about regulatory framework distinction
+ * This is used when potential confusion is detected
+ */
+export const getRegulatoryFrameworkDistinctionText = (): string => {
+  return `
+IMPORTANT REGULATORY DISTINCTION:
+
+1. Open Offers (under Listing Rules Chapter 7):
+   - Corporate action for capital raising by listed companies
+   - No trading in nil-paid rights
+   - Regulated by the Stock Exchange of Hong Kong Limited
+   - Focus on fundraising for the issuer
+
+2. Takeover/General Offers (under Takeovers Code):
+   - Acquisition mechanism for obtaining control of a company
+   - Subject to mandatory offer thresholds (30%)
+   - Regulated by the Securities and Futures Commission
+   - Focus on change of control and shareholder protection
+
+These are completely different regulatory concepts governed by different rules.
+  `;
 };

@@ -21,6 +21,11 @@ export function isGeneralOfferQuery(query: string, isWhitewashQuery: boolean = f
     return false; // Critical: Open offers are corporate actions under Listing Rules, not Takeovers Code
   }
   
+  // If it has execution process terms, check for takeovers code terminology
+  if (hasExecutionProcessTerms(normalizedQuery) && !hasListingRulesTerms(normalizedQuery)) {
+    return hasTakeoversCodeTerms(normalizedQuery);
+  }
+  
   // These are specific Takeovers Code terms
   const takeoversCodeTerms = [
     'general offer',
@@ -45,6 +50,11 @@ export function isOpenOfferQuery(query: string): boolean {
   
   // Strong explicit check for "open offer" term to ensure it's about the corporate action
   if (normalizedQuery.includes('open offer')) {
+    // If it has execution process terms, check for listing rules terminology
+    if (hasExecutionProcessTerms(normalizedQuery)) {
+      return !hasTakeoversCodeTerms(normalizedQuery);
+    }
+    
     // Look for corporate action or listing rules context clues
     const corporateActionClues = [
       'corporate action',
@@ -114,6 +124,11 @@ export function isTakeoversCodeQuery(query: string): boolean {
     return false;
   }
   
+  // If it has execution process terms, check for takeovers code terminology
+  if (hasExecutionProcessTerms(normalizedQuery)) {
+    return hasTakeoversCodeTerms(normalizedQuery);
+  }
+  
   const takeoversTerms = [
     'takeover',
     'general offer',
@@ -126,4 +141,76 @@ export function isTakeoversCodeQuery(query: string): boolean {
   ];
   
   return takeoversTerms.some(term => normalizedQuery.includes(term));
+}
+
+/**
+ * Check if query contains execution process terms
+ */
+export function hasExecutionProcessTerms(query: string): boolean {
+  const executionTerms = [
+    'execution', 
+    'process', 
+    'timeline', 
+    'working', 
+    'procedure', 
+    'steps',
+    'timetable execution',
+    'working process'
+  ];
+  
+  return executionTerms.some(term => query.includes(term));
+}
+
+/**
+ * Check if query contains Listing Rules terminology
+ */
+export function hasListingRulesTerms(query: string): boolean {
+  const listingRulesTerms = [
+    'listing rule',
+    'chapter 7',
+    'rule 7',
+    'corporate action',
+    'capital raising',
+    'rights issue',
+    'board lot',
+    'share consolidation'
+  ];
+  
+  return listingRulesTerms.some(term => query.includes(term));
+}
+
+/**
+ * Check if query contains Takeovers Code terminology
+ */
+export function hasTakeoversCodeTerms(query: string): boolean {
+  const takeoversTerms = [
+    'takeover',
+    'general offer',
+    'mandatory offer',
+    'voluntary offer',
+    'rule 26',
+    'takeovers code',
+    'sfc',
+    'securities and futures commission'
+  ];
+  
+  return takeoversTerms.some(term => query.includes(term));
+}
+
+/**
+ * Checks if query specifically relates to execution processes
+ */
+export function isExecutionProcessQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  const executionTerms = [
+    'execution process', 
+    'working process', 
+    'execution timeline',
+    'working procedure',
+    'execution timetable',
+    'preparation steps',
+    'execution steps'
+  ];
+  
+  return executionTerms.some(term => normalizedQuery.includes(term));
 }

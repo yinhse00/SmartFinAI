@@ -68,3 +68,29 @@ export const FRAMEWORK_TERMINOLOGY = {
   LISTING_RULES: ['open offer', 'rights issue', 'corporate action', 'capital raising', 'chapter 7'],
   TAKEOVERS_CODE: ['general offer', 'takeover offer', 'mandatory offer', 'voluntary offer', 'rule 26']
 };
+
+/**
+ * Execution process timelines by regulatory framework
+ * These reflect the standard execution processes for different types of corporate actions
+ */
+export const EXECUTION_TIMELINES = {
+  LISTING_RULES: {
+    PRE_ANNOUNCEMENT: '2-3 days preparation + 2-10 business days HKEX vetting',
+    CIRCULAR_PREPARATION: '3-10 days preparation + 5-20 business days HKEX vetting',
+    SHAREHOLDER_APPROVAL: 'As required by Listing Rules, typically 14-21 days notice',
+    IMPLEMENTATION: 'Varies by corporate action type'
+  },
+  TAKEOVERS_CODE: {
+    PRE_ANNOUNCEMENT: '3 days preparation + 2-10 business days SFC vetting',
+    OFFER_DOCUMENT: '3-10 days preparation + 5-20 business days SFC vetting',
+    OFFER_TIMELINE: 'As specified in Takeovers Code (e.g., Day 21 first closing, Day 60 unconditional deadline)'
+  }
+};
+
+/**
+ * Regulatory bodies responsible for different frameworks
+ */
+export const REGULATORY_AUTHORITIES = {
+  LISTING_RULES: 'Stock Exchange of Hong Kong Limited (HKEX)',
+  TAKEOVERS_CODE: 'Securities and Futures Commission (SFC)'
+};
