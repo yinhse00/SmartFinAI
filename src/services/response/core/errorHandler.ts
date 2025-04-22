@@ -38,7 +38,7 @@ export const errorHandler = {
           contextUsed: false,
           relevanceScore: 0,
           isBackupResponse: true,
-          error: "Connection error"
+          error: "Connection error"  // This line was causing the TypeScript error, but now it's fixed
         }
       };
     }

@@ -19,7 +19,8 @@ export interface GrokResponse {
     takeoversCodeUsed?: boolean;
     whitewashInfoIncluded?: boolean;
     referenceDocumentsUsed?: boolean;
-    isBackupResponse?: boolean;  // Added missing property
+    isBackupResponse?: boolean;
+    error?: string;  // Added this property to fix the type error
     responseCompleteness?: {
       isComplete: boolean;
       confidence: 'low' | 'medium' | 'high';
