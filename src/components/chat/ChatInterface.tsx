@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import ProcessingIndicator from './ProcessingIndicator';
+import ApiConnectionStatus from './ApiConnectionStatus';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -84,7 +85,10 @@ const ChatInterface = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex-1">
-        {/* SmartFinAI Chat Window - Now takes full width */}
+        {/* API Connection Status */}
+        <ApiConnectionStatus onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)} />
+        
+        {/* SmartFinAI Chat Window */}
         <div className="flex-1 flex flex-col">
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}

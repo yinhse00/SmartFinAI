@@ -16,6 +16,83 @@ interface GrokChatRequestBody {
 
 export const grokApiService = {
   /**
+   * Test if the Grok API is reachable and configured correctly
+   */
+  testApiConnection: async (apiKey?: string): Promise<{success: boolean, message: string}> => {
+    try {
+      console.log("Testing Grok API connection...");
+      const key = apiKey || getGrokApiKey();
+      
+      if (!key || !key.startsWith('xai-')) {
+        return {
+          success: false,
+          message: "Invalid API key format. Keys should start with 'xai-'"
+        };
+      }
+      
+      // Make a minimal test request to verify connectivity
+      const testRequest = {
+        messages: [
+          { 
+            role: 'system', 
+            content: 'You are a helpful assistant.' 
+          },
+          { 
+            role: 'user', 
+            content: 'Respond with OK if you receive this message.' 
+          }
+        ],
+        model: "grok-3-mini-beta",
+        temperature: 0.1,
+        max_tokens: 10
+      };
+      
+      // Set a short timeout for the test request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
+      const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+      const apiEndpoint = isDevelopment 
+        ? 'https://api.grok.ai/v1/chat/completions' 
+        : 'https://api.grok.ai/v1/chat/completions';
+      
+      const response = await fetch(apiEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${key}`,
+          'Origin': window.location.origin,
+          'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify(testRequest),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          success: true,
+          message: "API connection successful"
+        };
+      } else {
+        const errorText = await response.text();
+        return {
+          success: false,
+          message: `API error: ${response.status} - ${errorText}`
+        };
+      }
+    } catch (error) {
+      console.error("API connection test failed:", error);
+      return {
+        success: false,
+        message: error instanceof Error ? error.message : String(error)
+      };
+    }
+  },
+
+  /**
    * Make a specialized financial expert request to the Grok API
    */
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
@@ -139,3 +216,4 @@ export const grokApiService = {
     throw lastError || new Error("API call failed after maximum retries");
   }
 };
+

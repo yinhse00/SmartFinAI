@@ -1,138 +1,174 @@
 
-import { RegulatoryEntry } from '../../database/types';
-import { searchService } from '../../databaseService';
-import { getWhitewashWaiverFallbackEntry } from '../fallbacks/whitewashFallback';
-
 /**
- * Service for searching takeover code related documents
+ * Service for searching takeovers-related documents
  */
+import { RegulatoryEntry } from '../../database/types';
+import { searchService } from '../../database/searchService';
+
 export const takeoversSearchService = {
   /**
-   * Find documents related to general offers in the takeovers code
+   * Find documents related to general offers
    */
   findGeneralOfferDocuments: async (query: string, isWhitewashQuery: boolean): Promise<RegulatoryEntry[]> => {
-    console.log(`Searching for general offer documents${isWhitewashQuery ? ' (whitewash related)' : ''}`);
+    // Expand search terms to include takeover code related terms
+    const searchTerms = [
+      'general offer',
+      'takeover',
+      'acquisition',
+      'mandatory offer',
+      'voluntary offer',
+      'code on takeovers',
+      'takeovers code',
+      'takeovers and mergers'
+    ];
     
-    // Search in takeovers category
-    const takeoversResults = await searchService.search(query, 'takeovers');
-    
-    // For whitewash queries, we need to specifically search for whitewash waivers
+    // Add whitewash-specific terms if needed
     if (isWhitewashQuery) {
-      const whitewashResults = await searchService.search('whitewash waiver', 'takeovers');
-      
-      // Combine results, removing duplicates
-      const combinedResults = [...takeoversResults];
-      
-      for (const whitewashResult of whitewashResults) {
-        if (!combinedResults.some(result => result.id === whitewashResult.id)) {
-          combinedResults.push(whitewashResult);
-        }
-      }
-      
-      console.log(`Found ${combinedResults.length} takeovers code documents related to whitewash waivers`);
-      return combinedResults;
+      searchTerms.push('whitewash');
+      searchTerms.push('whitewashed');
+      searchTerms.push('waiver');
     }
     
-    console.log(`Found ${takeoversResults.length} general offer takeovers code documents`);
-    return takeoversResults;
+    // Create an enhanced query combining original query with takeover terms
+    const enhancedQuery = `${query} ${searchTerms.join(' ')}`;
+    
+    // Search for takeover code documents with enhanced query
+    const results = await searchService.findDocuments({
+      query: enhancedQuery,
+      categories: ['takeovers'],
+      limit: 3,
+      fuzzyMatch: true
+    });
+    
+    return results;
   },
   
   /**
-   * Find all takeover documents relevant to the query
-   * Used in the sequential search process
+   * Find general takeover documents
    */
   findTakeoverDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
-    console.log('Searching for all relevant takeovers code documents');
-    
-    // Search directly in the takeovers category
-    const takeoversResults = await searchService.search(query, 'takeovers');
-    
-    // Check for specific takeover keywords in the query
-    const takeoversKeywords = [
-      'takeover', 'take over', 'takeovers', 'offer', 'offers', 'offeror', 
-      'offeree', 'mandatory', 'whitewash', 'waiver', 'concert'
-    ];
-    
-    const containsTakeoverKeywords = takeoversKeywords.some(keyword => 
-      query.toLowerCase().includes(keyword.toLowerCase())
-    );
-    
-    // If the query contains takeover keywords but we didn't find results, do a broader search
-    if (containsTakeoverKeywords && takeoversResults.length === 0) {
-      console.log('Query contains takeover keywords but no results found, doing broader search');
-      
-      // Find relevant takeover rule numbers
-      const relevantRuleNumbers = findRelevantTakeoverRules(query);
-      
-      // If we found relevant rule numbers, search for them specifically
-      if (relevantRuleNumbers.length > 0) {
-        console.log(`Found relevant takeover rule numbers: ${relevantRuleNumbers.join(', ')}`);
-        
-        // Search for each rule number
-        const ruleResults = await Promise.all(
-          relevantRuleNumbers.map(ruleNum => searchService.search(ruleNum, 'takeovers'))
-        );
-        
-        // Flatten the results
-        const flattenedRuleResults = ruleResults.flat();
-        
-        // Combine with previous results
-        const combinedResults = [...takeoversResults];
-        
-        // Add unique entries
-        for (const ruleResult of flattenedRuleResults) {
-          if (!combinedResults.some(result => result.id === ruleResult.id)) {
-            combinedResults.push(ruleResult);
-          }
-        }
-        
-        console.log(`Found ${combinedResults.length} takeovers code documents (including rule numbers)`);
-        return combinedResults;
-      }
-    }
-    
-    console.log(`Found ${takeoversResults.length} takeovers code documents`);
-    return takeoversResults;
+    // Search for takeover code documents
+    return await searchService.findDocuments({
+      query,
+      categories: ['takeovers'],
+      limit: 3,
+      fuzzyMatch: true
+    });
   },
-
+  
   /**
-   * Add whitewash fallback document if needed for whitewash queries
+   * Add whitewash fallback document if needed
    */
   addWhitewashFallbackIfNeeded: (results: RegulatoryEntry[], isWhitewashQuery: boolean): RegulatoryEntry[] => {
+    // If it's a whitewash query and we don't have enough results, add a fallback document
     if (isWhitewashQuery && results.length < 2) {
-      console.log('Adding whitewash waiver fallback document');
-      return [...results, getWhitewashWaiverFallbackEntry()];
+      console.log("Adding whitewash fallback document");
+      
+      const whitewashFallback: RegulatoryEntry = {
+        id: 'whitewash-fallback',
+        category: 'takeovers',
+        title: 'Whitewash Waiver Guidelines',
+        content: `Whitewash Waivers under the Hong Kong Takeovers Code:
+        
+1. Definition: A "whitewash waiver" refers to a waiver from the obligation to make a mandatory general offer under Rule 26 of the Takeovers Code.
+
+2. Application: When an issue of new securities would result in the acquirer holding 30% or more voting rights (or if already between 30-50%, increasing by more than 2% in 12 months).
+
+3. Requirements for Whitewash Waiver:
+   - The whitewash document must contain competent independent advice
+   - The whitewash must be approved by independent shareholders
+   - No disqualifying transactions within 6 months prior to announcement
+   - Compliance with all other applicable rules and regulations
+
+4. Independent Shareholder Approval:
+   - A majority of independent votes cast at a properly convened meeting
+   - Independent shareholders are those not involved in or interested in the transaction
+
+5. Restrictions Post-Waiver:
+   - No further acquisitions of voting rights for 6 months after the waiver
+   - No disposals of securities for 6 months if it would reduce holding below waiver level`,
+        description: 'Guidelines on whitewash waivers under the Takeovers Code',
+        url: '',
+        created_at: new Date().toISOString(),
+        file_path: '',
+        file_type: 'text',
+        file_size: 0,
+        file_url: ''
+      };
+      
+      return [...results, whitewashFallback];
     }
+    
     return results;
   },
-
+  
   /**
    * Add general offer timetable fallback if needed
    */
   addGeneralOfferTimetableFallback: (results: RegulatoryEntry[], query: string, isGeneralOffer: boolean): RegulatoryEntry[] => {
-    const lowerQuery = query.toLowerCase();
-    const isTimetableQuery = lowerQuery.includes('timetable') || 
-                            lowerQuery.includes('timeline') || 
-                            lowerQuery.includes('schedule');
-
-    if (isGeneralOffer && isTimetableQuery && results.length < 2) {
-      console.log('Adding general offer timetable fallback');
+    // Check if this is likely a query about offer timetables
+    const isTimetableQuery = 
+      query.toLowerCase().includes('timetable') ||
+      query.toLowerCase().includes('timeline') ||
+      query.toLowerCase().includes('schedule') ||
+      query.toLowerCase().includes('when') ||
+      query.toLowerCase().includes('process') ||
+      query.toLowerCase().includes('how long');
       
-      // Create a fallback general offer timetable document
+    // Only add fallback if it's a timetable query for general offers and we don't have many results
+    if (isGeneralOffer && isTimetableQuery && results.length < 2) {
+      console.log("Adding general offer timetable fallback");
+      
       const timetableFallback: RegulatoryEntry = {
-        id: `general-offer-timetable-${Date.now()}`,
-        title: "General Offer Timetable",
-        content: "A general offer timetable under the Hong Kong Takeovers Code typically follows these steps: " + 
-                "Day 0: Announcement of firm intention to make an offer. " +
-                "Day 21 (latest): Posting of offer document to shareholders. " +
-                "Day 28: Earliest first closing date (offer must be open for at least 21 days from posting). " +
-                "Day 39: Target board's latest date to provide updated financial information or profit forecast. " +
-                "Day 60: Final deadline for all offer conditions to be satisfied or waived. " +
-                "Day 81: Final deadline for offer to become or be declared unconditional as to acceptances.",
-        category: "takeovers",
-        source: "Takeovers Code",
-        lastUpdated: new Date(),
-        status: "active"
+        id: 'general-offer-timetable-fallback',
+        category: 'takeovers',
+        title: 'General Offer Timetable',
+        content: `Typical Timetable for a General Offer under Hong Kong Takeovers Code:
+
+Day 0: Announcement of firm intention to make an offer (Rule 3.5)
+- Must identify offeror and terms of offer
+- Must confirm financial resources available
+- Must identify any pre-conditions
+
+Within 21 days of announcement: Offer document must be posted (Rule 8.2)
+- Must include all material information for shareholders
+- Must follow content requirements in Schedule I & III
+- Must include competent independent advice
+
+Day 21 after posting: Initial closing date (minimum period for offer)
+- First date offer can close (Rule 15.1)
+- No extension if declared "no increase/no extension"
+
+Day 28: Offeree board circular deadline (Rule 8.4)
+- Board must issue response circular within 14 days of offer document posting
+- Must include independent financial advice
+
+Day 39: Final deadline for material new information (Rule 31.5)
+- No material new information after Day 39
+- Prevents last-minute changes that shareholders cannot evaluate
+
+Day 46: Last day for revisions to offer (Rule 16)
+- Any revised offer must remain open for 14 days
+- No revisions in final 14 days of offer period
+
+Day 60: Final day for offer to become/be declared unconditional as to acceptances (Rule 15.5)
+- If not unconditional by this date, offer lapses
+- All conditions must be met or waived
+
+Unconditional Date + 7 days: Final closing date after unconditional (Rule 15.3)
+- Offer must remain open for 14 days after becoming/being declared unconditional
+- Provides time for remaining shareholders to accept
+
+Closing Date + 10 business days: Payment deadline (Rule 20.1)
+- Consideration must be paid within 10 business days of offer closing
+- Applies to both initial and revised offers`,
+        description: 'Standard timetable for general offers under the Hong Kong Takeovers Code',
+        url: '',
+        created_at: new Date().toISOString(),
+        file_path: '',
+        file_type: 'text',
+        file_size: 0,
+        file_url: ''
       };
       
       return [...results, timetableFallback];
@@ -141,32 +177,3 @@ export const takeoversSearchService = {
     return results;
   }
 };
-
-/**
- * Find relevant takeover rule numbers based on query content
- */
-function findRelevantTakeoverRules(query: string): string[] {
-  const lowerQuery = query.toLowerCase();
-  const ruleMap: Record<string, string[]> = {
-    'mandatory': ['Rule 26', 'Rule 26.1'],
-    'whitewash': ['Whitewash Waiver', 'Rule 26 Waiver'],
-    'concert parties': ['Rule 26.1'],
-    'offer period': ['Rule 2'],
-    'general offer': ['Rule 26'],
-    'partial offer': ['Rule 28'],
-    'disclosure': ['Rule 3'],
-    'frustration': ['Rule 4'],
-    'special deals': ['Rule 25'],
-    'chain principle': ['Rule 26.1']
-  };
-  
-  const relevantRules: string[] = [];
-  
-  for (const [keyword, rules] of Object.entries(ruleMap)) {
-    if (lowerQuery.includes(keyword)) {
-      relevantRules.push(...rules);
-    }
-  }
-  
-  return [...new Set(relevantRules)]; // Remove duplicates
-}
