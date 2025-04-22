@@ -25,11 +25,12 @@ interface ChatMessageProps {
 
 const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) => {
   const [formattedDate, setFormattedDate] = useState<string>('');
+  const [hasAnimated, setHasAnimated] = useState(false);
   const { theme } = useTheme();
   const contentRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (message.sender === 'bot' && message.content && onTypingProgress) {
+    if (message.sender === 'bot' && message.content && onTypingProgress && !hasAnimated) {
       let index = 0;
       const typingInterval = setInterval(() => {
         if (contentRef.current) {
@@ -42,12 +43,13 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
           if (contentRef.current) {
             contentRef.current.innerHTML = message.content;
           }
+          setHasAnimated(true);
         }
       }, 20);
 
       return () => clearInterval(typingInterval);
     }
-  }, [message, onTypingProgress]);
+  }, [message, onTypingProgress, hasAnimated]);
 
   useEffect(() => {
     setFormattedDate(formatDistanceToNow(message.timestamp, { addSuffix: true }));
@@ -85,37 +87,40 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
   }
 
   return (
-    <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-      <div className="w-full max-w-2xl">
-        <div className={`flex flex-col rounded-lg p-3 w-fit max-w-full ${message.sender === 'user'
-          ? 'bg-finance-blue text-white ml-auto'
-          : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-auto'
+    <div className="w-full px-4">
+      <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
+        <div className="w-full">
+          <div className={`flex flex-col rounded-lg p-3 w-full ${
+            message.sender === 'user'
+              ? 'bg-finance-blue text-white ml-auto'
+              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-auto'
           }`}>
-          {message.isError && (
-            <div className="mb-2 p-2 rounded-md bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200">
-              <Lightbulb className="inline-block mr-2 h-4 w-4 align-middle" />
-              {message.content}
-            </div>
-          )}
-          <div ref={contentRef}>
-            {renderContent()}
-          </div>
-          <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-            {formattedDate}
-            {message.isTruncated && (
-              <span className="ml-2">
-                <span className="inline-flex items-center font-semibold">
-                  <Lightbulb className="mr-1 h-3 w-3" />
-                  Incomplete Response
-                </span>
-                {onRetry && (
-                  <button onClick={onRetry} className="ml-2 text-blue-500 hover:underline">
-                    Retry
-                    <RefreshCw className="inline-block ml-1 h-3 w-3" />
-                  </button>
-                )}
-              </span>
+            {message.isError && (
+              <div className="mb-2 p-2 rounded-md bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200">
+                <Lightbulb className="inline-block mr-2 h-4 w-4 align-middle" />
+                {message.content}
+              </div>
             )}
+            <div ref={contentRef}>
+              {renderContent()}
+            </div>
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+              {formattedDate}
+              {message.isTruncated && (
+                <span className="ml-2">
+                  <span className="inline-flex items-center font-semibold">
+                    <Lightbulb className="mr-1 h-3 w-3" />
+                    Incomplete Response
+                  </span>
+                  {onRetry && (
+                    <button onClick={onRetry} className="ml-2 text-blue-500 hover:underline">
+                      Retry
+                      <RefreshCw className="inline-block ml-1 h-3 w-3" />
+                    </button>
+                  )}
+                </span>
+              )}
+            </div>
           </div>
         </div>
       </div>
