@@ -3,6 +3,14 @@ import { getGrokApiKey } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
 
+// List of potential Grok API endpoints to try
+const API_ENDPOINTS = [
+  'https://api.grok.ai/v1/chat/completions',
+  'https://grok-api.com/v1/chat/completions',
+  'https://grok.x.ai/v1/chat/completions',
+  'https://api.x.ai/v1/chat/completions'
+];
+
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
     const apiKey = providedApiKey || getGrokApiKey();
@@ -63,18 +71,13 @@ export const apiClient = {
     
     while (retries <= maxRetries) {
       try {
-        // Endpoints to try
-        const apiEndpoints = [
-          'https://api.grok.ai/v1/chat/completions',
-          'https://grok-api.com/v1/chat/completions'
-        ];
-        
+        // Use multiple potential API endpoints
         let response = null;
         let endpointError = null;
         const requestConfigs = createRequestConfigs();
         
         // Try each endpoint with each request configuration
-        for (const apiEndpoint of apiEndpoints) {
+        for (const apiEndpoint of API_ENDPOINTS) {
           for (const requestConfig of requestConfigs) {
             try {
               console.log(`Attempting API call to: ${apiEndpoint} (config variation ${requestConfigs.indexOf(requestConfig) + 1})`);

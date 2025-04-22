@@ -1,6 +1,14 @@
 
 import { getGrokApiKey } from '../../apiKeyService';
 
+// List of potential API endpoints to test
+const TEST_ENDPOINTS = [
+  'https://api.grok.ai',
+  'https://grok-api.com',
+  'https://grok.x.ai',
+  'https://api.x.ai'
+];
+
 export const connectionTester = {
   testApiConnection: async (apiKey?: string): Promise<{success: boolean, message: string}> => {
     try {
@@ -15,131 +23,100 @@ export const connectionTester = {
       }
       
       // We'll use a more sophisticated test approach:
-      // 1. First try using credentials: 'omit' to avoid preflight CORS issues
-      // 2. Then try a simpler HEAD request to test basic connectivity
-      // 3. Finally, attempt a simplified version of the actual API call
+      // 1. Try multiple endpoints with simple HEAD requests
+      // 2. If those succeed, try an actual minimal API call
       
       // Track which test passes for better diagnostics
       let connectivityTestPassed = false;
-      let corsTestPassed = false;
-      let apiTestPassed = false;
+      let endpointsTested = 0;
+      let workingEndpoint = null;
       
-      // First test: Basic connectivity with HEAD request (less CORS issues)
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const headResponse = await fetch('https://api.grok.ai', {
-          method: 'HEAD',
-          signal: controller.signal,
-          credentials: 'omit' as RequestCredentials, // Fix type
-          mode: 'no-cors'     // Try with no-cors mode
-        });
-        
-        clearTimeout(timeoutId);
-        connectivityTestPassed = true;
-        console.log("Basic connectivity test passed");
-      } catch (connectivityError) {
-        console.log("Basic connectivity test failed:", connectivityError);
-        // We'll continue with other tests even if this fails
-      }
-      
-      // Second test: Simple OPTIONS request to check CORS configuration
-      if (connectivityTestPassed) {
+      // First test: Try multiple endpoints with basic requests
+      for (const endpoint of TEST_ENDPOINTS) {
         try {
           const controller = new AbortController();
           const timeoutId = setTimeout(() => controller.abort(), 5000);
           
-          const corsResponse = await fetch('https://api.grok.ai/v1/chat/completions', {
-            method: 'OPTIONS',
+          console.log(`Testing endpoint: ${endpoint}`);
+          const headResponse = await fetch(endpoint, {
+            method: 'HEAD',
             signal: controller.signal,
-            headers: {
-              'Origin': window.location.origin
-            },
-            credentials: 'omit' as RequestCredentials // Fix type
+            credentials: 'omit' as RequestCredentials,
+            mode: 'no-cors'
           });
           
           clearTimeout(timeoutId);
-          corsTestPassed = true;
-          console.log("CORS preflight test passed");
-        } catch (corsError) {
-          console.log("CORS preflight test failed:", corsError);
+          connectivityTestPassed = true;
+          workingEndpoint = endpoint;
+          console.log(`Endpoint ${endpoint} connectivity test successful`);
+          break; // Found a working endpoint
+        } catch (endpointError) {
+          console.log(`Endpoint ${endpoint} connectivity test failed:`, endpointError);
+          endpointsTested++;
         }
+      }
+      
+      if (!connectivityTestPassed) {
+        console.log(`All ${endpointsTested} endpoints failed basic connectivity test`);
+        return {
+          success: false,
+          message: "Cannot establish connectivity with any Grok API endpoints. This may indicate network issues, CORS restrictions, or firewall settings."
+        };
       }
       
       // Final test: Actual API call with minimal payload
-      if (connectivityTestPassed) {
-        try {
-          const testRequest = {
-            messages: [
-              { role: 'system', content: 'Test.' },
-              { role: 'user', content: 'Test.' }
-            ],
-            model: "grok-3-mini-beta",
-            temperature: 0.1,
-            max_tokens: 5
+      try {
+        const testRequest = {
+          messages: [
+            { role: 'system', content: 'Test.' },
+            { role: 'user', content: 'Test.' }
+          ],
+          model: "grok-3-mini-beta",
+          temperature: 0.1,
+          max_tokens: 5
+        };
+        
+        const apiEndpoint = `${workingEndpoint}/v1/chat/completions`;
+        console.log(`Testing actual API call to: ${apiEndpoint}`);
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${key}`,
+            'Origin': window.location.origin,
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify(testRequest),
+          signal: controller.signal,
+          credentials: 'omit' as RequestCredentials
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          console.log("Full API test passed");
+          return {
+            success: true,
+            message: "API connection successful"
           };
-          
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
-          const response = await fetch('https://api.grok.ai/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${key}`,
-              'Origin': window.location.origin,
-              'Accept': 'application/json'
-            },
-            body: JSON.stringify(testRequest),
-            signal: controller.signal,
-            credentials: 'omit' as RequestCredentials // Fix type
-          });
-          
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            apiTestPassed = true;
-            console.log("Full API test passed");
-            return {
-              success: true,
-              message: "API connection successful"
-            };
-          } else {
-            const errorText = await response.text();
-            return {
-              success: false,
-              message: `API error: ${response.status} - ${errorText}`
-            };
-          }
-        } catch (apiError) {
-          console.error("API test failed:", apiError);
+        } else {
+          const errorText = await response.text();
+          return {
+            success: false,
+            message: `API error: ${response.status} - ${errorText}`
+          };
         }
-      }
-      
-      // Return appropriate diagnostic message based on which tests passed
-      if (!connectivityTestPassed) {
+      } catch (apiError) {
+        console.error("API test failed:", apiError);
         return {
           success: false,
-          message: "Cannot establish basic connectivity to Grok API. This may indicate network issues or firewall restrictions."
-        };
-      } else if (!corsTestPassed) {
-        return {
-          success: false,
-          message: "Basic connectivity available, but CORS preflight failed. The API may be restricting access from this origin."
-        };
-      } else if (!apiTestPassed) {
-        return {
-          success: false,
-          message: "API authentication failed. The API key may be invalid or expired."
+          message: `Basic connectivity established but API call failed: ${apiError instanceof Error ? apiError.message : 'Unknown error'}`
         };
       }
-      
-      // Fallback message if we reached this point
-      return {
-        success: false,
-        message: "Connection tests failed. See console for detailed error logs."
-      };
     } catch (error) {
       console.error("API connection test failed:", error);
       return {

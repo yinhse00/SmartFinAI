@@ -41,18 +41,24 @@ export const offlineResponseGenerator = {
     
     // Create appropriate message based on error type
     let diagnosisMessage = "";
+    let troubleshootingTips = "";
     
     if (isCorsError) {
-      diagnosisMessage = "This appears to be a CORS (Cross-Origin Resource Sharing) issue. The API server is not allowing requests from this domain. This is a security restriction that can only be resolved by configuring the API server to allow requests from this domain.";
+      diagnosisMessage = "This appears to be a CORS (Cross-Origin Resource Sharing) issue. The API server is not allowing requests from this domain.";
+      troubleshootingTips = "Try using a CORS proxy service or accessing this application from a different network environment. The Grok API may have restrictions on which domains can access it directly from browsers.";
     } else if (isNetworkError) {
-      diagnosisMessage = "This appears to be a network connectivity issue. Please check your internet connection and ensure that there are no firewall or proxy settings blocking access to the Grok API endpoints.";
+      diagnosisMessage = "This appears to be a network connectivity issue.";
+      troubleshootingTips = "Please check your internet connection and ensure that there are no firewall or proxy settings blocking access to the Grok API endpoints. If you're on a corporate network, VPN, or using browser privacy extensions, try disabling them temporarily.";
     } else if (isAuthError) {
-      diagnosisMessage = "This appears to be an authentication issue. Please verify your API key is valid and has not expired.";
+      diagnosisMessage = "This appears to be an authentication issue.";
+      troubleshootingTips = "Please verify your API key is valid and has not expired. You can check this by trying the key in a different application or the official Grok API documentation.";
     }
 
     const offlineMessage = `I'm currently operating in offline mode because the Grok API is unreachable (${errorType}: ${errorMessage}). 
     
 ${diagnosisMessage}
+
+${troubleshootingTips}
 
 I can still provide general information about Hong Kong listing rules and financial regulations based on my core knowledge, but I cannot access the specialized regulatory database for detailed citations and rule references at this moment.
 
