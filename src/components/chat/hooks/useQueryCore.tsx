@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Message } from '../ChatMessage';
-import { setupLogging, logQueryStart, logContextInfo, logQueryParameters, finishLogging } from './useQueryLogger';
+import { useQueryLogger, setupLogging, logQueryStart, logContextInfo, logQueryParameters, finishLogging } from './useQueryLogger';
 
 /**
  * Core functionality for query execution

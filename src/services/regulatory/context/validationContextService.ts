@@ -1,6 +1,6 @@
 
 import { databaseService } from '../../database/databaseService';
-import { extractKeyTerms } from '../utils/financialTermsExtractor';
+import { extractKeyTerms } from '../../database/utils/textProcessing';
 import { searchService } from '../../databaseService';
 
 /**

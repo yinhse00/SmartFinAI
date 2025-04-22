@@ -90,3 +90,20 @@ export function extractFinancialTerms(query: string): string[] {
   
   return foundTerms.length > 0 ? foundTerms : [query];
 }
+
+/**
+ * Extract key terms from a query by splitting into words and filtering
+ * This is the function that was missing but is used by validationContextService
+ */
+export function extractKeyTerms(text: string): string[] {
+  // Split text into words and filter out short words and common stop words
+  const stopWords = ['the', 'and', 'or', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'of'];
+  
+  return text
+    .split(/\s+/)
+    .filter(word => word.length > 2 && !stopWords.includes(word.toLowerCase()))
+    // Include regulatory specific terms like rule numbers
+    .concat(text.match(/\d+\.\d+[A-Z]?/g) || [])
+    // Include chapter numbers
+    .concat(text.match(/chapter\s+\d+/gi) || []);
+}

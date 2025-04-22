@@ -79,3 +79,16 @@ export const useQueryLogger = () => {
     finishLogging
   };
 };
+
+// Add the setupLogging function that's being imported in useQueryCore.tsx
+export const setupLogging = () => {
+  console.log('Setting up query logging...');
+  return true;
+};
+
+// Export individual logging functions for direct import
+export { 
+  // Re-export the functions from the hook
+  useQueryLogger as __useQueryLogger, // Avoid naming conflicts
+};
+
