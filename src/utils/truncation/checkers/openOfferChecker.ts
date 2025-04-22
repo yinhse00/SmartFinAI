@@ -1,4 +1,3 @@
-
 /**
  * Check Open Offer response for completeness
  * Open Offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
@@ -41,46 +40,40 @@ export function checkOpenOfferResponse(content: string) {
     result.missingElements.push("CRITICAL ERROR: Incorrectly references Takeovers Code for Open Offer (corporate action under Listing Rules)");
   }
   
-  // ENHANCED: Check for more explicit regulatory misclassification
-  if (lowerContent.includes('acquisition') || 
-      lowerContent.includes('control threshold') || 
-      lowerContent.includes('30% threshold') ||
-      lowerContent.includes('acquiring')) {
-    result.isComplete = false;
-    result.missingElements.push("CRITICAL ERROR: Incorrectly describes Open Offer using acquisition terminology (belongs to Takeovers Code)");
-  }
+  // Check for key trading arrangement guide timetable elements
+  const timetableKeywords = [
+    'cum-entitlement', 
+    'ex-entitlement', 
+    'record date', 
+    'application form', 
+    'acceptance', 
+    'new shares listing'
+  ];
   
-  // Check for key open offer components
-  const mandatoryKeywords = ['ex-entitlement', 'record date', 'acceptance period', 'payment date', 'corporate action'];
-  
-  const missingKeywords = mandatoryKeywords.filter(
+  const missingTimetableKeywords = timetableKeywords.filter(
     keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
   );
   
-  if (missingKeywords.length > 0) {
+  if (missingTimetableKeywords.length > 0) {
     result.isComplete = false;
     result.missingElements.push(
-      ...missingKeywords.map(k => `Missing key open offer concept: ${k}`)
+      ...missingTimetableKeywords.map(k => `Missing key open offer timetable element: ${k}`)
     );
   }
   
   // Check that open offer explicitly mentions no nil-paid rights AND explicitly identifies as corporate action
-  if (!lowerContent.includes('corporate action')) {
-    result.isComplete = false;
-    result.missingElements.push("Missing identification of Open Offer as a corporate action under Listing Rules");
-  }
-  
   if (!lowerContent.includes('no nil-paid') && !lowerContent.includes('not have nil-paid') && 
       !lowerContent.includes('unlike rights issues') && !lowerContent.includes('no trading of rights')) {
     result.isComplete = false;
     result.missingElements.push("Missing key open offer distinction (no nil-paid rights trading)");
   }
   
-  // Check that it mentions capital-raising purpose (not acquisition)
-  if (!lowerContent.includes('capital raising') && !lowerContent.includes('raise capital') && 
-      !lowerContent.includes('fund raising') && !lowerContent.includes('fundraising')) {
+  // Check for Guide on Trading Arrangements reference
+  if (!lowerContent.includes('guide on trading arrangement') && 
+      !lowerContent.includes('trading arrangements guide') &&
+      !lowerContent.includes('hkex guide')) {
     result.isComplete = false;
-    result.missingElements.push("Missing capital-raising purpose of Open Offer corporate action");
+    result.missingElements.push("Missing reference to Guide on Trading Arrangements");
   }
   
   return result;

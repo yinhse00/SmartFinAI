@@ -1,3 +1,4 @@
+
 import { TRADING_ARRANGEMENTS, CORPORATE_ACTION_PROCESSES } from '../constants/tradingConstants';
 
 /**
@@ -97,7 +98,7 @@ These are fundamentally different from corporate actions like open offers under 
     // Listing Rules corporate action process based on type
     switch (type) {
       case 'open_offer':
-        return `# Complete Execution Process for Open Offer (Listing Rules - Corporate Action)
+        return `# Complete Execution Process for Open Offer (Listing Rules)
 
 ## Pre-Announcement Phase
 | Timeline | Step | Description |
@@ -112,7 +113,7 @@ These are fundamentally different from corporate actions like open offers under 
 | Day 1 to 10 | Preparation of Circular | Drafting of circular with details of open offer |
 | Day 11 to 30 | HKEX Vetting of Circular | Stock Exchange review (5-20 business days depending on complexity) |
 | Day 31 | Circular Publication | Dispatch of circular to shareholders |
-| Day 45-52 | Shareholders' Meeting | EGM for shareholders' approval (if required) |
+| Day 45-52 | Shareholders' Meeting | EGM for shareholders' approval (if required under Rule 7.24) |
 | Day 45-52 | Results Announcement | Announcement of EGM results (same day as meeting) |
 
 ## Trading and Execution Phase
@@ -128,7 +129,9 @@ These are fundamentally different from corporate actions like open offers under 
 CRITICAL REGULATORY DISTINCTION:
 Open offers are CORPORATE ACTIONS regulated under Listing Rules Chapter 7 for capital-raising by listed companies.
 They are governed by the Stock Exchange of Hong Kong Limited (HKEX).
-Unlike rights issues, there is NO trading in nil-paid rights for open offers.`;
+Unlike rights issues, there is NO trading in nil-paid rights for open offers.
+Only one market exists during the open offer period - existing shares (ex-entitlement).
+Open offers may require shareholders' approval if they would increase issued shares by more than 50% (Rule 7.24).`;
         
       case 'rights_issue':
         return `# Complete Execution Process for Rights Issue (Listing Rules - Corporate Action)

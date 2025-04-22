@@ -18,16 +18,18 @@ export const systemMessageBuilder = {
       "1. Pre-announcement phase: " + EXECUTION_TIMELINES.LISTING_RULES.PRE_ANNOUNCEMENT + "\n" +
       "2. Circular preparation phase: " + EXECUTION_TIMELINES.LISTING_RULES.CIRCULAR_PREPARATION + "\n" +
       "3. Shareholders' approval if required under Rule 7.24\n" +
-      "4. Implementation of trading timetable (ex-entitlement, acceptance period, etc.)\n\n" +
+      "4. Implementation of trading timetable per the Guide on Trading Arrangements\n\n" +
       
-      "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
-      "1. Ex-entitlement date\n" +
-      "2. Record date\n" +
-      "3. Acceptance period (start and end dates)\n" +
-      "4. Payment date\n" +
-      "5. Explanation of nil-paid rights trading (not applicable for open offers)\n" +
-      "6. Specific listing rule references (e.g., Rule 7.24, Chapter 7)\n" +
-      "7. A clear conclusion summarizing the key dates and actions\n\n" +
+      "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components from the Guide on Trading Arrangements:\n" +
+      "1. Last cum-entitlement trading day (T-2)\n" +
+      "2. Ex-entitlement date (T-1)\n" +
+      "3. Record date (T)\n" +
+      "4. Application form dispatch (T+5)\n" +
+      "5. Latest acceptance date (T+14)\n" +
+      "6. New shares listing (T+21)\n" +
+      "7. Explicit statement that open offers do NOT have nil-paid rights trading (unlike rights issues)\n" +
+      "8. Specific listing rule references (e.g., Rule 7.24, Rule 7.26A for excess applications)\n" +
+      "9. A clear conclusion summarizing the key dates and actions\n\n" +
       "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.\n\n" +
       
       "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code. Regulated by: " + REGULATORY_AUTHORITIES.LISTING_RULES;
