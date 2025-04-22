@@ -1,7 +1,7 @@
-
 import { Button } from '@/components/ui/button';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { detectAndFormatTables } from '@/utils/tableFormatter';
 
 interface GeneratedResponseDisplayProps {
   response: string | null;
@@ -19,6 +19,9 @@ const GeneratedResponseDisplay = ({
   onDownloadExcel,
 }: GeneratedResponseDisplayProps) => {
   if (!response) return null;
+
+  // Format response with tables
+  const formattedResponse = detectAndFormatTables(response);
 
   return (
     <div className="space-y-2 mt-4">
@@ -61,9 +64,10 @@ const GeneratedResponseDisplay = ({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm whitespace-pre-line">
-        {response}
-      </div>
+      <div 
+        className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm"
+        dangerouslySetInnerHTML={{ __html: formattedResponse }}
+      />
     </div>
   );
 };
