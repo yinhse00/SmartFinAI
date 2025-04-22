@@ -72,24 +72,33 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       return <ChatTableMessage content={message.content} />;
     }
 
+    // Enhanced formatting to improve paragraph separation and readability
     const formattedContent = message.content
-      .replace(/```([^`]+)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded my-2 overflow-x-auto"><code>$1</code></pre>')
+      // Handle code blocks first
+      .replace(/```([^`]+)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded my-3 overflow-x-auto"><code>$1</code></pre>')
+      // Handle inline code
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
+      // Handle bold text
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      // Handle italic text
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      // Enhanced paragraph handling to support Markdown-style breaks
+      // Enhanced paragraph handling with better spacing
       .split('\n\n')  // Split on double newlines to create paragraphs
       .map(paragraph => 
         `<p class="mb-4">${
           paragraph
+            .trim()
             .replace(/\n/g, '<br />')  // Single newlines become line breaks within paragraphs
         }</p>`
       )
       .join('');  // Join paragraphs together
 
     return (
-      <div className="prose dark:prose-invert break-words">
-        <div dangerouslySetInnerHTML={{ __html: formattedContent }} />
+      <div className="prose dark:prose-invert break-words max-w-full">
+        <div 
+          dangerouslySetInnerHTML={{ __html: formattedContent }} 
+          className="space-y-2"
+        />
       </div>
     );
   }
@@ -98,7 +107,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
     <div className="w-full px-4">
       <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
         <div className="w-full">
-          <div className={`flex flex-col rounded-lg p-3 w-full ${
+          <div className={`flex flex-col rounded-lg p-4 w-full ${
             message.sender === 'user'
               ? 'bg-finance-blue text-white ml-auto'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-auto'
@@ -109,10 +118,10 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
                 {message.content}
               </div>
             )}
-            <div ref={contentRef}>
+            <div ref={contentRef} className="chat-message-content">
               {renderContent()}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">
               {formattedDate}
               {message.isTruncated && (
                 <span className="ml-2">
@@ -137,4 +146,3 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
 };
 
 export default ChatMessage;
-
