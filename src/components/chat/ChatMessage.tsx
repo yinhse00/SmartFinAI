@@ -44,7 +44,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
             contentRef.current.innerHTML = message.content;
           }
         }
-      }, 35); // Adjusted from 20 to 35ms for consistency
+      }, 20); // Restored to original 20ms interval
 
       return () => clearInterval(typingInterval);
     }
