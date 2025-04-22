@@ -77,13 +77,15 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .replace(/\n/g, '<br />');
+      .split('\n\n').join('</p><p class="mb-4">')
+      .split('\n').join('<br />');
 
     return (
       <div 
         className="prose dark:prose-invert break-words"
-        dangerouslySetInnerHTML={{ __html: formattedContent }}
-      />
+      >
+        <p className="mb-4" dangerouslySetInnerHTML={{ __html: formattedContent }} />
+      </div>
     );
   }
 
