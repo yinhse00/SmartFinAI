@@ -27,7 +27,9 @@ export const useFallbackDetection = () => {
       "service is temporarily unavailable",
       "could not access the regulatory database",
       "financial database is currently unavailable",
-      "unable to retrieve complete information at this time"
+      "unable to retrieve complete information at this time",
+      "unable to connect to my financial expertise service",
+      "network connectivity issues or service maintenance"
     ];
     
     // Check for any fallback indicators

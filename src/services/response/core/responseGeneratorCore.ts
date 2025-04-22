@@ -8,7 +8,7 @@ import { responseEnhancer } from '../modules/responseEnhancer';
  */
 export const responseGeneratorCore = {
   /**
-   * Make API call with proper error handling
+   * Make API call with proper error handling and retry logic
    */
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
@@ -27,11 +27,12 @@ export const responseGeneratorCore = {
     try {
       console.log('Attempting backup API call with simplified parameters');
       
+      // Use a simpler system prompt and model configuration for better reliability
       const backupRequestBody = {
         messages: [
           {
             role: 'system',
-            content: 'You are SmartFinAI, a helpful assistant with knowledge of Hong Kong financial regulations.'
+            content: 'You are SmartFinAI, a helpful assistant with knowledge of Hong Kong financial regulations. Provide concise, accurate information based on official sources.'
           },
           { role: 'user', content: prompt }
         ],
@@ -39,6 +40,9 @@ export const responseGeneratorCore = {
         temperature: 0.3,
         max_tokens: 1500
       };
+      
+      // Add a short delay before the retry to prevent rate limiting issues
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
     } catch (backupError) {

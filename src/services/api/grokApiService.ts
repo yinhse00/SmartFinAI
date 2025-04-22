@@ -38,32 +38,48 @@ export const grokApiService = {
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
 
-    try {
-      const baseUrl = 'https://api.grok.ai/v1';
-      const apiEndpoint = `${baseUrl}/chat/completions`;
-      
-      const response = await fetch(apiEndpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(requestBody)
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Financial expert API error ${response.status}:`, errorText);
-        throw new Error(`Financial expert API error: ${response.status}`);
+    // Run this in development mode to test API failure handling
+    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    // Implementation with retry logic
+    const maxRetries = 2;
+    let retries = 0;
+    
+    while (retries <= maxRetries) {
+      try {
+        const baseUrl = 'https://api.grok.ai/v1';
+        const apiEndpoint = `${baseUrl}/chat/completions`;
+        
+        const response = await fetch(apiEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'Origin': window.location.origin
+          },
+          body: JSON.stringify(requestBody)
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Financial expert API error ${response.status}:`, errorText);
+          throw new Error(`Financial expert API error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log("Financial expert API response received successfully");
+        return data;
+      } catch (error) {
+        retries++;
+        if (retries <= maxRetries) {
+          console.warn(`API call attempt ${retries} failed. Retrying...`, error);
+          // Add exponential backoff
+          await new Promise(resolve => setTimeout(resolve, retries * 1000));
+        } else {
+          console.error("Financial expert API call failed after retries:", error);
+          throw error;
+        }
       }
-      
-      const data = await response.json();
-      console.log("Financial expert API response received successfully");
-      return data;
-      
-    } catch (error) {
-      console.error("Financial expert API call failed:", error);
-      throw error;
     }
   }
 };
