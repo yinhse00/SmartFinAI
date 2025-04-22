@@ -2,29 +2,22 @@
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 
+const INITIAL_MESSAGE: Message = {
+  id: '1',
+  content: "Hello! I'm your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?",
+  sender: 'bot',
+  timestamp: new Date(),
+};
+
 /**
  * Hook to manage chat message state with memory clearing functionality
  */
 export const useMessageState = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      content: 'Hello! I\'m your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?',
-      sender: 'bot',
-      timestamp: new Date(),
-    }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE]);
 
   // New method to clear conversation memory
   const clearConversationMemory = () => {
-    setMessages([
-      {
-        id: '1',
-        content: 'Hello! I\'m your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?',
-        sender: 'bot',
-        timestamp: new Date(),
-      }
-    ]);
+    setMessages([INITIAL_MESSAGE]);
   };
 
   return {
@@ -33,4 +26,3 @@ export const useMessageState = () => {
     clearConversationMemory
   };
 };
-
