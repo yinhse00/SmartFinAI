@@ -31,7 +31,7 @@ export const requestBodyBuilder = {
     };
   },
 
-  private enhancePrompt(prompt: string): string {
+  enhancePrompt(prompt: string): string {
     const isTimelineQuery = (prompt.toLowerCase().includes('open offer') || 
                            prompt.toLowerCase().includes('rights issue')) && 
                           (prompt.toLowerCase().includes('timetable') || 
@@ -57,7 +57,7 @@ export const requestBodyBuilder = {
     return enhancedPrompt;
   },
 
-  private getAdjustedParameters(
+  getAdjustedParameters(
     maxTokens: number,
     temperature: number,
     isRetryAttempt: boolean
