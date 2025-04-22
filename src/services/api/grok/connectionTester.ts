@@ -26,8 +26,7 @@ export const connectionTester = {
       const isBrowserEnvironment = typeof window !== 'undefined';
       
       if (isBrowserEnvironment) {
-        // In browser environments, CORS restrictions are likely
-        console.log("Browser environment detected - CORS restrictions may apply");
+        console.log("Browser environment detected - testing with CORS preflight workarounds");
         
         try {
           // Try a proxy approach first if available
@@ -37,10 +36,8 @@ export const connectionTester = {
           const proxyResponse = await fetch(`${localProxyUrl}/models`, {
             method: 'GET',
             headers: {
-              'Authorization': `Bearer ${key}`,
-              'Content-Type': 'application/json'
-            },
-            credentials: 'same-origin' as RequestCredentials
+              'Authorization': `Bearer ${key}`
+            }
           });
           
           if (proxyResponse.ok) {
@@ -49,112 +46,92 @@ export const connectionTester = {
               success: true,
               message: "API connection successful via local proxy"
             };
+          } else {
+            console.warn(`Proxy test failed with status: ${proxyResponse.status}`);
           }
         } catch (proxyError) {
-          console.log("Local proxy test failed:", proxyError);
+          console.warn("Local proxy test failed:", proxyError);
           // Continue with other tests
         }
-      }
-      
-      // Track which test passes for better diagnostics
-      let connectivityTestPassed = false;
-      let endpointsTested = 0;
-      let workingEndpoint = null;
-      
-      // First test: Try multiple endpoints with basic requests
-      for (const endpoint of TEST_ENDPOINTS) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 5000);
-          
-          console.log(`Testing endpoint: ${endpoint}`);
-          const headResponse = await fetch(endpoint, {
-            method: 'HEAD',
-            signal: controller.signal,
-            credentials: 'omit' as RequestCredentials,
-            mode: 'no-cors'
-          });
-          
-          clearTimeout(timeoutId);
-          connectivityTestPassed = true;
-          workingEndpoint = endpoint;
-          console.log(`Endpoint ${endpoint} connectivity test successful`);
-          break; // Found a working endpoint
-        } catch (endpointError) {
-          console.log(`Endpoint ${endpoint} connectivity test failed:`, endpointError);
-          endpointsTested++;
+        
+        // Try using a simple HEAD request which might bypass CORS for connectivity testing
+        let connectivityTestPassed = false;
+        let workingEndpoint = null;
+        
+        for (const endpoint of TEST_ENDPOINTS) {
+          try {
+            console.log(`Testing basic connectivity to: ${endpoint}`);
+            // Using image request which often has less strict CORS
+            const imgTest = new Image();
+            imgTest.onload = () => {
+              console.log(`Basic connectivity test passed for ${endpoint}`);
+              connectivityTestPassed = true;
+              workingEndpoint = endpoint;
+            };
+            imgTest.onerror = () => {
+              console.log(`Basic connectivity test failed for ${endpoint}`);
+            };
+            imgTest.src = `${endpoint}/favicon.ico?${Date.now()}`;
+            
+            // Also try a simple fetch with no-cors
+            const response = await fetch(endpoint, {
+              method: 'HEAD',
+              mode: 'no-cors'
+            });
+            
+            console.log(`Endpoint ${endpoint} no-cors test completed`);
+            connectivityTestPassed = true;
+            workingEndpoint = endpoint;
+            break;
+          } catch (endpointError) {
+            console.warn(`Endpoint ${endpoint} connectivity test failed:`, endpointError);
+          }
+        }
+        
+        if (connectivityTestPassed && workingEndpoint) {
+          console.log(`Basic connectivity test passed for ${workingEndpoint}`);
+          return {
+            success: true,
+            message: "Basic connectivity test passed. API should be reachable through a backend proxy."
+          };
+        } else {
+          return {
+            success: false,
+            message: "Cannot establish basic connectivity with any Grok API endpoints. Please check your network connection."
+          };
         }
       }
       
-      if (!connectivityTestPassed) {
-        console.log(`All ${endpointsTested} endpoints failed basic connectivity test`);
-        return {
-          success: false,
-          message: "Cannot establish connectivity with any Grok API endpoints. This is likely due to CORS restrictions in the browser environment."
-        };
-      }
-      
-      // For browser environments, since we already know CORS will likely block actual API calls,
-      // we can provide a more accurate message without making the full test
-      if (isBrowserEnvironment) {
-        console.log("Browser environment with CORS restrictions detected - using offline mode");
-        return {
-          success: false,
-          message: "Browser CORS restrictions detected. The API may be reachable, but not directly from a browser. Try using a backend proxy service."
-        };
-      }
-      
-      // Final test: Actual API call with minimal payload
+      // Non-browser environment - try direct connection
       try {
-        const testRequest = {
-          messages: [
-            { role: 'system', content: 'Test.' },
-            { role: 'user', content: 'Test.' }
-          ],
-          model: "grok-3-mini-beta",
-          temperature: 0.1,
-          max_tokens: 5
-        };
+        const testEndpoint = TEST_ENDPOINTS[0] + '/v1/models';
+        console.log(`Testing direct API call to: ${testEndpoint}`);
         
-        const apiEndpoint = `${workingEndpoint}/v1/chat/completions`;
-        console.log(`Testing actual API call to: ${apiEndpoint}`);
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
+        const response = await fetch(testEndpoint, {
+          method: 'GET',
           headers: {
-            'Content-Type': 'application/json',
             'Authorization': `Bearer ${key}`,
-            'Origin': window.location.origin,
-            'Accept': 'application/json'
-          },
-          body: JSON.stringify(testRequest),
-          signal: controller.signal,
-          credentials: 'omit' as RequestCredentials
+            'Content-Type': 'application/json'
+          }
         });
         
-        clearTimeout(timeoutId);
-        
         if (response.ok) {
-          console.log("Full API test passed");
+          console.log("Direct API call successful");
           return {
             success: true,
             message: "API connection successful"
           };
         } else {
-          const errorText = await response.text();
           return {
             success: false,
-            message: `API error: ${response.status} - ${errorText}`
+            message: `API error: ${response.status}`
           };
         }
       } catch (apiError) {
         console.error("API test failed:", apiError);
         return {
           success: false,
-          message: `API connection failed due to CORS restrictions. This is expected in browser environments.`
+          message: apiError instanceof Error ? apiError.message : String(apiError)
         };
       }
     } catch (error) {

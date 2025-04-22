@@ -47,13 +47,30 @@ export const offlineResponseGenerator = {
     if (isCorsError) {
       diagnosisMessage = "This appears to be a CORS (Cross-Origin Resource Sharing) issue. Your browser is preventing direct API access due to security restrictions.";
       troubleshootingTips = `
-The Grok API cannot be accessed directly from a browser due to CORS restrictions. This is a common security measure for APIs. To fix this, you would need:
+To resolve this issue:
 
-1. A backend server to make API calls on your behalf
-2. A proxy service that handles CORS for you
-3. The API provider to specifically allow your domain by updating their CORS policy
+1. You need to set up a backend proxy service. The Grok API cannot be accessed directly from a browser.
 
-Currently, the application is handling this gracefully by showing this offline mode message instead of breaking completely.
+2. Setup instructions:
+   - Create a server endpoint at '/api/grok' that forwards requests to the Grok API
+   - Make sure your server handles authentication and forwards the API key securely
+   - Your server should return the Grok API response directly to the client
+
+3. If you're using a development server like Vite, you can configure a proxy in your vite.config.ts:
+
+   server: {
+     proxy: {
+       '/api/grok': {
+         target: 'https://api.grok.ai',
+         changeOrigin: true,
+         rewrite: (path) => path.replace(/^\\/api\\/grok/, '')
+       }
+     }
+   }
+
+4. Restart your development server after making these changes.
+
+The application will continue to show offline mode until a proper proxy is configured.
 `;
     } else if (isNetworkError) {
       diagnosisMessage = "This appears to be a network connectivity issue.";

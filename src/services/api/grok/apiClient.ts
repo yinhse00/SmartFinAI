@@ -12,7 +12,7 @@ const API_ENDPOINTS = [
 ];
 
 // Local proxy endpoint if available
-const LOCAL_PROXY = '/api/grok';
+const LOCAL_PROXY = '/api/grok/chat/completions';
 
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
@@ -42,15 +42,14 @@ export const apiClient = {
     
     // First try using the local proxy if available
     try {
-      console.log("Attempting API call via local proxy");
+      console.log("Attempting API call via local proxy at:", LOCAL_PROXY);
       const proxyResponse = await fetch(LOCAL_PROXY, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify(requestBody),
-        credentials: 'same-origin' as RequestCredentials
+        body: JSON.stringify(requestBody)
       });
       
       if (proxyResponse.ok) {
@@ -58,94 +57,56 @@ export const apiClient = {
         console.log("Financial expert API response received successfully via proxy");
         return data;
       } else {
-        console.log("Proxy request failed with status:", proxyResponse.status);
+        console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
         // Continue with direct requests
       }
     } catch (proxyError) {
-      console.log("Proxy request failed:", proxyError);
+      console.warn("Proxy request failed:", proxyError);
       // Continue with direct requests
     }
     
+    // Attempt direct API calls with retries
     while (retries <= maxRetries) {
       try {
-        // Use multiple potential API endpoints
-        let response = null;
-        let endpointError = null;
-        
-        // Create request configurations to try - proper RequestCredentials type
-        const requestConfigs = [
-          // Standard config with all headers
-          { 
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`,
-              'Origin': window.location.origin,
-              'X-Requested-With': 'XMLHttpRequest'
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'omit' as RequestCredentials
-          },
-          
-          // Config with minimal headers (may help with CORS)
-          { 
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${apiKey}`
-            },
-            body: JSON.stringify(requestBody),
-            credentials: 'omit' as RequestCredentials,
-            mode: 'no-cors' as RequestMode
-          }
-        ];
-        
-        // Try each endpoint with each request configuration
+        // Try each endpoint
         for (const apiEndpoint of API_ENDPOINTS) {
-          for (const requestConfig of requestConfigs) {
-            try {
-              console.log(`Attempting API call to: ${apiEndpoint} (config variation ${requestConfigs.indexOf(requestConfig) + 1})`);
-              
-              const controller = new AbortController();
-              const timeoutId = setTimeout(() => controller.abort(), 10000);
-              
-              response = await fetch(apiEndpoint, {
-                ...requestConfig,
-                signal: controller.signal
-              });
-              
-              clearTimeout(timeoutId);
-              
-              if (response.ok) {
-                const data = await response.json();
-                console.log("Financial expert API response received successfully");
-                return data;
-              } else {
-                const errorText = await response.text();
-                endpointError = new Error(`API error: ${response.status} - ${errorText}`);
-                console.log(`Endpoint ${apiEndpoint} returned error: ${response.status}`);
-              }
-            } catch (endpointAttemptError) {
-              endpointError = endpointAttemptError;
-              console.log(`Endpoint ${apiEndpoint} (config ${requestConfigs.indexOf(requestConfig) + 1}) failed: ${endpointAttemptError.message}`);
+          try {
+            console.log(`Attempting direct API call to: ${apiEndpoint}`);
+            
+            const response = await fetch(apiEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Origin': window.location.origin
+              },
+              body: JSON.stringify(requestBody),
+              mode: 'cors'
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log("Financial expert API response received successfully via direct call");
+              return data;
+            } else {
+              console.warn(`Endpoint ${apiEndpoint} returned status: ${response.status}`);
             }
+          } catch (endpointError) {
+            console.warn(`Endpoint ${apiEndpoint} failed:`, endpointError);
+            // Continue to next endpoint
           }
         }
         
-        throw endpointError || new Error('All API endpoints failed');
+        // All endpoints failed, try next retry
+        throw new Error('All API endpoints failed');
       } catch (error) {
         lastError = error;
         retries++;
         
-        console.error("API call failed details:", {
+        console.error("API call attempt failed details:", {
           attempt: retries,
           errorType: error instanceof Error ? error.name : "Unknown",
-          errorMsg: error instanceof Error ? error.message : String(error),
-          isAbortError: error instanceof DOMException && error.name === "AbortError",
-          isCorsError: error instanceof Error && 
-            (error.message.includes('CORS') || 
-             error.message.includes('Failed to fetch') ||
-             error.message.includes('NetworkError'))
+          errorMsg: error instanceof Error ? error.message : String(error)
         });
         
         if (retries <= maxRetries) {
