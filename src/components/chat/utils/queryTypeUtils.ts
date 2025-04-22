@@ -1,7 +1,8 @@
-
 /**
  * Utilities for identifying financial query types
  */
+
+import { FINANCIAL_EXPERTISES } from '@/services/constants/financialConstants';
 
 export const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
@@ -12,7 +13,8 @@ export const FINANCIAL_QUERY_TYPES = {
   SHARE_CONSOLIDATION: 'share_consolidation',
   BOARD_LOT_CHANGE: 'board_lot_change',
   COMPANY_NAME_CHANGE: 'company_name_change',
-  GENERAL: 'general'
+  GENERAL: 'general',
+  TAKEOVER_OFFER: 'takeover_offer'
 };
 
 /**
@@ -25,8 +27,14 @@ export const identifyFinancialQueryType = (query: string): string => {
     return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
   } 
   
-  if (lowerQuery.includes('open offer')) {
+  if (lowerQuery.includes('open offer') && !lowerQuery.includes('takeover')) {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
+  }
+  
+  if ((lowerQuery.includes('offer') && lowerQuery.includes('takeover')) || 
+      lowerQuery.includes('mandatory offer') || 
+      lowerQuery.includes('rule 26')) {
+    return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
   }
   
   if (lowerQuery.includes('share consolidation') || 
@@ -47,10 +55,6 @@ export const identifyFinancialQueryType = (query: string): string => {
   
   if (lowerQuery.includes('connected transaction') || lowerQuery.includes('chapter 14a')) {
     return FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION;
-  }
-  
-  if (lowerQuery.includes('takeover') || lowerQuery.includes('mandatory offer') || lowerQuery.includes('rule 26')) {
-    return FINANCIAL_QUERY_TYPES.TAKEOVERS;
   }
   
   if (lowerQuery.includes('prospectus') || lowerQuery.includes('offering document') || lowerQuery.includes('ipo')) {

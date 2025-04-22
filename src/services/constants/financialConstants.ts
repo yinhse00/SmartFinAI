@@ -1,21 +1,21 @@
-
 /**
  * Financial expertise areas for specialized handling
  */
 export const FINANCIAL_EXPERTISES = {
   RIGHTS_ISSUE: 'rights_issue',
-  OPEN_OFFER: 'open_offer',
+  OPEN_OFFER: 'open_offer', // IMPORTANT: Governed by Listing Rules, NOT Takeovers Code
   SHARE_CONSOLIDATION: 'share_consolidation',
   BOARD_LOT_CHANGE: 'board_lot_change',
   COMPANY_NAME_CHANGE: 'company_name_change',
   CONNECTED_TRANSACTIONS: 'connected_transaction',
   TAKEOVERS: 'takeovers_code',
+  TAKEOVER_OFFER: 'takeover_offer', // Governed by Takeovers Code
   PROSPECTUS: 'prospectus',
   DISCLOSURE: 'disclosure',
   CIRCULAR: 'circular',
   WAIVER: 'waiver',
   LISTING_RULES: 'listing_rules',
-  CONVERSATIONAL: 'conversational', // Add this missing property
+  CONVERSATIONAL: 'conversational',
   GENERAL: 'general'
 };
 
@@ -24,17 +24,18 @@ export const FINANCIAL_EXPERTISES = {
  */
 export const QUERY_TYPE_TO_CATEGORY = {
   'rights_issue': 'listing_rules',
-  'open_offer': 'listing_rules',
+  'open_offer': 'listing_rules',  // Explicitly categorized under Listing Rules
   'share_consolidation': 'listing_rules',
   'board_lot_change': 'listing_rules',
   'company_name_change': 'listing_rules',
   'connected_transaction': 'listing_rules',
   'takeovers_code': 'takeovers',
+  'takeover_offer': 'takeovers',  // Explicitly categorized under Takeovers
   'prospectus': 'listing_rules',
   'disclosure': 'listing_rules',
   'circular': 'listing_rules',
   'waiver': 'listing_rules',
   'listing_rules': 'listing_rules',
-  'conversational': 'all', // Add mapping for conversational type
+  'conversational': 'all',
   'general': 'all'
 };
