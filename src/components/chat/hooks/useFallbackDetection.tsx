@@ -35,7 +35,11 @@ export const useFallbackDetection = () => {
       "API key",
       "connectivity issues",
       "until the connection is restored",
-      "try again in a few moments"
+      "try again in a few moments",
+      "offline mode",
+      "operating in offline mode",
+      "network error",
+      "API is unreachable"
     ];
     
     // Check for any fallback indicators - case insensitive
@@ -52,7 +56,9 @@ export const useFallbackDetection = () => {
         responseText.includes('"isBackupResponse"') || 
         responseText.includes('"error"') || 
         responseText.includes("isBackupResponse:") ||
-        responseText.includes("error:")
+        responseText.includes("error:") ||
+        responseText.includes('"isOfflineMode"') ||
+        responseText.includes("isOfflineMode:")
       );
     
     // Enhanced fallback detection with more specific indicators
@@ -61,6 +67,8 @@ export const useFallbackDetection = () => {
       responseText.includes('based on my core knowledge') ||
       (responseText.includes('technical difficulties') && responseText.includes('try again')) ||
       responseText.includes('I\'m currently using a fallback response mode') ||
+      responseText.includes('offline mode') ||
+      responseText.includes('I\'m currently in offline mode') ||
       // Check for suspiciously short responses to complex financial queries
       (responseText.length < 150 && responseText.includes('Hong Kong'));
     
