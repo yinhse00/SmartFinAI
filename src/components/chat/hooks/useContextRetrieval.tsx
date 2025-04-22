@@ -1,9 +1,10 @@
 
 import { contextService } from '@/services/regulatory/contextService';
 import { summaryIndexService } from '@/services/database/summaryIndexService';
+import { extractKeyTerms } from '@/services/database/utils/textProcessing';
 
 /**
- * Hook for retrieving regulatory context
+ * Hook for retrieving regulatory context with enhanced accuracy
  */
 export const useContextRetrieval = () => {
   const retrieveRegulatoryContext = async (
@@ -14,25 +15,64 @@ export const useContextRetrieval = () => {
     let reasoning = '';
     let contextTime = 0;
     let usedSummaryIndex = false;
+    let searchStrategy = 'general';
     
     try {
       const contextStart = Date.now();
       
+      // Enhanced query analysis to improve search accuracy
+      const queryTerms = extractKeyTerms(queryText.toLowerCase());
+      const containsChapterReference = Boolean(queryText.match(/chapter\s+\d+/i));
+      const containsRuleReference = Boolean(queryText.match(/rule\s+\d+(\.\d+)?/i));
+      const isDefinitionQuery = queryText.toLowerCase().includes('what is') || 
+                               queryText.toLowerCase().includes('definition');
+      
+      console.log('Query analysis:', {
+        queryTerms,
+        containsChapterReference,
+        containsRuleReference,
+        isDefinitionQuery,
+        isFaqQuery
+      });
+      
       // Step 1: Check Summary and Keyword Index first for faster lookup
       console.log('Checking Summary and Keyword Index for quick matches...');
-      const summaryResult = await summaryIndexService.findRelevantSummary(queryText);
+      
+      // Use more targeted summary search based on query characteristics
+      let summaryResult;
+      
+      if (containsChapterReference || containsRuleReference) {
+        // For queries with specific references, use specialized search
+        searchStrategy = 'reference-based';
+        summaryResult = await summaryIndexService.findRelevantSummaryByReference(queryText);
+      } else {
+        // Standard summary search
+        summaryResult = await summaryIndexService.findRelevantSummary(queryText);
+      }
       
       if (summaryResult.found) {
-        console.log('Found relevant match in Summary Index');
+        console.log(`Found relevant match in Summary Index using ${searchStrategy} strategy`);
         regulatoryContext = summaryResult.context || '';
-        reasoning = 'Retrieved from Summary and Keyword Index for faster processing';
+        reasoning = `Retrieved from Summary and Keyword Index using ${searchStrategy} strategy for faster and more accurate processing`;
         usedSummaryIndex = true;
       } else {
         // Step 2: If no match in Summary Index, perform comprehensive search
         console.log('No match in Summary Index, performing comprehensive database search');
-        const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
-        regulatoryContext = contextResult.context || '';
-        reasoning = contextResult.reasoning || '';
+        
+        // Use different search strategy based on query type
+        if (isDefinitionQuery) {
+          console.log('Definition query detected, using definition-focused search strategy');
+          const definitionContext = await contextService.getDefinitionContext(queryText);
+          regulatoryContext = definitionContext.context || '';
+          reasoning = definitionContext.reasoning || '';
+          searchStrategy = 'definition-focused';
+        } else {
+          // Standard comprehensive search
+          const contextResult = await contextService.getComprehensiveRegulatoryContext(queryText);
+          regulatoryContext = contextResult.context || '';
+          reasoning = contextResult.reasoning || '';
+          searchStrategy = 'comprehensive';
+        }
       }
       
       contextTime = Date.now() - contextStart;
@@ -40,6 +80,7 @@ export const useContextRetrieval = () => {
       // For FAQ queries, ensure we've searched across multiple potential sources
       if (isFaqQuery === true) {
         console.log('FAQ query detected, performing thorough database search for all relevant FAQ content');
+        searchStrategy = 'faq-specialized';
         
         // If initial search didn't yield strong FAQ content, try multiple search strategies
         if (!regulatoryContext.toLowerCase().includes('faq') && 
@@ -69,14 +110,30 @@ export const useContextRetrieval = () => {
           }
         }
       }
+
+      // New: Add validation data to cross-check response accuracy
+      const validationData = await contextService.getValidationContext(queryText);
+      if (validationData && validationData.context) {
+        // Append validation context with clear separator
+        regulatoryContext += "\n\n--- CROSS-VALIDATION DATA ---\n\n" + validationData.context;
+        console.log('Added cross-validation data to improve response accuracy');
+      }
+      
     } catch (contextError) {
       // If context retrieval fails, log it but continue with empty context
       console.error("Error retrieving context:", contextError);
       regulatoryContext = '';
       reasoning = 'Failed to retrieve context due to an error';
+      searchStrategy = 'failed';
     }
     
-    return { regulatoryContext, reasoning, contextTime, usedSummaryIndex };
+    return { 
+      regulatoryContext, 
+      reasoning, 
+      contextTime, 
+      usedSummaryIndex,
+      searchStrategy 
+    };
   };
 
   return { retrieveRegulatoryContext };

@@ -1,61 +1,78 @@
 
-import { LogLevel, setTruncationLogLevel } from '@/utils/truncation';
+import { useState, useEffect } from 'react';
 
 /**
- * Set up logging for the chat system
- */
-export const setupLogging = () => {
-  // Enable debug logging for truncation detection in development
-  if (process.env.NODE_ENV === 'development') {
-    setTruncationLogLevel(LogLevel.DEBUG);
-  }
-};
-
-/**
- * Log the start of a query processing operation
- */
-export const logQueryStart = (queryText: string) => {
-  console.group('Financial Query Processing');
-  console.log('Processing query:', queryText);
-};
-
-/**
- * Log information about retrieved context
- */
-export const logContextInfo = (
-  regulatoryContext: string,
-  reasoning: string,
-  queryType: string,
-  contextTime: number
-) => {
-  console.log('Financial Context Length:', regulatoryContext.length);
-  console.log('Financial Reasoning:', reasoning);
-  console.log('Query Type:', queryType);
-  console.log(`Context fetched in ${contextTime}ms`);
-};
-
-/**
- * Log query parameters used for processing
- */
-export const logQueryParameters = (financialQueryType: string, temperature: number, maxTokens: number) => {
-  console.log('Financial Query Type:', financialQueryType);
-  console.log('Temperature:', temperature);
-  console.log('Max Tokens:', maxTokens);
-};
-
-/**
- * Finish logging group
- */
-export const finishLogging = () => {
-  console.groupEnd();
-};
-
-/**
- * Hook for setting up and managing logging for the chat system (for backward compatibility)
+ * Hook for logging query processing details
  */
 export const useQueryLogger = () => {
+  const [isGroupOpen, setIsGroupOpen] = useState(false);
+
+  // Close any open console groups on component unmount
+  useEffect(() => {
+    return () => {
+      if (isGroupOpen) {
+        console.groupEnd();
+      }
+    };
+  }, [isGroupOpen]);
+
+  const logQueryStart = (queryText: string) => {
+    if (isGroupOpen) {
+      console.groupEnd();
+    }
+    console.group('Processing Financial Regulatory Query');
+    console.log('Query:', queryText);
+    setIsGroupOpen(true);
+  };
+
+  const logContextInfo = (
+    context: string, 
+    reasoning: string, 
+    financialQueryType: string,
+    contextTime: number,
+    searchStrategy?: string
+  ) => {
+    console.group('Context Retrieval');
+    console.log('Query Type:', financialQueryType);
+    console.log('Context Time:', `${contextTime}ms`);
+    if (searchStrategy) {
+      console.log('Search Strategy:', searchStrategy);
+    }
+    
+    if (reasoning) {
+      console.log('Reasoning:', reasoning);
+    }
+    
+    if (context) {
+      console.log('Context Length:', context.length);
+      console.log('Context Sample:', context.substring(0, 100) + '...');
+    } else {
+      console.log('No context found');
+    }
+    console.groupEnd();
+  };
+
+  const logQueryParameters = (
+    financialQueryType: string, 
+    temperature: number,
+    maxTokens: number
+  ) => {
+    console.group('Query Parameters');
+    console.log('Financial Query Type:', financialQueryType);
+    console.log('Temperature:', temperature);
+    console.log('Max Tokens:', maxTokens);
+    console.groupEnd();
+  };
+  
+  const finishLogging = () => {
+    if (isGroupOpen) {
+      console.log('Query processing completed');
+      console.groupEnd();
+      setIsGroupOpen(false);
+    }
+  };
+
   return {
-    setupLogging,
     logQueryStart,
     logContextInfo,
     logQueryParameters,

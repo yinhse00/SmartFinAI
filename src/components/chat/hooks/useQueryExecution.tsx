@@ -19,6 +19,7 @@ export const useQueryExecution = (
   isGrokApiKeySet: boolean,
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
+  const { toast } = useToast();
   const { logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
   const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
   const { 
@@ -71,21 +72,37 @@ export const useQueryExecution = (
       // Step 3: Retrieve regulatory context with optimized search
       // Ensure we're passing a boolean for isFaqQuery
       console.log("Step 3: Retrieving relevant regulatory context with optimized search");
-      const { regulatoryContext, reasoning, contextTime, usedSummaryIndex } = await retrieveRegulatoryContext(
+      const { 
+        regulatoryContext, 
+        reasoning, 
+        contextTime, 
+        usedSummaryIndex,
+        searchStrategy 
+      } = await retrieveRegulatoryContext(
         queryText, 
         Boolean(isFaqQuery) // Explicit boolean conversion
       );
       
-      // Log context info
+      // Log context info with search strategy
       logContextInfo(
         regulatoryContext, 
         reasoning, 
         financialQueryType || 'unspecified', 
-        contextTime
+        contextTime,
+        searchStrategy
       );
       
       if (usedSummaryIndex) {
-        console.log("Used Summary Index for faster context retrieval");
+        console.log(`Used Summary Index (${searchStrategy}) for faster context retrieval`);
+        
+        // Show toast for specific strategies to increase user confidence
+        if (searchStrategy === 'reference-based') {
+          toast({
+            title: "Using Specific Chapter/Rule References",
+            description: "Found exact regulatory content matching your chapter references",
+            duration: 3000,
+          });
+        }
       }
       
       // Update processing stage
@@ -94,6 +111,9 @@ export const useQueryExecution = (
       // Step 4: Process response with Grok API using retrieved context
       console.log("Step 4: Generating response with Grok API");
       const processingStart = Date.now();
+      
+      // Enhance parameters with search strategy for better prompt engineering
+      responseParams.searchStrategy = searchStrategy;
       
       try {
         await handleApiResponse(

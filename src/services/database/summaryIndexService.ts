@@ -92,6 +92,76 @@ export const summaryIndexService = {
   },
   
   /**
+   * Find relevant summary for queries with specific chapter/rule references
+   * This specialized search prioritizes exact chapter and rule references
+   */
+  findRelevantSummaryByReference: async (query: string): Promise<{
+    found: boolean;
+    context?: string;
+    sourceIds?: string[];
+  }> => {
+    console.log(`Searching Summary Index by specific reference in query: "${query}"`);
+    
+    // Ensure summary index is initialized
+    if (summaryIndexDatabase.length === 0) {
+      await summaryIndexService.initializeSummaryIndex();
+    }
+    
+    // Extract chapter and rule references
+    const chapterMatch = query.match(/chapter\s+(\d+[A-Z]?)/i);
+    const ruleMatch = query.match(/rule\s+(\d+(\.\d+)?)/i);
+    
+    const chapterRef = chapterMatch ? chapterMatch[1].toLowerCase() : null;
+    const ruleRef = ruleMatch ? ruleMatch[1].toLowerCase() : null;
+    
+    console.log(`Extracted references - Chapter: ${chapterRef}, Rule: ${ruleRef}`);
+    
+    // Look for entries that mention these specific references
+    const matches = summaryIndexDatabase.filter(entry => {
+      const entryText = (entry.title + ' ' + entry.summary).toLowerCase();
+      
+      // Check for chapter reference
+      if (chapterRef && entryText.includes(`chapter ${chapterRef}`)) {
+        return true;
+      }
+      
+      // Check for rule reference
+      if (ruleRef && entryText.includes(`rule ${ruleRef}`)) {
+        return true;
+      }
+      
+      return false;
+    });
+    
+    if (matches.length > 0) {
+      console.log(`Found ${matches.length} entries matching specific references`);
+      
+      // Get full regulatory entries for the matches
+      const matchedEntries = await Promise.all(
+        matches.map(match => databaseService.getEntryById(match.sourceId))
+      );
+      
+      // Filter out nulls and format the context
+      const validEntries = matchedEntries.filter(entry => entry !== null) as RegulatoryEntry[];
+      
+      if (validEntries.length > 0) {
+        const context = validEntries
+          .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
+          .join('\n\n---\n\n');
+        
+        return {
+          found: true,
+          context,
+          sourceIds: validEntries.map(entry => entry.id)
+        };
+      }
+    }
+    
+    console.log('No entries matching specific references found');
+    return { found: false };
+  },
+  
+  /**
    * Find relevant summary by specific file name
    */
   findRelevantSummaryByFile: async (query: string, fileName: string): Promise<{
@@ -156,4 +226,3 @@ export const summaryIndexService = {
     console.log(`Added entry "${entry.title}" to Summary Index`);
   }
 };
-

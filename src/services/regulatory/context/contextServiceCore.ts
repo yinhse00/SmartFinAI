@@ -68,5 +68,27 @@ export const contextServiceCore = {
       console.error('Error retrieving financial regulatory context:', error);
       return 'Error fetching Hong Kong financial regulatory context';
     }
+  },
+  
+  /**
+   * Get context from a specific source category
+   */
+  getSourceSpecificContext: async (query: string, sourceCategory: string): Promise<string> => {
+    try {
+      console.log(`Searching specifically in "${sourceCategory}" for: ${query}`);
+      
+      // Search in the specific source category
+      const results = await searchService.search(query, sourceCategory);
+      
+      if (results.length === 0) {
+        return '';
+      }
+      
+      // Format results
+      return contextFormatter.formatEntriesToContext(results);
+    } catch (error) {
+      console.error(`Error searching in ${sourceCategory}:`, error);
+      return '';
+    }
   }
 };
