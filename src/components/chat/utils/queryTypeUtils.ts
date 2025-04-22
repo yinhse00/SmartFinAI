@@ -1,5 +1,5 @@
 /**
- * Utilities for identifying financial query types
+ * Utilities for identifying financial query types with enhanced regulatory nuance
  */
 
 import { FINANCIAL_EXPERTISES } from '@/services/constants/financialConstants';
@@ -8,32 +8,33 @@ export const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
   CONNECTED_TRANSACTION: 'connected_transaction',
   TAKEOVERS: 'takeovers',
-  PROSPECTUS: 'prospectus',
   OPEN_OFFER: 'open_offer',
+  TAKEOVER_OFFER: 'takeover_offer',
+  PROSPECTUS: 'prospectus',
   SHARE_CONSOLIDATION: 'share_consolidation',
   BOARD_LOT_CHANGE: 'board_lot_change',
   COMPANY_NAME_CHANGE: 'company_name_change',
-  GENERAL: 'general',
-  TAKEOVER_OFFER: 'takeover_offer'
+  GENERAL: 'general'
 };
 
 /**
- * Identify the type of financial query based on content
+ * Identify the type of financial query with enhanced regulatory precision
  */
 export const identifyFinancialQueryType = (query: string): string => {
   const lowerQuery = query.toLowerCase();
   
-  if (lowerQuery.includes('rights issue')) {
-    return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
-  } 
-  
-  if (lowerQuery.includes('open offer') && !lowerQuery.includes('takeover')) {
+  // Open Offer Detection (Listing Rules specific)
+  if (lowerQuery.includes('open offer') && 
+      !lowerQuery.includes('takeover') && 
+      !lowerQuery.includes('mandatory')) {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
   }
   
+  // Takeover Offer Detection (Takeovers Code specific)
   if ((lowerQuery.includes('offer') && lowerQuery.includes('takeover')) || 
       lowerQuery.includes('mandatory offer') || 
-      lowerQuery.includes('rule 26')) {
+      lowerQuery.includes('rule 26') || 
+      lowerQuery.includes('whitewash')) {
     return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
   }
   
