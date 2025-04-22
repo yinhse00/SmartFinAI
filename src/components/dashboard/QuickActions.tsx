@@ -54,13 +54,13 @@ const QuickActions = () => {
           icon={History}
           title="View Recent Activity"
           description="Check recent queries and responses"
-          to="/history"
+          to="/chat"
         />
         <QuickAction
           icon={Database}
           title="Manage Database"
           description="View and edit stored references"
-          to="/database"
+          to="/references"
         />
         <div className="pt-2">
           <Button variant="outline" className="w-full text-finance-medium-blue dark:text-finance-accent-blue">
