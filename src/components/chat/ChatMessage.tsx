@@ -44,7 +44,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
             contentRef.current.innerHTML = message.content;
           }
         }
-      }, 20); // Adjust the interval for typing speed
+      }, 35); // Adjusted from 20 to 35ms for consistency
 
       return () => clearInterval(typingInterval);
     }
