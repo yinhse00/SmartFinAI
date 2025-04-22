@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { useTheme } from "@/components/theme-provider";
 import { Moon, Sun } from 'lucide-react';
@@ -27,6 +26,9 @@ const Navbar = () => {
           SmartFinAI
         </Link>
         <div className="flex items-center space-x-4">
+          <Link to="/dashboard" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
+            Dashboard
+          </Link>
           <Link to="/chat" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             Chat
           </Link>
