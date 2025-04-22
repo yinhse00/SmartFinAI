@@ -1,4 +1,3 @@
-
 export const detectAndFormatTables = (content: string): string => {
   // Split content into lines
   const lines = content.split('\n');
@@ -54,14 +53,14 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       .filter(cell => cell.length > 0)
   );
 
-  // Create HTML table
+  // Create HTML table with the enhanced styling class
   const tableRows = rows.map((row, index) => {
     const cells = row.map(cell => {
       const tag = index === 0 ? 'th' : 'td';
-      return `<${tag} class="px-4 py-2 border">${cell}</${tag}>`;
+      return `<${tag}>${cell}</${tag}>`;
     }).join('');
     return `<tr>${cells}</tr>`;
   }).join('');
 
-  return `<table class="min-w-full my-4 border-collapse border">${tableRows}</table>`;
+  return `<table class="generated-response-table">${tableRows}</table>`;
 };

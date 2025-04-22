@@ -1,43 +1,80 @@
 
 .generated-response-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   margin: 1rem 0;
   background: white;
   border-radius: 0.5rem;
   overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
 }
 
 .dark .generated-response-table {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
 }
 
 .generated-response-table th {
-  background: #f3f4f6;
+  background: #f8f9fa;
   font-weight: 600;
   text-align: left;
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  border-bottom: 2px solid #e5e7eb;
+  color: #4b5563;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .dark .generated-response-table th {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.05);
   border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .generated-response-table td {
-  padding: 0.75rem 1rem;
-  border: 1px solid #e5e7eb;
+  padding: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+  color: #374151;
+  font-size: 0.875rem;
 }
 
 .dark .generated-response-table td {
   border-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.generated-response-table tr:last-child td {
+  border-bottom: none;
 }
 
 .generated-response-table tr:hover td {
   background: rgba(0, 0, 0, 0.02);
+  transition: background-color 150ms ease-in-out;
 }
 
 .dark .generated-response-table tr:hover td {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Zebra striping for better readability */
+.generated-response-table tr:nth-child(even) td {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.dark .generated-response-table tr:nth-child(even) td {
+  background: rgba(255, 255, 255, 0.01);
+}
+
+/* Responsive styles */
+@media (max-width: 640px) {
+  .generated-response-table {
+    font-size: 0.75rem;
+  }
+  
+  .generated-response-table th,
+  .generated-response-table td {
+    padding: 0.75rem;
+  }
 }
