@@ -35,7 +35,7 @@ export const errorHandler = {
       errorMessage.includes('500') ||  // Server error
       errorMessage.includes('AbortError');
     
-    // For network errors, provide a clearer message
+    // For network errors, provide a clearer message with proper queryType
     if (isNetworkError) {
       console.log("Network error detected, providing specific network error fallback");
       return {
@@ -53,7 +53,7 @@ export const errorHandler = {
       };
     }
     
-    // API key errors
+    // API key errors - ensure queryType is always set
     if (errorMessage.includes('key') || errorMessage.includes('auth') || errorMessage.includes('401')) {
       console.log("API key error detected, providing specific auth error fallback");
       return {

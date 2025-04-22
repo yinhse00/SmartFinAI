@@ -16,7 +16,7 @@ export function generateFallbackResponse(query: string, reason: string = "API un
       metadata: {
         ...(response.metadata || {}),
         isBackupResponse: true,  // Always include this flag for detection
-        fallbackReason: reason
+        error: reason  // Use error field instead of custom fallbackReason
       }
     };
   };

@@ -43,15 +43,17 @@ export const useFallbackDetection = () => {
       responseText.toLowerCase().includes(indicator.toLowerCase())
     );
     
-    // Enhanced metadata detection with multiple formats
+    // Enhanced metadata detection with multiple formats for more reliable detection
+    const hasMetadataText = responseText.includes('"metadata"') || responseText.includes('metadata:');
+    
+    // More aggressive fallback detection - any metadata text might indicate a fallback
     const hasFallbackMetadata = 
-      responseText.includes('"isBackupResponse": true') || 
-      responseText.includes('"isBackupResponse":true') ||
-      responseText.includes('"fallback": true') ||
-      responseText.includes('"error":') ||
-      responseText.includes('"error": ') ||
-      responseText.includes('fallback response') ||
-      responseText.includes('backup response');
+      hasMetadataText && (
+        responseText.includes('"isBackupResponse"') || 
+        responseText.includes('"error"') || 
+        responseText.includes("isBackupResponse:") ||
+        responseText.includes("error:")
+      );
     
     // Enhanced fallback detection with more specific indicators
     const hasObviousFallbackMarkers =

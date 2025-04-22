@@ -39,50 +39,74 @@ export const grokApiService = {
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
 
     // Implementation with improved retry logic and error handling
-    const maxRetries = 3;
+    const maxRetries = 2; // Reduced from 3 to fail faster and use fallback
     let retries = 0;
     let lastError = null;
     
     while (retries <= maxRetries) {
       try {
-        // Use a proxy service for development environments to avoid CORS issues
+        // Use a more reliable API endpoint structure with proper fallback options
+        // Detect development environment
         const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
         
-        // Use direct API in production, but a CORS proxy in development
-        const baseUrl = isDevelopment 
-          ? 'https://cors-anywhere.herokuapp.com/https://api.grok.ai/v1'  // Use CORS proxy in development
-          : 'https://api.grok.ai/v1';  // Direct API in production
-          
-        const apiEndpoint = `${baseUrl}/chat/completions`;
+        // Configure multiple API endpoints to try in succession
+        const apiEndpoints = [
+          // Primary endpoint
+          isDevelopment 
+            ? 'https://api.grok.ai/v1/chat/completions' // Direct API in development with newer SDK
+            : 'https://api.grok.ai/v1/chat/completions',  // Direct API in production
+            
+          // Backup endpoint options if primary fails
+          isDevelopment
+            ? 'https://grok-api.com/v1/chat/completions'  // Alternative domain in development
+            : 'https://grok-api.com/v1/chat/completions'  // Alternative domain in production
+        ];
         
-        console.log(`Attempting API call to: ${isDevelopment ? 'CORS proxy -> Grok API' : 'Grok API directly'}`);
+        // Try each endpoint in turn until one succeeds
+        let response = null;
+        let endpointError = null;
         
-        // Add timeout to prevent hanging requests
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+        for (const apiEndpoint of apiEndpoints) {
+          try {
+            console.log(`Attempting API call to: ${apiEndpoint}`);
+            
+            // Add timeout to prevent hanging requests
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout (reduced from 30)
+            
+            response = await fetch(apiEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Origin': window.location.origin,
+                'X-Requested-With': 'XMLHttpRequest'
+              },
+              body: JSON.stringify(requestBody),
+              signal: controller.signal,
+              credentials: 'omit' // Don't send cookies to third-party domains
+            });
+            
+            // Clear the timeout to prevent aborting after success
+            clearTimeout(timeoutId);
+            
+            if (response.ok) {
+              // If this endpoint worked, break out of the loop
+              break;
+            } else {
+              const errorText = await response.text();
+              endpointError = new Error(`API error: ${response.status} - ${errorText}`);
+              console.log(`Endpoint ${apiEndpoint} returned error: ${response.status}`);
+            }
+          } catch (endpointAttemptError) {
+            endpointError = endpointAttemptError;
+            console.log(`Endpoint ${apiEndpoint} failed, trying next`);
+          }
+        }
         
-        const response = await fetch(apiEndpoint, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'Origin': window.location.origin,
-            // Add additional headers that might help with CORS
-            'X-Requested-With': 'XMLHttpRequest'
-          },
-          body: JSON.stringify(requestBody),
-          signal: controller.signal,
-          // Add credentials mode that might help with certain API configurations
-          credentials: 'omit' // Don't send cookies to third-party domains
-        });
-        
-        // Clear the timeout to prevent aborting after success
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-          const errorText = await response.text();
-          console.error(`Financial expert API error ${response.status}:`, errorText);
-          throw new Error(`Financial expert API error: ${response.status} - ${errorText}`);
+        // If we tried all endpoints and none worked
+        if (!response || !response.ok) {
+          throw endpointError || new Error('All API endpoints failed');
         }
         
         const data = await response.json();
@@ -101,10 +125,9 @@ export const grokApiService = {
         });
         
         if (retries <= maxRetries) {
-          console.warn(`API call attempt ${retries} failed. Retrying...`, error);
-          // Add exponential backoff with jitter
-          const backoffTime = Math.min(1000 * Math.pow(2, retries - 1) + Math.random() * 1000, 10000);
-          console.log(`Retrying in ${Math.round(backoffTime/1000)} seconds...`);
+          console.log(`Retrying in ${Math.round(Math.min(1000 * Math.pow(2, retries - 1), 8000)/1000)} seconds...`);
+          // Reduced backoff time to fail faster and use fallback responses
+          const backoffTime = Math.min(1000 * Math.pow(2, retries - 1), 8000);
           await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
           console.error("Financial expert API call failed after all retries:", error);
