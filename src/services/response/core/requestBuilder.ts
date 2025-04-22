@@ -17,13 +17,14 @@ export const requestBuilder = {
     // Create a professional financial system message based on expertise area
     let systemMessage = createFinancialExpertSystemPrompt(queryType, regulatoryContext);
     
-    // Add specific, comprehensive instructions for Open Offer timetables
+    // Add specific, comprehensive instructions for Open Offer as a corporate action under Listing Rules
     if (queryType === 'open_offer') {
-      systemMessage += "\n\nIMPORTANT REGULATORY DISTINCTION: An 'open offer' is a capital-raising mechanism under the Hong Kong Listing Rules (Chapter 7), NOT the Takeovers Code. It is different from a 'general offer' or 'takeover offer' which are governed by the Takeovers Code. When discussing open offers:\n" +
-      "1. Always reference Listing Rules, not the Takeovers Code\n" +
-      "2. Focus on capital raising aspects, not acquisition of control\n" +
-      "3. Highlight that unlike rights issues, open offers do not have tradable nil-paid rights\n" +
-      "4. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n\n" +
+      systemMessage += "\n\nCRITICAL REGULATORY DISTINCTION: An 'open offer' is a CORPORATE ACTION for capital-raising under the Hong Kong Listing Rules (Chapter 7), NOT the Takeovers Code. It is fundamentally different from a 'general offer' or 'takeover offer' which are governed by the Takeovers Code. When discussing open offers:\n" +
+      "1. ALWAYS identify it as a CORPORATE ACTION under Listing Rules\n" + 
+      "2. ALWAYS reference Listing Rules, NEVER the Takeovers Code\n" +
+      "3. Focus EXCLUSIVELY on capital raising aspects, never acquisition of control\n" +
+      "4. Highlight that unlike rights issues, open offers do not have tradable nil-paid rights\n" +
+      "5. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n\n" +
       
       "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
       "1. Ex-entitlement date\n" +
@@ -38,9 +39,9 @@ export const requestBuilder = {
     
     // Add special instructions for takeover offers to distinguish from open offers
     if (queryType === 'takeover_offer') {
-      systemMessage += "\n\nIMPORTANT REGULATORY DISTINCTION: A 'takeover offer' or 'general offer' is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules. It is different from an 'open offer' which is a capital-raising mechanism under Listing Rules Chapter 7. When discussing takeover offers:\n" +
+      systemMessage += "\n\nCRITICAL REGULATORY DISTINCTION: A 'takeover offer' or 'general offer' is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules. It is fundamentally different from an 'open offer' which is a CORPORATE ACTION for capital-raising under Listing Rules Chapter 7. When discussing takeover offers:\n" +
       "1. Always reference the Takeovers Code, not Listing Rules\n" +
-      "2. Focus on acquisition of control aspects, not capital raising\n" +
+      "2. Focus exclusively on acquisition of control aspects, not capital raising\n" +
       "3. Include relevant Takeovers Code references (e.g., Rule 26, Rule 30)\n" +
       "4. Distinguish between mandatory and voluntary offers where appropriate\n";
     }

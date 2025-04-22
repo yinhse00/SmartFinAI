@@ -31,15 +31,20 @@ export function isGeneralOfferQuery(query: string, isWhitewashQuery: boolean = f
 }
 
 /**
- * Checks if this is an open offer query (under Listing Rules)
- * Open offers are a capital-raising mechanism governed by Listing Rules
+ * Checks if this is an open offer query (CORPORATE ACTION under Listing Rules)
+ * Open offers are a capital-raising corporate action governed by Listing Rules Chapter 7
  */
 export function isOpenOfferQuery(query: string): boolean {
   const normalizedQuery = query.toLowerCase();
   
+  // Must explicitly include "open offer" term
+  if (!normalizedQuery.includes('open offer')) {
+    return false;
+  }
+  
   // Check for open offer but exclude takeovers code terminology
-  return normalizedQuery.includes('open offer') && 
-         !normalizedQuery.includes('takeover') &&
+  // to ensure we don't misclassify takeover queries
+  return !normalizedQuery.includes('takeover') &&
          !normalizedQuery.includes('mandatory offer') &&
          !normalizedQuery.includes('rule 26') &&
          !normalizedQuery.includes('general offer');
@@ -61,7 +66,7 @@ export function isTradingArrangementQuery(query: string): boolean {
 export function isCorporateActionQuery(query: string): boolean {
   const normalizedQuery = query.toLowerCase();
   const corporateActions = [
-    'open offer',  // Distinguish from takeover offer
+    'open offer',  // CORPORATE ACTION under Listing Rules
     'rights issue', 
     'share consolidation', 
     'board lot', 

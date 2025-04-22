@@ -60,6 +60,21 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       }
     }
     
+    // CRITICAL: Special check for regulatory framework confusion
+    // Ensure open offer responses NEVER reference Takeovers Code
+    if (financialQueryType === 'open_offer' && 
+        (content.toLowerCase().includes('takeover') || content.toLowerCase().includes('rule 26'))) {
+      analysis.isComplete = false;
+      analysis.missingElements.push("CRITICAL: Open offer response incorrectly references Takeovers Code. Open offers are CORPORATE ACTIONS under Listing Rules.");
+    }
+    
+    // Ensure takeover offer responses NEVER reference Listing Rules Chapter 7
+    if (financialQueryType === 'takeover_offer' && 
+        (content.toLowerCase().includes('chapter 7') || content.toLowerCase().includes('rule 7.'))) {
+      analysis.isComplete = false;
+      analysis.missingElements.push("CRITICAL: Takeover offer response incorrectly references Listing Rules Chapter 7. Takeover offers are governed by Takeovers Code.");
+    }
+    
     // Check for listing rules references
     if ((financialQueryType.includes('rights_issue') || financialQueryType.includes('open_offer')) &&
         !content.match(/rule\s+[0-9.]+|chapter\s+[0-9]+/i)) {

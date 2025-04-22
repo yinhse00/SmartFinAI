@@ -1,7 +1,7 @@
 
 /**
  * Check Open Offer response for completeness
- * Open Offers are governed by Listing Rules Chapter 7, NOT the Takeovers Code
+ * Open Offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
  * 
  * @param content The content to analyze
  * @returns Analysis result with completeness status and missing elements
@@ -19,23 +19,23 @@ export function checkOpenOfferResponse(content: string) {
     return result;
   }
   
-  // Check for Listing Rules references, not Takeovers Code
+  // Check for Listing Rules references - MANDATORY for open offers
   if (!lowerContent.includes('listing rule') && !lowerContent.includes('chapter 7') && 
       !lowerContent.includes('rule 7.') && !lowerContent.includes('rule 7 ')) {
     result.isComplete = false;
     result.missingElements.push("Missing Listing Rules references for Open Offer");
   }
   
-  // Check for incorrect regulatory framework references
+  // Check for incorrect regulatory framework references - MUST flag any takeover code mentions
   if (lowerContent.includes('takeovers code') || 
       lowerContent.includes('takeover code') ||
       lowerContent.includes('codes on takeovers') ||
       lowerContent.includes('rule 26')) {
     result.isComplete = false;
-    result.missingElements.push("Incorrectly references Takeovers Code for Open Offer");
+    result.missingElements.push("CRITICAL ERROR: Incorrectly references Takeovers Code for Open Offer (corporate action under Listing Rules)");
   }
   
-  const mandatoryKeywords = ['ex-entitlement', 'record date', 'acceptance period', 'payment date'];
+  const mandatoryKeywords = ['ex-entitlement', 'record date', 'acceptance period', 'payment date', 'corporate action'];
   
   const missingKeywords = mandatoryKeywords.filter(
     keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
@@ -48,7 +48,12 @@ export function checkOpenOfferResponse(content: string) {
     );
   }
   
-  // Check that open offer explicitly mentions no nil-paid rights
+  // Check that open offer explicitly mentions no nil-paid rights AND explicitly identifies as corporate action
+  if (!lowerContent.includes('corporate action')) {
+    result.isComplete = false;
+    result.missingElements.push("Missing identification of Open Offer as a corporate action under Listing Rules");
+  }
+  
   if (!lowerContent.includes('no nil-paid') && !lowerContent.includes('not have nil-paid') && 
       !lowerContent.includes('unlike rights issues') && !lowerContent.includes('no trading of rights')) {
     result.isComplete = false;
@@ -59,7 +64,7 @@ export function checkOpenOfferResponse(content: string) {
   if (!lowerContent.includes('capital raising') && !lowerContent.includes('raise capital') && 
       !lowerContent.includes('fund raising') && !lowerContent.includes('fundraising')) {
     result.isComplete = false;
-    result.missingElements.push("Missing capital-raising purpose of Open Offer");
+    result.missingElements.push("Missing capital-raising purpose of Open Offer corporate action");
   }
   
   return result;

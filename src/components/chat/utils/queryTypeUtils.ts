@@ -10,8 +10,8 @@ export const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
   CONNECTED_TRANSACTION: 'connected_transaction',
   TAKEOVERS: 'takeovers',
-  OPEN_OFFER: 'open_offer',
-  TAKEOVER_OFFER: 'takeover_offer',
+  OPEN_OFFER: 'open_offer', // CORPORATE ACTION under Listing Rules (Chapter 7)
+  TAKEOVER_OFFER: 'takeover_offer', // Under Takeovers Code only
   PROSPECTUS: 'prospectus',
   SHARE_CONSOLIDATION: 'share_consolidation',
   BOARD_LOT_CHANGE: 'board_lot_change',
@@ -21,11 +21,12 @@ export const FINANCIAL_QUERY_TYPES = {
 
 /**
  * Identify the type of financial query with enhanced regulatory precision
+ * Ensures open offers (corporate actions) are never confused with takeover offers
  */
 export const identifyFinancialQueryType = (query: string): string => {
   const lowerQuery = query.toLowerCase();
   
-  // Open Offer Detection (Listing Rules specific)
+  // Open Offer Detection (Listing Rules corporate action)
   if (isOpenOfferQuery(query)) {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
   }
@@ -36,6 +37,7 @@ export const identifyFinancialQueryType = (query: string): string => {
   }
   
   // Additional checks for other financial query types
+  // IMPORTANT: Only check for "open offer" after the more specific isOpenOfferQuery check above
   if (lowerQuery.includes('share consolidation') || 
       lowerQuery.includes('sub-division') || 
       lowerQuery.includes('subdivision')) {
