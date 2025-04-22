@@ -4,13 +4,7 @@
  * FIXED: Ensure consistent fallback responses across environments
  */
 
-interface GrokResponse {
-  text: string;
-  metadata?: {
-    isBackupResponse?: boolean;
-    [key: string]: any;
-  };
-}
+import { GrokResponse } from '@/types/grok';
 
 export function generateFallbackResponse(query: string, reason: string = "API unavailable"): GrokResponse {
   const lowerQuery = query.toLowerCase();
@@ -46,7 +40,8 @@ This timetable outlines the typical steps and timeline for a rights issue under 
 | T+13 to T+14 | Calculate acceptances and excess applications. Notify underwriters of any shortfall (if underwritten). Underwriters arrange for sale of unsubscribed shares ("rump placement") (Rule 10.31(1)(b)). |
 | T+15 | Announce results of the rights issue via RIS, including subscription levels and rump placement details (if any) (Rule 10.32). |
 | T+16 | New shares issued and admitted to trading on HKEx. Dealings in fully-paid shares commence. Refund cheques (if any) dispatched to shareholders for excess applications. |
-| T+17 onwards | Finalize accounts with clearing systems (e.g., CCASS). Update share register. |`
+| T+17 onwards | Finalize accounts with clearing systems (e.g., CCASS). Update share register. |`,
+      queryType: 'trading_arrangements'
     });
   }
   
@@ -56,7 +51,8 @@ This timetable outlines the typical steps and timeline for a rights issue under 
             `A mandatory general offer is triggered when:\n` +
             `- A person acquires 30% or more of voting rights in a company\n` +
             `- A person holding between 30-50% acquires more than 2% additional voting rights in any 12-month period\n\n` +
-            `The offer must be made in cash or include a cash alternative at the highest price paid by the acquirer during the offer period and within 6 months prior to it.`
+            `The offer must be made in cash or include a cash alternative at the highest price paid by the acquirer during the offer period and within 6 months prior to it.`,
+      queryType: 'takeovers'
     });
   }
   
@@ -74,7 +70,8 @@ This timetable outlines the typical steps and timeline for a rights issue under 
             `- Chapter 14: Notifiable Transactions\n` +
             `- Chapter 14A: Connected Transactions\n` +
             `- Chapter 15: Options, Warrants and Similar Rights\n\n` +
-            `For specific guidance on your situation, I recommend consulting with a qualified legal advisor.`
+            `For specific guidance on your situation, I recommend consulting with a qualified legal advisor.`,
+      queryType: 'listing_rules'
     });
   }
   
@@ -83,6 +80,7 @@ This timetable outlines the typical steps and timeline for a rights issue under 
     text: `I'm currently experiencing some technical difficulties accessing my full knowledge database. Based on what I can access, here's what I can provide about your query:\n\n` +
           `For questions about Hong Kong listing rules, takeovers code, and compliance requirements, I normally provide detailed information from regulatory sources. ` +
           `At the moment, I can only offer general guidance based on my core knowledge.\n\n` +
-          `Please try your query again in a few moments, or consider rephrasing your question to focus on fundamental aspects of Hong Kong financial regulations.`
+          `Please try your query again in a few moments, or consider rephrasing your question to focus on fundamental aspects of Hong Kong financial regulations.`,
+    queryType: 'general'
   });
 }
