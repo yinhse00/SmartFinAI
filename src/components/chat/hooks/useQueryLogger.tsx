@@ -86,9 +86,53 @@ export const setupLogging = () => {
   return true;
 };
 
-// Export individual logging functions for direct import
-export { 
-  // Re-export the functions from the hook
-  useQueryLogger as __useQueryLogger, // Avoid naming conflicts
+// Now export standalone versions of the logging functions for direct import
+export const logQueryStart = (queryText: string) => {
+  console.group('Processing Financial Regulatory Query');
+  console.log('Query:', queryText);
+  return true;
 };
 
+export const logContextInfo = (
+  context: string, 
+  reasoning: string, 
+  financialQueryType: string,
+  contextTime: number,
+  searchStrategy?: string
+) => {
+  console.group('Context Retrieval');
+  console.log('Query Type:', financialQueryType);
+  console.log('Context Time:', `${contextTime}ms`);
+  if (searchStrategy) {
+    console.log('Search Strategy:', searchStrategy);
+  }
+  
+  if (reasoning) {
+    console.log('Reasoning:', reasoning);
+  }
+  
+  if (context) {
+    console.log('Context Length:', context.length);
+    console.log('Context Sample:', context.substring(0, 100) + '...');
+  } else {
+    console.log('No context found');
+  }
+  console.groupEnd();
+};
+
+export const logQueryParameters = (
+  financialQueryType: string, 
+  temperature: number,
+  maxTokens: number
+) => {
+  console.group('Query Parameters');
+  console.log('Financial Query Type:', financialQueryType);
+  console.log('Temperature:', temperature);
+  console.log('Max Tokens:', maxTokens);
+  console.groupEnd();
+};
+
+export const finishLogging = () => {
+  console.log('Query processing completed');
+  console.groupEnd();
+};
