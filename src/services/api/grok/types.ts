@@ -1,5 +1,5 @@
 
-// Re-export types from main types file
+// Re-export types from main types file using 'export type'
 export type { GrokRequestParams, GrokResponse } from '@/types/grok';
 
 export interface GrokChatRequestBody {
@@ -11,4 +11,3 @@ export interface GrokChatRequestBody {
   temperature?: number;
   max_tokens?: number;
 }
-
