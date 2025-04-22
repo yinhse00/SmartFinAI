@@ -77,14 +77,19 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
       .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-      .split('\n\n').join('</p><p class="mb-4">')
-      .split('\n').join('<br />');
+      // Enhanced paragraph handling to support Markdown-style breaks
+      .split('\n\n')  // Split on double newlines to create paragraphs
+      .map(paragraph => 
+        `<p class="mb-4">${
+          paragraph
+            .replace(/\n/g, '<br />')  // Single newlines become line breaks within paragraphs
+        }</p>`
+      )
+      .join('');  // Join paragraphs together
 
     return (
-      <div 
-        className="prose dark:prose-invert break-words"
-      >
-        <p className="mb-4" dangerouslySetInnerHTML={{ __html: formattedContent }} />
+      <div className="prose dark:prose-invert break-words">
+        <div dangerouslySetInnerHTML={{ __html: formattedContent }} />
       </div>
     );
   }
@@ -132,3 +137,4 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
 };
 
 export default ChatMessage;
+
