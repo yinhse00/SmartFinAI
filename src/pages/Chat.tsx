@@ -1,7 +1,5 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
-import TableExample from '@/components/examples/TableExample';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { hasGrokApiKey, getGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
@@ -86,7 +84,6 @@ const Chat = () => {
   return (
     <MainLayout>
       <div className="space-y-6">
-        <TableExample />
         <ChatInterface />
       </div>
     </MainLayout>
