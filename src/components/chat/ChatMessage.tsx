@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Lightbulb, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -46,7 +45,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
           }
           setHasAnimated(true);
         }
-      }, 4); // Changed from 20 to 4 to make it 5 times faster
+      }, 4);
 
       return () => clearInterval(typingInterval);
     }
@@ -72,28 +71,24 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       return <ChatTableMessage content={message.content} />;
     }
 
-    // More aggressive paragraph formatting for better readability
     const paragraphs = message.content.split('\n\n');
     
     return (
-      <div className="prose dark:prose-invert break-words max-w-full">
+      <div className="prose dark:prose-invert break-words max-w-full text-[15px] leading-relaxed">
         {paragraphs.map((paragraph, idx) => {
-          // Skip empty paragraphs
           if (!paragraph.trim()) return null;
           
-          // Handle code blocks
           if (paragraph.startsWith('```') && paragraph.endsWith('```')) {
             const codeContent = paragraph.substring(3, paragraph.length - 3);
             return (
-              <pre key={idx} className="bg-gray-100 dark:bg-gray-800 p-3 rounded my-4 overflow-x-auto">
+              <pre key={idx} className="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg my-6 overflow-x-auto font-mono text-[14px]">
                 <code>{codeContent}</code>
               </pre>
             );
           }
           
-          // Format normal paragraphs
           const formattedPara = paragraph
-            .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
+            .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md font-mono text-sm">$1</code>')
             .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
             .replace(/\*([^*]+)\*/g, '<em>$1</em>')
             .replace(/\n/g, '<br />');
@@ -101,7 +96,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
           return (
             <p 
               key={idx} 
-              className="mb-5 mt-2" 
+              className="mb-6 mt-2 leading-7" 
               dangerouslySetInnerHTML={{ __html: formattedPara }}
             />
           );
@@ -113,11 +108,11 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
   return (
     <div className="w-full px-4">
       <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-        <div className="w-full">
-          <div className={`flex flex-col rounded-lg p-4 w-full ${
+        <div className="w-full max-w-4xl">
+          <div className={`flex flex-col rounded-lg p-6 w-full ${
             message.sender === 'user'
               ? 'bg-finance-blue text-white ml-auto'
-              : 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 mr-auto'
+              : 'bg-gray-50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-200 mr-auto'
           }`}>
             {message.isError && (
               <div className="mb-2 p-2 rounded-md bg-red-200 dark:bg-red-800 text-red-800 dark:text-red-200">
@@ -128,7 +123,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
             <div ref={contentRef} className="chat-message-content">
               {renderContent()}
             </div>
-            <div className="text-xs text-gray-500 dark:text-gray-400 mt-3">
+            <div className="text-xs text-gray-500 dark:text-gray-400 mt-4">
               {formattedDate}
               {message.isTruncated && (
                 <span className="ml-2">
