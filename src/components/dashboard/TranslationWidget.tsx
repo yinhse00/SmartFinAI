@@ -1,85 +1,31 @@
 
-import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
 import { Loader2, Globe } from 'lucide-react';
-import { grokService } from '@/services/grokService';
-import { hasGrokApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
 import { useFileDropHandler } from '@/hooks/useFileDropHandler';
+import { useTranslation } from '@/hooks/useTranslation';
 import LanguageSelector from '../translation/LanguageSelector';
 import TranslationInput from '../translation/TranslationInput';
 import TranslationOutput from '../translation/TranslationOutput';
 
 const TranslationWidget = () => {
-  const [content, setContent] = useState<string>('');
-  const [sourceLanguage, setSourceLanguage] = useState<'en' | 'zh'>('en');
-  const [targetLanguage, setTargetLanguage] = useState<'zh' | 'en'>('zh');
-  const [translatedContent, setTranslatedContent] = useState<string | null>(null);
-  const [isTranslating, setIsTranslating] = useState<boolean>(false);
   const navigate = useNavigate();
+  const {
+    content,
+    setContent,
+    sourceLanguage,
+    setSourceLanguage,
+    targetLanguage,
+    setTargetLanguage,
+    translatedContent,
+    isTranslating,
+    handleTranslate
+  } = useTranslation();
 
   const { isDragging, handleDrop, handleDragEnter, handleDragOver, handleDragLeave } = useFileDropHandler({
     onContentChange: setContent
   });
-
-  const handleTranslate = async () => {
-    if (!content.trim()) {
-      toast({
-        title: "Content required",
-        description: "Please enter text to translate.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (sourceLanguage === targetLanguage) {
-      toast({
-        title: "Same language",
-        description: "Source and target languages are the same. Please select different languages.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!hasGrokApiKey()) {
-      toast({
-        title: "API Key Required",
-        description: "Please set your Grok API key in the Chat interface first.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setIsTranslating(true);
-    setTranslatedContent(null);
-
-    try {
-      const contentToTranslate = content.trim();
-      
-      const response = await grokService.translateContent({
-        content: contentToTranslate,
-        sourceLanguage,
-        targetLanguage
-      });
-      
-      setTranslatedContent(response.text);
-      
-      toast({
-        title: "Translation completed",
-        description: "Your content has been translated successfully.",
-      });
-    } catch (error) {
-      toast({
-        title: "Translation failed",
-        description: "There was an error translating your content. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsTranslating(false);
-    }
-  };
 
   return (
     <Card className="finance-card">
