@@ -27,10 +27,7 @@ export const useFallbackDetection = () => {
       "service is temporarily unavailable",
       "could not access the regulatory database",
       "financial database is currently unavailable",
-      "unable to retrieve complete information at this time",
-      "This is a mock response", // Explicit mock response detection
-      "mock response from the Grok API", // Explicit mock response detection
-      "Please provide more details about your query" // Common in our mock responses
+      "unable to retrieve complete information at this time"
     ];
     
     // Check for any fallback indicators
@@ -44,7 +41,6 @@ export const useFallbackDetection = () => {
       responseText.includes('"isBackupResponse":true') ||
       responseText.includes('"fallback": true') ||
       responseText.includes('fallback response') ||
-      responseText.includes('mock response') ||
       responseText.includes('backup response');
     
     // Enhanced fallback detection with more specific indicators
@@ -52,11 +48,7 @@ export const useFallbackDetection = () => {
       responseText.includes('I can only offer general guidance') ||
       responseText.includes('based on my core knowledge') ||
       (responseText.includes('technical difficulties') && responseText.includes('try again')) ||
-      responseText.includes('I\'m currently using a fallback response mode') ||
-      // Add detection for our specific mock response pattern
-      (responseText.includes('Hong Kong') && 
-       responseText.includes('regulatory framework') && 
-       responseText.includes('general guidance'));
+      responseText.includes('I\'m currently using a fallback response mode');
     
     // Log detection results for debugging
     if (hasIndicator || hasFallbackMetadata || hasObviousFallbackMarkers) {
@@ -69,8 +61,7 @@ export const useFallbackDetection = () => {
       });
     }
     
-    return false; // ALWAYS return false to prevent fallback detection
-    // This ensures we always display responses to the user
+    return hasIndicator || hasFallbackMetadata || hasObviousFallbackMarkers;
   };
 
   return {
