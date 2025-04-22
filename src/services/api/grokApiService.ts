@@ -240,7 +240,7 @@ I can still provide general information about Hong Kong listing rules and financ
 
 Please try again later when the API connection is restored for more detailed and specific guidance.
 
-Regarding your question: "${prompt.substring(0, 100)}${prompt.length > 100 ? '...' : ''}"
+Regarding your question: "${prompt ? prompt.substring(0, 100) + (prompt.length > 100 ? '...' : '') : 'your query'}"
 
 While I can't provide specific rule citations in offline mode, I can offer general guidance based on my understanding of Hong Kong financial regulations. However, for specific regulatory advice and official interpretations, please refer to the official HKEX and SFC documentation when making financial or regulatory decisions.`;
 

@@ -32,5 +32,6 @@ export interface GrokResponse {
       usedGuidance: boolean;
     };
     responseWasTruncated?: boolean;
+    isOfflineMode?: boolean;
   };
 }
