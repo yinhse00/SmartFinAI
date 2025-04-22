@@ -1,4 +1,3 @@
-
 /**
  * Checks if this is a whitewash waiver query
  */
@@ -98,6 +97,18 @@ export function isTradingArrangementQuery(query: string): boolean {
 }
 
 /**
+ * Checks if this is a trading arrangement guide query
+ */
+export function isTradingArrangementGuideQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  return normalizedQuery.includes('guide on trading') || 
+         normalizedQuery.includes('trading arrangements guide') || 
+         normalizedQuery.includes('trading arrangement') || 
+         (normalizedQuery.includes('trading') && 
+          normalizedQuery.includes('arrangement'));
+}
+
+/**
  * Checks if this is a corporate action query
  */
 export function isCorporateActionQuery(query: string): boolean {
@@ -110,6 +121,49 @@ export function isCorporateActionQuery(query: string): boolean {
     'company name change'
   ];
   return corporateActions.some(action => normalizedQuery.includes(action));
+}
+
+/**
+ * Checks if this is a share reorganization query
+ */
+export function isShareReorganizationQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  return normalizedQuery.includes('share consolidation') || 
+         normalizedQuery.includes('consolidation of shares') || 
+         normalizedQuery.includes('sub-division') || 
+         normalizedQuery.includes('subdivision') || 
+         normalizedQuery.includes('split') && 
+         normalizedQuery.includes('share');
+}
+
+/**
+ * Checks if this is a board lot size change query
+ */
+export function isBoardLotChangeQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  return (normalizedQuery.includes('board lot') || 
+          normalizedQuery.includes('lot size')) && 
+         normalizedQuery.includes('change');
+}
+
+/**
+ * Checks if this is a company name change query
+ */
+export function isCompanyNameChangeQuery(query: string): boolean {
+  const normalizedQuery = query.toLowerCase();
+  return normalizedQuery.includes('company name') && 
+        (normalizedQuery.includes('change') || normalizedQuery.includes('chinese name'));
+}
+
+/**
+ * Checks if this is a specific corporate action covered by the trading arrangements guide
+ */
+export function isGuideCoveredCorporateActionQuery(query: string): boolean {
+  return isOpenOfferQuery(query) ||
+         isShareReorganizationQuery(query) ||
+         isBoardLotChangeQuery(query) ||
+         isCompanyNameChangeQuery(query) ||
+         query.toLowerCase().includes('rights issue');
 }
 
 /**

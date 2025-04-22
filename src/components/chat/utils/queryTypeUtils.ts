@@ -1,4 +1,3 @@
-
 /**
  * Utilities for identifying financial query types with enhanced regulatory nuance
  */
@@ -48,10 +47,38 @@ export const identifyFinancialQueryType = (query: string): string => {
       // Rights Issue execution process
       console.log("Identified as RIGHTS_ISSUE execution process");
       return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
+    } else if (lowerQuery.includes('share consolidation') || lowerQuery.includes('sub-division') || lowerQuery.includes('subdivision')) {
+      // Share consolidation execution process
+      console.log("Identified as SHARE_CONSOLIDATION execution process");
+      return FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION;
+    } else if ((lowerQuery.includes('board lot') || lowerQuery.includes('lot size')) && lowerQuery.includes('change')) {
+      // Board lot change execution process
+      console.log("Identified as BOARD_LOT_CHANGE execution process");
+      return FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE;
+    } else if (lowerQuery.includes('company name') && (lowerQuery.includes('change') || lowerQuery.includes('chinese name'))) {
+      // Company name change execution process
+      console.log("Identified as COMPANY_NAME_CHANGE execution process");
+      return FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE;
     }
   }
   
-  // CRITICAL: Second check - explicitly look for "open offer" as corporate action
+  // CRITICAL: Second check - check for specific corporate actions covered by the trading arrangements guide
+  if (lowerQuery.includes('guide on trading') || lowerQuery.includes('trading arrangements guide')) {
+    // If query mentions specific corporate actions
+    if (lowerQuery.includes('rights issue')) {
+      return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
+    } else if (lowerQuery.includes('open offer')) {
+      return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
+    } else if (lowerQuery.includes('share consolidation') || lowerQuery.includes('sub-division') || lowerQuery.includes('subdivision')) {
+      return FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION;
+    } else if ((lowerQuery.includes('board lot') || lowerQuery.includes('lot size')) && lowerQuery.includes('change')) {
+      return FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE;
+    } else if (lowerQuery.includes('company name') && (lowerQuery.includes('change') || lowerQuery.includes('chinese name'))) {
+      return FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE;
+    }
+  }
+  
+  // CRITICAL: Third check - explicitly look for "open offer" as corporate action
   // Open Offer Detection (Listing Rules corporate action)
   if (isOpenOfferQuery(query)) {
     // This is a corporate action under Listing Rules Chapter 7
@@ -59,7 +86,7 @@ export const identifyFinancialQueryType = (query: string): string => {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
   }
   
-  // CRITICAL: Third check - explicitly look for takeovers code terms
+  // CRITICAL: Fourth check - explicitly look for takeovers code terms
   if (isTakeoversCodeQuery(query)) {
     console.log("Identified as TAKEOVER_OFFER - under Takeovers Code");
     return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
@@ -204,4 +231,22 @@ IMPORTANT REGULATORY DISTINCTION:
 
 These are completely different regulatory concepts governed by different rules.
   `;
+};
+
+/**
+ * Check if query relates specifically to trading arrangements guide
+ */
+export const isGuideCoveredActionQuery = (query: string): boolean => {
+  const lowerQuery = query.toLowerCase();
+  
+  return (
+    (lowerQuery.includes('guide') && lowerQuery.includes('trading')) ||
+    (lowerQuery.includes('trading arrangements') && 
+     (lowerQuery.includes('rights issue') ||
+      lowerQuery.includes('open offer') ||
+      lowerQuery.includes('share consolidation') ||
+      lowerQuery.includes('sub-division') ||
+      lowerQuery.includes('board lot') ||
+      lowerQuery.includes('company name')))
+  );
 };

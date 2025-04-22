@@ -7,6 +7,7 @@ import {
   checkBoardLotCompleteness,
   checkCompanyNameChangeCompleteness
 } from './tradingArrangementChecks';
+import { GUIDE_COVERED_ACTIONS } from '@/services/constants/financialConstants';
 
 /**
  * Checks if a trading arrangement response is complete based on the query type
@@ -26,6 +27,12 @@ export const isTradingArrangementComplete = (content: string, queryType?: string
   
   if (!hasTradingMention) return true; // Not a trading arrangement response
   
+  // Check if query type is among those covered by the trading arrangements guide
+  const isGuideCoveredAction = GUIDE_COVERED_ACTIONS.includes(queryType);
+  
+  // If not a guide-covered action, no special completeness check needed
+  if (!isGuideCoveredAction) return true;
+  
   // For specific corporate actions, check for expected elements
   switch(queryType) {
     case 'rights_issue':
@@ -42,4 +49,23 @@ export const isTradingArrangementComplete = (content: string, queryType?: string
     default:
       return true; // For unknown types, assume complete
   }
+};
+
+/**
+ * Checks if response properly references the trading arrangements guide
+ * @param content Response content
+ * @param queryType Type of financial query
+ * @returns Boolean indicating if guide is properly referenced
+ */
+export const hasProperGuideReference = (content: string, queryType?: string): boolean => {
+  if (!content || !queryType || !GUIDE_COVERED_ACTIONS.includes(queryType)) {
+    return true; // Not applicable for non-guide actions
+  }
+  
+  const normalizedContent = content.toLowerCase();
+  
+  // Check for guide reference
+  return normalizedContent.includes('guide on trading arrangement') || 
+         normalizedContent.includes('trading arrangements guide') || 
+         normalizedContent.includes('hkex guide');
 };

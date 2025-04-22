@@ -1,7 +1,7 @@
 
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { responseOptimizer } from '../modules/responseOptimizer';
-import { REGULATORY_FRAMEWORKS, EXECUTION_TIMELINES } from '../../constants/financialConstants';
+import { REGULATORY_FRAMEWORKS, EXECUTION_TIMELINES, REGULATORY_AUTHORITIES, GUIDE_COVERED_ACTIONS, CORPORATE_ACTION_GUIDES } from '../../constants/financialConstants';
 
 /**
  * Builds appropriate API requests based on query type and context
@@ -61,6 +61,45 @@ export const requestBuilder = {
       "3. Offer timeline: " + EXECUTION_TIMELINES.TAKEOVERS_CODE.OFFER_TIMELINE + "\n\n" +
       
       "CRITICAL: Takeover offers are about acquisition of control, not capital raising. Open offers are about capital raising, not acquisition of control. These are completely different regulatory concepts governed by different regulatory frameworks. Regulated by: " + REGULATORY_AUTHORITIES.TAKEOVERS_CODE;
+    }
+    
+    // Add specific instructions for corporate actions covered by the trading arrangements guide
+    if (GUIDE_COVERED_ACTIONS.includes(queryType)) {
+      let guideReference = "";
+      switch (queryType) {
+        case 'rights_issue':
+          guideReference = CORPORATE_ACTION_GUIDES.RIGHTS_ISSUE;
+          break;
+        case 'open_offer':
+          guideReference = CORPORATE_ACTION_GUIDES.OPEN_OFFER;
+          break;
+        case 'share_consolidation':
+          guideReference = CORPORATE_ACTION_GUIDES.SHARE_CONSOLIDATION;
+          break;
+        case 'board_lot_change':
+          guideReference = CORPORATE_ACTION_GUIDES.BOARD_LOT_CHANGE;
+          break;
+        case 'company_name_change':
+          guideReference = CORPORATE_ACTION_GUIDES.COMPANY_NAME_CHANGE;
+          break;
+      }
+      
+      systemMessage += "\n\nCRITICAL INSTRUCTION FOR TRADING ARRANGEMENTS: When discussing trading arrangements for this corporate action, you MUST follow the \"Guide on Trading Arrangements for Selected Types of Corporate Actions\" issued by HKEX. This guide specifically covers:\n" +
+      "1. Rights issues\n" +
+      "2. Open offers\n" +
+      "3. Share consolidations or sub-divisions\n" +
+      "4. Changes in board lot size\n" +
+      "5. Changes of company name or addition of Chinese name\n\n" +
+      
+      "REFERENCE: " + guideReference + "\n\n" +
+      
+      "EXECUTION PROCESS FOR THIS CORPORATE ACTION:\n" +
+      "1. Pre-announcement phase: " + EXECUTION_TIMELINES.LISTING_RULES.PRE_ANNOUNCEMENT + "\n" +
+      "2. Circular preparation phase: " + EXECUTION_TIMELINES.LISTING_RULES.CIRCULAR_PREPARATION + "\n" +
+      "3. Shareholders' approval as required by Listing Rules\n" +
+      "4. Implementation of trading timetable according to the Guide\n\n" +
+      
+      "ENSURE COMPLETENESS: Your response MUST include ALL key components of the trading arrangements as specified in the Guide. Always reference the Guide explicitly in your response.";
     }
     
     // Add stronger instructions to use database content

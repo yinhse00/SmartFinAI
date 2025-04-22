@@ -49,7 +49,10 @@ export const REGULATORY_DESCRIPTIONS = {
   OPEN_OFFER: 'A CORPORATE ACTION under Listing Rules Chapter 7, allowing listed companies to issue new shares to existing shareholders for capital raising',
   TAKEOVER_OFFER: 'An acquisition mechanism governed by the Takeovers Code, involving mandatory or voluntary offers to acquire company shares',
   RIGHTS_ISSUE: 'A capital-raising corporate action under Listing Rules where existing shareholders are given the right to subscribe for new shares',
-  WHITEWASH_WAIVER: 'A specific waiver under the Takeovers Code that exempts parties from making a mandatory general offer obligation'
+  WHITEWASH_WAIVER: 'A specific waiver under the Takeovers Code that exempts parties from making a mandatory general offer obligation',
+  SHARE_CONSOLIDATION: 'A corporate action under Listing Rules where multiple shares are combined into fewer shares with higher value',
+  BOARD_LOT_CHANGE: 'A corporate action under Listing Rules where the standard trading unit (board lot) of shares is changed',
+  COMPANY_NAME_CHANGE: 'A corporate action under Listing Rules where a listed company changes its registered name'
 };
 
 /**
@@ -65,7 +68,7 @@ export const REGULATORY_FRAMEWORKS = {
  * Framework-specific terminology to avoid confusion
  */
 export const FRAMEWORK_TERMINOLOGY = {
-  LISTING_RULES: ['open offer', 'rights issue', 'corporate action', 'capital raising', 'chapter 7'],
+  LISTING_RULES: ['open offer', 'rights issue', 'corporate action', 'capital raising', 'chapter 7', 'share consolidation', 'board lot change', 'company name change'],
   TAKEOVERS_CODE: ['general offer', 'takeover offer', 'mandatory offer', 'voluntary offer', 'rule 26']
 };
 
@@ -94,3 +97,27 @@ export const REGULATORY_AUTHORITIES = {
   LISTING_RULES: 'Stock Exchange of Hong Kong Limited (HKEX)',
   TAKEOVERS_CODE: 'Securities and Futures Commission (SFC)'
 };
+
+/**
+ * Corporate action trading arrangement guides
+ * References to specific HKEX guides for different corporate actions
+ */
+export const CORPORATE_ACTION_GUIDES = {
+  RIGHTS_ISSUE: 'Guide on Trading Arrangements for Selected Types of Corporate Actions (Rights Issue)',
+  OPEN_OFFER: 'Guide on Trading Arrangements for Selected Types of Corporate Actions (Open Offer)',
+  SHARE_CONSOLIDATION: 'Guide on Trading Arrangements for Selected Types of Corporate Actions (Share Consolidation/Sub-division)',
+  BOARD_LOT_CHANGE: 'Guide on Trading Arrangements for Selected Types of Corporate Actions (Change in Board Lot Size)',
+  COMPANY_NAME_CHANGE: 'Guide on Trading Arrangements for Selected Types of Corporate Actions (Change of Company Name)'
+};
+
+/**
+ * Corporate action types covered by the trading arrangements guide
+ */
+export const GUIDE_COVERED_ACTIONS = [
+  'rights_issue',
+  'open_offer',
+  'share_consolidation',
+  'board_lot_change',
+  'company_name_change'
+];
+
