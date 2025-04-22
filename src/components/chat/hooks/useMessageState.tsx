@@ -4,7 +4,7 @@ import { Message } from '../ChatMessage';
 
 const INITIAL_MESSAGE: Message = {
   id: '1',
-  content: "Hello! I'm your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?",
+  content: "Hello! I'm your Hong Kong financial regulatory expert. How can I assist you today?",
   sender: 'bot',
   timestamp: new Date(),
 };
