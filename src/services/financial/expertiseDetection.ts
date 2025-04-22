@@ -1,4 +1,3 @@
-
 export function isSimpleConversationalQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase().trim();
   
@@ -74,4 +73,37 @@ export function isSimpleConversationalQuery(prompt: string): boolean {
   
   // If the query doesn't contain any financial terms, consider it conversational
   return !financialTerms.some(term => lowerPrompt.includes(term));
+}
+
+export function detectFinancialExpertiseArea(query: string): string {
+  const lowerQuery = query.toLowerCase();
+  
+  // Check for connected transactions and persons
+  if (lowerQuery.includes('connected person') || 
+      lowerQuery.includes('connected transaction') ||
+      lowerQuery.includes('chapter 14a')) {
+    return 'connected_transactions';
+  }
+  
+  // Check for rights issue related queries
+  if (lowerQuery.includes('rights issue')) {
+    return 'rights_issue';
+  }
+  
+  // Check for listing rules
+  if (lowerQuery.includes('listing rule') || 
+      lowerQuery.includes('chapter') ||
+      /rule\s+\d+/.test(lowerQuery)) {
+    return 'listing_rules';
+  }
+  
+  // Check for takeovers code
+  if (lowerQuery.includes('takeover') || 
+      lowerQuery.includes('whitewash') ||
+      lowerQuery.includes('mandatory offer')) {
+    return 'takeovers_code';
+  }
+  
+  // Default to general if no specific area is detected
+  return 'general';
 }
