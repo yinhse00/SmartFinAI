@@ -1,14 +1,15 @@
+import React from 'react';
 
 /**
  * Constants for token limits across different query types and scenarios
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 4000,
-  RETRY: 6000,
-  RIGHTS_ISSUE_TIMETABLE: 5000,
-  DEFINITION_QUERY: 4500,
-  CONNECTED_TRANSACTION: 4500,
-  SIMPLE_QUERY: 2000,
+  DEFAULT: 500000,  // Increased from 4000
+  RETRY: 600000,    // Increased from 6000
+  RIGHTS_ISSUE_TIMETABLE: 550000,  // Increased from 5000
+  DEFINITION_QUERY: 500000,  // Increased from 4500
+  CONNECTED_TRANSACTION: 500000,  // Increased from 4500
+  SIMPLE_QUERY: 300000,  // Increased from 2000
 } as const;
 
 /**
