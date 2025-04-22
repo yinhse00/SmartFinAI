@@ -1,22 +1,10 @@
 /**
  * Determine optimal temperature setting based on query type and content
  */
+import { tokenManagementService } from '../response/modules/tokenManagementService';
+
 export function determineOptimalTemperature(queryType: string, prompt: string): number {
-  // For factual regulatory matters, use lower temperature
-  if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 0.01; // Keep very precise setting for timetables
-  }
-  
-  if (['listing_rules', 'takeovers_code'].includes(queryType)) {
-    return 0.05; // Further reduced from 0.15 to 0.05 for rule interpretations to ensure database accuracy
-  }
-  
-  if (prompt.toLowerCase().includes('example') || prompt.toLowerCase().includes('template')) {
-    return 0.1; // Reduced from 0.3 to 0.1 for more consistent examples
-  }
-  
-  // Default for general inquiries
-  return 0.1; // Reduced from 0.2 to 0.1 to prioritize database content over creative generation
+  return tokenManagementService.getTemperature({ queryType, prompt });
 }
 
 /**
@@ -24,16 +12,7 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
  * Production-safe implementation with conservative limits
  */
 export function determineOptimalTokens(queryType: string, prompt: string): number {
-  if (queryType === 'rights_issue' && prompt.toLowerCase().includes('timetable')) {
-    return 9000; // Increased from 3000
-  }
-  
-  if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('detail')) {
-    return 7500; // Increased from 2500
-  }
-  
-  // Default token count - increased for production stability
-  return 6000; // Increased from 2000
+  return tokenManagementService.getTokenLimit({ queryType, prompt });
 }
 
 /**
