@@ -32,7 +32,7 @@ export const connectionTester = {
         const headResponse = await fetch('https://api.grok.ai', {
           method: 'HEAD',
           signal: controller.signal,
-          credentials: 'omit', // Avoid CORS preflight
+          credentials: 'omit' as RequestCredentials, // Fix type
           mode: 'no-cors'     // Try with no-cors mode
         });
         
@@ -56,7 +56,7 @@ export const connectionTester = {
             headers: {
               'Origin': window.location.origin
             },
-            credentials: 'omit'
+            credentials: 'omit' as RequestCredentials // Fix type
           });
           
           clearTimeout(timeoutId);
@@ -93,7 +93,7 @@ export const connectionTester = {
             },
             body: JSON.stringify(testRequest),
             signal: controller.signal,
-            credentials: 'omit'
+            credentials: 'omit' as RequestCredentials // Fix type
           });
           
           clearTimeout(timeoutId);

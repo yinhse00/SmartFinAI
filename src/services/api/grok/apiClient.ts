@@ -43,10 +43,10 @@ export const apiClient = {
         body: JSON.stringify(requestBody)
       };
       
-      // Config variations to try
+      // Config variations to try - fix credentials type to use proper RequestCredentials values
       return [
         // Standard config with all headers
-        { ...baseConfig, credentials: 'omit' },
+        { ...baseConfig, credentials: 'omit' as RequestCredentials },
         
         // Config with minimal headers (may help with CORS)
         { 
@@ -56,7 +56,7 @@ export const apiClient = {
             'Authorization': `Bearer ${apiKey}`
           },
           body: JSON.stringify(requestBody),
-          credentials: 'omit'
+          credentials: 'omit' as RequestCredentials
         }
       ];
     };
