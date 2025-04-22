@@ -16,18 +16,9 @@ export const tradingArrangementsService = {
     if (isCorporateAction) {
       console.log('Identified as corporate action trading arrangement query');
       
-      // CRITICAL: First try searching specifically for the guide document in the "Others" category
-      tradingArrangementsResults = await searchService.search(
-        "Guide on Trading Arrangements for Selected Types of Corporate Actions", 
-        "others"
-      );
-      console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement guide documents from "Others" category`);
-      
-      // Direct search for Trading Arrangement guide by title if not found in "Others"
-      if (tradingArrangementsResults.length === 0) {
-        tradingArrangementsResults = await searchService.searchByTitle("Guide on Trading Arrangements");
-        console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
-      }
+      // Direct search for Trading Arrangement guide by title
+      tradingArrangementsResults = await searchService.searchByTitle("Guide on Trading Arrangements");
+      console.log(`Found ${tradingArrangementsResults.length} Trading Arrangement documents by title search`);
       
       // If title search didn't yield results, try content search
       if (tradingArrangementsResults.length === 0) {
@@ -64,27 +55,15 @@ export const tradingArrangementsService = {
       const corporateActionType = extractCorporateActionType(query.toLowerCase());
       
       if (corporateActionType) {
-        // CRITICAL: First check in "Others" category for guide documents
-        timetableResults = await searchService.search(`${corporateActionType} timetable guide on trading arrangements`, 'others');
-        console.log(`Found ${timetableResults.length} results from "Others" category using '${corporateActionType} timetable' keyword`);
-        
-        // If no results from "Others", try listing_rules
-        if (timetableResults.length === 0) {
-          timetableResults = await searchService.search(`${corporateActionType} timetable`, 'listing_rules');
-          console.log(`Found ${timetableResults.length} results from "listing_rules" using '${corporateActionType} timetable' keyword`);
-        }
+        // Search for timetable info for specific corporate action
+        timetableResults = await searchService.search(`${corporateActionType} timetable`, 'listing_rules');
+        console.log(`Found ${timetableResults.length} results using '${corporateActionType} timetable' keyword`);
       }
       
       // If no specific results, default to rights issue timetable
       if (timetableResults.length === 0) {
-        // Try "Others" category first
-        timetableResults = await searchService.search('rights issue timetable guide on trading arrangements', 'others');
-        
-        // If no results, try listing_rules
-        if (timetableResults.length === 0) {
-          timetableResults = await searchService.search('rights issue timetable', 'listing_rules');
-          console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
-        }
+        timetableResults = await searchService.search('rights issue timetable', 'listing_rules');
+        console.log(`Found ${timetableResults.length} results using 'rights issue timetable' keyword`);
       }
     }
     
@@ -131,8 +110,8 @@ export const tradingArrangementsService = {
       enhancedResults.push({
         id: 'fallback-rights-issue-timetable',
         title: "Rights Issue Timetable",
-        source: "Guide on Trading Arrangements for Selected Types of Corporate Actions",
-        content: "Rights issue timetables typically follow a structured timeline from announcement to dealing day. Key dates include record date, PAL dispatch, rights trading period, and acceptance deadline. Refer to the Guide on Trading Arrangements for Selected Types of Corporate Actions for standardized timetables.",
+        source: "Listing Rules Chapter 10",
+        content: "Rights issue timetables typically follow a structured timeline from announcement to dealing day. Key dates include record date, PAL dispatch, rights trading period, and acceptance deadline.",
         category: "listing_rules",
         lastUpdated: new Date(),
         status: 'active'

@@ -1,3 +1,4 @@
+
 // Trading arrangement templates for different corporate actions
 export const TRADING_ARRANGEMENTS = {
   RIGHTS_ISSUE: `# Complete Execution Timetable for Rights Issue (Listing Rules)
@@ -36,7 +37,7 @@ Notes:
 - Rights issues may require shareholders' approval if they would increase issued shares by more than 50% (Rule 7.19A)
 - Final timetables must be approved by HKEX before announcement`,
 
-  OPEN_OFFER: `# Complete Execution Timetable for Open Offer (Listing Rules)
+  OPEN_OFFER: `# Complete Execution Timetable for Open Offer (Listing Rules - Corporate Action)
 
 ## Pre-Announcement Phase
 | Timeline | Step | Description |
@@ -51,7 +52,7 @@ Notes:
 | Day 1 to 10 | Preparation of Circular | Drafting of circular with details of open offer |
 | Day 11 to 30 | HKEX Vetting of Circular | Stock Exchange review (5-20 business days depending on complexity) |
 | Day 31 | Circular Publication | Dispatch of circular to shareholders |
-| Day 45-52 | Shareholders' Meeting | EGM for shareholders' approval (if required under Rule 7.24) |
+| Day 45-52 | Shareholders' Meeting | EGM for shareholders' approval (if required) |
 | Day 45-52 | Results Announcement | Announcement of EGM results (same day as meeting) |
 
 ## Trading and Execution Phase
@@ -65,12 +66,11 @@ Notes:
 | T+21 | New Shares Listing | Dealing in new shares commences |
 
 Notes:
-- CRITICAL DISTINCTION: Open offers are CORPORATE ACTIONS regulated under Listing Rules Chapter 7 for capital-raising
+- CRITICAL: Open offers are CORPORATE ACTIONS regulated under Listing Rules Chapter 7 for capital-raising
 - Unlike rights issues, there is NO trading in nil-paid rights for open offers
 - Only one market exists during the open offer period - existing shares (ex-entitlement)
-- Open offers require shareholders' approval if they would increase issued shares by more than 50% (Rule 7.24)
+- Open offers may require shareholders' approval if they would increase issued shares by more than 50% (Rule 7.24)
 - Open offers cannot be made at a price discount of 20% or more to the benchmarked price without specific waiver
-- Open offers with excess applications must comply with Rule 7.26A (fair basis allocation)
 - Final timetables must be approved by HKEX before announcement`,
 
   GENERAL_OFFER: `# Complete Execution Timetable for Offer under Takeovers Code

@@ -29,9 +29,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
+            {/* Redirect home to chat */}
             <Route path="/" element={<Navigate to="/chat" replace />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/references" element={<References />} />
+            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

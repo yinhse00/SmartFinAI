@@ -11,7 +11,7 @@ interface TypingAnimationProps {
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({ 
   text, 
-  speed = 1, // Restored to original super fast typing speed
+  speed = 1, // Super fast typing speed (1ms per character)
   className = "", 
   onComplete,
   onProgress

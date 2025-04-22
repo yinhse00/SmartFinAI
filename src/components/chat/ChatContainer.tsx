@@ -30,13 +30,13 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   retryLastQuery
 }) => {
   return (
-    <Card className="finance-card h-full flex flex-col w-full max-w-4xl mx-auto"> {/* Increased max width and centered */}
+    <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
       <CardContent 
-        className="flex-1 p-0 overflow-auto max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
+        className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
       >
         <ChatHistory 
           messages={messages} 

@@ -83,9 +83,7 @@ const Chat = () => {
 
   return (
     <MainLayout>
-      <div className="space-y-6">
-        <ChatInterface />
-      </div>
+      <ChatInterface />
     </MainLayout>
   );
 };
