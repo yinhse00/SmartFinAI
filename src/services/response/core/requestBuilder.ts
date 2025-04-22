@@ -1,4 +1,3 @@
-
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { responseOptimizer } from '../modules/responseOptimizer';
 
@@ -16,6 +15,19 @@ export const requestBuilder = {
   ): string => {
     // Create a professional financial system message based on expertise area
     let systemMessage = createFinancialExpertSystemPrompt(queryType, regulatoryContext);
+    
+    // Add specific, comprehensive instructions for Open Offer timetables
+    if (queryType === 'open_offer') {
+      systemMessage += "\n\nSPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
+      "1. Ex-entitlement date\n" +
+      "2. Record date\n" +
+      "3. Acceptance period (start and end dates)\n" +
+      "4. Payment date\n" +
+      "5. Explanation of nil-paid rights trading (if applicable)\n" +
+      "6. Specific listing rule references (e.g., Rule 7.19, Chapter 15)\n" +
+      "7. A clear conclusion summarizing the key dates and actions\n\n" +
+      "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.";
+    }
     
     // Add stronger instructions to use database content
     systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the provided database content, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
