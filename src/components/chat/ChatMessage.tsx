@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Lightbulb, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -45,7 +46,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
           }
           setHasAnimated(true);
         }
-      }, 20);
+      }, 4); // Changed from 20 to 4 to make it 5 times faster
 
       return () => clearInterval(typingInterval);
     }
