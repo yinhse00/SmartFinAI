@@ -1,4 +1,3 @@
-
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
@@ -10,7 +9,11 @@ import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
  */
 export const useChatLogic = () => {
   // Use specialized hooks
-  const { messages, setMessages } = useMessageState();
+  const { 
+    messages, 
+    setMessages, 
+    clearConversationMemory 
+  } = useMessageState();
   const { 
     grokApiKeyInput, 
     setGrokApiKeyInput, 
@@ -47,6 +50,7 @@ export const useChatLogic = () => {
     // Message state
     messages,
     setMessages,
+    clearConversationMemory,
     
     // API key state
     grokApiKeyInput,
