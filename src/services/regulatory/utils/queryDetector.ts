@@ -1,4 +1,3 @@
-
 /**
  * Checks if this is a whitewash waiver query
  */

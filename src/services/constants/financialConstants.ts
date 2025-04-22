@@ -4,13 +4,13 @@
  */
 export const FINANCIAL_EXPERTISES = {
   RIGHTS_ISSUE: 'rights_issue',
-  OPEN_OFFER: 'open_offer', // CORPORATE ACTION under Listing Rules (Chapter 7), NOT a takeover
+  OPEN_OFFER: 'open_offer',  // CORPORATE ACTION under Listing Rules (Chapter 7)
   SHARE_CONSOLIDATION: 'share_consolidation',
   BOARD_LOT_CHANGE: 'board_lot_change',
   COMPANY_NAME_CHANGE: 'company_name_change',
   CONNECTED_TRANSACTIONS: 'connected_transaction',
   TAKEOVERS: 'takeovers_code',
-  TAKEOVER_OFFER: 'takeover_offer', // Under Takeovers Code, NOT Listing Rules
+  TAKEOVER_OFFER: 'takeover_offer',  // Under Takeovers Code, NOT Listing Rules
   PROSPECTUS: 'prospectus',
   DISCLOSURE: 'disclosure',
   CIRCULAR: 'circular',
@@ -51,3 +51,4 @@ export const REGULATORY_DESCRIPTIONS = {
   RIGHTS_ISSUE: 'A capital-raising corporate action under Listing Rules where existing shareholders are given the right to subscribe for new shares',
   WHITEWASH_WAIVER: 'A specific waiver under the Takeovers Code that exempts parties from making a mandatory general offer obligation'
 };
+
