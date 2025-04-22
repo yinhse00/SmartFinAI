@@ -240,6 +240,3 @@ export const requestBuilder = {
     return { temperature: actualTemperature, maxTokens: safeMaxTokens };
   }
 };
-
-// Import this at the top of the file
-import { REGULATORY_AUTHORITIES } from '../../constants/financialConstants';
