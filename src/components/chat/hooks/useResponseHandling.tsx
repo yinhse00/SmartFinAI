@@ -42,12 +42,17 @@ export const useResponseHandling = (
       // Determine if this is a simple query
       const isSimpleQuery = isQuerySimple(queryText);
       
-      // FIXED: Apply conservative token limits for consistency across environments
+      // Apply very conservative token limits to avoid truncation
       const enhancedParams = {
         ...responseParams,
-        temperature: Math.min(0.3, responseParams.temperature || 0.3),
-        maxTokens: Math.min(1500, responseParams.maxTokens || 1500)
+        temperature: Math.min(0.2, responseParams.temperature || 0.2), // Lower temperature
+        maxTokens: Math.min(1000, responseParams.maxTokens || 1000)    // Much lower token limit
       };
+      
+      // Add instructions to prioritize completeness
+      if (enhancedParams.prompt) {
+        enhancedParams.prompt += " IMPORTANT: Provide a concise but COMPLETE response. Prioritize including all key information rather than details.";
+      }
       
       // Log environment info
       const isProduction = !window.location.href.includes('localhost') && 
@@ -67,7 +72,7 @@ export const useResponseHandling = (
         return errorMessage;
       }
       
-      // FIXED: Use consistent fallback detection across environments
+      // Use consistent fallback detection
       const isUsingFallback = isFallbackResponse(apiResponse.text);
       
       // Better debug logging
@@ -78,7 +83,7 @@ export const useResponseHandling = (
         hasBackupMetadata: apiResponse.metadata && apiResponse.metadata.isBackupResponse
       });
       
-      // FIXED: Apply consistent fallback handling
+      // Apply consistent fallback handling
       if (isUsingFallback) {
         console.log("Fallback response detected");
         handleFallbackResponse(isGrokApiKeySet);
@@ -101,7 +106,7 @@ export const useResponseHandling = (
       
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
       
-      // FIXED: Always show the partial response with proper truncation marking
+      // Always show the partial response with proper truncation marking
       if (!completenessCheck.isComplete) {
         console.log("Response appears incomplete, marking as truncated");
         
@@ -115,10 +120,13 @@ export const useResponseHandling = (
           }
         };
         
+        // Add truncation notice directly to the response
+        apiResponse.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Retry with higher limits' button for a more complete answer.]";
+        
         // Show toast but always display the partial response
         toast({
           title: "Partial Response Available",
-          description: "The complete answer is not available. Showing partial information.",
+          description: "The complete answer is not available. Showing partial information with retry option.",
           duration: 8000,
         });
       }

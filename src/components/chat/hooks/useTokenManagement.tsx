@@ -5,7 +5,8 @@ import { GrokResponse } from '@/types/grok';
  * Hook for managing token limits and parameters for API requests
  */
 export const useTokenManagement = () => {
-  const MAX_TOKENS = 4000;  // Reasonable maximum token limit
+  // Lower maximum token limit to ensure complete responses
+  const MAX_TOKENS = 3000;  // Reduced from 4000 for better reliability
   
   const enhanceTokenLimits = (
     queryText: string,
@@ -13,10 +14,10 @@ export const useTokenManagement = () => {
     isSimpleQuery: boolean,
     isAggregationQuery: boolean
   ) => {
-    // Use conservative multipliers
-    const baseTokenMultiplier = isSimpleQuery ? 1.2 : 1.5;
+    // Use more conservative multipliers to avoid truncation
+    const baseTokenMultiplier = isSimpleQuery ? 1.0 : 1.2; // Reduced from 1.2/1.5
     
-    // Calculate tokens with a safe maximum
+    // Calculate tokens with a safer maximum
     const calculatedTokens = Math.min(
       responseParams.maxTokens * baseTokenMultiplier, 
       MAX_TOKENS
@@ -29,14 +30,14 @@ export const useTokenManagement = () => {
         queryText.toLowerCase().includes('aggregate') || 
         queryText.toLowerCase().includes('within 12 months')) {
       
-      responseParams.prompt += " Ensure a comprehensive explanation of the aggregation requirements.";
+      responseParams.prompt += " Ensure a comprehensive but concise explanation of the aggregation requirements.";
       
-      // Slightly increase max tokens for complex queries, but still within limits
-      responseParams.maxTokens = Math.min(responseParams.maxTokens * 1.2, MAX_TOKENS);
+      // Use same token limit but prioritize conciseness
+      responseParams.prompt += " Focus on clarity and brevity while covering all key points.";
     }
     
-    // Add completion instruction to all prompts
-    responseParams.prompt += " Provide a complete response with necessary details.";
+    // Add completion instruction to all prompts with emphasis on completeness
+    responseParams.prompt += " Provide a complete response with necessary details. Be concise and prioritize completeness over verbosity.";
     
     return responseParams;
   };

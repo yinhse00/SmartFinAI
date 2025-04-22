@@ -3,8 +3,8 @@ import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 
-// Maximum token limit from Grok API docs
-const MAX_TOKEN_LIMIT = 131072;
+// Lower maximum token limit from Grok API for better reliability
+const MAX_TOKEN_LIMIT = 2500; // Reduced from 131072 to ensure complete responses
 
 /**
  * Core response generation functionality
@@ -15,11 +15,11 @@ export const responseGeneratorCore = {
    */
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      console.log("Making primary API call with standard parameters");
+      console.log("Making primary API call with conservative parameters");
       
-      // Check if max_tokens exceeds limit
+      // Enforce lower token limit to avoid truncation
       if (requestBody.max_tokens && requestBody.max_tokens > MAX_TOKEN_LIMIT) {
-        console.log(`Requested ${requestBody.max_tokens} tokens exceeds limit of ${MAX_TOKEN_LIMIT}, capping at limit`);
+        console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${MAX_TOKEN_LIMIT}, capping at limit`);
         requestBody.max_tokens = MAX_TOKEN_LIMIT;
       }
       
@@ -49,7 +49,7 @@ export const responseGeneratorCore = {
         ],
         model: "grok-3-mini-beta",
         temperature: 0.2,  // Lower temperature for more predictable responses
-        max_tokens: Math.min(10000, MAX_TOKEN_LIMIT)    // Ensure within token limit
+        max_tokens: 1500    // Much lower token limit to ensure complete responses
       };
       
       // Add a short delay before the retry to prevent rate limiting issues
@@ -67,7 +67,7 @@ export const responseGeneratorCore = {
         // Ultra-simplified request with minimal parameters
         const ultraSimplifiedRequest = {
           messages: [
-            { role: 'user', content: `Briefly: ${prompt.substring(0, 100)}` }
+            { role: 'user', content: `Briefly summarize: ${prompt.substring(0, 50)}` }
           ],
           model: "grok-3-mini-beta",
           temperature: 0.1,
