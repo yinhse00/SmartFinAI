@@ -11,6 +11,9 @@ const API_ENDPOINTS = [
   'https://api.x.ai/v1/chat/completions'
 ];
 
+// Local proxy endpoint if available
+const LOCAL_PROXY = '/api/grok';
+
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
     const apiKey = providedApiKey || getGrokApiKey();
@@ -37,44 +40,65 @@ export const apiClient = {
     
     const userPrompt = requestBody.messages.find(msg => msg.role === 'user')?.content || '';
     
-    // Prepare multiple request configurations to try
-    // This allows us to attempt different approaches that might work around CORS or network issues
-    const createRequestConfigs = () => {
-      const baseConfig = {
+    // First try using the local proxy if available
+    try {
+      console.log("Attempting API call via local proxy");
+      const proxyResponse = await fetch(LOCAL_PROXY, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'Origin': window.location.origin,
-          'X-Requested-With': 'XMLHttpRequest'
+          'Authorization': `Bearer ${apiKey}`
         },
-        body: JSON.stringify(requestBody)
-      };
+        body: JSON.stringify(requestBody),
+        credentials: 'same-origin' as RequestCredentials
+      });
       
-      // Config variations to try - fix credentials type to use proper RequestCredentials values
-      return [
-        // Standard config with all headers
-        { ...baseConfig, credentials: 'omit' as RequestCredentials },
-        
-        // Config with minimal headers (may help with CORS)
-        { 
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`
-          },
-          body: JSON.stringify(requestBody),
-          credentials: 'omit' as RequestCredentials
-        }
-      ];
-    };
+      if (proxyResponse.ok) {
+        const data = await proxyResponse.json();
+        console.log("Financial expert API response received successfully via proxy");
+        return data;
+      } else {
+        console.log("Proxy request failed with status:", proxyResponse.status);
+        // Continue with direct requests
+      }
+    } catch (proxyError) {
+      console.log("Proxy request failed:", proxyError);
+      // Continue with direct requests
+    }
     
     while (retries <= maxRetries) {
       try {
         // Use multiple potential API endpoints
         let response = null;
         let endpointError = null;
-        const requestConfigs = createRequestConfigs();
+        
+        // Create request configurations to try - proper RequestCredentials type
+        const requestConfigs = [
+          // Standard config with all headers
+          { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`,
+              'Origin': window.location.origin,
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'omit' as RequestCredentials
+          },
+          
+          // Config with minimal headers (may help with CORS)
+          { 
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify(requestBody),
+            credentials: 'omit' as RequestCredentials,
+            mode: 'no-cors' as RequestMode
+          }
+        ];
         
         // Try each endpoint with each request configuration
         for (const apiEndpoint of API_ENDPOINTS) {
@@ -117,7 +141,11 @@ export const apiClient = {
           attempt: retries,
           errorType: error instanceof Error ? error.name : "Unknown",
           errorMsg: error instanceof Error ? error.message : String(error),
-          isAbortError: error instanceof DOMException && error.name === "AbortError"
+          isAbortError: error instanceof DOMException && error.name === "AbortError",
+          isCorsError: error instanceof Error && 
+            (error.message.includes('CORS') || 
+             error.message.includes('Failed to fetch') ||
+             error.message.includes('NetworkError'))
         });
         
         if (retries <= maxRetries) {

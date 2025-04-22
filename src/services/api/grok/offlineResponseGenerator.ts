@@ -23,10 +23,11 @@ export const offlineResponseGenerator = {
       errorMessage.includes('CORS') || 
       errorMessage.includes('origin') ||
       errorMessage.includes('cross') ||
-      errorMessage.includes('Access-Control');
+      errorMessage.includes('Access-Control') ||
+      errorMessage.includes('Failed to fetch') || // Common CORS-related error
+      errorMessage.includes('Load failed'); // Common browser CORS error
       
     const isNetworkError =
-      errorMessage.includes('Failed to fetch') ||
       errorMessage.includes('network') ||
       errorMessage.includes('Network Error') ||
       errorMessage.includes('timeout') ||
@@ -44,8 +45,16 @@ export const offlineResponseGenerator = {
     let troubleshootingTips = "";
     
     if (isCorsError) {
-      diagnosisMessage = "This appears to be a CORS (Cross-Origin Resource Sharing) issue. The API server is not allowing requests from this domain.";
-      troubleshootingTips = "Try using a CORS proxy service or accessing this application from a different network environment. The Grok API may have restrictions on which domains can access it directly from browsers.";
+      diagnosisMessage = "This appears to be a CORS (Cross-Origin Resource Sharing) issue. Your browser is preventing direct API access due to security restrictions.";
+      troubleshootingTips = `
+The Grok API cannot be accessed directly from a browser due to CORS restrictions. This is a common security measure for APIs. To fix this, you would need:
+
+1. A backend server to make API calls on your behalf
+2. A proxy service that handles CORS for you
+3. The API provider to specifically allow your domain by updating their CORS policy
+
+Currently, the application is handling this gracefully by showing this offline mode message instead of breaking completely.
+`;
     } else if (isNetworkError) {
       diagnosisMessage = "This appears to be a network connectivity issue.";
       troubleshootingTips = "Please check your internet connection and ensure that there are no firewall or proxy settings blocking access to the Grok API endpoints. If you're on a corporate network, VPN, or using browser privacy extensions, try disabling them temporarily.";
