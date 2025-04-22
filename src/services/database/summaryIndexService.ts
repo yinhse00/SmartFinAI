@@ -16,6 +16,7 @@ interface SummaryIndexEntry {
   summary: string;
   sourceId: string;
   category: string;
+  sourceFile?: string; // Source file name used for specific file search
 }
 
 // In-memory database of summary entries for faster lookup
@@ -105,6 +106,65 @@ export const summaryIndexService = {
   },
   
   /**
+   * Find relevant summary by specific file name
+   * This supports the new sequential search workflow
+   */
+  findRelevantSummaryByFile: async (query: string, fileName: string): Promise<{
+    found: boolean;
+    context?: string;
+    sourceIds?: string[];
+  }> => {
+    console.log(`Searching Summary Index for "${query}" in file: ${fileName}`);
+    
+    // Ensure summary index is initialized
+    if (summaryIndexDatabase.length === 0) {
+      await summaryIndexService.initializeSummaryIndex();
+    }
+    
+    // Extract key terms from query
+    const queryTerms = extractKeyTerms(query.toLowerCase());
+    
+    // Find entries that are from the specified file and match query terms
+    const matches = summaryIndexDatabase.filter(entry => {
+      // Check if entry is from the specified file
+      const isFromTargetFile = entry.sourceFile === fileName || 
+                              entry.title.includes(fileName) ||
+                              entry.title.includes(fileName.replace('.docx', ''));
+      
+      // If not from target file, skip
+      if (!isFromTargetFile) return false;
+      
+      // Check if any query terms match the keywords
+      return entry.keywords.some(keyword => 
+        queryTerms.some(term => keyword.includes(term))
+      );
+    });
+    
+    if (matches.length > 0) {
+      console.log(`Found ${matches.length} relevant entries in file "${fileName}"`);
+      
+      // Sort matches by relevance (number of keyword matches)
+      const sortedMatches = matches.sort((a, b) => {
+        const aMatchCount = countMatches(a.keywords, queryTerms);
+        const bMatchCount = countMatches(b.keywords, queryTerms);
+        return bMatchCount - aMatchCount;
+      });
+      
+      // Get the original entries from the database
+      const sourceIds = sortedMatches.map(match => match.sourceId);
+      
+      // Return source IDs without loading full content yet
+      return {
+        found: true,
+        sourceIds
+      };
+    }
+    
+    console.log(`No matches found in file "${fileName}"`);
+    return { found: false };
+  },
+  
+  /**
    * Add a new entry to the summary index
    */
   addToSummaryIndex: (entry: RegulatoryEntry): void => {
@@ -128,13 +188,17 @@ function generateSummaryEntry(entry: RegulatoryEntry): SummaryIndexEntry {
   // Generate a brief summary (first 200 characters)
   const summary = entry.content.substring(0, 200) + '...';
   
+  // Determine if this is from a summary index file
+  const sourceFile = entry.title.includes('Summary and Keyword Index') ? entry.title : undefined;
+  
   return {
     id: `summary-${entry.id}`,
     title: entry.title,
     keywords: allKeywords,
     summary,
     sourceId: entry.id,
-    category: entry.category
+    category: entry.category,
+    sourceFile
   };
 }
 

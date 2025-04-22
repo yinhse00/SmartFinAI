@@ -11,167 +11,101 @@ import { tradingArrangementsService } from './tradingArrangementsService';
 import { aggregationSearchService } from './aggregationSearchService';
 import { fallbackService } from './fallbackService';
 import { contextFormatter } from './contextFormatter';
+import { summaryIndexService } from '../../database/summaryIndexService';
 
 /**
  * Orchestrates the search process across multiple specialized services
+ * following the revised sequential search workflow
  */
 export const contextSearchOrchestrator = {
   /**
-   * Execute comprehensive search strategy across all specialized services
+   * Execute comprehensive search strategy following defined workflow sequence
    */
   executeComprehensiveSearch: async (query: string) => {
     try {
-      console.group('Orchestrating Comprehensive Financial Search');
+      console.group('Orchestrating Sequential Financial Search');
       console.log('Original Query:', query);
       
-      // Check if this might be FAQ related
-      const isFaqQuery = query.toLowerCase().includes('faq') || 
-                         query.toLowerCase().includes('continuing obligation') ||
-                         Boolean(query.match(/\b10\.4\b/));
-                         
-      if (isFaqQuery) {
-        console.log('Detected FAQ/continuing obligations query, prioritizing relevant documents');
-        // Get FAQ documents first
-        const faqResults = await findFAQDocuments(query);
-        
-        if (faqResults.length > 0) {
-          const context = contextFormatter.formatEntriesToContext(faqResults);
-          const reasoning = `This response is based directly on official HKEX documentation from "10.4 FAQ Continuing Obligations" that provides authoritative guidance on the inquiry.`;
-          console.groupEnd();
-          return contextFormatter.createContextResponse(context, reasoning);
-        }
+      let combinedContext = '';
+      let combinedReasoning = '';
+      let searchResults: RegulatoryEntry[] = [];
+      
+      // STEP 1: Send to Grok for initial analysis (this happens at the query processing level)
+      console.log('STEP 1: Initial query analysis completed');
+      
+      // STEP 2 & 3: First check Summary and Keyword Index_Listing Rule
+      console.log('STEP 2 & 3: Checking Summary and Keyword Index_Listing Rule.docx');
+      const listingRulesSummary = await summaryIndexService.findRelevantSummaryByFile(query, 'Summary and Keyword Index_Listing Rule.docx');
+      
+      if (listingRulesSummary.found) {
+        console.log('Found matches in Listing Rules Summary Index');
+        searchResults = [...searchResults, ...await searchService.getEntriesBySourceIds(listingRulesSummary.sourceIds || [])];
       }
       
-      // Fix: Convert to lowercase and include both singular and plural forms
-      const normalizedQuery = query.toLowerCase()
-        .replace('right issue', 'rights issue')  // Common typo fix
-        .replace('rights issues', 'rights issue') // Normalize plural form
-        .replace('right issues', 'rights issue'); // Another common typo
+      // STEP 4: Search relevant files based on Listing Rules summary matches
+      console.log('STEP 4: Searching relevant Listing Rules files');
+      const listingRulesResults = await searchService.search(query, 'listing_rules');
+      searchResults = [...searchResults, ...listingRulesResults];
       
-      // Check if this query is about whitewash waivers specifically
-      const isWhitewashQuery = isWhitewashWaiverQuery(normalizedQuery);
-      if (isWhitewashQuery) {
-        console.log('Identified as whitewash waiver query - specifically searching for related documents');
+      // STEP 5: Check token count (handled at response generation level)
+      console.log('STEP 5: Token count will be checked during response generation');
+      
+      // STEP 6: Check Takeovers Code
+      console.log('STEP 6: Checking Takeovers Code files');
+      const takeoversResults = await takeoversSearchService.findTakeoverDocuments(query);
+      
+      // Add takeovers results to our combined results
+      searchResults = [...searchResults, ...takeoversResults];
+      
+      // STEP 7: Check token count (handled at response generation level)
+      console.log('STEP 7: Token count will be checked during response generation');
+      
+      // STEP 8: Check Summary and Keyword Index_Rule and Guidance.docx
+      console.log('STEP 8: Checking Summary and Keyword Index_Rule and Guidance.docx');
+      const guidanceSummary = await summaryIndexService.findRelevantSummaryByFile(query, 'Summary and Keyword Index_Rule and Guidance.docx');
+      
+      if (guidanceSummary.found) {
+        console.log('Found matches in Guidance Summary Index');
+        searchResults = [...searchResults, ...await searchService.getEntriesBySourceIds(guidanceSummary.sourceIds || [])];
       }
       
-      // Check for specific rule references first - this takes priority
-      const specificRuleResults = await specificRuleSearchService.findSpecificRulesDocuments(normalizedQuery);
-      if (specificRuleResults.length > 0) {
-        console.log(`Found ${specificRuleResults.length} results specifically matching rule references`);
-      }
+      // STEP 9: Search relevant files based on Guidance summary matches
+      console.log('STEP 9: Searching relevant Guidance files');
+      const guidanceResults = await searchService.search(query, 'guidance');
+      searchResults = [...searchResults, ...guidanceResults];
       
-      // For Rule 7.19A aggregation queries, ensure we have that specific rule information
-      const aggregationResults = await aggregationSearchService.findAggregationDocuments(query);
+      // STEP 10: Check token count (handled at response generation level)
+      console.log('STEP 10: Token count will be checked during response generation');
       
-      // Determine if this is a general offer query (takeovers code)
-      const isGeneralOffer = isGeneralOfferQuery(normalizedQuery, isWhitewashQuery);
+      // STEP 11: Prepare final results
+      console.log('STEP 11: Preparing final analysis results');
       
-      // For general offer queries, specifically search for takeovers code documents
-      let takeoversResults: RegulatoryEntry[] = [];
-      if (isGeneralOffer) {
-        takeoversResults = await takeoversSearchService.findGeneralOfferDocuments(normalizedQuery, isWhitewashQuery);
-      }
-      
-      // Check for Trading Arrangement documents for corporate actions
-      const isTradingArrangement = isTradingArrangementQuery(normalizedQuery);
-      const isCorporateAction = isCorporateActionQuery(normalizedQuery);
-      
-      // For trading arrangement queries related to corporate actions, explicitly search for Trading Arrangement documents
-      let tradingArrangementsResults: RegulatoryEntry[] = [];
-      if (isTradingArrangement) {
-        tradingArrangementsResults = await tradingArrangementsService.findTradingArrangementDocuments(normalizedQuery, isCorporateAction);
-      }
-      
-      // Determine the appropriate category based on query content
-      let searchCategory = 'listing_rules'; // Default
-      if (isGeneralOffer) {
-        searchCategory = 'takeovers';
-      }
-      
-      // Regular search in appropriate category
-      let searchResults = await searchService.search(normalizedQuery, searchCategory);
-      console.log(`Found ${searchResults.length} primary results from exact search in ${searchCategory}`);
-      
-      // Start with aggregation results for rights issue aggregation queries
-      if (aggregationResults.length > 0) {
-        searchResults = [...aggregationResults, ...searchResults];
-      }
-      
-      // Add specific rule results (high priority)
-      searchResults = [...specificRuleResults, ...searchResults];
-      
-      // Prioritize results based on query type
-      if (isGeneralOffer) {
-        // For general offer queries, prioritize takeovers results
-        searchResults = [...takeoversResults, ...searchResults];
-      } else {
-        // For other queries, prioritize trading arrangement results if applicable
-        searchResults = [...tradingArrangementsResults, ...searchResults];
-      }
-      
-      // Extract financial terms for search enhancement
+      // Extract financial terms for relevance sorting
       const financialTerms = extractFinancialTerms(query);
       
-      // If no results, try searching with extracted financial terms
-      if (searchResults.length === 0 || searchResults.length < 2) {
-        const financialTermsQuery = financialTerms.join(' ');
-        const termResults = await searchService.search(financialTermsQuery, searchCategory);
-        console.log(`Found ${termResults.length} results using financial terms in ${searchCategory}`);
-        
-        // Combine results if we found some with terms
-        if (termResults.length > 0) {
-          searchResults = [...searchResults, ...termResults];
-        }
-      }
-      
-      // If still no results or few results, do a keyword search with key financial terms
-      if (searchResults.length === 0 || searchResults.length < 2) {
-        // Check if query contains timetable references
-        if (query.toLowerCase().includes('timetable') || 
-            query.toLowerCase().includes('schedule') || 
-            query.toLowerCase().includes('timeline')) {
-            
-          const timetableResults = await tradingArrangementsService.findTimetableDocuments(query, isGeneralOffer);
-          searchResults = [...searchResults, ...timetableResults];
-        } else {
-          // General financial term search across all categories
-          const generalResults = await searchService.search(financialTerms[0] || normalizedQuery);
-          console.log(`Found ${generalResults.length} results from broad search`);
-          searchResults = [...searchResults, ...generalResults];
-        }
-      }
-      
-      // Add any necessary fallback documents
-      searchResults = await fallbackService.addFallbackDocumentsIfNeeded(
-        searchResults, 
-        query, 
-        isWhitewashQuery, 
-        isGeneralOffer
-      );
-      
-      // Ensure we have unique results
+      // Remove duplicates from all search results
       const uniqueResults = removeDuplicateResults(searchResults);
       
-      // Combine and prioritize results with financial relevance scoring
+      // Prioritize results by relevance
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
       // Format context with section headings and regulatory citations
       const context = contextFormatter.formatEntriesToContext(prioritizedResults);
       
-      // Generate reasoning that explains why these specific regulations are relevant
-      const reasoning = contextFormatter.generateReasoning(prioritizedResults, query, financialTerms);
+      // Generate reasoning that explains our sequential search process
+      const reasoning = `Analysis conducted following sequential approach: first checked Listing Rules, then Takeovers Code, and finally Interpretation and Guidance documents. Results combined and prioritized by relevance to query "${query}".`;
       
       console.log('Context Length:', context.length);
-      console.log('Reasoning:', reasoning);
+      console.log('Search Workflow Completed');
       console.groupEnd();
       
       return contextFormatter.createContextResponse(context, reasoning);
     } catch (error) {
-      console.error('Error in comprehensive financial search:', error);
+      console.error('Error in sequential financial search:', error);
       console.groupEnd();
       return {
         context: 'Error fetching financial regulatory context',
-        reasoning: 'Unable to search specialized financial database due to an unexpected error.'
+        reasoning: 'Unable to complete the sequential search workflow due to an unexpected error.'
       };
     }
   }

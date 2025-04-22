@@ -1,91 +1,125 @@
 
 import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
-import { getWhitewashWaiverFallbackEntry } from '../fallbacks/whitewashFallback';
 
 /**
- * Service for takeovers and general offer searches
+ * Service for searching takeover code related documents
  */
 export const takeoversSearchService = {
   /**
-   * Find documents related to general offers
+   * Find documents related to general offers in the takeovers code
    */
-  findGeneralOfferDocuments: async (normalizedQuery: string, isWhitewashQuery: boolean): Promise<RegulatoryEntry[]> => {
-    let takeoversResults: RegulatoryEntry[] = [];
-
-    console.log('Identified as general offer query - specifically searching for Takeovers Code documents');
+  findGeneralOfferDocuments: async (query: string, isWhitewashQuery: boolean): Promise<RegulatoryEntry[]> => {
+    console.log(`Searching for general offer documents${isWhitewashQuery ? ' (whitewash related)' : ''}`);
     
-    // First, specifically check for the takeovers and mergers code PDF
-    const takeoversCodeResults = await searchService.searchByTitle("codes on takeovers and mergers and share buy backs");
-    if (takeoversCodeResults.length > 0) {
-      console.log('Found specific "codes on takeovers and mergers and share buy backs.pdf" document');
-      takeoversResults = [...takeoversCodeResults];
-    }
+    // Search in takeovers category
+    const takeoversResults = await searchService.search(query, 'takeovers');
     
-    // Direct search in takeovers category
-    const categoryResults = await searchService.search(normalizedQuery, 'takeovers');
-    console.log(`Found ${categoryResults.length} Takeovers Code documents by category search`);
-    takeoversResults = [...takeoversResults, ...categoryResults];
-    
-    // If direct search didn't yield results, try content search with specific terms
-    if (takeoversResults.length === 0) {
-      takeoversResults = await searchService.search("general offer mandatory takeovers code", "takeovers");
-      console.log(`Found ${takeoversResults.length} results from takeovers keyword search`);
-    }
-    
-    // Special handling for whitewash waiver queries
+    // For whitewash queries, we need to specifically search for whitewash waivers
     if (isWhitewashQuery) {
-      const whitewashResults = await searchService.search("whitewash waiver dealing requirements", "takeovers");
-      console.log(`Found ${whitewashResults.length} whitewash waiver specific results`);
+      const whitewashResults = await searchService.search('whitewash waiver', 'takeovers');
       
-      // Add whitewash-specific documents to results
-      takeoversResults = [...takeoversResults, ...whitewashResults];
+      // Combine results, removing duplicates
+      const combinedResults = [...takeoversResults];
+      
+      for (const whitewashResult of whitewashResults) {
+        if (!combinedResults.some(result => result.id === whitewashResult.id)) {
+          combinedResults.push(whitewashResult);
+        }
+      }
+      
+      console.log(`Found ${combinedResults.length} takeovers code documents related to whitewash waivers`);
+      return combinedResults;
     }
     
+    console.log(`Found ${takeoversResults.length} general offer takeovers code documents`);
     return takeoversResults;
   },
   
   /**
-   * Add whitewash-specific fallback if necessary
+   * Find all takeover documents relevant to the query
+   * Used in the sequential search process
    */
-  addWhitewashFallbackIfNeeded: (results: RegulatoryEntry[], isWhitewashQuery: boolean): RegulatoryEntry[] => {
-    let enhancedResults = [...results];
+  findTakeoverDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
+    console.log('Searching for all relevant takeovers code documents');
     
-    // For whitewash waiver queries, ensure we have dealing requirements information
-    if (isWhitewashQuery && !results.some(result => 
-        result.content.toLowerCase().includes('dealing') && 
-        result.content.toLowerCase().includes('whitewash'))) {
-      console.log("Adding specific whitewash waiver dealing requirements");
-      enhancedResults.push(getWhitewashWaiverFallbackEntry());
+    // Search directly in the takeovers category
+    const takeoversResults = await searchService.search(query, 'takeovers');
+    
+    // Check for specific takeover keywords in the query
+    const takeoversKeywords = [
+      'takeover', 'take over', 'takeovers', 'offer', 'offers', 'offeror', 
+      'offeree', 'mandatory', 'whitewash', 'waiver', 'concert'
+    ];
+    
+    const containsTakeoverKeywords = takeoversKeywords.some(keyword => 
+      query.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    // If the query contains takeover keywords but we didn't find results, do a broader search
+    if (containsTakeoverKeywords && takeoversResults.length === 0) {
+      console.log('Query contains takeover keywords but no results found, doing broader search');
+      
+      // Find relevant takeover rule numbers
+      const relevantRuleNumbers = findRelevantTakeoverRules(query);
+      
+      // If we found relevant rule numbers, search for them specifically
+      if (relevantRuleNumbers.length > 0) {
+        console.log(`Found relevant takeover rule numbers: ${relevantRuleNumbers.join(', ')}`);
+        
+        // Search for each rule number
+        const ruleResults = await Promise.all(
+          relevantRuleNumbers.map(ruleNum => searchService.search(ruleNum, 'takeovers'))
+        );
+        
+        // Flatten the results
+        const flattenedRuleResults = ruleResults.flat();
+        
+        // Combine with previous results
+        const combinedResults = [...takeoversResults];
+        
+        // Add unique entries
+        for (const ruleResult of flattenedRuleResults) {
+          if (!combinedResults.some(result => result.id === ruleResult.id)) {
+            combinedResults.push(ruleResult);
+          }
+        }
+        
+        console.log(`Found ${combinedResults.length} takeovers code documents (including rule numbers)`);
+        return combinedResults;
+      }
     }
     
-    return enhancedResults;
-  },
-  
-  /**
-   * Add general offer timetable fallback if necessary
-   */
-  addGeneralOfferTimetableFallback: (results: RegulatoryEntry[], query: string, isGeneralOffer: boolean): RegulatoryEntry[] => {
-    let enhancedResults = [...results];
-    
-    // Special case for general offer timetable - add fallback if needed
-    if (isGeneralOffer && 
-        (query.toLowerCase().includes('timetable') || 
-        query.toLowerCase().includes('schedule') ||
-        query.toLowerCase().includes('timeline')) &&
-        enhancedResults.length < 2) {
-      console.log("Enhancing general offer timetable context with fallback information");
-      enhancedResults.push({
-        id: 'fallback-general-offer-timetable',
-        title: "General Offer Timetable",
-        source: "Takeovers Code Rule 15",
-        content: "A general offer timetable under the Takeovers Code begins with the Rule 3.5 announcement and must specify a closing date not less than 21 days from the date the offer document is posted. All conditions must be satisfied within 60 days from the offer document posting, unless extended by the Executive.",
-        category: "takeovers",
-        lastUpdated: new Date(),
-        status: 'active'
-      });
-    }
-    
-    return enhancedResults;
+    console.log(`Found ${takeoversResults.length} takeovers code documents`);
+    return takeoversResults;
   }
 };
+
+/**
+ * Find relevant takeover rule numbers based on query content
+ */
+function findRelevantTakeoverRules(query: string): string[] {
+  const lowerQuery = query.toLowerCase();
+  const ruleMap: Record<string, string[]> = {
+    'mandatory': ['Rule 26', 'Rule 26.1'],
+    'whitewash': ['Whitewash Waiver', 'Rule 26 Waiver'],
+    'concert parties': ['Rule 26.1'],
+    'offer period': ['Rule 2'],
+    'general offer': ['Rule 26'],
+    'partial offer': ['Rule 28'],
+    'disclosure': ['Rule 3'],
+    'frustration': ['Rule 4'],
+    'special deals': ['Rule 25'],
+    'chain principle': ['Rule 26.1']
+  };
+  
+  const relevantRules: string[] = [];
+  
+  for (const [keyword, rules] of Object.entries(ruleMap)) {
+    if (lowerQuery.includes(keyword)) {
+      relevantRules.push(...rules);
+    }
+  }
+  
+  return [...new Set(relevantRules)]; // Remove duplicates
+}

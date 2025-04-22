@@ -1,17 +1,16 @@
 
 export interface GrokRequestParams {
   prompt: string;
-  temperature?: number;
-  maxTokens?: number;
-  regulatoryContext?: string;
   apiKey?: string;
+  regulatoryContext?: string;
+  reasoning?: string;
+  maxTokens?: number;
+  temperature?: number;
 }
 
 export interface GrokResponse {
   text: string;
-  queryType?: string;
-  hasContext?: boolean;
-  relevanceScore?: number;
+  queryType: string;
   metadata?: {
     contextUsed?: boolean;
     relevanceScore?: number;
@@ -20,11 +19,18 @@ export interface GrokResponse {
     whitewashInfoIncluded?: boolean;
     referenceDocumentsUsed?: boolean;
     isBackupResponse?: boolean;
-    error?: string;  // Added this property to fix the type error
     responseCompleteness?: {
       isComplete: boolean;
-      confidence: 'low' | 'medium' | 'high';
+      confidence: string;
       reasons?: string[];
+      missingElements?: string[];
     };
+    error?: string;
+    sequentialSearchProcess?: {
+      usedListingRules: boolean;
+      usedTakeoversCode: boolean;
+      usedGuidance: boolean;
+    };
+    responseWasTruncated?: boolean;
   };
 }

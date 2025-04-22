@@ -3,6 +3,9 @@ import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 
+// Maximum token limit from Grok API docs
+const MAX_TOKEN_LIMIT = 131072;
+
 /**
  * Core response generation functionality
  */
@@ -13,6 +16,13 @@ export const responseGeneratorCore = {
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
       console.log("Making primary API call with standard parameters");
+      
+      // Check if max_tokens exceeds limit
+      if (requestBody.max_tokens && requestBody.max_tokens > MAX_TOKEN_LIMIT) {
+        console.log(`Requested ${requestBody.max_tokens} tokens exceeds limit of ${MAX_TOKEN_LIMIT}, capping at limit`);
+        requestBody.max_tokens = MAX_TOKEN_LIMIT;
+      }
+      
       return await grokApiService.callChatCompletions(requestBody, apiKey);
     } catch (error) {
       console.error('Primary API call failed:', error);
@@ -39,7 +49,7 @@ export const responseGeneratorCore = {
         ],
         model: "grok-3-mini-beta",
         temperature: 0.2,  // Lower temperature for more predictable responses
-        max_tokens: 800    // Reduced tokens for higher reliability
+        max_tokens: Math.min(10000, MAX_TOKEN_LIMIT)    // Ensure within token limit
       };
       
       // Add a short delay before the retry to prevent rate limiting issues
@@ -71,5 +81,33 @@ export const responseGeneratorCore = {
       console.error('All backup API calls failed:', backupError);
       throw backupError;
     }
+  },
+  
+  /**
+   * Check if response needs to be truncated due to token limits
+   * Returns a message to be appended to the response if truncation occurred
+   */
+  checkAndHandleTokenLimit: (responseText: string, tokenCount: number): {
+    truncated: boolean,
+    text: string
+  } => {
+    // If token count is near limit, mark as truncated
+    if (tokenCount > MAX_TOKEN_LIMIT * 0.95) {
+      console.log(`Response near token limit (${tokenCount}), marking as truncated`);
+      
+      // Truncate response if it's too long
+      const truncationMessage = "\n\n[NOTE: Response has been truncated due to token limit. This represents the analysis completed so far.]";
+      
+      return {
+        truncated: true,
+        text: responseText + truncationMessage
+      };
+    }
+    
+    // No truncation needed
+    return {
+      truncated: false,
+      text: responseText
+    };
   }
 };

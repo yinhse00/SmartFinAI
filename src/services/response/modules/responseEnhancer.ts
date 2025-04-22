@@ -1,71 +1,62 @@
 
 import { GrokResponse } from '@/types/grok';
-import { responseFormatter } from './responseFormatter';
-import { detectFinancialExpertiseArea } from '@/services/financial/expertiseDetection';
-import { getTruncationDiagnostics } from '@/utils/truncation';
 
 /**
- * Service for enhancing responses with metadata
+ * Service to enhance response with metadata
  */
 export const responseEnhancer = {
   /**
-   * Enhance a response with additional metadata
+   * Enhance response with metadata about the search process and sources used
    */
   enhanceResponse: (
-    text: string,
-    queryType: string | null,
-    usedContext: boolean,
-    contextRelevanceScore: number,
-    queryText: string,
-    isBackupResponse?: boolean
+    responseText: string, 
+    queryType: string, 
+    contextUsed: boolean, 
+    relevanceScore: number,
+    prompt: string
   ): GrokResponse => {
-    const isExpertResponse = detectFinancialExpertiseArea(queryText) !== 'general';
-    const tradingInfo = isTradingArrangementQuery(queryText);
-    const containsTakeoversCode = text.toLowerCase().includes('takeovers code') || 
-                                 text.toLowerCase().includes('takeover code');
-    const isWhitewashQuery = queryText.toLowerCase().includes('whitewash');
-    const hasRefDocuments = text.includes('REFERENCE DOCUMENTS:');
+    // Extract details about the sequential search process from response
+    const usedListingRules = responseText.toLowerCase().includes('listing rule') || 
+                            responseText.toLowerCase().includes('chapter');
+    const usedTakeoversCode = responseText.toLowerCase().includes('takeovers code') || 
+                             responseText.toLowerCase().includes('takeover code') || 
+                             responseText.toLowerCase().includes('rule 26');
+    const usedGuidance = responseText.toLowerCase().includes('guidance') || 
+                        responseText.toLowerCase().includes('faq') || 
+                        responseText.toLowerCase().includes('interpretation');
     
-    // Add response completeness check
-    const diagnostics = getTruncationDiagnostics(text);
+    // Check if response appears to be truncated
+    const isTruncated = responseText.includes('[NOTE: Response has been truncated due to token limit');
     
-    return responseFormatter.formatResponse(
-      text,
-      queryType || 'general',
-      usedContext,
-      contextRelevanceScore,
-      tradingInfo,
-      containsTakeoversCode,
-      isWhitewashQuery,
-      hasRefDocuments,
-      isBackupResponse
-    );
+    // Create enhanced response
+    return {
+      text: responseText,
+      queryType,
+      metadata: {
+        contextUsed,
+        relevanceScore,
+        sequentialSearchProcess: {
+          usedListingRules,
+          usedTakeoversCode, 
+          usedGuidance
+        },
+        responseWasTruncated: isTruncated
+      }
+    };
+  },
+  
+  /**
+   * Add information about the sequential search workflow to response
+   */
+  addWorkflowInfo: (response: GrokResponse): GrokResponse => {
+    const searchWorkflowInfo = '\n\nThis response was generated using a sequential search through: ' +
+      '(1) Listing Rules, (2) Takeovers Code, and (3) Interpretation and Guidance documents.';
+    
+    // Only add workflow info if it's not already included
+    if (!response.text.includes('sequential search through')) {
+      response.text += searchWorkflowInfo;
+    }
+    
+    return response;
   }
 };
-
-/**
- * Determine if a query is related to trading arrangements
- */
-function isTradingArrangementQuery(prompt: string): boolean {
-  const lowerPrompt = prompt.toLowerCase();
-  
-  // Check for trading arrangement indicators in the prompt
-  const hasTradingArrangement = lowerPrompt.includes('trading arrangement');
-  const hasTradingSchedule = lowerPrompt.includes('trading') && lowerPrompt.includes('schedule');
-  
-  // Check for corporate actions with timetables
-  const hasCorporateAction = 
-    lowerPrompt.includes('rights issue') || 
-    lowerPrompt.includes('open offer') ||
-    lowerPrompt.includes('share consolidation') ||
-    lowerPrompt.includes('sub-division') ||
-    lowerPrompt.includes('board lot') || 
-    lowerPrompt.includes('company name');
-    
-  const hasTimeReference = 
-    lowerPrompt.includes('timetable') || 
-    lowerPrompt.includes('schedule');
-  
-  // Return true if any of the conditions are met
-  return hasTradingArrangement || hasTradingSchedule || (hasCorporateAction && hasTimeReference);
-}

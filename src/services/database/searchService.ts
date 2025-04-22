@@ -96,6 +96,23 @@ export const searchService = {
   },
 
   /**
+   * Get regulatory entries by their source IDs
+   * Used by the sequential search process
+   */
+  getEntriesBySourceIds: async (sourceIds: string[]): Promise<RegulatoryEntry[]> => {
+    console.log(`Retrieving ${sourceIds.length} entries by source IDs`);
+    
+    // Get all entries
+    const allEntries = databaseService.getAllEntries();
+    
+    // Filter entries by source IDs
+    const results = allEntries.filter(entry => sourceIds.includes(entry.id));
+    
+    console.log(`Retrieved ${results.length} entries from database`);
+    return results;
+  },
+
+  /**
    * Search both in-memory database and reference documents
    * @param query The search query
    * @param category Optional category to filter results
