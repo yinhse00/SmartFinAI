@@ -38,48 +38,81 @@ export const grokApiService = {
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
 
-    // Run this in development mode to test API failure handling
-    const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
-    
-    // Implementation with retry logic
-    const maxRetries = 2;
+    // Implementation with improved retry logic and error handling
+    const maxRetries = 3;
     let retries = 0;
+    let lastError = null;
     
     while (retries <= maxRetries) {
       try {
-        const baseUrl = 'https://api.grok.ai/v1';
+        // Use a proxy service for development environments to avoid CORS issues
+        const isDevelopment = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+        
+        // Use direct API in production, but a CORS proxy in development
+        const baseUrl = isDevelopment 
+          ? 'https://cors-anywhere.herokuapp.com/https://api.grok.ai/v1'  // Use CORS proxy in development
+          : 'https://api.grok.ai/v1';  // Direct API in production
+          
         const apiEndpoint = `${baseUrl}/chat/completions`;
+        
+        console.log(`Attempting API call to: ${isDevelopment ? 'CORS proxy -> Grok API' : 'Grok API directly'}`);
+        
+        // Add timeout to prevent hanging requests
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
         
         const response = await fetch(apiEndpoint, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${apiKey}`,
-            'Origin': window.location.origin
+            'Origin': window.location.origin,
+            // Add additional headers that might help with CORS
+            'X-Requested-With': 'XMLHttpRequest'
           },
-          body: JSON.stringify(requestBody)
+          body: JSON.stringify(requestBody),
+          signal: controller.signal,
+          // Add credentials mode that might help with certain API configurations
+          credentials: 'omit' // Don't send cookies to third-party domains
         });
+        
+        // Clear the timeout to prevent aborting after success
+        clearTimeout(timeoutId);
         
         if (!response.ok) {
           const errorText = await response.text();
           console.error(`Financial expert API error ${response.status}:`, errorText);
-          throw new Error(`Financial expert API error: ${response.status}`);
+          throw new Error(`Financial expert API error: ${response.status} - ${errorText}`);
         }
         
         const data = await response.json();
         console.log("Financial expert API response received successfully");
         return data;
       } catch (error) {
+        lastError = error;
         retries++;
+        
+        // Log detailed error information
+        console.error("API call failed details:", {
+          attempt: retries,
+          errorType: error instanceof Error ? error.name : "Unknown",
+          errorMsg: error instanceof Error ? error.message : String(error),
+          isAbortError: error instanceof DOMException && error.name === "AbortError"
+        });
+        
         if (retries <= maxRetries) {
           console.warn(`API call attempt ${retries} failed. Retrying...`, error);
-          // Add exponential backoff
-          await new Promise(resolve => setTimeout(resolve, retries * 1000));
+          // Add exponential backoff with jitter
+          const backoffTime = Math.min(1000 * Math.pow(2, retries - 1) + Math.random() * 1000, 10000);
+          console.log(`Retrying in ${Math.round(backoffTime/1000)} seconds...`);
+          await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
-          console.error("Financial expert API call failed after retries:", error);
+          console.error("Financial expert API call failed after all retries:", error);
           throw error;
         }
       }
     }
+    
+    throw lastError || new Error("API call failed after maximum retries");
   }
 };

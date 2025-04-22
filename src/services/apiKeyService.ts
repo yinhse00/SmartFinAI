@@ -1,4 +1,3 @@
-
 /**
  * Service for managing API keys in local storage
  */
@@ -8,6 +7,7 @@ const PRIMARY_KEY = 'GROK_API_KEY';
 const BACKUP_KEY = 'grokApiKey';
 
 // Default deployment key for environments without localStorage access
+// Note: This is a placeholder key format - actual key would be provided by Grok
 const DEFAULT_DEPLOYMENT_KEY = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
 
 /**
@@ -50,8 +50,6 @@ export const getGrokApiKey = (): string => {
       backupKey: backupValue ? `${backupValue.substring(0, 4)}...` : 'none'
     });
     
-    // Always return default deployment key if localStorage access fails
-    // This ensures all environments have a working key
     console.log('No valid API key found in storage, using default deployment key');
     
     try {
@@ -61,7 +59,6 @@ export const getGrokApiKey = (): string => {
       console.log('Set default deployment API key');
     } catch (e) {
       console.error('Failed to set default deployment key in localStorage', e);
-      // Even if localStorage fails, we still return the default key
     }
     
     return DEFAULT_DEPLOYMENT_KEY;

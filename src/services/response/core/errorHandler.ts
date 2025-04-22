@@ -24,10 +24,20 @@ export const errorHandler = {
    */
   createFallbackResponse: (prompt: string, error: unknown): GrokResponse => {
     const errorMessage = error instanceof Error ? error.message : 'Unexpected error';
-    const isNetworkError = errorMessage.includes('fetch') || errorMessage.includes('network');
+    const isNetworkError = 
+      errorMessage.includes('fetch') || 
+      errorMessage.includes('network') ||
+      errorMessage.includes('Failed to') ||
+      errorMessage.includes('CORS') ||
+      errorMessage.includes('abort') ||
+      errorMessage.includes('timeout') ||
+      errorMessage.includes('429') ||  // Too many requests
+      errorMessage.includes('500') ||  // Server error
+      errorMessage.includes('AbortError');
     
     // For network errors, provide a clearer message
     if (isNetworkError) {
+      console.log("Network error detected, providing specific network error fallback");
       return {
         text: "I'm currently unable to connect to my financial expertise service. This could be due to network connectivity issues or service maintenance.\n\n" +
               "For questions about Hong Kong listing rules and regulations, I would normally provide detailed information from official sources. " +
@@ -38,7 +48,23 @@ export const errorHandler = {
           contextUsed: false,
           relevanceScore: 0,
           isBackupResponse: true,
-          error: "Connection error"  // This line was causing the TypeScript error, but now it's fixed
+          error: "Network connection error"
+        }
+      };
+    }
+    
+    // API key errors
+    if (errorMessage.includes('key') || errorMessage.includes('auth') || errorMessage.includes('401')) {
+      console.log("API key error detected, providing specific auth error fallback");
+      return {
+        text: "There seems to be an issue with the API authentication. The system cannot access the financial expertise database with the current credentials.\n\n" +
+              "This could be due to an expired API key or authentication issues. Please try refreshing your API key in the settings.",
+        queryType: 'system',
+        metadata: {
+          contextUsed: false,
+          relevanceScore: 0,
+          isBackupResponse: true,
+          error: "API authentication error"
         }
       };
     }
