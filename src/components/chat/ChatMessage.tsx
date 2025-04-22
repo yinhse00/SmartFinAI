@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -13,6 +14,10 @@ export interface Message {
   timestamp: Date;
   isError?: boolean;
   isTruncated?: boolean;
+  references?: any[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  queryType?: string;
 }
 
 interface ChatMessageProps {
