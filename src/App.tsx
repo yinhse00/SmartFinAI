@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,7 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Chat from "./pages/Chat";
 import References from "./pages/References";
 import NotFound from "./pages/NotFound";
-import Dashboard from "./pages/Dashboard";
+import Index from "./pages/Index";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -29,8 +30,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Navigate to="/dashboard" replace />} />
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<Index />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/references" element={<References />} />
             <Route path="*" element={<NotFound />} />
