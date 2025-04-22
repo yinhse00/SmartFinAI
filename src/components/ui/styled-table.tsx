@@ -23,7 +23,7 @@ export function StyledTable({
   onSort 
 }: StyledTableProps) {
   return (
-    <div className="w-full overflow-auto rounded-md border bg-white shadow-sm dark:bg-gray-800">
+    <div className="w-full overflow-auto rounded-lg border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-800">
       <Table>
         <TableHeader className="sticky top-0 z-10">
           <TableRow>
@@ -31,8 +31,9 @@ export function StyledTable({
               <TableHead 
                 key={index}
                 className={`
-                  bg-gray-50 font-semibold dark:bg-gray-900 
-                  ${sortable ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700' : ''}
+                  bg-gray-50 px-6 py-4 text-left text-sm font-semibold text-gray-900 
+                  dark:bg-gray-900 dark:text-gray-100
+                  ${sortable ? 'cursor-pointer transition-colors hover:bg-gray-100 dark:hover:bg-gray-700' : ''}
                 `}
                 onClick={sortable ? () => onSort && onSort(index) : undefined}
               >
@@ -60,7 +61,8 @@ export function StyledTable({
                   key={cellIndex}
                   className={`
                     ${rowIndex % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50/50 dark:bg-gray-800/50'}
-                    p-4 text-sm
+                    px-6 py-4 text-sm text-gray-700 dark:text-gray-300
+                    border-t border-gray-200 dark:border-gray-700
                   `}
                 >
                   {cell}
