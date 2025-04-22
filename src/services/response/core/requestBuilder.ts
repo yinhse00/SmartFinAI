@@ -1,4 +1,3 @@
-
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { responseOptimizer } from '../modules/responseOptimizer';
 
@@ -13,7 +12,7 @@ export const requestBuilder = {
     queryType: string, 
     regulatoryContext?: string, 
     isFaqQuery: boolean = false
-  ): string {
+  ): string => {
     // Create a professional financial system message based on expertise area
     let systemMessage = createFinancialExpertSystemPrompt(queryType, regulatoryContext);
     
