@@ -1,7 +1,5 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { Lightbulb, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useTheme } from "next-themes";
@@ -73,13 +71,19 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       return <ChatTableMessage content={message.content} />;
     }
 
+    // Simple markdown formatting for code blocks and line breaks
+    const formattedContent = message.content
+      .replace(/```([^`]+)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded my-2 overflow-x-auto"><code>$1</code></pre>')
+      .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+      .replace(/\n/g, '<br />');
+
     return (
-      <ReactMarkdown
+      <div 
         className="prose dark:prose-invert break-words"
-        remarkPlugins={[remarkGfm]}
-      >
-        {message.content}
-      </ReactMarkdown>
+        dangerouslySetInnerHTML={{ __html: formattedContent }}
+      />
     );
   };
 
