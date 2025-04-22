@@ -1,3 +1,4 @@
+
 /**
  * Check Open Offer response for completeness
  * Open Offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
