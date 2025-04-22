@@ -1,6 +1,6 @@
 
 import { useState, useMemo } from 'react';
-import { CaretSort, Search } from 'lucide-react';
+import { ChevronUp, ChevronDown, Search } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -93,7 +93,11 @@ export function DataTable<T extends { [key: string]: any }>({ data, columns }: D
                 >
                   <div className="flex items-center space-x-2">
                     <span>{column.header}</span>
-                    <CaretSort className="h-4 w-4" />
+                    {sortConfig.key === column.key && (
+                      sortConfig.direction === 'asc' ? 
+                        <ChevronUp className="h-4 w-4" /> : 
+                        <ChevronDown className="h-4 w-4" />
+                    )}
                   </div>
                 </TableHead>
               ))}
