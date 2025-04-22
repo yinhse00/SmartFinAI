@@ -1,8 +1,10 @@
+
 /**
  * Utilities for identifying financial query types with enhanced regulatory nuance
  */
 
 import { FINANCIAL_EXPERTISES } from '@/services/constants/financialConstants';
+import { isOpenOfferQuery, isGeneralOfferQuery } from '@/services/regulatory/utils/queryDetector';
 
 export const FINANCIAL_QUERY_TYPES = {
   RIGHTS_ISSUE: 'rights_issue',
@@ -24,20 +26,16 @@ export const identifyFinancialQueryType = (query: string): string => {
   const lowerQuery = query.toLowerCase();
   
   // Open Offer Detection (Listing Rules specific)
-  if (lowerQuery.includes('open offer') && 
-      !lowerQuery.includes('takeover') && 
-      !lowerQuery.includes('mandatory')) {
+  if (isOpenOfferQuery(query)) {
     return FINANCIAL_QUERY_TYPES.OPEN_OFFER;
   }
   
   // Takeover Offer Detection (Takeovers Code specific)
-  if ((lowerQuery.includes('offer') && lowerQuery.includes('takeover')) || 
-      lowerQuery.includes('mandatory offer') || 
-      lowerQuery.includes('rule 26') || 
-      lowerQuery.includes('whitewash')) {
+  if (isGeneralOfferQuery(query)) {
     return FINANCIAL_QUERY_TYPES.TAKEOVER_OFFER;
   }
   
+  // Additional checks for other financial query types
   if (lowerQuery.includes('share consolidation') || 
       lowerQuery.includes('sub-division') || 
       lowerQuery.includes('subdivision')) {
@@ -60,6 +58,10 @@ export const identifyFinancialQueryType = (query: string): string => {
   
   if (lowerQuery.includes('prospectus') || lowerQuery.includes('offering document') || lowerQuery.includes('ipo')) {
     return FINANCIAL_QUERY_TYPES.PROSPECTUS;
+  }
+  
+  if (lowerQuery.includes('rights issue')) {
+    return FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE;
   }
   
   return FINANCIAL_QUERY_TYPES.GENERAL;

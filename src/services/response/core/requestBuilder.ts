@@ -19,15 +19,30 @@ export const requestBuilder = {
     
     // Add specific, comprehensive instructions for Open Offer timetables
     if (queryType === 'open_offer') {
-      systemMessage += "\n\nSPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
+      systemMessage += "\n\nIMPORTANT REGULATORY DISTINCTION: An 'open offer' is a capital-raising mechanism under the Hong Kong Listing Rules (Chapter 7), NOT the Takeovers Code. It is different from a 'general offer' or 'takeover offer' which are governed by the Takeovers Code. When discussing open offers:\n" +
+      "1. Always reference Listing Rules, not the Takeovers Code\n" +
+      "2. Focus on capital raising aspects, not acquisition of control\n" +
+      "3. Highlight that unlike rights issues, open offers do not have tradable nil-paid rights\n" +
+      "4. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n\n" +
+      
+      "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components:\n" +
       "1. Ex-entitlement date\n" +
       "2. Record date\n" +
       "3. Acceptance period (start and end dates)\n" +
       "4. Payment date\n" +
-      "5. Explanation of nil-paid rights trading (if applicable)\n" +
-      "6. Specific listing rule references (e.g., Rule 7.19, Chapter 15)\n" +
+      "5. Explanation of nil-paid rights trading (not applicable for open offers)\n" +
+      "6. Specific listing rule references (e.g., Rule 7.24, Chapter 7)\n" +
       "7. A clear conclusion summarizing the key dates and actions\n\n" +
       "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.";
+    }
+    
+    // Add special instructions for takeover offers to distinguish from open offers
+    if (queryType === 'takeover_offer') {
+      systemMessage += "\n\nIMPORTANT REGULATORY DISTINCTION: A 'takeover offer' or 'general offer' is governed by the Hong Kong Codes on Takeovers and Mergers, NOT the Listing Rules. It is different from an 'open offer' which is a capital-raising mechanism under Listing Rules Chapter 7. When discussing takeover offers:\n" +
+      "1. Always reference the Takeovers Code, not Listing Rules\n" +
+      "2. Focus on acquisition of control aspects, not capital raising\n" +
+      "3. Include relevant Takeovers Code references (e.g., Rule 26, Rule 30)\n" +
+      "4. Distinguish between mandatory and voluntary offers where appropriate\n";
     }
     
     // Add stronger instructions to use database content

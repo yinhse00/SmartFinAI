@@ -41,8 +41,13 @@ export const QUERY_TYPE_TO_CATEGORY = {
   'general': 'all'
 };
 
-// Enhanced descriptive comments for regulatory context
+/**
+ * Enhanced descriptive comments for regulatory context
+ * These descriptions clarify the distinct regulatory frameworks for different types of offers
+ */
 export const REGULATORY_DESCRIPTIONS = {
   OPEN_OFFER: 'A capital-raising mechanism under Listing Rules Chapter 7, allowing listed companies to issue new shares to existing shareholders',
-  TAKEOVER_OFFER: 'An acquisition mechanism governed by the Takeovers Code, involving mandatory or voluntary offers to acquire company shares'
+  TAKEOVER_OFFER: 'An acquisition mechanism governed by the Takeovers Code, involving mandatory or voluntary offers to acquire company shares',
+  RIGHTS_ISSUE: 'A capital-raising mechanism under Listing Rules where existing shareholders are given the right to subscribe for new shares',
+  WHITEWASH_WAIVER: 'A specific waiver under the Takeovers Code that exempts parties from making a mandatory general offer obligation'
 };
