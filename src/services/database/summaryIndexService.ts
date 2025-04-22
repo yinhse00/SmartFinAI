@@ -1,29 +1,15 @@
 
 import { databaseService } from "./databaseService";
 import { RegulatoryEntry } from "./types";
-
-/**
- * This service handles Summary and Keyword Index operations
- * It provides a faster way to find information by checking summaries and keywords first
- * before performing a full database search
- */
-
-// Interface for summary index entries
-interface SummaryIndexEntry {
-  id: string;
-  title: string;
-  keywords: string[];
-  summary: string;
-  sourceId: string;
-  category: string;
-  sourceFile?: string; // Source file name used for specific file search
-}
+import { SummaryIndexEntry } from "./types/summaryIndex";
+import { extractKeyTerms, countMatches } from "./utils/textProcessing";
+import { generateSummaryEntry } from "./utils/summaryEntryGenerator";
 
 // In-memory database of summary entries for faster lookup
 let summaryIndexDatabase: SummaryIndexEntry[] = [];
 
 /**
- * Service for summary and keyword index
+ * Service for summary and keyword index operations
  */
 export const summaryIndexService = {
   /**
@@ -107,7 +93,6 @@ export const summaryIndexService = {
   
   /**
    * Find relevant summary by specific file name
-   * This supports the new sequential search workflow
    */
   findRelevantSummaryByFile: async (query: string, fileName: string): Promise<{
     found: boolean;
@@ -150,10 +135,8 @@ export const summaryIndexService = {
         return bMatchCount - aMatchCount;
       });
       
-      // Get the original entries from the database
-      const sourceIds = sortedMatches.map(match => match.sourceId);
-      
       // Return source IDs without loading full content yet
+      const sourceIds = sortedMatches.map(match => match.sourceId);
       return {
         found: true,
         sourceIds
@@ -174,61 +157,3 @@ export const summaryIndexService = {
   }
 };
 
-/**
- * Generate a summary entry from a regulatory entry
- */
-function generateSummaryEntry(entry: RegulatoryEntry): SummaryIndexEntry {
-  // Extract keywords from title and content
-  const titleKeywords = extractKeyTerms(entry.title.toLowerCase());
-  const contentKeywords = extractKeyTerms(entry.content.toLowerCase());
-  
-  // Merge keywords and remove duplicates
-  const allKeywords = [...new Set([...titleKeywords, ...contentKeywords])];
-  
-  // Generate a brief summary (first 200 characters)
-  const summary = entry.content.substring(0, 200) + '...';
-  
-  // Determine if this is from a summary index file
-  const sourceFile = entry.title.includes('Summary and Keyword Index') ? entry.title : undefined;
-  
-  return {
-    id: `summary-${entry.id}`,
-    title: entry.title,
-    keywords: allKeywords,
-    summary,
-    sourceId: entry.id,
-    category: entry.category,
-    sourceFile
-  };
-}
-
-/**
- * Extract key terms from text
- */
-function extractKeyTerms(text: string): string[] {
-  // Split text into words and filter out short words and common stop words
-  const stopWords = ['the', 'and', 'or', 'a', 'an', 'in', 'on', 'at', 'to', 'for', 'with', 'by', 'of'];
-  
-  return text
-    .split(/\s+/)
-    .filter(word => word.length > 2 && !stopWords.includes(word))
-    // Include regulatory specific terms like rule numbers
-    .concat(text.match(/\d+\.\d+[A-Z]?/g) || [])
-    // Include chapter numbers
-    .concat(text.match(/chapter\s+\d+/gi) || []);
-}
-
-/**
- * Count how many terms from the query match the keywords
- */
-function countMatches(keywords: string[], queryTerms: string[]): number {
-  let count = 0;
-  
-  for (const term of queryTerms) {
-    if (keywords.some(keyword => keyword.includes(term))) {
-      count++;
-    }
-  }
-  
-  return count;
-}
