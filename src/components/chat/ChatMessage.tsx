@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Lightbulb, RefreshCw } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -44,7 +43,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
             contentRef.current.innerHTML = message.content;
           }
         }
-      }, 20); // Restored to original 20ms interval
+      }, 20);
 
       return () => clearInterval(typingInterval);
     }
@@ -55,15 +54,14 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
 
     const intervalId = setInterval(() => {
       setFormattedDate(formatDistanceToNow(message.timestamp, { addSuffix: true }));
-    }, 60000); // Update every minute
+    }, 60000);
 
     return () => clearInterval(intervalId);
   }, [message.timestamp]);
 
-  const renderContent = () => {
+  function renderContent() {
     if (!message.content) return null;
 
-    // Check if the message contains a table format
     const isTable = message.content.includes('|') && 
                    message.content.split('\n').filter(line => line.includes('|')).length >= 3;
 
@@ -71,7 +69,6 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
       return <ChatTableMessage content={message.content} />;
     }
 
-    // Simple markdown formatting for code blocks and line breaks
     const formattedContent = message.content
       .replace(/```([^`]+)```/g, '<pre class="bg-gray-100 dark:bg-gray-800 p-2 rounded my-2 overflow-x-auto"><code>$1</code></pre>')
       .replace(/`([^`]+)`/g, '<code class="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded">$1</code>')
@@ -85,7 +82,7 @@ const ChatMessage = ({ message, onRetry, onTypingProgress }: ChatMessageProps) =
         dangerouslySetInnerHTML={{ __html: formattedContent }}
       />
     );
-  };
+  }
 
   return (
     <div className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}>
