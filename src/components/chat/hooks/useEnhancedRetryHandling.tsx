@@ -27,11 +27,23 @@ export const useEnhancedRetryHandling = () => {
       // Track this retry attempt
       setRetryCount(currentRetryCount + 1);
       
-      // Enhance parameters for this retry attempt - use local enhanceParamsForRetry that takes only needed parameters
+      // Preserve any context from the original query
+      const preservedContext = enhancedParams.regulatoryContext;
+      console.log(`Retry attempt ${currentRetryCount + 1}/${maxRetries} with preserved context: ${!!preservedContext}`);
+      
+      // Enhance parameters for this retry attempt with much higher token limits
       const retryParams = enhanceParamsForRetry(enhancedParams, currentRetryCount);
       
-      // Log retry information
-      console.log(`Retry attempt ${currentRetryCount + 1}/${maxRetries} with ${retryParams.maxTokens} tokens and temperature ${retryParams.temperature}`);
+      // Add special marker to indicate this is a retry
+      retryParams.prompt = `${retryParams.prompt} [THIS IS A RETRY ATTEMPT - ENSURE COMPLETE RESPONSE]`;
+      
+      // Force lower temperature on retries for more deterministic results
+      retryParams.temperature = Math.min(retryParams.temperature, 0.1);
+      
+      // Double the max tokens on retry for completeness, with a reasonable cap
+      retryParams.maxTokens = Math.min(6000, retryParams.maxTokens * 2);
+      
+      console.log(`Enhanced Retry Parameters - Tokens: ${retryParams.maxTokens}, Temperature: ${retryParams.temperature}`);
       
       // Make the API call with enhanced parameters
       const retryResponse: GrokResponse = await grokService.generateResponse(retryParams);
@@ -69,7 +81,7 @@ export const useEnhancedRetryHandling = () => {
         false // Never treat retries as simple queries
       );
       
-      console.log(`Retry completeness check - Complete: ${retryCompletenessCheck.isComplete}, Reasons: ${retryCompletenessCheck.reasons.join(', ')}`);
+      console.log(`Retry completeness check - Complete: ${retryCompletenessCheck.isComplete}, Reasons: ${retryCompletenessCheck.reasons?.join(', ') || 'None'}`);
       
       return {
         retryAttempted: true,

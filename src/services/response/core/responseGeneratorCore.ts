@@ -4,7 +4,8 @@ import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 
 // Set appropriate maximum token limit for Grok API for better coverage
-const MAX_TOKEN_LIMIT = 3500; // Increased from 2500 for more comprehensive responses
+const MAX_TOKEN_LIMIT = 4000; // Increased from 3500 for more comprehensive responses
+const RETRY_TOKEN_LIMIT = 7000; // Even higher limit for retry attempts
 
 /**
  * Core response generation functionality
@@ -17,13 +18,34 @@ export const responseGeneratorCore = {
     try {
       console.log("Making primary API call with optimized parameters");
       
+      // Detect if this is a retry attempt based on prompt content
+      const isRetryAttempt = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
+                            requestBody.messages.find(m => m.role === 'user').content.includes('[RETRY_ATTEMPT]');
+      
       // Special handling for definition queries to ensure completeness
       const userMessage = requestBody.messages.find((m: any) => m.role === 'user')?.content || '';
       const isDefinitionQuery = userMessage.toLowerCase().includes('what is') || 
                                userMessage.toLowerCase().includes('definition');
       
-      // Allow higher token limits for definition queries
-      const effectiveTokenLimit = isDefinitionQuery ? Math.max(MAX_TOKEN_LIMIT, 4000) : MAX_TOKEN_LIMIT;
+      // Check for rights issue timetable queries
+      const isRightsIssueQuery = userMessage.toLowerCase().includes('rights issue') &&
+                               (userMessage.toLowerCase().includes('timetable') ||
+                                userMessage.toLowerCase().includes('schedule') ||
+                                userMessage.toLowerCase().includes('dates'));
+      
+      // Allow higher token limits for specific query types
+      let effectiveTokenLimit = MAX_TOKEN_LIMIT;
+      
+      // Use different token limits for different query types
+      if (isRetryAttempt) {
+        effectiveTokenLimit = RETRY_TOKEN_LIMIT;
+        console.log("Retry attempt detected, using enhanced token limit:", effectiveTokenLimit);
+      } else if (isDefinitionQuery) {
+        effectiveTokenLimit = Math.max(MAX_TOKEN_LIMIT, 5000);
+      } else if (isRightsIssueQuery) {
+        effectiveTokenLimit = Math.max(MAX_TOKEN_LIMIT, 6000);
+        console.log("Rights issue timetable query detected, using enhanced token limit:", effectiveTokenLimit);
+      }
       
       // Enforce appropriate token limit based on query type
       if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
@@ -35,7 +57,13 @@ export const responseGeneratorCore = {
       if (userMessage.toLowerCase().includes('connected person') || 
          userMessage.toLowerCase().includes('connected transaction')) {
         console.log("Connected person/transaction query detected, ensuring sufficient tokens");
-        requestBody.max_tokens = Math.max(requestBody.max_tokens, 3500);
+        requestBody.max_tokens = Math.max(requestBody.max_tokens, 4500);
+      }
+      
+      // For retry attempts, use lower temperature for more deterministic results
+      if (isRetryAttempt && requestBody.temperature > 0.2) {
+        console.log("Retry attempt detected, reducing temperature for consistency");
+        requestBody.temperature = 0.1;
       }
       
       return await grokApiService.callChatCompletions(requestBody, apiKey);

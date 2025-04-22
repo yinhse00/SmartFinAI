@@ -28,6 +28,9 @@ export const requestBuilder = {
     // Add special instruction for definition queries to be comprehensive
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR DEFINITIONS: When responding to 'what is' or definition questions, provide COMPREHENSIVE explanations including the formal regulatory definition, practical implications, and relevant examples. For connected persons or connected transactions, include ALL categories of connected persons and relevant thresholds from Chapter 14A.";
     
+    // Add special instruction for rights issue timetables
+    systemMessage += "\n\nSPECIAL INSTRUCTION FOR RIGHTS ISSUES: When asked about rights issue timetables, provide ALL key dates and actions including: board meeting date, announcement date, circular dispatch, EGM date, record date, commencement of dealings in nil-paid rights, last day for splitting, last day for acceptance and payment, results announcement date, refund date, and dispatch date of share certificates. Include ALL key information and ensure the response is COMPLETE.";
+    
     // Add special instruction for completeness and brevity to avoid truncation
     systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Be CONCISE and direct. Prioritize including all key points over lengthy explanations. If discussing a procedure with multiple steps, include ALL steps but explain each briefly. Format information efficiently. Focus on providing complete information rather than verbose explanations.";
     
@@ -43,14 +46,34 @@ export const requestBuilder = {
     temperature: number,
     maxTokens: number
   ): any => {
-    // Add instruction for completeness to the prompt
-    const enhancedPrompt = prompt + " Please provide a complete but concise response covering all key points.";
+    // Check if this is a retry attempt based on prompt content
+    const isRetryAttempt = prompt.includes('[RETRY_ATTEMPT]') || prompt.includes('[THIS IS A RETRY ATTEMPT');
     
-    // For definition queries, ensure higher token limit
-    const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
+    // Add instruction for completeness to the prompt
+    let enhancedPrompt = prompt;
+    
+    // For rights issue timetable queries, add specific instructions
+    if (prompt.toLowerCase().includes('rights issue') && 
+        (prompt.toLowerCase().includes('timetable') || prompt.toLowerCase().includes('schedule'))) {
+      enhancedPrompt += " Please provide a COMPLETE timetable with ALL key dates and actions. Include board meeting, announcement, circular dispatch, EGM, record date, dealings in nil-paid rights, acceptance period, results announcement, and refund dates.";
+    } else {
+      enhancedPrompt += " Please provide a complete but concise response covering all key points.";
+    }
+    
+    // For retry attempts, use higher token limits and lower temperature
+    let finalTokens = maxTokens;
+    let finalTemperature = temperature;
+    
+    if (isRetryAttempt) {
+      console.log("Retry attempt detected: Using enhanced parameters");
+      finalTokens = Math.min(6000, maxTokens * 2);
+      finalTemperature = Math.min(0.1, temperature);
+    } else {
+      // For definition queries, ensure higher token limit
+      const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
                              prompt.toLowerCase().includes('definition');
-                             
-    const finalTokens = isDefinitionQuery ? Math.max(maxTokens, 2500) : maxTokens;
+      finalTokens = isDefinitionQuery ? Math.max(maxTokens, 2500) : maxTokens;
+    }
     
     return {
       messages: [
@@ -58,7 +81,7 @@ export const requestBuilder = {
         { role: 'user', content: enhancedPrompt }
       ],
       model: "grok-3-mini-beta",
-      temperature: temperature,
+      temperature: finalTemperature,
       // Use appropriate token limit to ensure completeness
       max_tokens: finalTokens,
     };
@@ -73,6 +96,20 @@ export const requestBuilder = {
     hasContext: boolean,
     isSimpleQuery: boolean = false
   ): { temperature: number, maxTokens: number } => {
+    // Check for rights issue timetable queries
+    const isRightsIssueQuery = queryType === 'rights_issue' &&
+                             (prompt.toLowerCase().includes('timetable') || 
+                              prompt.toLowerCase().includes('schedule'));
+    
+    // For rights issue timetable queries, use specialized settings
+    if (isRightsIssueQuery) {
+      console.log("Rights issue timetable query detected - using specialized parameters");
+      return {
+        temperature: 0.1,  // Very low temperature for deterministic results
+        maxTokens: 5000    // Higher token limit for comprehensive timetable
+      };
+    }
+    
     // Check for definition queries
     const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
                              prompt.toLowerCase().includes('definition');
@@ -81,7 +118,7 @@ export const requestBuilder = {
     if (isDefinitionQuery) {
       return {
         temperature: 0.1,  // Very low temperature for accurate definitions
-        maxTokens: 3000    // Higher token limit for comprehensive definitions
+        maxTokens: 4000    // Higher token limit for comprehensive definitions
       };
     }
     
@@ -89,7 +126,7 @@ export const requestBuilder = {
     if (isSimpleQuery && !hasContext) {
       return {
         temperature: 0.3,
-        maxTokens: 1500
+        maxTokens: 2000
       };
     }
     
@@ -100,7 +137,7 @@ export const requestBuilder = {
     const actualTemperature = hasContext ? 0.1 : temperature;
     
     // Ensure token count is within safe limits to avoid truncation
-    const safeMaxTokens = Math.min(3000, maxTokens);
+    const safeMaxTokens = Math.min(4000, maxTokens);
     
     return { temperature: actualTemperature, maxTokens: safeMaxTokens };
   }
