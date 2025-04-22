@@ -1,3 +1,4 @@
+
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
@@ -20,8 +21,8 @@ export const useChatLogic = () => {
   } = useApiKeyState();
   const { input, setInput, lastQuery, setLastQuery } = useInputState();
   
-  // Reference documents data
-  const { data: referenceDocuments } = useReferenceDocuments();
+  // Reference documents data - use with enabled: false to avoid auto-fetching
+  const { data: referenceDocuments = [] } = useReferenceDocuments();
   
   // Query processor
   const {

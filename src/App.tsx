@@ -11,12 +11,20 @@ import Chat from "./pages/Chat";
 import References from "./pages/References";
 import NotFound from "./pages/NotFound";
 
-const queryClient = new QueryClient();
+// Create a client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5000,
+      retry: 1,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <ThemeProvider defaultTheme="system" storageKey="finance-grok-theme">
+    <ThemeProvider defaultTheme="system" storageKey="finance-grok-theme">
+      <TooltipProvider>
         <Toaster />
         <Sonner />
         <BrowserRouter>
@@ -29,8 +37,8 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </ThemeProvider>
-    </TooltipProvider>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
