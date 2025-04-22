@@ -1,4 +1,3 @@
-
 import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
@@ -33,9 +32,11 @@ export const contextSearchOrchestrator = {
       // STEP 1: Send to Grok for initial analysis (this happens at the query processing level)
       console.log('STEP 1: Initial query analysis completed');
       
-      // STEP 2 & 3: First check Summary and Keyword Index_Listing Rule
-      console.log('STEP 2 & 3: Checking Summary and Keyword Index_Listing Rule.docx');
-      const listingRulesSummary = await summaryIndexService.findRelevantSummaryByFile(query, 'Summary and Keyword Index_Listing Rule.docx');
+      // STEP 2 & 3: First check Summary and Keyword Index 
+      console.log('STEP 2 & 3: Checking Summary and Keyword Index');
+      
+      // Removed specific reference to "Summary and Keyword Index_Listing Rule.docx"
+      const listingRulesSummary = await summaryIndexService.findRelevantSummaryByFile(query, 'Listing Rules Summary.docx');
       
       if (listingRulesSummary.found) {
         console.log('Found matches in Listing Rules Summary Index');
