@@ -33,12 +33,8 @@ export const takeoversSearchService = {
     const enhancedQuery = `${query} ${searchTerms.join(' ')}`;
     
     // Search for takeover code documents with enhanced query
-    const results = await searchService.findDocuments({
-      query: enhancedQuery,
-      categories: ['takeovers'],
-      limit: 3,
-      fuzzyMatch: true
-    });
+    // Updated to use search instead of findDocuments
+    const results = await searchService.search(enhancedQuery, 'takeovers');
     
     return results;
   },
@@ -48,12 +44,8 @@ export const takeoversSearchService = {
    */
   findTakeoverDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
     // Search for takeover code documents
-    return await searchService.findDocuments({
-      query,
-      categories: ['takeovers'],
-      limit: 3,
-      fuzzyMatch: true
-    });
+    // Updated to use search instead of findDocuments
+    return await searchService.search(query, 'takeovers');
   },
   
   /**
@@ -87,13 +79,9 @@ export const takeoversSearchService = {
 5. Restrictions Post-Waiver:
    - No further acquisitions of voting rights for 6 months after the waiver
    - No disposals of securities for 6 months if it would reduce holding below waiver level`,
-        description: 'Guidelines on whitewash waivers under the Takeovers Code',
-        url: '',
-        created_at: new Date().toISOString(),
-        file_path: '',
-        file_type: 'text',
-        file_size: 0,
-        file_url: ''
+        source: 'Hong Kong Takeovers Code',
+        lastUpdated: new Date(),
+        status: 'active'
       };
       
       return [...results, whitewashFallback];
@@ -162,13 +150,9 @@ Unconditional Date + 7 days: Final closing date after unconditional (Rule 15.3)
 Closing Date + 10 business days: Payment deadline (Rule 20.1)
 - Consideration must be paid within 10 business days of offer closing
 - Applies to both initial and revised offers`,
-        description: 'Standard timetable for general offers under the Hong Kong Takeovers Code',
-        url: '',
-        created_at: new Date().toISOString(),
-        file_path: '',
-        file_type: 'text',
-        file_size: 0,
-        file_url: ''
+        source: 'Hong Kong Takeovers Code',
+        lastUpdated: new Date(),
+        status: 'active'
       };
       
       return [...results, timetableFallback];
