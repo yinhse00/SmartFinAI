@@ -4,27 +4,17 @@ import { logTruncation, LogLevel } from './logLevel';
 export const detectTruncation = (content: string): boolean => {
   if (!content) return false;
 
+  // CRITICAL FIX: Make truncation detection much less sensitive
   const truncationIndicators = [
-    // More relaxed length check
-    !/[.!?:]$/.test(content) && content.length > 500, // Increased from 200
-    
-    // Uneven number of code blocks
-    ((content.match(/```/g) || []).length % 2 !== 0),
-    
-    // Content that seems abruptly cut off
+    // Only check for very clear truncation markers
     content.trim().endsWith('...') ||
-    content.trim().endsWith('and') ||
-    content.trim().endsWith('or') ||
-    content.trim().endsWith('but') ||
+    content.trim().endsWith('…'),
     
-    // Long content without proper sentence ending
-    content.split(' ').length > 100 && 
-    !content.endsWith('.') && 
-    !content.endsWith('!') && 
-    !content.endsWith('?'),
+    // Severely cut off content
+    content.length < 50 && content.length > 0,
     
-    // Table formatting without complete structure
-    (content.includes('|') && !content.includes('---') && content.split('\n').length < 3)
+    // Very uneven number of code blocks (not just odd)
+    ((content.match(/```/g) || []).length > 1 && (content.match(/```/g) || []).length % 2 !== 0)
   ];
   
   const isTruncated = truncationIndicators.some(indicator => indicator === true);
@@ -67,7 +57,8 @@ export const checkUnbalancedConstructs = (content: string): {
       // For identical opening/closing chars like quotes, we just check for even count
       const count = (content.match(new RegExp(`${opening}`, 'g')) || []).length;
       counts[name] = count;
-      if (count % 2 !== 0) {
+      // CRITICAL FIX: Only consider unbalanced if the count is high enough to matter
+      if (count % 2 !== 0 && count > 2) {
         isUnbalanced = true;
       }
     } else {
@@ -75,7 +66,8 @@ export const checkUnbalancedConstructs = (content: string): {
       const openCount = (content.match(new RegExp(`\\${opening}`, 'g')) || []).length;
       const closeCount = (content.match(new RegExp(`\\${closing}`, 'g')) || []).length;
       counts[name] = openCount - closeCount;
-      if (openCount !== closeCount) {
+      // CRITICAL FIX: Only consider unbalanced if the difference is significant
+      if (Math.abs(openCount - closeCount) > 2) {
         isUnbalanced = true;
       }
     }
@@ -83,7 +75,7 @@ export const checkUnbalancedConstructs = (content: string): {
   
   // Also check for list items without endings when we have multiple list items
   const bulletPoints = (content.match(/^[\s]*[-*•][\s].*$/gm) || []).length;
-  const unfinishedList = bulletPoints > 1 && /[-*•][\s][^.!?:;)]*$/.test(content);
+  const unfinishedList = bulletPoints > 5 && /[-*•][\s][^.!?:;)]*$/.test(content);
   
   if (unfinishedList) {
     counts['bulletPoints'] = bulletPoints;

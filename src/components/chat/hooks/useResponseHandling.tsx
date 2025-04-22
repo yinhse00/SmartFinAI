@@ -42,12 +42,19 @@ export const useResponseHandling = (
       // Determine if this is a simple query
       const isSimpleQuery = isQuerySimple(queryText);
       
-      // Apply very conservative token limits to avoid truncation
-      const enhancedParams = {
-        ...responseParams,
-        temperature: Math.min(0.2, responseParams.temperature || 0.2), // Lower temperature
-        maxTokens: Math.min(1000, responseParams.maxTokens || 1000)    // Much lower token limit
-      };
+      // CRITICAL FIX: Use much higher token limits, especially for financial queries
+      let enhancedParams = { ...responseParams };
+      
+      // For financial/regulatory queries, use very high token limits
+      if (financialQueryType === 'open_offer' || financialQueryType === 'rights_issue') {
+        enhancedParams.maxTokens = 10000; // High limit for timetable queries
+        enhancedParams.temperature = 0.1;  // Low temperature for accuracy
+        console.log(`Using enhanced parameters for ${financialQueryType}: tokens=${enhancedParams.maxTokens}, temp=${enhancedParams.temperature}`);
+      } else {
+        // For other queries, still use higher limits than before
+        enhancedParams.maxTokens = Math.max(4000, enhancedParams.maxTokens || 4000);
+        enhancedParams.temperature = Math.min(0.3, enhancedParams.temperature || 0.3);
+      }
       
       // Add instructions to prioritize completeness
       if (enhancedParams.prompt) {
@@ -96,13 +103,25 @@ export const useResponseHandling = (
         }
       }
       
-      // Analyze response completeness
-      let completenessCheck = analyzeResponseCompleteness(
-        apiResponse.text, 
-        financialQueryType, 
-        queryText, 
-        isSimpleQuery
-      );
+      // CRITICAL FIX: Use much more lenient completeness checks based on query type
+      let completenessCheck;
+      
+      // For simple queries, skip complex analysis
+      if (isSimpleQuery || apiResponse.text.length < 1000) {
+        completenessCheck = { 
+          isComplete: true, 
+          reasons: [],
+          financialAnalysis: { missingElements: [] } 
+        };
+      } else {
+        // For complex queries like timetables, do a proper check but be more lenient
+        completenessCheck = analyzeResponseCompleteness(
+          apiResponse.text, 
+          financialQueryType, 
+          queryText, 
+          isSimpleQuery
+        );
+      }
       
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
       

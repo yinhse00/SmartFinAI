@@ -1,3 +1,4 @@
+
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { responseOptimizer } from '../modules/responseOptimizer';
 
@@ -64,10 +65,10 @@ export const requestBuilder = {
     // Add instruction for completeness to the prompt
     let enhancedPrompt = prompt;
     
-    // For rights issue timetable queries, add specific instructions
-    if (prompt.toLowerCase().includes('rights issue') && 
+    // CRITICAL FIX: For financial timetable queries, add specific instructions
+    if ((prompt.toLowerCase().includes('open offer') || prompt.toLowerCase().includes('rights issue')) && 
         (prompt.toLowerCase().includes('timetable') || prompt.toLowerCase().includes('schedule'))) {
-      enhancedPrompt += " Please provide a COMPLETE timetable with ALL key dates and actions. Include board meeting, announcement, circular dispatch, EGM, record date, dealings in nil-paid rights, acceptance period, results announcement, and refund dates.";
+      enhancedPrompt += " Please ensure to include a clear conclusion or summary section at the end of your response that ties everything together. Your response must be complete and well-structured. Please provide a comprehensive response with a clear conclusion section that summarizes all key points.";
     } else {
       enhancedPrompt += " Please provide a complete but concise response covering all key points.";
     }
@@ -78,13 +79,9 @@ export const requestBuilder = {
     
     if (isRetryAttempt) {
       console.log("Retry attempt detected: Using enhanced parameters");
-      finalTokens = Math.min(6000, maxTokens * 2);
+      // CRITICAL FIX: Use much higher token limits for retries
+      finalTokens = Math.max(10000, maxTokens); // Always use at least 10K for retry
       finalTemperature = Math.min(0.1, temperature);
-    } else {
-      // For definition queries, ensure higher token limit
-      const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
-                             prompt.toLowerCase().includes('definition');
-      finalTokens = isDefinitionQuery ? Math.max(maxTokens, 2500) : maxTokens;
     }
     
     return {
@@ -94,7 +91,7 @@ export const requestBuilder = {
       ],
       model: "grok-3-mini-beta",
       temperature: finalTemperature,
-      // Use appropriate token limit to ensure completeness
+      // CRITICAL FIX: Use appropriate token limits consistently
       max_tokens: finalTokens,
     };
   },
@@ -108,17 +105,17 @@ export const requestBuilder = {
     hasContext: boolean,
     isSimpleQuery: boolean = false
   ): { temperature: number, maxTokens: number } => {
-    // Check for rights issue timetable queries
-    const isRightsIssueQuery = queryType === 'rights_issue' &&
-                             (prompt.toLowerCase().includes('timetable') || 
-                              prompt.toLowerCase().includes('schedule'));
+    // CRITICAL FIX: For timetable queries, use specialized settings
+    const isTimetableQuery = (queryType === 'open_offer' || queryType === 'rights_issue') &&
+                           (prompt.toLowerCase().includes('timetable') || 
+                            prompt.toLowerCase().includes('schedule'));
     
-    // For rights issue timetable queries, use specialized settings
-    if (isRightsIssueQuery) {
-      console.log("Rights issue timetable query detected - using specialized parameters");
+    // For timetable queries, use specialized settings
+    if (isTimetableQuery) {
+      console.log(`${queryType} timetable query detected - using specialized parameters`);
       return {
         temperature: 0.1,  // Very low temperature for deterministic results
-        maxTokens: 5000    // Higher token limit for comprehensive timetable
+        maxTokens: 10000   // Much higher token limit for comprehensive timetables
       };
     }
     
@@ -130,7 +127,7 @@ export const requestBuilder = {
     if (isDefinitionQuery) {
       return {
         temperature: 0.1,  // Very low temperature for accurate definitions
-        maxTokens: 4000    // Higher token limit for comprehensive definitions
+        maxTokens: 8000    // Higher token limit for comprehensive definitions
       };
     }
     
@@ -138,7 +135,7 @@ export const requestBuilder = {
     if (isSimpleQuery && !hasContext) {
       return {
         temperature: 0.3,
-        maxTokens: 2000
+        maxTokens: 4000    // Increased from 2000
       };
     }
     
@@ -148,8 +145,8 @@ export const requestBuilder = {
     // Use lower temperature for database-backed queries
     const actualTemperature = hasContext ? 0.1 : temperature;
     
-    // Ensure token count is within safe limits to avoid truncation
-    const safeMaxTokens = Math.min(4000, maxTokens);
+    // CRITICAL FIX: Use consistently higher token limits
+    const safeMaxTokens = Math.min(8000, Math.max(4000, maxTokens));
     
     return { temperature: actualTemperature, maxTokens: safeMaxTokens };
   }

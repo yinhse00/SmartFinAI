@@ -46,7 +46,7 @@ export const grokResponseGenerator = {
             ],
             model: "grok-3-mini-beta",
             temperature: 0.7,
-            max_tokens: Math.min(2000, params.maxTokens || 2000), // Ensure token limit is reasonable
+            max_tokens: 4000, // FIXED: Increase token limit for conversational queries
           };
           
           // Make API call with simpler configuration for conversational queries
@@ -80,7 +80,7 @@ export const grokResponseGenerator = {
       const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
                            "\n\n" + databasePriorityInstruction;
       
-      // Get optimized parameters for API call - CONSISTENT ACROSS ENVIRONMENTS
+      // Get optimized parameters for API call
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
         queryType, 
         params.prompt, 
@@ -88,18 +88,30 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // FIXED: Ensure consistent parameters across all environments
-      // Use the same temperature and token limits in both development and production
+      // CRITICAL FIX: Use much higher token limits for all requests to prevent truncation
+      // Especially for specialized financial queries like open offers and rights issues
+      // Note that we are using constants from token management service
+      let finalTokens = maxTokens;
+      if (queryType === 'open_offer' || queryType === 'rights_issue') {
+        // Use much higher token limits for timetable queries
+        finalTokens = 10000; // Set a high but still practical limit for API
+        console.log(`Using enhanced token limit (${finalTokens}) for ${queryType} query`);
+      } else {
+        // For all other queries, use higher limits than default
+        finalTokens = Math.min(8000, maxTokens); // Cap at 8K for API practicality
+      }
+      
+      // Build the request body with the enhanced token limits
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
-        Math.min(0.3, temperature), // Cap temperature for consistency
-        Math.min(2000, maxTokens)   // Cap tokens for consistency
+        Math.min(0.2, temperature), // Keep temperature low for consistency
+        finalTokens               // Use our enhanced token limits
       );
 
       try {
         // Make primary API call
-        console.log(`Making API call with tokens: ${Math.min(2000, maxTokens)}, temperature: ${Math.min(0.3, temperature)}`);
+        console.log(`Making API call with tokens: ${finalTokens}, temperature: ${Math.min(0.2, temperature)}`);
         const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
         
         // Get the raw response text
@@ -141,7 +153,6 @@ export const grokResponseGenerator = {
           console.error('Both API attempts failed, using fallback:', backupError);
           console.groupEnd();
           
-          // FIXED: Use consistent fallback response format across environments
           return {
             text: "I'm currently experiencing some technical difficulties accessing my full knowledge database. Based on what I can access, here's what I can provide about your query:\n\n" + 
                   "For questions about Hong Kong listing rules, takeovers code, and compliance requirements, I normally provide detailed information from regulatory sources. " +
