@@ -1,3 +1,4 @@
+
 /**
  * Check Open Offer response for completeness
  * Open Offers are CORPORATE ACTIONS governed by Listing Rules Chapter 7, NOT the Takeovers Code
@@ -40,8 +41,15 @@ export function checkOpenOfferResponse(content: string) {
     result.missingElements.push("CRITICAL ERROR: Incorrectly references Takeovers Code for Open Offer (corporate action under Listing Rules)");
   }
   
-  // Check for key trading arrangement guide timetable elements
-  const timetableKeywords = [
+  // Check for explicit Guide on Trading Arrangements reference
+  if (!lowerContent.includes('guide on trading arrangement') && 
+      !lowerContent.includes('trading arrangements guide')) {
+    result.isComplete = false;
+    result.missingElements.push("CRITICAL: Missing reference to Guide on Trading Arrangements for Selected Types of Corporate Actions");
+  }
+  
+  // Check for key trading arrangement guide timetable elements - MANDATORY for all open offers
+  const mandatoryTimelineElements = [
     'cum-entitlement', 
     'ex-entitlement', 
     'record date', 
@@ -50,14 +58,14 @@ export function checkOpenOfferResponse(content: string) {
     'new shares listing'
   ];
   
-  const missingTimetableKeywords = timetableKeywords.filter(
+  const missingMandatoryElements = mandatoryTimelineElements.filter(
     keyword => !lowerContent.includes(keyword) && !lowerContent.includes(keyword.replace('-', ' '))
   );
   
-  if (missingTimetableKeywords.length > 0) {
+  if (missingMandatoryElements.length > 0) {
     result.isComplete = false;
     result.missingElements.push(
-      ...missingTimetableKeywords.map(k => `Missing key open offer timetable element: ${k}`)
+      ...missingMandatoryElements.map(k => `CRITICAL: Missing mandatory open offer timetable element required by Guide on Trading Arrangements: ${k}`)
     );
   }
   
@@ -65,15 +73,7 @@ export function checkOpenOfferResponse(content: string) {
   if (!lowerContent.includes('no nil-paid') && !lowerContent.includes('not have nil-paid') && 
       !lowerContent.includes('unlike rights issues') && !lowerContent.includes('no trading of rights')) {
     result.isComplete = false;
-    result.missingElements.push("Missing key open offer distinction (no nil-paid rights trading)");
-  }
-  
-  // Check for Guide on Trading Arrangements reference
-  if (!lowerContent.includes('guide on trading arrangement') && 
-      !lowerContent.includes('trading arrangements guide') &&
-      !lowerContent.includes('hkex guide')) {
-    result.isComplete = false;
-    result.missingElements.push("Missing reference to Guide on Trading Arrangements");
+    result.missingElements.push("CRITICAL: Missing key open offer distinction (no nil-paid rights trading)");
   }
   
   return result;

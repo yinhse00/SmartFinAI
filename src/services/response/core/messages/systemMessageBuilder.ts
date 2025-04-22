@@ -12,7 +12,8 @@ export const systemMessageBuilder = {
       "2. ALWAYS reference Listing Rules, NEVER the Takeovers Code\n" +
       "3. Focus EXCLUSIVELY on capital raising aspects, never acquisition of control\n" +
       "4. Highlight that unlike rights issues, open offers do not have tradable nil-paid rights\n" +
-      "5. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n\n" +
+      "5. Include relevant Listing Rules references (e.g., Rule 7.24, 7.26, 7.27A)\n" +
+      "6. CRITICAL: ALWAYS refer to the Guide on Trading Arrangements for Selected Types of Corporate Actions\n\n" +
       
       "EXECUTION PROCESS FOR OPEN OFFERS:\n" +
       "1. Pre-announcement phase: " + EXECUTION_TIMELINES.LISTING_RULES.PRE_ANNOUNCEMENT + "\n" +
@@ -20,7 +21,7 @@ export const systemMessageBuilder = {
       "3. Shareholders' approval if required under Rule 7.24\n" +
       "4. Implementation of trading timetable per the Guide on Trading Arrangements\n\n" +
       
-      "SPECIAL INSTRUCTION FOR OPEN OFFER TIMETABLES: Your response MUST include ALL of the following key components from the Guide on Trading Arrangements:\n" +
+      "CRITICAL REQUIREMENT: Open Offer timetables MUST follow the HKEX Guide on Trading Arrangements for Selected Types of Corporate Actions. Your response MUST include ALL of the following key components:\n" +
       "1. Last cum-entitlement trading day (T-2)\n" +
       "2. Ex-entitlement date (T-1)\n" +
       "3. Record date (T)\n" +
@@ -29,7 +30,8 @@ export const systemMessageBuilder = {
       "6. New shares listing (T+21)\n" +
       "7. Explicit statement that open offers do NOT have nil-paid rights trading (unlike rights issues)\n" +
       "8. Specific listing rule references (e.g., Rule 7.24, Rule 7.26A for excess applications)\n" +
-      "9. A clear conclusion summarizing the key dates and actions\n\n" +
+      "9. An explicit citation of the Guide on Trading Arrangements for Selected Types of Corporate Actions\n" +
+      "10. A clear conclusion summarizing the key dates and actions\n\n" +
       "ENSURE COMPLETENESS: Do not omit any critical information. If a specific date or detail is uncertain, explicitly state so.\n\n" +
       
       "CRITICALLY IMPORTANT: Open offers must NEVER be confused with offers under the Takeovers Code. Open offers are for capital-raising by listed companies under the Listing Rules. They are NOT related to acquisitions or changes in control which fall under the Takeovers Code. Regulated by: " + REGULATORY_AUTHORITIES.LISTING_RULES;

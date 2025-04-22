@@ -17,14 +17,20 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     diagnostics: {} as any
   };
   
-  // CRITICAL FIX: Much more lenient truncation detection to match both environments
-  // Only detect very obvious truncation patterns
+  // Check for obvious truncation patterns
   if (content.endsWith('...') || 
       content.endsWith('…') || 
-      (content.length > 0 && content.length < 50)) { // Extremely short responses
+      (content.length > 0 && content.length < 50)) {
     analysis.isTruncated = true;
     analysis.isComplete = false;
     analysis.missingElements.push("Response appears truncated by basic indicators");
+  }
+  
+  // CRITICAL CHECK: For open offers, ensure Guide on Trading Arrangements is referenced
+  if (financialQueryType === 'open_offer' && 
+      !content.toLowerCase().includes('guide on trading arrangements')) {
+    analysis.isComplete = false;
+    analysis.missingElements.push("CRITICAL: Open offer response must reference Guide on Trading Arrangements");
   }
   
   // Only run financial analysis for specific financial query types
@@ -32,10 +38,19 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       ['rights_issue', 'open_offer', 'takeovers', 'listing_rules'].includes(financialQueryType)) {
     const financialAnalysis = analyzeFinancialResponseDetails(content, financialQueryType);
     
-    // Use even more lenient criteria - only mark incomplete for 2+ missing critical elements
-    if (financialAnalysis.missingElements.length > 2) {
-      analysis.isComplete = false;
-      analysis.missingElements.push(...financialAnalysis.missingElements);
+    // Open offers are critical - be strict about completeness for them
+    if (financialQueryType === 'open_offer') {
+      // Any missing elements for open offers are critical
+      if (financialAnalysis.missingElements.length > 0) {
+        analysis.isComplete = false;
+        analysis.missingElements.push(...financialAnalysis.missingElements);
+      }
+    } else {
+      // For other types, use more lenient criteria
+      if (financialAnalysis.missingElements.length > 2) {
+        analysis.isComplete = false;
+        analysis.missingElements.push(...financialAnalysis.missingElements);
+      }
     }
   }
   
