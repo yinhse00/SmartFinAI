@@ -1,4 +1,5 @@
-import { getGrokApiKey, trackTokenUsage, getLeastUsedKey } from '../../apiKeyService';
+
+import { getGrokApiKey, trackTokenUsage, getLeastUsedKey, getBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
 
@@ -15,8 +16,14 @@ const LOCAL_PROXY = '/api/grok/chat/completions';
 
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
-    // Use provided key, least used key, or get next key in rotation
-    const apiKey = providedApiKey || getLeastUsedKey() || getGrokApiKey();
+    // Check if this is a retry attempt
+    const userContent = requestBody.messages.find(msg => msg.role === 'user')?.content || '';
+    const isRetryAttempt = userContent.includes('[RETRY_ATTEMPT]');
+    
+    // Use provided key, or select the best key based on context
+    const apiKey = providedApiKey || 
+                 (isRetryAttempt ? getLeastUsedKey() : getBestPerformingKey()) || 
+                 getGrokApiKey();
     
     if (!apiKey) {
       console.error("No API key provided for financial expert access");
@@ -33,12 +40,11 @@ export const apiClient = {
     console.log("Temperature:", requestBody.temperature);
     console.log("Max tokens:", requestBody.max_tokens);
     console.log("Using API Key:", apiKey.substring(0, 8) + "***");
+    console.log("Is retry attempt:", isRetryAttempt ? "Yes" : "No");
 
     const maxRetries = 2;
     let retries = 0;
     let lastError = null;
-    
-    const userPrompt = requestBody.messages.find(msg => msg.role === 'user')?.content || '';
     
     // First try using the local proxy if available
     try {
@@ -55,6 +61,21 @@ export const apiClient = {
       if (proxyResponse.ok) {
         const data = await proxyResponse.json();
         console.log("Financial expert API response received successfully via proxy");
+        
+        // Track token usage if available
+        if (data.usage?.total_tokens) {
+          trackTokenUsage(apiKey, data.usage.total_tokens);
+        }
+        
+        // Check for truncation in the response content
+        const responseText = data.choices?.[0]?.message?.content || '';
+        const isTruncated = responseText.endsWith('...') || 
+                       responseText.includes("I'll continue") ||
+                       responseText.includes('I will continue');
+        
+        // Track response quality for this key
+        trackResponseQuality(apiKey, isTruncated);
+        
         return data;
       } else {
         console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
@@ -87,6 +108,19 @@ export const apiClient = {
             if (response.ok) {
               const data = await response.json();
               console.log("Financial expert API response received successfully via direct call");
+              
+              // Track token usage
+              if (data.usage?.total_tokens) {
+                trackTokenUsage(apiKey, data.usage.total_tokens);
+              }
+              
+              // Track response quality for this key
+              const responseText = data.choices?.[0]?.message?.content || '';
+              const isTruncated = responseText.endsWith('...') || 
+                             responseText.includes("I'll continue") ||
+                             responseText.includes('I will continue');
+              trackResponseQuality(apiKey, isTruncated);
+              
               return data;
             } else {
               console.warn(`Endpoint ${apiEndpoint} returned status: ${response.status}`);
@@ -115,67 +149,11 @@ export const apiClient = {
           await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
           console.error("Financial expert API call failed after all retries:", error);
-          return offlineResponseGenerator.generateOfflineResponseFormat(userPrompt, error);
+          return offlineResponseGenerator.generateOfflineResponseFormat(userContent, error);
         }
       }
     }
     
     throw lastError || new Error("API call failed after maximum retries");
-
-    // Track token usage after successful response
-    try {
-      const response = await makeApiCall(apiKey, requestBody);
-      if (response.usage?.total_tokens) {
-        trackTokenUsage(apiKey, response.usage.total_tokens);
-      }
-      return response;
-    } catch (error) {
-      // If the error is related to token limits, try with a different key
-      if (error.message?.includes('rate_limit') || error.message?.includes('quota')) {
-        console.log('Token limit reached, trying different key...');
-        const newKey = getGrokApiKey(); // This will get the next key in rotation
-        return await apiClient.callChatCompletions(requestBody, newKey);
-      }
-      throw error;
-    }
   }
 };
-
-// Helper function to make the actual API call
-async function makeApiCall(apiKey: string, requestBody: GrokChatRequestBody) {
-    try {
-        // Try each endpoint
-        for (const apiEndpoint of API_ENDPOINTS) {
-          try {
-            console.log(`Attempting direct API call to: ${apiEndpoint}`);
-            
-            const response = await fetch(apiEndpoint, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${apiKey}`,
-                'Origin': window.location.origin
-              },
-              body: JSON.stringify(requestBody),
-              mode: 'cors'
-            });
-            
-            if (response.ok) {
-              const data = await response.json();
-              console.log("Financial expert API response received successfully via direct call");
-              return data;
-            } else {
-              console.warn(`Endpoint ${apiEndpoint} returned status: ${response.status}`);
-            }
-          } catch (endpointError) {
-            console.warn(`Endpoint ${apiEndpoint} failed:`, endpointError);
-            // Continue to next endpoint
-          }
-        }
-        
-        // All endpoints failed, try next retry
-        throw new Error('All API endpoints failed');
-      } catch (error) {
-        throw error;
-      }
-}

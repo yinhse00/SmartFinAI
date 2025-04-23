@@ -1,6 +1,7 @@
 
 import { useCallback, useRef } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { getFreshGrokApiKey } from '@/services/apiKeyService';
 
 /**
  * Hook for handling retry functionality with enhanced parameter preservation
@@ -41,12 +42,17 @@ export const useRetryHandler = (
       return;
     }
     
-    // Add a marker to indicate this is a retry attempt
+    // Get a fresh API key for the retry
+    const freshKey = getFreshGrokApiKey();
+    console.log("Using fresh API key for retry:", freshKey.substring(0, 6) + "***");
+    
+    // Add markers to indicate this is a retry attempt
     const enhancedQuery = `${lastQuery} [RETRY_ATTEMPT]`;
     
     setInput(lastQuery);
     setTimeout(() => {
       if (processQueryRef.current) {
+        console.log("Retrying query with higher token limits and fresh API key");
         processQueryRef.current(enhancedQuery);
       }
     }, 100);

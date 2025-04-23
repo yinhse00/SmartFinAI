@@ -18,10 +18,13 @@ interface ApiKeyUsage {
   key: string;
   tokensUsed: number;
   lastUsed: number;
+  truncationCount: number;
+  successCount: number;
 }
 
 let currentKeyIndex = 0;
 const keyUsageMap = new Map<string, ApiKeyUsage>();
+let lastTruncatedKey = '';
 
 /**
  * Helper: Validate and deduplicate API keys.
@@ -89,11 +92,54 @@ export const getGrokApiKey = (): string => {
     // Update usage map
     keyUsageMap.set(
       selectedKey,
-      keyUsageMap.get(selectedKey) || { key: selectedKey, tokensUsed: 0, lastUsed: Date.now() }
+      keyUsageMap.get(selectedKey) || { 
+        key: selectedKey, 
+        tokensUsed: 0, 
+        lastUsed: Date.now(),
+        truncationCount: 0,
+        successCount: 0 
+      }
     );
     return selectedKey;
   } catch (error) {
     console.error('Error accessing API keys:', error);
+    return DEFAULT_DEPLOYMENT_KEYS[0];
+  }
+};
+
+/**
+ * Get a fresh key that hasn't been associated with truncation recently
+ */
+export const getFreshGrokApiKey = (): string => {
+  try {
+    const keys = loadKeysFromStorage();
+    if (!keys.length) throw new Error('No available API keys in storage or defaults.');
+    
+    // Filter out the last key that had truncation issues
+    const freshKeys = keys.filter(key => key !== lastTruncatedKey);
+    
+    // If we have fresh keys, use those; otherwise use all keys
+    const keyPool = freshKeys.length > 0 ? freshKeys : keys;
+    
+    // Pick a random key for unpredictability rather than sequential
+    const randomIndex = Math.floor(Math.random() * keyPool.length);
+    const selectedKey = keyPool[randomIndex];
+    
+    // Update usage tracking
+    keyUsageMap.set(
+      selectedKey,
+      keyUsageMap.get(selectedKey) || { 
+        key: selectedKey, 
+        tokensUsed: 0, 
+        lastUsed: Date.now(),
+        truncationCount: 0,
+        successCount: 0 
+      }
+    );
+    
+    return selectedKey;
+  } catch (error) {
+    console.error('Error getting fresh API key:', error);
     return DEFAULT_DEPLOYMENT_KEYS[0];
   }
 };
@@ -114,9 +160,35 @@ export const trackTokenUsage = (key: string, tokens: number): void => {
   const usage = keyUsageMap.get(key) || {
     key,
     tokensUsed: 0,
-    lastUsed: Date.now()
+    lastUsed: Date.now(),
+    truncationCount: 0,
+    successCount: 0
   };
   usage.tokensUsed += tokens;
+  usage.lastUsed = Date.now();
+  keyUsageMap.set(key, usage);
+};
+
+/**
+ * Track response quality for a specific key
+ */
+export const trackResponseQuality = (key: string, wasTruncated: boolean): void => {
+  if (!key) return;
+  const usage = keyUsageMap.get(key) || {
+    key,
+    tokensUsed: 0,
+    lastUsed: Date.now(),
+    truncationCount: 0,
+    successCount: 0
+  };
+  
+  if (wasTruncated) {
+    usage.truncationCount++;
+    lastTruncatedKey = key; // Remember this key had truncation issues
+  } else {
+    usage.successCount++;
+  }
+  
   usage.lastUsed = Date.now();
   keyUsageMap.set(key, usage);
 };
@@ -134,6 +206,39 @@ export const getLeastUsedKey = (): string => {
     }
   }
   return least?.key || getGrokApiKey();
+};
+
+/**
+ * Get the key with best performance (lowest truncation ratio)
+ */
+export const getBestPerformingKey = (): string => {
+  // If there's been no usage, rotate as normal
+  if (!keyUsageMap.size) return getGrokApiKey();
+  
+  let bestKey = null;
+  let bestScore = -1;
+  
+  for (const usage of keyUsageMap.values()) {
+    const totalResponses = usage.successCount + usage.truncationCount;
+    if (totalResponses === 0) continue;
+    
+    // Calculate success rate (higher is better)
+    const successRate = usage.successCount / totalResponses;
+    
+    // Calculate token efficiency (lower tokens used is better)
+    const tokenFactor = usage.tokensUsed > 0 ? 
+                      1 - Math.min(1, Math.log10(usage.tokensUsed) / 6) : 1;
+    
+    // Combined score (higher is better)
+    const score = (successRate * 0.7) + (tokenFactor * 0.3);
+    
+    if (bestScore < 0 || score > bestScore) {
+      bestScore = score;
+      bestKey = usage.key;
+    }
+  }
+  
+  return bestKey || getGrokApiKey();
 };
 
 /**

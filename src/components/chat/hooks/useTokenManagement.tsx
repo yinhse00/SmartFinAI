@@ -1,67 +1,68 @@
 
-import { tokenManagementService } from '@/services/response/modules/tokenManagementService';
+import { useCallback } from 'react';
 
+/**
+ * Hook for managing token limits and API parameters
+ */
 export const useTokenManagement = () => {
-  const enhanceTokenLimits = (
+  const enhanceTokenLimits = useCallback((
     queryText: string,
     responseParams: any,
     isSimpleQuery: boolean,
     isAggregationQuery: boolean
   ) => {
-    // Get base token limit
-    const baseTokenLimit = tokenManagementService.getTokenLimit({
-      queryType: responseParams.financialQueryType || 'general',
-      prompt: queryText,
-      isSimpleQuery
-    });
+    let enhancedParams = { ...responseParams };
     
-    // Increase token limit for complex queries
-    let tokenLimit = baseTokenLimit;
-
-    // Significantly boost tokens for queries that are likely to require comprehensive responses
-    if (isAggregationQuery) {
-      tokenLimit = Math.min(tokenLimit * 2, 8000); // More aggressive cap for aggregation queries
+    // Base token settings
+    const DEFAULT_TOKEN_LIMIT = isSimpleQuery ? 4000 : 6000;
+    const COMPLEX_TOKEN_LIMIT = 8000;
+    const RETRY_TOKEN_LIMIT = 10000;
+    
+    // Detect if this is a retry attempt
+    const isRetryAttempt = queryText.includes('[RETRY_ATTEMPT]');
+    
+    // Determine token limit based on query characteristics
+    let maxTokens = DEFAULT_TOKEN_LIMIT;
+    
+    if (isRetryAttempt) {
+      // Significantly increase tokens for retry attempts
+      maxTokens = RETRY_TOKEN_LIMIT;
+      console.log('Using retry token limit:', maxTokens);
+    } else if (isAggregationQuery) {
+      // Use higher limits for aggregation queries
+      maxTokens = COMPLEX_TOKEN_LIMIT;
+      console.log('Using aggregation query token limit:', maxTokens);
     } else if (queryText.toLowerCase().includes('timetable') || 
-               queryText.toLowerCase().includes('schedule')) {
-      tokenLimit = Math.min(tokenLimit * 1.5, 7500); // Higher cap for timetable/schedule queries
-    } else if (queryText.toLowerCase().includes('detailed') ||
-               queryText.toLowerCase().includes('comprehensive') ||
-               queryText.toLowerCase().includes('complete')) {
-      tokenLimit = Math.min(tokenLimit * 1.4, 7000); // Higher cap for detailed requests
+               queryText.toLowerCase().includes('schedule') ||
+               queryText.toLowerCase().includes('timeline')) {
+      // Timetables/schedules need more tokens to be complete
+      maxTokens = COMPLEX_TOKEN_LIMIT;
+      console.log('Using timetable query token limit:', maxTokens);
+    } else if (queryText.toLowerCase().includes('rights issue') || 
+               queryText.toLowerCase().includes('open offer')) {
+      // Corporate actions need more complete responses
+      maxTokens = COMPLEX_TOKEN_LIMIT - 1000;
+      console.log('Using corporate action token limit:', maxTokens);
+    } else if (queryText.length > 200) {
+      // Longer queries generally need more tokens
+      maxTokens = DEFAULT_TOKEN_LIMIT + 1000;
+      console.log('Using long query token limit:', maxTokens);
     }
     
-    // Additional boost for comparison and difference queries
-    if (queryText.toLowerCase().includes('difference between') ||
-        queryText.toLowerCase().includes('compare') ||
-        queryText.toLowerCase().includes('versus') ||
-        queryText.toLowerCase().includes('vs')) {
-      tokenLimit = Math.min(tokenLimit * 1.3, 7000); // Higher cap for comparison queries
+    // Override parameters with enhanced values
+    enhancedParams.maxTokens = maxTokens;
+    
+    // Also reduce temperature for retries for more deterministic/complete responses
+    if (isRetryAttempt) {
+      enhancedParams.temperature = 0.1; // Very low temperature for retries
+    } else if (queryText.toLowerCase().includes('timetable') ||
+               queryText.toLowerCase().includes('rights issue') ||
+               isAggregationQuery) {
+      enhancedParams.temperature = 0.2; // Low temperature for precision-critical queries
     }
     
-    // Further boost for specific financial terms that likely require detailed explanations
-    if (queryText.toLowerCase().includes('connected transaction') ||
-        queryText.toLowerCase().includes('whitewash waiver') ||
-        queryText.toLowerCase().includes('rule 7.19a') ||
-        queryText.toLowerCase().includes('chapter 14a')) {
-      tokenLimit = Math.min(tokenLimit * 1.25, 7500); // Domain-specific boosts
-    }
+    return enhancedParams;
+  }, []);
 
-    // Get appropriate temperature - lower temperature for more deterministic responses
-    const temperature = tokenManagementService.getTemperature({
-      queryType: responseParams.financialQueryType || 'general',
-      prompt: queryText
-    });
-
-    console.log(`Enhanced token limit: ${tokenLimit}, Temperature: ${temperature}, Simple query: ${isSimpleQuery}`);
-
-    return {
-      ...responseParams,
-      maxTokens: tokenLimit,
-      temperature
-    };
-  };
-
-  return {
-    enhanceTokenLimits
-  };
+  return { enhanceTokenLimits };
 };
