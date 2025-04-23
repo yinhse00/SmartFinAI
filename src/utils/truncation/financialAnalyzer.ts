@@ -101,7 +101,12 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     if (financialAnalysis.missingElements.length > 0) {
       analysis.isComplete = false;
       analysis.missingElements.push(...financialAnalysis.missingElements);
-      analysis.confidence = financialAnalysis.confidence || 'medium';
+      // Fix: Check if confidence exists before accessing it
+      if ('confidence' in financialAnalysis) {
+        analysis.confidence = financialAnalysis.confidence || 'medium';
+      } else {
+        analysis.confidence = 'medium';
+      }
     }
   }
   
