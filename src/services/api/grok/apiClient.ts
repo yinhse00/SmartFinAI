@@ -1,5 +1,4 @@
-
-import { getGrokApiKey } from '../../apiKeyService';
+import { getGrokApiKey, trackTokenUsage, getLeastUsedKey } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
 
@@ -16,7 +15,8 @@ const LOCAL_PROXY = '/api/grok/chat/completions';
 
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
-    const apiKey = providedApiKey || getGrokApiKey();
+    // Use provided key, least used key, or get next key in rotation
+    const apiKey = providedApiKey || getLeastUsedKey() || getGrokApiKey();
     
     if (!apiKey) {
       console.error("No API key provided for financial expert access");
@@ -121,5 +121,61 @@ export const apiClient = {
     }
     
     throw lastError || new Error("API call failed after maximum retries");
+
+    // Track token usage after successful response
+    try {
+      const response = await makeApiCall(apiKey, requestBody);
+      if (response.usage?.total_tokens) {
+        trackTokenUsage(apiKey, response.usage.total_tokens);
+      }
+      return response;
+    } catch (error) {
+      // If the error is related to token limits, try with a different key
+      if (error.message?.includes('rate_limit') || error.message?.includes('quota')) {
+        console.log('Token limit reached, trying different key...');
+        const newKey = getGrokApiKey(); // This will get the next key in rotation
+        return await apiClient.callChatCompletions(requestBody, newKey);
+      }
+      throw error;
+    }
   }
 };
+
+// Helper function to make the actual API call
+async function makeApiCall(apiKey: string, requestBody: GrokChatRequestBody) {
+    try {
+        // Try each endpoint
+        for (const apiEndpoint of API_ENDPOINTS) {
+          try {
+            console.log(`Attempting direct API call to: ${apiEndpoint}`);
+            
+            const response = await fetch(apiEndpoint, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`,
+                'Origin': window.location.origin
+              },
+              body: JSON.stringify(requestBody),
+              mode: 'cors'
+            });
+            
+            if (response.ok) {
+              const data = await response.json();
+              console.log("Financial expert API response received successfully via direct call");
+              return data;
+            } else {
+              console.warn(`Endpoint ${apiEndpoint} returned status: ${response.status}`);
+            }
+          } catch (endpointError) {
+            console.warn(`Endpoint ${apiEndpoint} failed:`, endpointError);
+            // Continue to next endpoint
+          }
+        }
+        
+        // All endpoints failed, try next retry
+        throw new Error('All API endpoints failed');
+      } catch (error) {
+        throw error;
+      }
+}
