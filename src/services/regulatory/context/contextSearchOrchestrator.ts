@@ -14,7 +14,7 @@ export const contextSearchOrchestrator = {
       
       let searchResults: RegulatoryEntry[] = [];
       
-      // STEP 1: Initial query analysis for definition and important terms
+      // STEP 1: Initial query analysis for specialized topics
       console.log('STEP 1: Initial query analysis');
       const isDefinitionQuery = query.toLowerCase().includes('what is') || 
                                query.toLowerCase().includes('definition of') ||
@@ -23,9 +23,13 @@ export const contextSearchOrchestrator = {
       const isConnectedPersonQuery = query.toLowerCase().includes('connected person') ||
                                     query.toLowerCase().includes('connected transaction');
       
-      // For definition queries, especially about connected persons,
+      const isChapter18CQuery = query.toLowerCase().includes('chapter 18c') ||
+                              query.toLowerCase().includes('specialist technology') ||
+                              query.toLowerCase().includes('18c requirements');
+      
+      // For definition queries, Chapter 18C, or connected persons,
       // we search ALL sources regardless of initial matches
-      const needsComprehensiveSearch = isDefinitionQuery || isConnectedPersonQuery;
+      const needsComprehensiveSearch = isDefinitionQuery || isConnectedPersonQuery || isChapter18CQuery;
       
       // STEP 2: Check multiple Summary and Keyword Indexes first
       console.log('STEP 2: Checking Multiple Summary and Keyword Indexes');
@@ -48,7 +52,18 @@ export const contextSearchOrchestrator = {
         }
       }
       
-      // STEP 3: For definition queries or important terms, ALWAYS do comprehensive search
+      // STEP 2.5: For Chapter 18C queries, explicitly search for Chapter 18C content
+      if (isChapter18CQuery) {
+        console.log('Chapter 18C query detected - searching Chapter 18C specific content');
+        const chapter18CResults = await searchService.search('Chapter 18C Specialist Technology', 'listing_rules');
+        searchResults = [...chapter18CResults, ...searchResults];
+        
+        // Also search for related guidance letters
+        const guidanceResults = await searchService.search('Specialist Technology guidance letters', 'guidance');
+        searchResults = [...searchResults, ...guidanceResults];
+      }
+      
+      // STEP 3: For important topics, ALWAYS do comprehensive search
       if (needsComprehensiveSearch) {
         console.log('Important regulatory term detected - performing comprehensive search');
         
@@ -67,18 +82,44 @@ export const contextSearchOrchestrator = {
           const chapterResults = await searchService.search('Chapter 14A connected person definition', 'listing_rules');
           searchResults = [...chapterResults, ...searchResults];
         }
+        
+        // For Chapter 18C queries, ensure we have the full chapter content
+        if (isChapter18CQuery) {
+          console.log('Chapter 18C query - ensuring full chapter content');
+          const chapter18CFullResults = await searchService.search('Chapter 18C complete', 'listing_rules');
+          searchResults = [...chapter18CFullResults, ...searchResults]; 
+        }
       }
       
       // STEP 4: Remove duplicates and prioritize results
       const uniqueResults = removeDuplicateResults(searchResults);
-      const financialTerms = extractFinancialTerms(query);
+      let financialTerms = extractFinancialTerms(query);
+      
+      // For Chapter 18C queries, ensure specialist technology terms are included
+      if (isChapter18CQuery) {
+        financialTerms = [
+          ...financialTerms,
+          'chapter 18c',
+          'specialist technology',
+          'commercial company',
+          'pre-commercial company',
+          'sophisticated investor'
+        ];
+      }
+      
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
       // Format context with section headings and regulatory citations
       const context = contextFormatter.formatEntriesToContext(prioritizedResults);
       
       // Generate detailed reasoning for the search process
-      const reasoning = `Comprehensive analysis conducted across multiple regulatory sources. Enhanced search strategy implemented for definition query "${query}" with focus on Chapter 14A and related regulatory content.`;
+      let reasoning = `Comprehensive analysis conducted across multiple regulatory sources.`;
+      
+      if (isChapter18CQuery) {
+        reasoning += ` Enhanced search strategy implemented for Chapter 18C Specialist Technology Companies query "${query}" with focus on Chapter 18C requirements and related guidance.`;
+      } else if (isDefinitionQuery) {
+        reasoning += ` Enhanced search strategy implemented for definition query "${query}" with focus on regulatory definitions.`;
+      }
       
       console.log('Search Workflow Completed');
       console.groupEnd();
@@ -94,4 +135,3 @@ export const contextSearchOrchestrator = {
     }
   }
 };
-
