@@ -8,7 +8,8 @@
 export function checkComparisonResponse(content: string, queryType: string) {
   const result = {
     isComplete: true,
-    missingElements: [] as string[]
+    missingElements: [] as string[],
+    confidence: 'high' as 'high' | 'medium' | 'low'
   };
   
   const lowerContent = content.toLowerCase();

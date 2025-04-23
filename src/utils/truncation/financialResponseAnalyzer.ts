@@ -20,6 +20,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     isComplete: true,
     isTruncated: false,
     missingElements: [] as string[],
+    confidence: 'high' as 'high' | 'medium' | 'low',
     diagnostics: {} as any
   };
   
@@ -27,6 +28,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
   if (content.length > 3000 && !hasConclusion(content)) {
     analysis.isComplete = false;
     analysis.missingElements.push("Missing conclusion or summary section");
+    analysis.confidence = 'medium';
   }
   
   // Domain-specific checks based on query type
@@ -48,6 +50,9 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       if (!checkResult.isComplete) {
         analysis.isComplete = false;
         analysis.missingElements.push(...checkResult.missingElements);
+        if (checkResult.confidence) {
+          analysis.confidence = checkResult.confidence;
+        }
       }
     }
     
@@ -58,6 +63,9 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       if (!comparisonResult.isComplete) {
         analysis.isComplete = false;
         analysis.missingElements.push(...comparisonResult.missingElements);
+        if (comparisonResult.confidence) {
+          analysis.confidence = comparisonResult.confidence;
+        }
       }
     }
     
@@ -70,6 +78,9 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
       if (!executionProcessResult.isComplete) {
         analysis.isComplete = false;
         analysis.missingElements.push(...executionProcessResult.missingElements);
+        if (executionProcessResult.confidence) {
+          analysis.confidence = executionProcessResult.confidence;
+        }
       }
     }
     
@@ -80,6 +91,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           !content.toLowerCase().includes('chapter 7')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL: Open offer response missing Listing Rules references");
+        analysis.confidence = 'high';
       }
       
       // Check for incorrect Takeovers Code references
@@ -88,6 +100,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           content.toLowerCase().includes('mandatory offer')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL ERROR: Open offer response incorrectly references Takeovers Code concepts");
+        analysis.confidence = 'high';
       }
       
       // Check for capital raising purpose (essential for corporate actions)
@@ -95,6 +108,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           !content.toLowerCase().includes('fundraising')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL: Missing capital-raising purpose for Open Offer corporate action");
+        analysis.confidence = 'high';
       }
     }
     
@@ -105,6 +119,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           !content.toLowerCase().includes('code on takeover')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL: Takeover offer response missing Takeovers Code references");
+        analysis.confidence = 'high';
       }
       
       // Check for incorrect Listing Rules Chapter 7 references
@@ -112,6 +127,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           content.toLowerCase().includes('rule 7.')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL ERROR: Takeover offer response incorrectly references Listing Rules Chapter 7");
+        analysis.confidence = 'high';
       }
       
       // Check for acquisition purpose (essential for takeover offers)
@@ -119,6 +135,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
           !content.toLowerCase().includes('control')) {
         analysis.isComplete = false;
         analysis.missingElements.push("CRITICAL: Missing acquisition/control purpose for Takeover offer under Takeovers Code");
+        analysis.confidence = 'high';
       }
     }
   }
@@ -159,10 +176,15 @@ function isExecutionProcessContent(content: string): boolean {
 /**
  * Checks execution process response completeness
  */
-function checkExecutionProcessCompleteness(content: string, queryType: string): { isComplete: boolean, missingElements: string[] } {
+function checkExecutionProcessCompleteness(content: string, queryType: string): { 
+  isComplete: boolean, 
+  missingElements: string[],
+  confidence?: 'high' | 'medium' | 'low' 
+} {
   const result = {
     isComplete: true,
-    missingElements: [] as string[]
+    missingElements: [] as string[],
+    confidence: 'medium' as 'high' | 'medium' | 'low'
   };
   
   const normalizedContent = content.toLowerCase();

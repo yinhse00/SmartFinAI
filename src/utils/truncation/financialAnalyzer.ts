@@ -14,7 +14,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     isComplete: true,
     isTruncated: false,
     missingElements: [] as string[],
-    confidence: 'high',
+    confidence: 'high' as 'high' | 'medium' | 'low',
     diagnostics: {} as any
   };
   

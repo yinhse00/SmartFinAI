@@ -9,7 +9,8 @@ import { logTruncation, LogLevel } from '../logLevel';
 export function checkRightsIssueResponse(content: string) {
   const result = {
     isComplete: true,
-    missingElements: [] as string[]
+    missingElements: [] as string[],
+    confidence: 'high' as 'high' | 'medium' | 'low'
   };
   
   const lowerContent = content.toLowerCase();

@@ -9,7 +9,8 @@
 export function checkOpenOfferResponse(content: string) {
   const result = {
     isComplete: true,
-    missingElements: [] as string[]
+    missingElements: [] as string[],
+    confidence: 'high' as 'high' | 'medium' | 'low'
   };
   
   const lowerContent = content.toLowerCase();
@@ -23,6 +24,7 @@ export function checkOpenOfferResponse(content: string) {
   if (!lowerContent.includes('corporate action') && !lowerContent.includes('capital raising')) {
     result.isComplete = false;
     result.missingElements.push("CRITICAL: Missing identification of Open Offer as a corporate action under Listing Rules");
+    result.confidence = 'high';
   }
   
   // Check for Listing Rules references - MANDATORY for open offers
@@ -30,6 +32,7 @@ export function checkOpenOfferResponse(content: string) {
       !lowerContent.includes('rule 7.') && !lowerContent.includes('rule 7 ')) {
     result.isComplete = false;
     result.missingElements.push("Missing Listing Rules references for Open Offer");
+    result.confidence = 'high';
   }
   
   // Check for incorrect regulatory framework references - MUST flag any takeover code mentions
@@ -39,6 +42,7 @@ export function checkOpenOfferResponse(content: string) {
       lowerContent.includes('rule 26')) {
     result.isComplete = false;
     result.missingElements.push("CRITICAL ERROR: Incorrectly references Takeovers Code for Open Offer (corporate action under Listing Rules)");
+    result.confidence = 'high';
   }
   
   // ENHANCED: Check for more explicit regulatory misclassification
@@ -48,6 +52,7 @@ export function checkOpenOfferResponse(content: string) {
       lowerContent.includes('acquiring')) {
     result.isComplete = false;
     result.missingElements.push("CRITICAL ERROR: Incorrectly describes Open Offer using acquisition terminology (belongs to Takeovers Code)");
+    result.confidence = 'high';
   }
   
   // Check for key open offer components
@@ -100,7 +105,11 @@ export function isComparisonQuery(content: string): boolean {
 /**
  * Check for regulatory framework confusion in the query
  */
-export function checkRegulatoryFrameworkClarity(content: string): { isConfused: boolean, explanation: string } {
+export function checkRegulatoryFrameworkClarity(content: string): { 
+  isConfused: boolean, 
+  explanation: string,
+  confidence?: 'high' | 'medium' | 'low' 
+} {
   const lowerContent = content.toLowerCase();
   
   // Check if open offers are incorrectly described using takeovers terminology
@@ -109,7 +118,8 @@ export function checkRegulatoryFrameworkClarity(content: string): { isConfused: 
        lowerContent.includes('mandatory offer'))) {
     return {
       isConfused: true,
-      explanation: "CRITICAL: Response incorrectly mixes Open Offers (Listing Rules corporate action) with Takeovers Code concepts"
+      explanation: "CRITICAL: Response incorrectly mixes Open Offers (Listing Rules corporate action) with Takeovers Code concepts",
+      confidence: 'high'
     };
   }
   
