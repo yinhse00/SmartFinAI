@@ -60,13 +60,18 @@ export const useResponseFormatter = () => {
     financialAnalysis: any,
     retryLastQuery: () => void
   ) => {
+    // Fix: Add null/undefined checks before accessing length
+    // More defensive coding to prevent undefined errors
+    const diagnosticReasons = diagnostics?.reasons || [];
+    const financialMissingElements = financialAnalysis?.missingElements || [];
+    
     // Show toast with more detailed reason for truncation
     let truncationReason = "The response appears to have been cut off.";
     
-    if (diagnostics.reasons.length > 0) {
-      truncationReason = `The response appears incomplete: ${diagnostics.reasons[0]}`;
-    } else if (financialAnalysis.missingElements.length > 0) {
-      truncationReason = `Financial content incomplete: ${financialAnalysis.missingElements[0]}`;
+    if (diagnosticReasons.length > 0) {
+      truncationReason = `The response appears incomplete: ${diagnosticReasons[0]}`;
+    } else if (financialMissingElements.length > 0) {
+      truncationReason = `Financial content incomplete: ${financialMissingElements[0]}`;
     }
     
     toast({

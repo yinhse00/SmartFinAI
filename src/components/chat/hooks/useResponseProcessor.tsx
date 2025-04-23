@@ -39,10 +39,10 @@ export const useResponseProcessor = (
     }
 
     // Only mark as truncated for non-simple queries that failed completeness check
-    if (!completenessCheck.isComplete) {
+    if (completenessCheck && !completenessCheck.isComplete) {
       console.log('Incomplete response detected after all retries:', {
-        reasons: completenessCheck.reasons,
-        financialAnalysisMissingElements: completenessCheck.financialAnalysis.missingElements
+        reasons: completenessCheck.reasons || [],
+        financialAnalysisMissingElements: completenessCheck.financialAnalysis?.missingElements || []
       });
       botMessage.isTruncated = true;
     }
@@ -52,8 +52,9 @@ export const useResponseProcessor = (
 
     // Show continue ("next part") button if batch continuation needed
     if (botMessage.isTruncated && batchInfo && batchInfo.onContinue) {
-      const diagnostics = completenessCheck.reasons.length > 0
-        ? { reasons: completenessCheck.reasons }
+      const diagnosticsReasons = completenessCheck?.reasons || [];
+      const diagnosticMessage = diagnosticsReasons.length > 0
+        ? { reasons: diagnosticsReasons }
         : { reasons: ['Response appears incomplete'] };
 
       toast({
@@ -67,12 +68,33 @@ export const useResponseProcessor = (
           >Continue</button>
         )
       });
-    } else if (botMessage.isTruncated) {
-      showTruncationToast(
-        completenessCheck.reasons,
-        completenessCheck.financialAnalysis,
-        retryLastQuery
-      );
+    } else if (botMessage.isTruncated && completenessCheck) {
+      // Only call showTruncationToast if completenessCheck has valid data
+      if (completenessCheck.reasons || completenessCheck.financialAnalysis) {
+        showTruncationToast(
+          completenessCheck.reasons ? { reasons: completenessCheck.reasons } : { reasons: [] },
+          completenessCheck.financialAnalysis || { missingElements: [] },
+          retryLastQuery
+        );
+      } else {
+        // Fallback if completeness check doesn't have the expected structure
+        toast({
+          title: "Incomplete Response",
+          description: "The response appears to be incomplete. You can retry your query for a complete answer.",
+          duration: 10000,
+          action: (
+            <Button
+              onClick={retryLastQuery}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <RefreshCw size={14} />
+              Retry query
+            </Button>
+          )
+        });
+      }
     }
 
     return botMessage;
