@@ -1,145 +1,47 @@
-import { useState, useCallback } from 'react';
+
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from '@/hooks/use-toast';
-
 import FileDropZone from './FileDropZone';
 import FileList from './FileList';
 import MetadataForm from './MetadataForm';
-import { uploadFilesToSupabase } from '@/utils/referenceUploadUtils';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-
-interface FileWithError extends File {
-  error?: string;
-}
+import { useFileSelection, allowedExtensions } from './hooks/useFileSelection';
+import { useReferenceUpload } from './hooks/useReferenceUpload';
 
 interface ReferenceUploaderProps {
   onUploadComplete?: () => void;
 }
 
 const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete }) => {
-  const [files, setFiles] = useState<FileWithError[]>([]);
+  const {
+    files,
+    setFiles,
+    handleFileChange,
+    removeFile,
+    validateFiles,
+  } = useFileSelection();
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'];
-
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files) as FileWithError[];
-      
-      // Validate files before adding them
-      const validatedFiles = newFiles.map(file => {
-        const fileExt = file.name.split('.').pop()?.toLowerCase();
-        
-        if (!allowedExtensions.includes(fileExt || '')) {
-          return { ...file, error: 'Invalid file type. PDF, DOCX, TXT, XLSX, XLS' };
-        }
-        
-        if (file.size > 20971520) { // 20MB
-          return { ...file, error: 'File exceeds 20MB limit' };
-        }
-        
-        return file;
-      });
-      
-      setFiles(prev => [...prev, ...validatedFiles]);
-      setUploadError(null);
+  const {
+    isUploading,
+    uploadError,
+    setUploadError,
+    handleUpload,
+  } = useReferenceUpload(
+    files,
+    category,
+    description,
+    validateFiles,
+    () => {
+      setFiles([]);
+      setCategory('');
+      setDescription('');
+      if (onUploadComplete) onUploadComplete();
     }
-  }, []);
-
-  const removeFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const validateFiles = useCallback(() => {
-    const invalidFiles = files.filter(file => {
-      const fileExt = file.name.split('.').pop()?.toLowerCase();
-      return !allowedExtensions.includes(fileExt || '') || file.size > 20971520;
-    });
-    
-    return invalidFiles.length === 0;
-  }, [files]);
-
-  const handleUpload = useCallback(async () => {
-    // Reset error state
-    setUploadError(null);
-    
-    // Basic validation
-    if (files.length === 0) {
-      toast({
-        title: "No files selected",
-        description: "Please select at least one file to upload.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!category) {
-      toast({
-        title: "Category required",
-        description: "Please select a category for the documents.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate file types and sizes
-    if (!validateFiles()) {
-      toast({
-        title: "Invalid files",
-        description: "Please remove invalid files before uploading.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    setIsUploading(true);
-    
-    try {
-      console.log('Starting upload process with', files.length, 'files');
-      const result = await uploadFilesToSupabase(files, category, description);
-      
-      if (result.success) {
-        toast({
-          title: "Upload successful",
-          description: result.message,
-        });
-        
-        // Reset form
-        setFiles([]);
-        setCategory('');
-        setDescription('');
-        
-        // Notify parent component that upload is complete
-        if (onUploadComplete) {
-          onUploadComplete();
-        }
-      } else {
-        console.error('Upload failed:', result.error || result.message);
-        setUploadError(result.message);
-        toast({
-          title: "Upload failed",
-          description: result.message,
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error('Unhandled error during upload:', error);
-      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
-      setUploadError(errorMessage);
-      toast({
-        title: "Upload error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
-    }
-  }, [files, category, description, validateFiles, onUploadComplete]);
+  );
 
   // Check for invalid files
   const hasInvalidFiles = !validateFiles();
@@ -153,14 +55,12 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        {/* File Drop Area */}
         <FileDropZone 
           onFileChange={handleFileChange} 
           isUploading={isUploading}
           allowedExtensions={allowedExtensions}
         />
 
-        {/* Selected Files */}
         <FileList 
           files={files} 
           onRemoveFile={removeFile}
@@ -168,7 +68,6 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
           allowedExtensions={allowedExtensions}
         />
 
-        {/* Error Message */}
         {uploadError && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
@@ -185,7 +84,6 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
           </Alert>
         )}
 
-        {/* Metadata */}
         <MetadataForm 
           category={category}
           setCategory={setCategory}
@@ -215,3 +113,4 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
 };
 
 export default ReferenceUploader;
+
