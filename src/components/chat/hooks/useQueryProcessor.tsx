@@ -1,13 +1,10 @@
 
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRetryHandler } from './useRetryHandler';
 import { useQueryExecution } from './useQueryExecution';
 import { useQueryInputHandler } from './useQueryInputHandler';
 import { Message } from '../ChatMessage';
 
-/**
- * Hook for managing query processing
- */
 export const useQueryProcessor = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -18,11 +15,8 @@ export const useQueryProcessor = (
   isGrokApiKeySet: boolean,
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  // Set up retry handler without passing processQuery (avoiding circular dependency)
   const { retryLastQuery, setProcessQueryFn } = useRetryHandler(lastQuery, setInput);
-  
-  // Set up query execution - this is the main processing logic
-  const { isLoading, processQuery, processingStage } = useQueryExecution(
+  const { isLoading, processQuery: processQueryOriginal, processingStage } = useQueryExecution(
     messages,
     setMessages,
     setLastQuery,
@@ -31,13 +25,59 @@ export const useQueryProcessor = (
     isGrokApiKeySet,
     setApiKeyDialogOpen
   );
-  
-  // Set up input handlers
   const { handleSend, handleKeyDown } = useQueryInputHandler(processQuery, input);
 
-  // Set the processQuery function in the retry handler
+  // Batch/multi-part state
+  const batchNumber = useRef(1);
+  const [isBatching, setIsBatching] = useState(false);
+  const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
+
+  // Internal: handle "Continue" for fetching next batch
+  const processQuery = async (queryText: string, { isBatchContinuation = false } = {}) => {
+    // If continuing a batch, add special instruction
+    let prompt = queryText;
+    if (isBatchContinuation && batchNumber.current > 1) {
+      prompt = `${queryText} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
+    }
+
+    // Store for UI
+    if (!isBatchContinuation) {
+      setBatchingPrompt(queryText);
+      batchNumber.current = 1;
+      setIsBatching(false);
+    }
+
+    const batchInfo = isBatchContinuation
+      ? { batchNumber: batchNumber.current, isContinuing: true }
+      : undefined;
+
+    // Wrap setMessages to append messages
+    const setMessagesBatch = (msgs: Message[]) => setMessages(msgs);
+    // Call the original processQuery from useQueryExecution, slightly modified to take batchInfo
+    await processQueryOriginal(
+      prompt,
+      batchInfo,
+      async (truncated: boolean) => {
+        // If response was truncated, allow batch continuation
+        if (truncated) {
+          setIsBatching(true);
+        } else {
+          setIsBatching(false);
+        }
+      }
+    );
+  };
+
+  // Triggered when user clicks "Continue" for the next batch part
+  const handleContinueBatch = () => {
+    if (batchingPrompt) {
+      batchNumber.current += 1;
+      processQuery(batchingPrompt, { isBatchContinuation: true });
+    }
+  };
+
   useEffect(() => {
-    setProcessQueryFn(processQuery);
+    setProcessQueryFn((qt, opts) => processQuery(qt, opts));
   }, [processQuery, setProcessQueryFn]);
 
   return {
@@ -46,6 +86,9 @@ export const useQueryProcessor = (
     handleKeyDown,
     processQuery,
     retryLastQuery,
-    processingStage
+    processingStage,
+    isBatching,
+    currentBatchNumber: batchNumber.current,
+    handleContinueBatch
   };
 };

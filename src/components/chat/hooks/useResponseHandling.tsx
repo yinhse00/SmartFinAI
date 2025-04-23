@@ -9,9 +9,7 @@ import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
 
-/**
- * Hook for handling API responses with consistent behavior across environments
- */
+// Add batchInfo param
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,
@@ -24,47 +22,39 @@ export const useResponseHandling = (
   const { enhanceTokenLimits } = useTokenManagement();
   const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
 
+  // batchInfo: { batchNumber, isContinuing, onContinue }
   const handleApiResponse = async (
     queryText: string,
     responseParams: any,
     regulatoryContext: string | undefined,
     reasoning: string | undefined,
     financialQueryType: string,
-    processedMessages: Message[]
+    processedMessages: Message[],
+    batchInfo?: { batchNumber: number, isContinuing: boolean, onContinue?: () => void }
   ) => {
     try {
       console.log('Calling API for SmartFinAI response');
-      
-      // Add timing logs
       const apiCallStartTime = Date.now();
-      console.log('API call started at:', new Date(apiCallStartTime).toISOString());
-      
-      // Determine if this is a simple query
+
       const isSimpleQuery = isQuerySimple(queryText);
-      const isAggregationQuery = queryText.toLowerCase().includes('aggregate') || 
-                                 queryText.toLowerCase().includes('rule 7.19a');
-      
-      // Use the enhanced token limits
+      const isAggregationQuery = queryText.toLowerCase().includes('aggregate') ||
+        queryText.toLowerCase().includes('rule 7.19a');
+
       let enhancedParams = enhanceTokenLimits(
-        queryText, 
-        responseParams, 
+        queryText,
+        responseParams,
         isSimpleQuery,
         isAggregationQuery
       );
-      
-      console.log(`Using parameters: tokens=${enhancedParams.maxTokens}, temp=${enhancedParams.temperature}`);
-      
-      // Add instructions to prioritize completeness
+
       if (enhancedParams.prompt) {
         enhancedParams.prompt += " IMPORTANT: Provide a concise but COMPLETE response. Prioritize including all key information rather than details.";
       }
-      
-      // Log environment info
-      const isProduction = !window.location.href.includes('localhost') && 
-                         !window.location.href.includes('127.0.0.1');
+
+      const isProduction = !window.location.href.includes('localhost') &&
+        !window.location.href.includes('127.0.0.1');
       console.log("Current environment:", isProduction ? "production" : "development");
-      
-      // Make the API call
+
       let apiResponse: GrokResponse;
       try {
         apiResponse = await grokService.generateResponse(enhancedParams);
@@ -76,35 +66,31 @@ export const useResponseHandling = (
         setMessages([...processedMessages, errorMessage]);
         return errorMessage;
       }
-      
-      // Use consistent fallback detection
+
       const isUsingFallback = isFallbackResponse(apiResponse.text);
-      
+
       if (isUsingFallback) {
         console.log("Fallback response detected");
         handleFallbackResponse(isGrokApiKeySet);
-        
         if (apiResponse.metadata) {
           apiResponse.metadata.isBackupResponse = true;
         } else {
           apiResponse.metadata = { isBackupResponse: true };
         }
       }
-      
-      // Check completeness with improved analysis
+
       const completenessCheck = analyzeResponseCompleteness(
-        apiResponse.text, 
-        financialQueryType, 
-        queryText, 
+        apiResponse.text,
+        financialQueryType,
+        queryText,
         isSimpleQuery
       );
-      
+
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
-      
-      // If response is incomplete, mark as truncated
+
       if (!completenessCheck.isComplete) {
         console.log("Response appears incomplete, marking as truncated");
-        
+
         apiResponse.metadata = {
           ...apiResponse.metadata,
           responseCompleteness: {
@@ -113,25 +99,26 @@ export const useResponseHandling = (
             reasons: completenessCheck.reasons
           }
         };
-        
-        apiResponse.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Retry with higher limits' button for a more complete answer.]";
-        
+
+        apiResponse.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Continue' button for the next part.]";
+
         toast({
           title: "Partial Response",
-          description: "The complete answer was not generated. Click 'Retry' for a more complete response.",
+          description: "The complete answer was not generated. Click 'Continue' for a more complete response.",
           duration: 8000,
         });
       }
-      
+
       return processApiResponse(
         apiResponse,
         processedMessages,
         regulatoryContext,
         reasoning,
         financialQueryType,
-        completenessCheck
+        completenessCheck,
+        batchInfo
       );
-      
+
     } catch (error) {
       console.error("Unhandled error in response handling:", error);
       const errorMessage = handleApiError(error, processedMessages);

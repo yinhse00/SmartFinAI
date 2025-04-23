@@ -7,9 +7,7 @@ import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
 
-/**
- * Hook for executing queries and managing the response flow
- */
+// Add: batchInfo arg and onBatchTruncated callback
 export const useQueryExecution = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -22,10 +20,10 @@ export const useQueryExecution = (
   const { toast } = useToast();
   const { logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
   const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
-  const { 
-    isLoading, 
-    processingStage, 
-    startProcessing, 
+  const {
+    isLoading,
+    processingStage,
+    startProcessing,
     createUserMessage,
     finishProcessing,
     setStage,
@@ -34,122 +32,94 @@ export const useQueryExecution = (
   } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
-  
+
   setupLogging();
 
-  const processQuery = async (queryText: string) => {
-    // Validate and start processing
+  // batchInfo: { batchNumber, isContinuing }, onBatchTruncated: callback
+  const processQuery = async (
+    queryText: string,
+    batchInfo?: { batchNumber: number, isContinuing: boolean },
+    onBatchTruncated?: (isTruncated: boolean) => void
+  ) => {
     if (!startProcessing(queryText)) return;
     setLastQuery(queryText);
-    
-    // Create and add user message
     const updatedMessages = createUserMessage(queryText, messages);
+
     setMessages(updatedMessages);
     setInput('');
 
     try {
-      // Start logging
       logQueryStart(queryText);
-      
+
       // Step 1: Prepare query parameters and determine query type (preliminary analysis)
-      console.log("Step 1: Initial analysis of query");
-      const { 
-        responseParams, 
-        financialQueryType, 
+      const {
+        responseParams,
+        financialQueryType,
         isFaqQuery,
         actualTemperature,
-        enhancedMaxTokens 
+        enhancedMaxTokens
       } = prepareQuery(queryText);
-      
-      // Log query parameters
+
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
-      
-      // Step 2: Check Summary and Keyword Index first before full database search
-      console.log("Step 2: Checking Summary and Keyword Index for quick answers");
-      // Set stage to reflect we're reviewing the database
+
       setStage('reviewing');
-      
-      // Step 3: Retrieve regulatory context with optimized search
-      // Ensure we're passing a boolean for isFaqQuery
-      console.log("Step 3: Retrieving relevant regulatory context with optimized search");
-      const { 
-        regulatoryContext, 
-        reasoning, 
-        contextTime, 
+
+      // Step 3: Retrieve regulatory context
+      const {
+        regulatoryContext,
+        reasoning,
+        contextTime,
         usedSummaryIndex,
-        searchStrategy 
+        searchStrategy
       } = await retrieveRegulatoryContext(
-        queryText, 
-        Boolean(isFaqQuery) // Explicit boolean conversion
+        queryText,
+        Boolean(isFaqQuery)
       );
-      
-      // Log context info with search strategy
+
       logContextInfo(
-        regulatoryContext, 
-        reasoning, 
-        financialQueryType || 'unspecified', 
+        regulatoryContext,
+        reasoning,
+        financialQueryType || 'unspecified',
         contextTime,
         searchStrategy
       );
-      
-      if (usedSummaryIndex) {
-        console.log(`Used Summary Index (${searchStrategy}) for faster context retrieval`);
-        
-        // Show toast for specific strategies to increase user confidence
-        if (searchStrategy === 'reference-based') {
-          toast({
-            title: "Using Specific Chapter/Rule References",
-            description: "Found exact regulatory content matching your chapter references",
-            duration: 3000,
-          });
-        }
-      }
-      
-      // Update processing stage
+
       setStage('processing');
-      
-      // Step 4: Process response with Grok API using retrieved context
-      console.log("Step 4: Generating response with Grok API");
-      const processingStart = Date.now();
-      
-      // Enhance parameters with search strategy for better prompt engineering
+
+      // Add searchStrategy for prompt engineering
       responseParams.searchStrategy = searchStrategy;
-      
-      try {
-        await handleApiResponse(
-          queryText, 
-          responseParams, 
-          regulatoryContext,
-          reasoning,
-          financialQueryType || 'unspecified',
-          updatedMessages
-        );
-        const processingTime = Date.now() - processingStart;
-        console.log(`Response generated in ${processingTime}ms`);
-      } catch (responseError) {
-        console.error("Error generating response:", responseError);
-        
-        // Add a partial response message if the API call failed
-        const errorMessage: Message = {
-          id: Date.now().toString(),
-          content: "I apologize, but I encountered an issue while processing your request. Please try again or rephrase your question.",
-          sender: 'bot',
-          timestamp: new Date(),
-          isError: true
-        };
-        
-        setMessages([...updatedMessages, errorMessage]);
-      }
-      
-      // Final stage
+
+      // Step 4: Process response
+      const processingStart = Date.now();
+
+      const result = await handleApiResponse(
+        queryText,
+        responseParams,
+        regulatoryContext,
+        reasoning,
+        financialQueryType || 'unspecified',
+        updatedMessages,
+        batchInfo
+      );
+
+      const processingTime = Date.now() - processingStart;
+      console.log(`Response generated in ${processingTime}ms`);
+
       setStage('finalizing');
-      
-      // Determine appropriate finalization delay
+
       const isSimpleQuery = financialQueryType === 'conversational';
       const finalizingTime = isSimpleQuery ? 150 : 250;
       await new Promise(resolve => setTimeout(resolve, finalizingTime));
-      
+
       finishLogging();
+
+      // If the message is truncated and this is a batch, trigger the callback:
+      if (batchInfo && result && result.isTruncated) {
+        if (onBatchTruncated) onBatchTruncated(true);
+      } else if (onBatchTruncated) {
+        onBatchTruncated(false);
+      }
+
     } catch (error) {
       handleProcessingError(error, updatedMessages);
     } finally {

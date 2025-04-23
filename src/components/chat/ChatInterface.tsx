@@ -7,7 +7,7 @@ import ProcessingIndicator from './ProcessingIndicator';
 import ApiConnectionStatus from './ApiConnectionStatus';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
-import { 
+import {
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
@@ -30,52 +30,47 @@ const ChatInterface = () => {
     handleSaveApiKeys,
     handleSend,
     handleKeyDown,
-    retryLastQuery
+    retryLastQuery,
+    // Batch/continue:
+    isBatching,
+    currentBatchNumber,
+    handleContinueBatch,
   } = useChatLogic();
 
   // Enhanced truncation detection for incomplete responses
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
-      
-      // Only check bot messages that aren't already marked as truncated
-      if (lastMessage.sender === 'bot' && 
-          lastMessage.content && 
-          !lastMessage.isTruncated) {
-        
+      if (
+        lastMessage.sender === 'bot' &&
+        lastMessage.content &&
+        !lastMessage.isTruncated
+      ) {
         const content = lastMessage.content;
         const queryType = lastMessage.queryType || '';
-        
-        // Use simplified financial analysis
         const financialAnalysis = analyzeFinancialResponse(content, queryType);
-        
-        // Ensure explicit boolean handling
         const isTruncated = financialAnalysis.isComplete === false;
-
         if (isTruncated) {
           console.log('Response appears incomplete:', {
             financialAnalysis: financialAnalysis.missingElements
           });
-          
-          // Mark the message as truncated
           const updatedMessages = [...messages];
           updatedMessages[updatedMessages.length - 1].isTruncated = true;
           setMessages(updatedMessages);
-          
-          // Show toast with retry option
+
           toast({
             title: "Incomplete Response",
             description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
             duration: 15000,
-            action: <Button 
-                     onClick={retryLastQuery} 
-                     variant="outline"
-                     size="sm"
-                     className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
-                    >
-                      <RefreshCw size={14} />
-                      Retry query
-                    </Button>
+            action: <Button
+              onClick={retryLastQuery}
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
+            >
+              <RefreshCw size={14} />
+              Retry query
+            </Button>
           });
         }
       }
@@ -87,12 +82,12 @@ const ChatInterface = () => {
       <div className="flex-1">
         {/* API Connection Status */}
         <ApiConnectionStatus onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)} />
-        
+
         {/* SmartFinAI Chat Window */}
         <div className="flex-1 flex flex-col">
           {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
-          
+
           {/* Enhanced database review status indicator */}
           {isLoading && processingStage === 'reviewing' && (
             <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue dark:text-finance-light-blue">
@@ -103,8 +98,8 @@ const ChatInterface = () => {
               </span>
             </div>
           )}
-          
-          <ChatContainer 
+
+          <ChatContainer
             messages={messages}
             isLoading={isLoading}
             isGrokApiKeySet={isGrokApiKeySet}
@@ -115,11 +110,24 @@ const ChatInterface = () => {
             onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
             retryLastQuery={retryLastQuery}
           />
+
+          {/* Multi-part batch answer controls */}
+          {isBatching && (
+            <div className="flex justify-center my-4">
+              <Button
+                variant="default"
+                className="flex items-center gap-2 bg-finance-accent-blue text-white"
+                onClick={handleContinueBatch}
+              >
+                <RefreshCw size={16} /> Continue to Next Part (Part {currentBatchNumber + 1})
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
       {/* API Key Dialog */}
-      <APIKeyDialog 
+      <APIKeyDialog
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}
         grokApiKeyInput={grokApiKeyInput}
