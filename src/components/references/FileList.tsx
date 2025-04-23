@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, FileType, X, AlertCircle } from 'lucide-react';
@@ -14,15 +13,18 @@ interface FileListProps {
   disabled?: boolean;
 }
 
-const FileList: React.FC<FileListProps> = ({ files, onRemoveFile, disabled = false }) => {
+const FileList: React.FC<FileListProps & { allowedExtensions?: string[] }> = ({
+  files,
+  onRemoveFile,
+  disabled = false,
+  allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'],
+}) => {
   if (files.length === 0) {
     return null;
   }
   
-  // Helper function to determine file icon based on file extension
   const getFileIcon = (fileName: string) => {
     const extension = fileName.split('.').pop()?.toLowerCase();
-    
     switch (extension) {
       case 'pdf':
         return <FileText className="h-5 w-5 text-red-500" />;
@@ -31,18 +33,18 @@ const FileList: React.FC<FileListProps> = ({ files, onRemoveFile, disabled = fal
         return <FileText className="h-5 w-5 text-blue-500" />;
       case 'txt':
         return <FileText className="h-5 w-5 text-gray-500" />;
+      case 'xlsx':
+      case 'xls':
+        return <FileText className="h-5 w-5 text-green-500" />;
       default:
         return <FileType className="h-5 w-5 text-finance-medium-blue dark:text-finance-accent-blue" />;
     }
   };
 
-  // Check if file is valid
   const isValidFile = (file: FileWithError) => {
     const extension = file.name.split('.').pop()?.toLowerCase();
-    const validExtensions = ['pdf', 'docx', 'txt'];
     const validSize = file.size <= 20971520; // 20MB
-    
-    return validExtensions.includes(extension || '') && validSize;
+    return allowedExtensions.includes(extension || '') && validSize;
   };
 
   return (
@@ -54,8 +56,8 @@ const FileList: React.FC<FileListProps> = ({ files, onRemoveFile, disabled = fal
           const errorMessage = file.error || (
             file.size > 20971520 
               ? 'File exceeds 20MB limit' 
-              : !['pdf', 'docx', 'txt'].includes(file.name.split('.').pop()?.toLowerCase() || '')
-                ? 'Invalid file type. Only PDF, DOCX, and TXT are supported.'
+              : !allowedExtensions.includes(file.name.split('.').pop()?.toLowerCase() || '')
+                ? 'Invalid file type. Only PDF, DOCX, TXT, XLSX, XLS are supported.'
                 : ''
           );
           

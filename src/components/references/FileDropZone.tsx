@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Upload, Loader2 } from 'lucide-react';
@@ -6,9 +5,10 @@ import { Upload, Loader2 } from 'lucide-react';
 interface FileDropZoneProps {
   onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   isUploading?: boolean;
+  allowedExtensions?: string[];
 }
 
-const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading = false }) => {
+const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading = false, allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'] }) => {
   const [isDragging, setIsDragging] = useState(false);
   
   const handleDragEnter = useCallback((e: React.DragEvent<HTMLDivElement>) => {
@@ -42,7 +42,6 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading =
     
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       try {
-        // Create a synthetic event to pass to the onFileChange handler
         const dataTransfer = new DataTransfer();
         
         for (let i = 0; i < e.dataTransfer.files.length; i++) {
@@ -51,14 +50,11 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading =
         
         const inputElement = document.getElementById('file-upload') as HTMLInputElement;
         if (inputElement) {
-          // Update the input's files
           inputElement.files = dataTransfer.files;
           
-          // Trigger the onChange event
           const event = new Event('change', { bubbles: true });
           inputElement.dispatchEvent(event);
           
-          // Also manually call the handler to ensure it works
           onFileChange({ target: { files: dataTransfer.files } } as unknown as React.ChangeEvent<HTMLInputElement>);
         }
       } catch (error) {
@@ -72,6 +68,8 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading =
       document.getElementById('file-upload')?.click();
     }
   }, [isUploading]);
+
+  const acceptString = allowedExtensions.map(ext => `.${ext}`).join(',');
 
   return (
     <div 
@@ -101,7 +99,7 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading =
         )}
       </p>
       <p className="text-xs text-center text-gray-500 dark:text-gray-500 mt-1">
-        Supports PDF, DOCX, TXT (max 20MB per file)
+        Supports PDF, DOCX, TXT, XLSX, XLS (max 20MB per file)
       </p>
       <Input
         id="file-upload"
@@ -109,7 +107,7 @@ const FileDropZone: React.FC<FileDropZoneProps> = ({ onFileChange, isUploading =
         className="hidden"
         multiple
         onChange={onFileChange}
-        accept=".pdf,.docx,.txt"
+        accept={acceptString}
         disabled={isUploading}
       />
     </div>

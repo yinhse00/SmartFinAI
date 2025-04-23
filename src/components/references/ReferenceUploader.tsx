@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +25,8 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
+  const allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'];
+
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const newFiles = Array.from(e.target.files) as FileWithError[];
@@ -34,8 +35,8 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
       const validatedFiles = newFiles.map(file => {
         const fileExt = file.name.split('.').pop()?.toLowerCase();
         
-        if (!['pdf', 'docx', 'txt'].includes(fileExt || '')) {
-          return { ...file, error: 'Invalid file type. Only PDF, DOCX, and TXT are supported.' };
+        if (!allowedExtensions.includes(fileExt || '')) {
+          return { ...file, error: 'Invalid file type. PDF, DOCX, TXT, XLSX, XLS' };
         }
         
         if (file.size > 20971520) { // 20MB
@@ -57,7 +58,7 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
   const validateFiles = useCallback(() => {
     const invalidFiles = files.filter(file => {
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      return !['pdf', 'docx', 'txt'].includes(fileExt || '') || file.size > 20971520;
+      return !allowedExtensions.includes(fileExt || '') || file.size > 20971520;
     });
     
     return invalidFiles.length === 0;
@@ -156,6 +157,7 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
         <FileDropZone 
           onFileChange={handleFileChange} 
           isUploading={isUploading}
+          allowedExtensions={allowedExtensions}
         />
 
         {/* Selected Files */}
@@ -163,6 +165,7 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
           files={files} 
           onRemoveFile={removeFile}
           disabled={isUploading} 
+          allowedExtensions={allowedExtensions}
         />
 
         {/* Error Message */}
@@ -195,7 +198,7 @@ const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete 
         <Button 
           onClick={handleUpload} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={isUploading || files.length === 0 || !category || hasInvalidFiles}
+          disabled={isUploading || files.length === 0 || !category || !validateFiles()}
         >
           {isUploading ? (
             <>
