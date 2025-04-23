@@ -1,5 +1,6 @@
+
 /**
- * Service for managing multiple API keys in local storage
+ * Service for managing multiple API keys in local storage with robust error handling.
  */
 
 const PRIMARY_KEYS_KEY = 'GROK_API_KEYS';
@@ -23,65 +24,73 @@ let currentKeyIndex = 0;
 const keyUsageMap = new Map<string, ApiKeyUsage>();
 
 /**
- * Get the next available Grok API key from the pool
+ * Helper: Validate and deduplicate API keys.
+ */
+function filterValidKeys(keys: unknown): string[] {
+  if (!Array.isArray(keys)) return [];
+  const seen = new Set<string>();
+  return keys.filter(k => typeof k === 'string' && k.startsWith('xai-') && k.length >= 20 && !seen.has(k) && !!seen.add(k));
+}
+
+/**
+ * Helper: Load keys array from storage with fallback.
+ */
+function loadKeysFromStorage(): string[] {
+  let keys: string[] = [];
+  try {
+    const raw = localStorage.getItem(PRIMARY_KEYS_KEY) || localStorage.getItem(BACKUP_KEYS_KEY);
+    if (raw) {
+      keys = filterValidKeys(JSON.parse(raw));
+    }
+  } catch (e) {
+    console.warn('Could not parse API keys from storage:', e);
+  }
+  // If not available or invalid, use defaults
+  if (!keys.length) {
+    keys = [...DEFAULT_DEPLOYMENT_KEYS];
+    try {
+      localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(keys));
+      localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(keys));
+    } catch (e) {
+      console.warn('Failed to set default deployment keys', e);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Helper: Save valid API keys to both storage locations.
+ */
+function saveKeysToStorage(keys: string[]) {
+  const validKeys = filterValidKeys(keys);
+  if (!validKeys.length) {
+    console.error('Attempted to save empty or invalid key set.');
+    return;
+  }
+  try {
+    localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(validKeys));
+    localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(validKeys));
+    console.log('API keys saved to both storages.');
+  } catch (e) {
+    console.error('Failed to save API keys:', e);
+  }
+}
+
+/**
+ * Get the next available Grok API key from the pool (with round-robin rotation)
  */
 export const getGrokApiKey = (): string => {
   try {
-    // Try to get the array of keys
-    const keysString = localStorage.getItem(PRIMARY_KEYS_KEY);
-    let keys: string[] = [];
-    
-    if (keysString) {
-      try {
-        keys = JSON.parse(keysString);
-        // Validate format of all keys
-        keys = keys.filter(key => key.startsWith('xai-') && key.length >= 20);
-      } catch (e) {
-        console.warn('Invalid API keys format in storage');
-      }
-    }
-    
-    // If no valid keys found in primary storage, try backup
-    if (keys.length === 0) {
-      const backupKeysString = localStorage.getItem(BACKUP_KEYS_KEY);
-      if (backupKeysString) {
-        try {
-          keys = JSON.parse(backupKeysString);
-          keys = keys.filter(key => key.startsWith('xai-') && key.length >= 20);
-          
-          // Sync to primary storage if valid keys found
-          if (keys.length > 0) {
-            localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(keys));
-          }
-        } catch (e) {
-          console.warn('Invalid API keys format in backup storage');
-        }
-      }
-    }
-    
-    // If still no valid keys, use defaults
-    if (keys.length === 0) {
-      keys = DEFAULT_DEPLOYMENT_KEYS;
-      try {
-        localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(keys));
-        localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(keys));
-      } catch (e) {
-        console.error('Failed to set default deployment keys', e);
-      }
-    }
-    
-    // Rotate through available keys
+    const keys = loadKeysFromStorage();
+    if (!keys.length) throw new Error('No available API keys in storage or defaults.');
+    // Robust index handling
     currentKeyIndex = (currentKeyIndex + 1) % keys.length;
     const selectedKey = keys[currentKeyIndex];
-    
-    // Update usage tracking
-    const usage = keyUsageMap.get(selectedKey) || {
-      key: selectedKey,
-      tokensUsed: 0,
-      lastUsed: Date.now()
-    };
-    keyUsageMap.set(selectedKey, usage);
-    
+    // Update usage map
+    keyUsageMap.set(
+      selectedKey,
+      keyUsageMap.get(selectedKey) || { key: selectedKey, tokensUsed: 0, lastUsed: Date.now() }
+    );
     return selectedKey;
   } catch (error) {
     console.error('Error accessing API keys:', error);
@@ -90,50 +99,23 @@ export const getGrokApiKey = (): string => {
 };
 
 /**
- * Set multiple Grok API keys in local storage
+ * Set multiple Grok API keys in local storage, robustly replacing all.
  */
 export const setGrokApiKeys = (keys: string[]): void => {
-  try {
-    // Validate key format before storing
-    const validKeys = keys.filter(key => key.startsWith('xai-') && key.length >= 20);
-    
-    if (validKeys.length === 0) {
-      console.error('No valid API keys provided');
-      return;
-    }
-    
-    // Store in both locations for redundancy
-    try {
-      localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(validKeys));
-      console.log('Successfully set primary API keys');
-    } catch (e) {
-      console.warn('Failed to set primary API keys', e);
-    }
-    
-    try {
-      localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(validKeys));
-      console.log('Successfully set backup API keys');
-    } catch (e) {
-      console.warn('Failed to set backup API keys', e);
-    }
-    
-    // Reset usage tracking
-    keyUsageMap.clear();
-  } catch (error) {
-    console.error('Failed to set API keys:', error);
-  }
+  saveKeysToStorage(keys);
+  keyUsageMap.clear(); // Reset usage stats on set
 };
 
 /**
  * Track token usage for a specific key
  */
 export const trackTokenUsage = (key: string, tokens: number): void => {
+  if (!key || typeof tokens !== 'number') return;
   const usage = keyUsageMap.get(key) || {
     key,
     tokensUsed: 0,
     lastUsed: Date.now()
   };
-  
   usage.tokensUsed += tokens;
   usage.lastUsed = Date.now();
   keyUsageMap.set(key, usage);
@@ -143,10 +125,15 @@ export const trackTokenUsage = (key: string, tokens: number): void => {
  * Get the least used API key
  */
 export const getLeastUsedKey = (): string => {
-  const keys = Array.from(keyUsageMap.values());
-  if (keys.length === 0) return getGrokApiKey();
-  
-  return keys.sort((a, b) => a.tokensUsed - b.tokensUsed)[0].key;
+  // If there's been no usage, rotate as normal
+  if (!keyUsageMap.size) return getGrokApiKey();
+  let least = null;
+  for (const usage of keyUsageMap.values()) {
+    if (!least || usage.tokensUsed < least.tokensUsed) {
+      least = usage;
+    }
+  }
+  return least?.key || getGrokApiKey();
 };
 
 /**
@@ -160,7 +147,11 @@ export const getPerplexityApiKey = (): string => {
  * Set the Perplexity API key in local storage
  */
 export const setPerplexityApiKey = (key: string): void => {
-  localStorage.setItem('PERPLEXITY_API_KEY', key);
+  try {
+    localStorage.setItem('PERPLEXITY_API_KEY', key);
+  } catch (e) {
+    console.warn('Failed to store Perplexity API key:', e);
+  }
 };
 
 /**
@@ -171,52 +162,22 @@ export const hasPerplexityApiKey = (): boolean => {
 };
 
 /**
- * Set the Grok API key in local storage with enhanced reliability
+ * Set a single Grok API key (as legacy single-key usage).
  */
 export const setGrokApiKey = (key: string): void => {
+  if (typeof key !== 'string' || !key.startsWith('xai-') || key.length < 20) {
+    console.error('Invalid API key format, not saving');
+    return;
+  }
   try {
-    // Validate key format before storing
-    if (!key.startsWith('xai-') || key.length < 20) {
-      console.error('Invalid API key format, not saving');
-      return;
-    }
-    
-    // Try to store in both locations for redundancy
-    try {
-      localStorage.setItem('GROK_API_KEY', key);
-      console.log('Successfully set primary API key');
-    } catch (e) {
-      console.warn('Failed to set primary API key', e);
-    }
-    
-    try {
-      localStorage.setItem('grokApiKey', key);
-      console.log('Successfully set backup API key');
-    } catch (e) {
-      console.warn('Failed to set backup API key', e);
-    }
-    
-    // Verify storage was successful
-    try {
-      const storedKey = localStorage.getItem('GROK_API_KEY');
-      const backupStoredKey = localStorage.getItem('grokApiKey');
-      
-      console.log('API key storage verification:', {
-        primaryKeySet: !!storedKey,
-        primaryKeyMatches: storedKey === key,
-        backupKeySet: !!backupStoredKey,
-        backupKeyMatches: backupStoredKey === key
-      });
-      
-      if (storedKey !== key) {
-        console.warn('API key storage verification failed - primary key');
-      }
-      
-      if (backupStoredKey !== key) {
-        console.warn('API key storage verification failed - backup key');
-      }
-    } catch (e) {
-      console.warn('API key verification failed', e);
+    localStorage.setItem('GROK_API_KEY', key);
+    localStorage.setItem('grokApiKey', key);
+    // Also update the multi-key pool
+    saveKeysToStorage([key]);
+    // Check validity
+    const stored = localStorage.getItem('GROK_API_KEY');
+    if (stored !== key) {
+      console.warn('API key storage verification failed - primary key');
     }
   } catch (error) {
     console.error('Failed to set API key in localStorage:', error);
@@ -224,23 +185,19 @@ export const setGrokApiKey = (key: string): void => {
 };
 
 /**
- * Check if a Grok API key is set with enhanced validation
+ * Check if at least one valid Grok API key is set
  */
 export const hasGrokApiKey = (): boolean => {
   try {
-    const key = getGrokApiKey();
-    const isValid = !!key && key.length > 10 && key.startsWith('xai-');
-    
+    const keys = loadKeysFromStorage();
+    const isValid = keys.some(key => typeof key === 'string' && key.startsWith('xai-') && key.length >= 20);
     console.log('API key validation check:', {
-      hasKey: !!key,
-      isValid: isValid,
-      keyStart: key ? key.substring(0, 6) : 'none'
+      found: keys.length,
+      isValid
     });
-    
     return isValid;
   } catch (error) {
     console.error('Error checking for API key:', error);
-    // If any errors occur, assume we have a key (the default one)
-    return true;
+    return false;
   }
 };
