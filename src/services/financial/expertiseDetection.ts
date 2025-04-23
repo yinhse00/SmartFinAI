@@ -1,4 +1,3 @@
-
 export function isSimpleConversationalQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase().trim();
   
@@ -78,15 +77,6 @@ export function isSimpleConversationalQuery(prompt: string): boolean {
 
 export function detectFinancialExpertiseArea(query: string): string {
   const lowerQuery = query.toLowerCase();
-  
-  // Check for specialist technology / Chapter 18C related queries
-  if (lowerQuery.includes('chapter 18c') || 
-      lowerQuery.includes('specialist technology') ||
-      lowerQuery.includes('pre-commercial company') ||
-      lowerQuery.includes('commercial company requirements') ||
-      lowerQuery.includes('18c requirements')) {
-    return 'specialist_technology';
-  }
   
   // Check for connected transactions and persons
   if (lowerQuery.includes('connected person') || 
