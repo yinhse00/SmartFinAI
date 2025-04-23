@@ -1,5 +1,5 @@
 
-import { getGrokApiKey, trackTokenUsage, getLeastUsedKey, getBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
+import { getGrokApiKey, trackTokenUsage, selectLeastUsedKey, selectBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
 
@@ -22,7 +22,7 @@ export const apiClient = {
     
     // Use provided key, or select the best key based on context
     const apiKey = providedApiKey || 
-                 (isRetryAttempt ? getLeastUsedKey() : getBestPerformingKey()) || 
+                 (isRetryAttempt ? selectLeastUsedKey() : selectBestPerformingKey()) || 
                  getGrokApiKey();
     
     if (!apiKey) {
@@ -157,3 +157,4 @@ export const apiClient = {
     throw lastError || new Error("API call failed after maximum retries");
   }
 };
+
