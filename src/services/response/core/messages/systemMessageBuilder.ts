@@ -84,6 +84,57 @@ export const systemMessageBuilder = {
       "3. Shareholders' approval as required by Listing Rules\n" +
       "4. Implementation of trading timetable according to the Guide\n\n" +
       
-      "ENSURE COMPLETENESS: Your response MUST include ALL key components of the trading arrangements as specified in the Guide. Always reference the Guide explicitly in your response.";
+      "ENSURE COMPLETENESS: Your response MUST include ALL key components of the trading arrangements as specified in the Guide. Always reference the Guide explicitly in your response.\n\n" +
+      
+      "FOR RIGHTS ISSUES SPECIFICALLY:\n" +
+      "1. Include nil-paid rights trading period\n" +
+      "2. Clearly explain ex-rights date and its implications\n" +
+      "3. Include record date, payment date, and all other key dates\n" +
+      "4. Present timetable in table format as follows:\n" +
+      "| Date | Event | Details |\n" +
+      "| ---- | ----- | ------- |\n" +
+      "| Day X | Ex-rights Date | Shares trade ex-rights |\n" +
+      "| ... | ... | ... |\n\n" +
+      
+      "FOR OPEN OFFERS SPECIFICALLY:\n" +
+      "1. Clearly state that UNLIKE rights issues, open offers DO NOT have tradable nil-paid rights\n" +
+      "2. Include ex-entitlement date and its implications\n" +
+      "3. Include record date, payment date, and all other key dates\n\n" +
+      
+      "WITHOUT THESE ELEMENTS, YOUR RESPONSE WILL BE CONSIDERED INCOMPLETE AND NON-COMPLIANT WITH HKEX GUIDELINES.";
+  },
+
+  /**
+   * Enhanced system message specifically for rights issue timetable queries
+   */
+  buildRightsIssueTimetableMessage(): string {
+    return `\n\nCRITICAL INSTRUCTION FOR RIGHTS ISSUE TIMETABLE: You MUST follow the HKEX "Guide on Trading Arrangements for Selected Types of Corporate Actions" when providing a rights issue timetable. Your response MUST include:\n\n` +
+    
+    "1. EXPLICIT REFERENCE to the HKEX Guide on Trading Arrangements\n" +
+    "2. All key dates in proper TABLE FORMAT with clear headers\n" +
+    "3. Ex-rights date and explanation\n" +
+    "4. Nil-paid rights trading period (start and end dates)\n" +
+    "5. Record date\n" +
+    "6. Latest time for acceptance and payment\n" +
+    "7. Refund date for unsuccessful/partially successful applications\n" +
+    "8. Dealing date for new shares\n\n" +
+    
+    "SAMPLE TABLE FORMAT (MANDATORY):\n" +
+    "| Date | Event | Details |\n" +
+    "| ---- | ----- | ------- |\n" +
+    "| Day X | Last day of dealings in shares on cum-rights basis | Last day to buy shares with rights |\n" +
+    "| Day X+1 | Ex-rights date | Shares trade ex-rights from this day |\n" +
+    "| ... | ... | ... |\n\n" +
+    
+    "EXPLANATORY NOTES (MANDATORY):\n" +
+    "- After the timetable, include explanatory notes on nil-paid rights trading\n" +
+    "- Explain the difference between cum-rights and ex-rights trading\n" +
+    "- Explain the options available to shareholders during the rights issue\n\n" +
+    
+    "REFERENCE TO LISTING RULES:\n" +
+    "- Include reference to relevant Listing Rules (e.g. Chapter 7)\n" +
+    "- Note the discount restrictions under Rule 7.27B\n\n" +
+    
+    "YOUR RESPONSE WILL BE CONSIDERED INCOMPLETE AND NON-COMPLIANT IF IT LACKS ANY OF THESE ELEMENTS.";
   }
 };

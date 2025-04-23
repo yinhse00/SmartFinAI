@@ -1,3 +1,4 @@
+
 import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
@@ -5,6 +6,22 @@ import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
  * With adjusted maximum token limit and safety checks
  */
 export const getOptimalTokens = (queryType: string, query: string): number => {
+  // Check for explicit trading arrangement query with guide reference requirements
+  const isGuideBasedTradingArrangement = 
+    [FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE, 
+     FINANCIAL_QUERY_TYPES.OPEN_OFFER,
+     FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+     FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE,
+     FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE].includes(queryType) &&
+    (query.toLowerCase().includes('timetable') || 
+     query.toLowerCase().includes('trading arrangement') || 
+     query.toLowerCase().includes('schedule'));
+     
+  if (isGuideBasedTradingArrangement) {
+    console.log("Using enhanced token limits for HKEX guide-based trading arrangement query");
+    return 30000; // Increased from previous limits for comprehensive guide compliance
+  }
+  
   // Rights issue and complex timetable queries now get up to 24000 tokens (3x the previous 8000)
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
@@ -61,6 +78,24 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
  * Determine if response needs enhanced token settings
  */
 export const needsEnhancedTokenSettings = (queryType: string, query: string): boolean => {
+  // Check for trading arrangement guide compliance queries
+  const isGuideCoveredAction = [
+    FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE,
+    FINANCIAL_QUERY_TYPES.OPEN_OFFER,
+    FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+    FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE,
+    FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE
+  ].includes(queryType);
+  
+  const isTradingArrangementQuery = 
+    query.toLowerCase().includes('timetable') || 
+    query.toLowerCase().includes('trading arrangement') || 
+    query.toLowerCase().includes('trading schedule');
+  
+  if (isGuideCoveredAction && isTradingArrangementQuery) {
+    return true;
+  }
+
   const complexTopicIndicators = [
     'detailed explanation', 'comprehensive guide', 'full timetable',
     'step by step', 'all requirements', 'complete process', 
@@ -96,6 +131,20 @@ export const needsEnhancedTokenSettings = (queryType: string, query: string): bo
 };
 
 export const getOptimalTemperature = (queryType: string, query: string): number => {
+  // For guide-based trading arrangement queries, use extremely low temperature
+  const isGuideBasedTradingArrangement = 
+    [FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE, 
+     FINANCIAL_QUERY_TYPES.OPEN_OFFER,
+     FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
+     FINANCIAL_QUERY_TYPES.BOARD_LOT_CHANGE,
+     FINANCIAL_QUERY_TYPES.COMPANY_NAME_CHANGE].includes(queryType) &&
+    (query.toLowerCase().includes('timetable') || 
+     query.toLowerCase().includes('trading arrangement'));
+     
+  if (isGuideBasedTradingArrangement) {
+    return 0.01; // Very low temperature for strict guide compliance
+  }
+
   // For comparison queries, use very low temperature for maximum consistency
   if (query.toLowerCase().includes('difference between') || 
       query.toLowerCase().includes('compare') || 

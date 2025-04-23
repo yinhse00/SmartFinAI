@@ -18,6 +18,7 @@ export const useRetryHandler = (
     regulatoryContext?: string;
     reasoning?: string;
     financialQueryType?: string;
+    useGuideReferenceEnhancement?: boolean;
   }>({});
 
   const setProcessQueryFn = useCallback((processQueryFn: (query: string) => Promise<void>) => {
@@ -28,6 +29,7 @@ export const useRetryHandler = (
     regulatoryContext?: string;
     reasoning?: string;
     financialQueryType?: string;
+    useGuideReferenceEnhancement?: boolean;
   }) => {
     lastContextRef.current = context;
   }, []);
@@ -46,13 +48,22 @@ export const useRetryHandler = (
     const freshKey = getFreshGrokApiKey();
     console.log("Using fresh API key for retry:", freshKey.substring(0, 6) + "***");
     
-    // Add markers to indicate this is a retry attempt
-    const enhancedQuery = `${lastQuery} [RETRY_ATTEMPT]`;
+    // Add markers to indicate this is a retry attempt with guide emphasis
+    let enhancedQuery = `${lastQuery} [RETRY_ATTEMPT]`;
+    
+    // For trading arrangement related queries, add special enhancement
+    if (lastContextRef.current.financialQueryType && 
+        ['rights_issue', 'open_offer', 'share_consolidation', 
+         'board_lot_change', 'company_name_change'].includes(lastContextRef.current.financialQueryType)) {
+      enhancedQuery += " [FOLLOW_TRADING_GUIDE_STRICTLY]";
+      lastContextRef.current.useGuideReferenceEnhancement = true;
+      console.log("Enhanced retry with trading guide reference requirement");
+    }
     
     setInput(lastQuery);
     setTimeout(() => {
       if (processQueryRef.current) {
-        console.log("Retrying query with higher token limits and fresh API key");
+        console.log("Retrying query with higher token limits, fresh API key, and enhanced guide adherence");
         processQueryRef.current(enhancedQuery);
       }
     }, 100);
