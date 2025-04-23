@@ -8,6 +8,7 @@ const BACKUP_KEYS_KEY = 'grokApiKeys';
 // Default deployment keys pool
 const DEFAULT_DEPLOYMENT_KEYS = [
   'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3',
+  'xai-wqG2hD4YSmX3mQtjr43pCeg8CCnvU9O2AEE73CTSEchgELJRDDgIdmcvZCCqB8N5T0Y00YhSCmtKBXMO',
   'xai-backup1KeyHere',
   'xai-backup2KeyHere'
 ];
