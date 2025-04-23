@@ -1,14 +1,15 @@
 
 /**
  * Constants for token limits across different query types and scenarios
+ * All limits are TRIPLED for expanded token allowance
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 4000,  // Reduced from 500000 to a more realistic value
-  RETRY: 6000,    // Reduced from 600000
-  RIGHTS_ISSUE_TIMETABLE: 7000,  // Reduced from 550000
-  DEFINITION_QUERY: 5000,  // Reduced from 500000
-  CONNECTED_TRANSACTION: 5500,  // Reduced from 500000
-  SIMPLE_QUERY: 2500,  // Reduced from 300000
+  DEFAULT: 12000,  // was 4000
+  RETRY: 18000,    // was 6000
+  RIGHTS_ISSUE_TIMETABLE: 21000,  // was 7000
+  DEFINITION_QUERY: 15000,  // was 5000
+  CONNECTED_TRANSACTION: 16500,  // was 5500
+  SIMPLE_QUERY: 7500,  // was 2500
 } as const;
 
 /**
@@ -26,31 +27,26 @@ export const tokenManagementService = {
   }): number {
     const { queryType, isRetryAttempt, prompt, isSimpleQuery } = params;
 
-    // Retry attempts get higher token limits
     if (isRetryAttempt) {
       return TOKEN_LIMITS.RETRY;
     }
 
-    // Rights issue timetable queries need higher limits
     if (queryType === 'rights_issue' && 
         (prompt.toLowerCase().includes('timetable') || 
          prompt.toLowerCase().includes('schedule'))) {
       return TOKEN_LIMITS.RIGHTS_ISSUE_TIMETABLE;
     }
 
-    // Definition queries need sufficient tokens
     if (prompt.toLowerCase().includes('what is') || 
         prompt.toLowerCase().includes('definition')) {
       return TOKEN_LIMITS.DEFINITION_QUERY;
     }
 
-    // Connected transaction queries need sufficient tokens
     if (prompt.toLowerCase().includes('connected person') || 
         prompt.toLowerCase().includes('connected transaction')) {
       return TOKEN_LIMITS.CONNECTED_TRANSACTION;
     }
 
-    // Simple queries can use lower token limits
     if (isSimpleQuery) {
       return TOKEN_LIMITS.SIMPLE_QUERY;
     }
@@ -68,19 +64,16 @@ export const tokenManagementService = {
   }): number {
     const { isRetryAttempt, queryType, prompt } = params;
 
-    // Use very low temperature for retries
     if (isRetryAttempt) {
       return 0.1;
     }
 
-    // Rights issue timetables need very low temperature
     if (queryType === 'rights_issue' && 
         (prompt.toLowerCase().includes('timetable') || 
          prompt.toLowerCase().includes('schedule'))) {
       return 0.05;
     }
 
-    // Definition queries need low temperature
     if (prompt.toLowerCase().includes('what is') || 
         prompt.toLowerCase().includes('definition')) {
       return 0.1;

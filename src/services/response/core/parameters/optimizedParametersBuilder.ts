@@ -18,8 +18,8 @@ export const optimizedParametersBuilder = {
     
     if (isTimetableQuery) {
       return {
-        temperature: 0.05, // Use extremely low temperature for deterministic timetables
-        maxTokens: 12000   // Use very high token limits for timetables
+        temperature: 0.05,
+        maxTokens: 36000   // was 12000, now TRIPLED
       };
     }
     
@@ -32,36 +32,36 @@ export const optimizedParametersBuilder = {
     if (isExecutionProcessQuery) {
       return {
         temperature: 0.1,
-        maxTokens: 10000
+        maxTokens: 30000  // was 10000, now TRIPLED
       };
     }
     
-    // For definition queries - often need to be comprehensive
+    // For definition queries
     if (prompt.toLowerCase().includes('what is') || 
         prompt.toLowerCase().includes('definition')) {
       return {
         temperature: 0.1,
-        maxTokens: 8000
+        maxTokens: 24000 // was 8000
       };
     }
     
-    // For connected transaction queries - these need detailed threshold explanations
+    // For connected transaction queries
     if (prompt.toLowerCase().includes('connected transaction') || 
         prompt.toLowerCase().includes('connected person')) {
       return {
         temperature: 0.1,
-        maxTokens: 9000
+        maxTokens: 27000 // was 9000
       };
     }
     
-    // For comparison queries - these compare multiple concepts
+    // For comparison queries
     if (prompt.toLowerCase().includes('compare') ||
         prompt.toLowerCase().includes('difference between') ||
         prompt.toLowerCase().includes('versus') ||
         prompt.toLowerCase().includes(' vs ')) {
       return {
         temperature: 0.1,
-        maxTokens: 9000
+        maxTokens: 27000 // was 9000
       };
     }
     
@@ -69,7 +69,7 @@ export const optimizedParametersBuilder = {
     if (isSimpleQuery && !hasContext) {
       return {
         temperature: 0.3,
-        maxTokens: 4000
+        maxTokens: 12000 // was 4000
       };
     }
     
@@ -77,7 +77,7 @@ export const optimizedParametersBuilder = {
     const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, prompt);
     
     const actualTemperature = hasContext ? 0.1 : temperature;
-    const safeMaxTokens = Math.min(8000, Math.max(4000, maxTokens));
+    const safeMaxTokens = Math.min(24000, Math.max(12000, maxTokens)); // was [8000, 4000]
     
     return { 
       temperature: actualTemperature, 

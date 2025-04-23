@@ -3,9 +3,9 @@ import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
-// Set appropriate maximum token limit for Grok API for better coverage
-const MAX_TOKEN_LIMIT = 4000; // Increased from 3500 for more comprehensive responses
-const RETRY_TOKEN_LIMIT = 7000; // Even higher limit for retry attempts
+// Set appropriate maximum token limit for Grok API for better coverage (TRIPLED limits)
+const MAX_TOKEN_LIMIT = 12000; // was 4000
+const RETRY_TOKEN_LIMIT = 21000; // was 7000
 
 /**
  * Core response generation functionality
@@ -18,26 +18,20 @@ export const responseGeneratorCore = {
     try {
       console.log("Making primary API call with optimized parameters");
       
-      // Detect if this is a retry attempt
       const isRetryAttempt = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                             requestBody.messages.find(m => m.role === 'user').content.includes('[RETRY_ATTEMPT]');
-      
       const userMessage = requestBody.messages.find((m: any) => m.role === 'user')?.content || '';
-      
-      // Get token limit from centralized service
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         isRetryAttempt,
         prompt: userMessage
       });
       
-      // Enforce appropriate token limit
       if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
         console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${effectiveTokenLimit}, capping at limit`);
         requestBody.max_tokens = effectiveTokenLimit;
       }
       
-      // Get temperature from centralized service
       const temperature = tokenManagementService.getTemperature({
         queryType: requestBody.queryType || 'general',
         isRetryAttempt,
@@ -60,50 +54,36 @@ export const responseGeneratorCore = {
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
       console.log('Attempting backup API call with simplified parameters');
-      
-      // Check for definition queries
       const isDefinitionQuery = prompt.toLowerCase().includes('what is') || 
                                prompt.toLowerCase().includes('definition');
-      
-      // For definition queries, use more specialized system prompt
       const systemPrompt = isDefinitionQuery 
         ? 'You are a financial regulatory expert specializing in Hong Kong listing rules. Provide comprehensive definitions with all relevant details from Chapter 14A for connected persons/transactions queries.'
         : 'You are a helpful assistant with knowledge of Hong Kong financial regulations.';
-      
-      // Use a much simpler system prompt and model configuration for better reliability
       const backupRequestBody = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
         model: "grok-3-mini-beta",
-        temperature: 0.2,  // Lower temperature for more predictable responses
-        max_tokens: isDefinitionQuery ? 3000 : 1500  // Higher limit for definitions
+        temperature: 0.2,
+        max_tokens: isDefinitionQuery ? 9000 : 4500 // TRIPLED: was 3000/1500
       };
       
-      // Add a short delay before the retry to prevent rate limiting issues
       await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Try a second backup with even more simplified parameters if the first backup fails
       try {
         return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
       } catch (firstBackupError) {
-        console.error('First backup API call failed, trying ultra-simplified backup:', firstBackupError);
-        
-        // Wait longer before the second attempt
+        console.error('First backup API call failed, trying ultra-simplified backup:', firstBackupError);      
         await new Promise(resolve => setTimeout(resolve, 2000));
         
-        // Ultra-simplified request with minimal parameters
         const ultraSimplifiedRequest = {
           messages: [
             { role: 'user', content: `Briefly summarize: ${prompt.substring(0, 50)}` }
           ],
           model: "grok-3-mini-beta",
           temperature: 0.1,
-          max_tokens: 300
+          max_tokens: 900 // TRIPLED: was 300
         };
-        
-        // Final attempt
         return await grokApiService.callChatCompletions(ultraSimplifiedRequest, apiKey);
       }
     } catch (backupError) {
@@ -123,16 +103,12 @@ export const responseGeneratorCore = {
     // If token count is near limit, mark as truncated
     if (tokenCount > MAX_TOKEN_LIMIT * 0.95) {
       console.log(`Response near token limit (${tokenCount}), marking as truncated`);
-      
-      // Truncate response if it's too long
       const truncationMessage = "\n\n[NOTE: Response has been truncated due to token limit. This represents the analysis completed so far.]";
-      
       return {
         truncated: true,
         text: responseText + truncationMessage
       };
     }
-    
     // No truncation needed
     return {
       truncated: false,
