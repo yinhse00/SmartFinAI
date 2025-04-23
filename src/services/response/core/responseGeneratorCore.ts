@@ -1,11 +1,12 @@
+
 import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
-// Set appropriate maximum token limit for Grok API for better coverage (TRIPLED limits)
-const MAX_TOKEN_LIMIT = 12000; // was 4000
-const RETRY_TOKEN_LIMIT = 21000; // was 7000
+// Set appropriate maximum token limit for Grok API for better coverage (QUINTUPLED limits)
+const MAX_TOKEN_LIMIT = 20000; // was 4000, now 5x
+const RETRY_TOKEN_LIMIT = 35000; // was 7000, now 5x
 
 /**
  * Core response generation functionality
@@ -66,7 +67,7 @@ export const responseGeneratorCore = {
         ],
         model: "grok-3-mini-beta",
         temperature: 0.2,
-        max_tokens: isDefinitionQuery ? 9000 : 4500 // TRIPLED: was 3000/1500
+        max_tokens: isDefinitionQuery ? 15000 : 7500 // was 3k/9k/15k, now 5x
       };
       
       await new Promise(resolve => setTimeout(resolve, 1000));
@@ -82,7 +83,7 @@ export const responseGeneratorCore = {
           ],
           model: "grok-3-mini-beta",
           temperature: 0.1,
-          max_tokens: 900 // TRIPLED: was 300
+          max_tokens: 1500 // was 300/900, now 5x
         };
         return await grokApiService.callChatCompletions(ultraSimplifiedRequest, apiKey);
       }

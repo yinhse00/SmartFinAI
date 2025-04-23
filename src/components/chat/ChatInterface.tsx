@@ -35,6 +35,7 @@ const ChatInterface = () => {
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
+    autoBatch
   } = useChatLogic();
 
   // Enhanced truncation detection for incomplete responses
@@ -112,7 +113,7 @@ const ChatInterface = () => {
           />
 
           {/* Multi-part batch answer controls */}
-          {isBatching && (
+          {isBatching && !autoBatch && (
             <div className="flex justify-center my-4">
               <Button
                 variant="default"

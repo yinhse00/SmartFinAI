@@ -113,7 +113,7 @@ export const useQueryExecution = (
 
       finishLogging();
 
-      // If the message is truncated and this is a batch, trigger the callback:
+      // Improved: will ALWAYS trigger batch continuation automatically if autoBatch is enabled by caller (see processor logic)
       if (batchInfo && result && result.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {

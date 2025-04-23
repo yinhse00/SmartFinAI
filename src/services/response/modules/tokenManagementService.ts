@@ -1,15 +1,15 @@
 
 /**
  * Constants for token limits across different query types and scenarios
- * All limits are TRIPLED for expanded token allowance
+ * All limits are QUINTUPLED for expanded token allowance
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 12000,  // was 4000
-  RETRY: 18000,    // was 6000
-  RIGHTS_ISSUE_TIMETABLE: 21000,  // was 7000
-  DEFINITION_QUERY: 15000,  // was 5000
-  CONNECTED_TRANSACTION: 16500,  // was 5500
-  SIMPLE_QUERY: 7500,  // was 2500
+  DEFAULT: 20000,  // was 4000, 5x
+  RETRY: 30000,    // was 6000, 5x
+  RIGHTS_ISSUE_TIMETABLE: 35000,  // was 7000, 5x
+  DEFINITION_QUERY: 25000,  // was 5000, 5x
+  CONNECTED_TRANSACTION: 27500,  // was 5500, 5x
+  SIMPLE_QUERY: 12500,  // was 2500, 5x
 } as const;
 
 /**

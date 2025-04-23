@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useRetryHandler } from './useRetryHandler';
 import { useQueryExecution } from './useQueryExecution';
@@ -30,13 +29,18 @@ export const useQueryProcessor = (
   const batchNumber = useRef(1);
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
+  const [autoBatch, setAutoBatch] = useState(false);
+
+  // Auto-batch controller (when truncation is detected, keep fetching next parts until complete or max batches reached)
+  const MAX_AUTO_BATCHES = 4;
 
   // Create our actual processQuery function
-  const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean } = {}) => {
+  const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean, autoBatch?: boolean } = {}) => {
     // If continuing a batch, add special instruction
     let prompt = queryText;
     const isBatchContinuation = options.isBatchContinuation || false;
-    
+    const autoBatchMode = options.autoBatch || false;
+
     if (isBatchContinuation && batchNumber.current > 1) {
       prompt = `${queryText} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
     }
@@ -46,21 +50,29 @@ export const useQueryProcessor = (
       setBatchingPrompt(queryText);
       batchNumber.current = 1;
       setIsBatching(false);
+      setAutoBatch(autoBatchMode);
     }
 
     const batchInfo = isBatchContinuation
       ? { batchNumber: batchNumber.current, isContinuing: true }
       : undefined;
 
-    // Wrap setMessages to append messages
     const setMessagesBatch = (msgs: Message[]) => setMessages(msgs);
-    // Call the original processQuery from useQueryExecution
+
+    let truncatedLastPart = false;
+
     await executeQuery(
       prompt,
       batchInfo,
       async (truncated: boolean) => {
-        // If response was truncated, allow batch continuation
-        if (truncated) {
+        truncatedLastPart = truncated;
+        if (truncated && autoBatchMode && batchNumber.current < MAX_AUTO_BATCHES) {
+          setIsBatching(true);
+          setTimeout(() => {
+            batchNumber.current += 1;
+            processQuery(queryText, { isBatchContinuation: true, autoBatch: true });
+          }, 750);
+        } else if (truncated) {
           setIsBatching(true);
         } else {
           setIsBatching(false);
@@ -69,14 +81,16 @@ export const useQueryProcessor = (
     );
   };
 
-  // Initialize the input handler after processQuery is defined
-  const { handleSend, handleKeyDown } = useQueryInputHandler(processQuery, input);
+  // Initialize input handler after processQuery is defined
+  const { handleSend, handleKeyDown } = useQueryInputHandler(
+    (q, opt = {}) => processQuery(q, { ...opt, autoBatch }), input
+  );
 
   // Triggered when user clicks "Continue" for the next batch part
   const handleContinueBatch = () => {
     if (batchingPrompt) {
       batchNumber.current += 1;
-      processQuery(batchingPrompt, { isBatchContinuation: true });
+      processQuery(batchingPrompt, { isBatchContinuation: true, autoBatch });
     }
   };
 
@@ -93,6 +107,7 @@ export const useQueryProcessor = (
     processingStage,
     isBatching,
     currentBatchNumber: batchNumber.current,
-    handleContinueBatch
+    handleContinueBatch,
+    autoBatch
   };
 };

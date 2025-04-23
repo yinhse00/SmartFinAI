@@ -19,7 +19,7 @@ export const optimizedParametersBuilder = {
     if (isTimetableQuery) {
       return {
         temperature: 0.05,
-        maxTokens: 36000   // was 12000, now TRIPLED
+        maxTokens: 60000   // was 12k/36k, now 5x the previous default
       };
     }
     
@@ -32,7 +32,7 @@ export const optimizedParametersBuilder = {
     if (isExecutionProcessQuery) {
       return {
         temperature: 0.1,
-        maxTokens: 30000  // was 10000, now TRIPLED
+        maxTokens: 50000  // was 10k/30k, now 5x base
       };
     }
     
@@ -41,7 +41,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes('definition')) {
       return {
         temperature: 0.1,
-        maxTokens: 24000 // was 8000
+        maxTokens: 40000 // was 8k/24k, now 5x
       };
     }
     
@@ -50,7 +50,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes('connected person')) {
       return {
         temperature: 0.1,
-        maxTokens: 27000 // was 9000
+        maxTokens: 45000 // was 9k/27k, now 5x
       };
     }
     
@@ -61,7 +61,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes(' vs ')) {
       return {
         temperature: 0.1,
-        maxTokens: 27000 // was 9000
+        maxTokens: 45000 // was 9k/27k, now 5x
       };
     }
     
@@ -69,7 +69,7 @@ export const optimizedParametersBuilder = {
     if (isSimpleQuery && !hasContext) {
       return {
         temperature: 0.3,
-        maxTokens: 12000 // was 4000
+        maxTokens: 20000 // was 4k/12k, now 5x
       };
     }
     
@@ -77,7 +77,7 @@ export const optimizedParametersBuilder = {
     const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, prompt);
     
     const actualTemperature = hasContext ? 0.1 : temperature;
-    const safeMaxTokens = Math.min(24000, Math.max(12000, maxTokens)); // was [8000, 4000]
+    const safeMaxTokens = Math.min(40000, Math.max(20000, maxTokens * 5)); // 5x old bounds
     
     return { 
       temperature: actualTemperature, 

@@ -6,19 +6,19 @@ export const useRetryStrategies = () => {
     responseParams: any, 
     retryCount: number
   ) => {
-    // Even more aggressive token scaling - triple tokens on first retry, quadruple on second
-    const tokenMultiplier = retryCount === 0 ? 3 : (retryCount === 1 ? 4 : 5);
+    // Even more aggressive token scaling - x5 on first retry, x6 on second, x7 on later
+    const tokenMultiplier = retryCount === 0 ? 5 : (retryCount === 1 ? 6 : 7);
     const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
-    
+
     // Use extremely low temperature on retries for maximum determinism
-    const reducedTemperature = 0.05; // Even lower temperature for more deterministic results
-    
+    const reducedTemperature = 0.05;
+
     // Build enhanced parameters for retry with specialized prompting techniques
     const enhancedParams = {
       ...responseParams,
-      maxTokens: Math.min(increasedTokens, 10000), // Much higher token cap for completeness
+      maxTokens: Math.min(increasedTokens, 40000), // Much higher token cap for completeness (old 10k cap, now upped)
       temperature: reducedTemperature,
-      prompt: responseParams.prompt + 
+      prompt: responseParams.prompt +
         " CRITICAL: This is a RETRY attempt. You MUST provide a COMPLETE and COMPREHENSIVE response. " +
         "DO NOT truncate your response. For timetables, include ALL key dates and actions. " +
         "For regulatory content, include ALL relevant rules and requirements. " +
@@ -26,9 +26,8 @@ export const useRetryStrategies = () => {
         "If your response needs to be detailed, START with the most important information. " +
         "Format efficiently using bullet points and tables where appropriate to fit more information."
     };
-    
-    // Add specific guidance based on detected query type
-    if (responseParams.prompt?.toLowerCase().includes('rights issue') || 
+
+    if (responseParams.prompt?.toLowerCase().includes('rights issue') ||
         (responseParams.financialQueryType === 'rights_issue')) {
       enhancedParams.prompt += " FOR RIGHTS ISSUE TIMETABLES: " +
         "You MUST include ALL trading dates and nil-paid rights period in a well-structured table format. " +
@@ -38,16 +37,15 @@ export const useRetryStrategies = () => {
       enhancedParams.prompt += " FOR CONNECTED TRANSACTIONS: " +
         "List ALL categories of connected persons and transaction thresholds at the beginning of your response.";
     }
-    
+
     console.log(`Enhanced Retry Parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}, Retry #${retryCount+1}`);
     return enhancedParams;
   };
 
   const determineMaxRetries = (isSimpleQuery: boolean, isAggregationQuery: boolean): number => {
-    // Increase maximum retries for complex queries
-    if (isSimpleQuery) return 1; // Simple queries need fewer retries
-    if (isAggregationQuery) return 3; // More complex queries get more retries
-    return 2; // Standard queries get 2 retries
+    if (isSimpleQuery) return 1;
+    if (isAggregationQuery) return 3;
+    return 2;
   };
 
   return {
