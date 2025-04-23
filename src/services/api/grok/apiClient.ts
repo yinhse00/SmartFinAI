@@ -1,3 +1,4 @@
+
 import { getGrokApiKey, trackTokenUsage, selectLeastUsedKey, selectBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
@@ -19,7 +20,7 @@ export const apiClient = {
     const userContent = requestBody.messages.find(msg => msg.role === 'user')?.content || '';
     const isRetryAttempt = userContent.includes('[RETRY_ATTEMPT]');
     
-    // Use provided key, or select the best key based on context
+    // Use provided key, or select the best key based on context and load balancing
     const apiKey = providedApiKey || 
                  (isRetryAttempt ? selectLeastUsedKey() : selectBestPerformingKey()) || 
                  getGrokApiKey();

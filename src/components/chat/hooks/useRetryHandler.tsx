@@ -42,7 +42,7 @@ export const useRetryHandler = (
       return;
     }
     
-    // Get a fresh API key for the retry
+    // Get a fresh API key for the retry to prevent overloading any single key
     const freshKey = getFreshGrokApiKey();
     console.log("Using fresh API key for retry:", freshKey.substring(0, 6) + "***");
     
