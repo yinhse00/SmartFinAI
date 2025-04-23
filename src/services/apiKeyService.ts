@@ -12,8 +12,10 @@ const DEFAULT_DEPLOYMENT_KEYS = [
   'xai-wqG2hD4YSmX3mQtjr43pCeg8CCnvU9O2AEE73CTSEchgELJRDDgIdmcvZCCqB8N5T0Y00YhSCmtKBXMO',
   'xai-backup1KeyHere',
   'xai-backup2KeyHere',
-  // Adding the new API key
-  'xai-7h1uCveS6tzIywYV6DS8fjVk49mMuggoG0usLyEV03iODdadLZojWQJhlttKw1UpXAXAHg29l7G5ZDLb'
+  // Adding the new API keys from previous addition
+  'xai-7h1uCveS6tzIywYV6DS8fjVk49mMuggoG0usLyEV03iODdadLZojWQJhlttKw1UpXAXAHg29l7G5ZDLb',
+  // Adding the new API key just now
+  'xai-C3YiE8RYzsdK4eMJBGLKRzMR3gmBAABkvcinl6rvgpeMsiONgHLqmIp2C7gy77It6sTVrCHV5gb0Mtb1'
 ];
 
 interface ApiKeyUsage {
