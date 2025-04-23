@@ -28,8 +28,6 @@ export function analyzeOpenOfferResponse(content: string) {
     analysis.confidence = checkResult.confidence || 'medium';
   }
 
-  // Additional hardcoded regulatory checks can go here if needed
-
   return analysis;
 }
 

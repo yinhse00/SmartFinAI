@@ -1,8 +1,8 @@
 
 import { checkExecutionProcessCompleteness } from './executionProcess';
-import { analyzeRightsIssueResponse } from './rightsIssue';
-import { analyzeOpenOfferResponse } from './openOffer';
-import { analyzeTakeoverOfferResponse } from './takeoverOffer';
+import { analyzeRightsIssueResponse, evaluateRightsIssueContent } from './rightsIssue';
+import { analyzeOpenOfferResponse, evaluateOpenOfferContent } from './openOffer';
+import { analyzeTakeoverOfferResponse, evaluateTakeoverOfferContent } from './takeoverOffer';
 
 /**
  * Main entry point for financial response analysis
@@ -153,36 +153,12 @@ function isExecutionProcessContent(content: string): boolean {
          (normalizedContent.includes('step') || normalizedContent.includes('phase')));
 }
 
-// Helper functions for content evaluation
-function evaluateRightsIssueContent(content: string): { isComplete: boolean; missingElements: string[] } {
-  const { analyzeRightsIssueResponse } = require('./rightsIssue');
-  const analysis = analyzeRightsIssueResponse(content);
-  return {
-    isComplete: analysis.isComplete,
-    missingElements: analysis.missingElements || []
-  };
-}
-
-function evaluateOpenOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
-  const { analyzeOpenOfferResponse } = require('./openOffer');
-  const analysis = analyzeOpenOfferResponse(content);
-  return {
-    isComplete: analysis.isComplete,
-    missingElements: analysis.missingElements || []
-  };
-}
-
-function evaluateTakeoverOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
-  const { analyzeTakeoverOfferResponse } = require('./takeoverOffer');
-  const analysis = analyzeTakeoverOfferResponse(content);
-  return {
-    isComplete: analysis.isComplete,
-    missingElements: analysis.missingElements || []
-  };
-}
-
-// Re-export sub-components for direct use
-export * from './executionProcess';
-export * from './rightsIssue';
-export * from './openOffer';
-export * from './takeoverOffer';
+// Export these helper functions directly from this file
+export {
+  analyzeRightsIssueResponse,
+  evaluateRightsIssueContent,
+  analyzeOpenOfferResponse, 
+  evaluateOpenOfferContent,
+  analyzeTakeoverOfferResponse,
+  evaluateTakeoverOfferContent
+};

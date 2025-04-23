@@ -1,48 +1,56 @@
 
-import { FRAMEWORK_TERMINOLOGY } from '@/services/constants/financialConstants';
-
-export function checkExecutionProcessCompleteness(content: string, queryType: string) {
+/**
+ * Checks if an execution process description is complete
+ * @param content The content to check
+ * @returns Analysis result
+ */
+export function checkExecutionProcessCompleteness(content: string) {
   const result = {
     isComplete: true,
     missingElements: [] as string[],
-    confidence: 'medium' as 'high' | 'medium' | 'low'
+    confidence: 'high' as 'high' | 'medium' | 'low'
   };
 
-  const normalizedContent = content.toLowerCase();
-
-  if (!normalizedContent.includes('preparation') && !normalizedContent.includes('drafting')) {
+  const lowerContent = content.toLowerCase();
+  
+  // Check if process has steps or timeline
+  const hasSteps = lowerContent.includes('step 1') || 
+                  lowerContent.includes('first step') ||
+                  lowerContent.includes('phase 1');
+                  
+  const hasTimeline = lowerContent.includes('timeline') ||
+                     lowerContent.includes('timetable') ||
+                     lowerContent.includes('schedule');
+                     
+  // Missing both steps and timeline indicates incomplete content
+  if (!hasSteps && !hasTimeline) {
     result.isComplete = false;
-    result.missingElements.push("Missing preparation phase details");
+    result.missingElements.push('Process steps or timeline');
+    result.confidence = 'medium';
   }
-  if (!normalizedContent.includes('vetting')) {
+  
+  // Check for dates in timeline
+  if (hasTimeline) {
+    const hasDates = /\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi.test(content);
+    
+    if (!hasDates) {
+      result.isComplete = false;
+      result.missingElements.push('Timeline dates');
+      result.confidence = 'high';
+    }
+  }
+  
+  // Check for completion markers
+  const hasCompletion = lowerContent.includes('completion') ||
+                       lowerContent.includes('final step') ||
+                       lowerContent.includes('last step');
+                       
+  if (!hasCompletion && (hasSteps || hasTimeline)) {
     result.isComplete = false;
-    result.missingElements.push("Missing regulatory vetting details");
+    result.missingElements.push('Process completion steps');
+    result.confidence = 'medium';
   }
-  if (!hasTimeframes(normalizedContent)) {
-    result.isComplete = false;
-    result.missingElements.push("Missing specific timeframes for steps");
-  }
-  if (['open_offer', 'rights_issue'].includes(queryType)) {
-    if (!normalizedContent.includes('hkex') && !normalizedContent.includes('stock exchange')) {
-      result.isComplete = false;
-      result.missingElements.push("Missing Stock Exchange (HKEX) regulatory authority reference");
-    }
-    if (!FRAMEWORK_TERMINOLOGY.LISTING_RULES.some(term => normalizedContent.includes(term))) {
-      result.isComplete = false;
-      result.missingElements.push("Missing Listing Rules framework references");
-    }
-  }
-  if (['takeover_offer', 'takeovers_code'].includes(queryType)) {
-    if (!normalizedContent.includes('sfc') && !normalizedContent.includes('securities and futures commission')) {
-      result.isComplete = false;
-      result.missingElements.push("Missing Securities and Futures Commission (SFC) regulatory authority reference");
-    }
-    if (!FRAMEWORK_TERMINOLOGY.TAKEOVERS_CODE.some(term => normalizedContent.includes(term))) {
-      result.isComplete = false;
-      result.missingElements.push("Missing Takeovers Code framework references");
-    }
-  }
-
+  
   return result;
 }
 
@@ -54,10 +62,4 @@ export function isExecutionProcessContent(content: string): boolean {
          normalizedContent.includes('timetable') ||
          (normalizedContent.includes('process') && 
          (normalizedContent.includes('step') || normalizedContent.includes('phase')));
-}
-
-function hasTimeframes(content: string): boolean {
-  const dayRangeRegex = /\d+\s*-\s*\d+\s*(days|business days)/i;
-  const specificDayRegex = /day\s+\d+/i;
-  return dayRangeRegex.test(content) || specificDayRegex.test(content);
 }
