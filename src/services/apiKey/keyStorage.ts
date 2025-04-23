@@ -1,4 +1,3 @@
-
 /**
  * Handles all localStorage interactions for Grok/perplexity API keys.
  * Enhanced security with proper validation and error handling
@@ -10,7 +9,7 @@ const LEGACY_SINGLE_KEY_BACKUP = 'grokApiKey';
 const PERPLEXITY_KEY = 'PERPLEXITY_API_KEY';
 
 // No hardcoded API keys for security - use empty array as default
-const DEFAULT_DEPLOYMENT_KEYS: string[] = [];
+export const DEFAULT_DEPLOYMENT_KEYS: string[] = [];
 
 // Validation and deduplication
 export function filterValidKeys(keys: unknown): string[] {
