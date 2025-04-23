@@ -1,4 +1,10 @@
-import React from 'react';
+
+import React, { useState } from 'react';
+import { RefreshCw } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import TypingAnimation from './TypingAnimation';
 
 export interface Message {
   id: string;
