@@ -4,17 +4,29 @@ import { logTruncation, LogLevel } from './logLevel';
 export const detectTruncation = (content: string): boolean => {
   if (!content) return false;
 
-  // CRITICAL FIX: Make truncation detection much less sensitive
+  // Improved truncation indicators - more comprehensive
   const truncationIndicators = [
-    // Only check for very clear truncation markers
-    content.trim().endsWith('...') ||
-    content.trim().endsWith('…'),
+    // Clear truncation markers
+    content.trim().endsWith('...') || content.trim().endsWith('…'),
     
-    // Severely cut off content
+    // Severely cut off content 
     content.length < 50 && content.length > 0,
     
-    // Very uneven number of code blocks (not just odd)
-    ((content.match(/```/g) || []).length > 1 && (content.match(/```/g) || []).length % 2 !== 0)
+    // Uneven code blocks
+    ((content.match(/```/g) || []).length > 1 && (content.match(/```/g) || []).length % 2 !== 0),
+    
+    // End with unfinished markdown table
+    content.includes('|') && content.split('\n').filter(line => line.includes('|')).length > 2 && 
+    !content.trim().split('\n').slice(-3).some(line => line.includes('|')),
+    
+    // Cut off HTML tag
+    content.trim().match(/<[^>]*$/),
+    
+    // End with incomplete sentence right after a bullet point
+    content.trim().match(/[-*•]\s+\w+[^.!?]*$/),
+    
+    // End with incomplete sentence after a colon
+    content.trim().match(/:\s+\w+[^.!?]*$/)
   ];
   
   const isTruncated = truncationIndicators.some(indicator => indicator === true);
@@ -22,7 +34,7 @@ export const detectTruncation = (content: string): boolean => {
   if (isTruncated) {
     logTruncation(
       LogLevel.WARN, 
-      "Basic truncation detected with more lenient criteria", 
+      "Basic truncation detected", 
       { length: content.length, lastChars: content.slice(-40) }
     );
   }
@@ -57,7 +69,7 @@ export const checkUnbalancedConstructs = (content: string): {
       // For identical opening/closing chars like quotes, we just check for even count
       const count = (content.match(new RegExp(`${opening}`, 'g')) || []).length;
       counts[name] = count;
-      // CRITICAL FIX: Only consider unbalanced if the count is high enough to matter
+      // Only consider unbalanced if the count is high enough to matter
       if (count % 2 !== 0 && count > 2) {
         isUnbalanced = true;
       }
@@ -66,20 +78,36 @@ export const checkUnbalancedConstructs = (content: string): {
       const openCount = (content.match(new RegExp(`\\${opening}`, 'g')) || []).length;
       const closeCount = (content.match(new RegExp(`\\${closing}`, 'g')) || []).length;
       counts[name] = openCount - closeCount;
-      // CRITICAL FIX: Only consider unbalanced if the difference is significant
-      if (Math.abs(openCount - closeCount) > 2) {
+      // Only consider unbalanced if the difference is significant
+      // More lenient for brackets and parentheses which may appear in natural text
+      if (Math.abs(openCount - closeCount) > (name === 'brackets' || name === 'parentheses' ? 3 : 1)) {
         isUnbalanced = true;
       }
     }
   }
   
-  // Also check for list items without endings when we have multiple list items
+  // Check for list items without endings when we have multiple list items
   const bulletPoints = (content.match(/^[\s]*[-*•][\s].*$/gm) || []).length;
-  const unfinishedList = bulletPoints > 5 && /[-*•][\s][^.!?:;)]*$/.test(content);
+  const lastBulletComplete = !content.match(/[-*•][\s][^.!?:;)]*$/m); // Is the last bullet point complete?
+  const unfinishedList = bulletPoints > 3 && !lastBulletComplete;
   
   if (unfinishedList) {
     counts['bulletPoints'] = bulletPoints;
+    counts['lastBulletComplete'] = lastBulletComplete ? 1 : 0;
     isUnbalanced = true;
+  }
+  
+  // Check for table row balance (number of | symbols should be consistent in each row)
+  if (content.includes('|') && content.includes('\n|')) {
+    const tableRows = content.split('\n').filter(line => line.trim().startsWith('|'));
+    if (tableRows.length > 2) {
+      const pipeCounts = tableRows.map(row => (row.match(/\|/g) || []).length);
+      const inconsistentTable = pipeCounts.some(count => count !== pipeCounts[0]);
+      if (inconsistentTable) {
+        counts['inconsistentTableRows'] = 1;
+        isUnbalanced = true;
+      }
+    }
   }
   
   if (isUnbalanced) {

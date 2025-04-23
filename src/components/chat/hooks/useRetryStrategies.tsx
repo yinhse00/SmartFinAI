@@ -6,42 +6,48 @@ export const useRetryStrategies = () => {
     responseParams: any, 
     retryCount: number
   ) => {
-    // More aggressive token scaling - double tokens on first retry, triple on second, etc.
-    const tokenMultiplier = retryCount === 0 ? 2 : (retryCount === 1 ? 3 : 4);
+    // Even more aggressive token scaling - triple tokens on first retry, quadruple on second
+    const tokenMultiplier = retryCount === 0 ? 3 : (retryCount === 1 ? 4 : 5);
     const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
     
-    // Aggressively reduce temperature on retries
-    const reducedTemperature = 0.1; // Fixed low temperature for deterministic results
+    // Use extremely low temperature on retries for maximum determinism
+    const reducedTemperature = 0.05; // Even lower temperature for more deterministic results
     
-    // Build enhanced parameters for retry
+    // Build enhanced parameters for retry with specialized prompting techniques
     const enhancedParams = {
       ...responseParams,
-      maxTokens: Math.min(increasedTokens, 7000), // Higher token cap for completeness
+      maxTokens: Math.min(increasedTokens, 10000), // Much higher token cap for completeness
       temperature: reducedTemperature,
       prompt: responseParams.prompt + 
-        " CRITICAL: You MUST provide a COMPLETE and COMPREHENSIVE response. " +
-        "For rights issue timetables, include ALL key dates and actions: announcement, EGM, " +
-        "record date, commencement of dealings in nil-paid rights, acceptance period start and end, " +
-        "results announcement, and refund dates. " +
-        "If your response is getting cut off, restart from the beginning to ensure completeness."
+        " CRITICAL: This is a RETRY attempt. You MUST provide a COMPLETE and COMPREHENSIVE response. " +
+        "DO NOT truncate your response. For timetables, include ALL key dates and actions. " +
+        "For regulatory content, include ALL relevant rules and requirements. " +
+        "For comparative analysis, include COMPLETE information for all compared items. " +
+        "If your response needs to be detailed, START with the most important information. " +
+        "Format efficiently using bullet points and tables where appropriate to fit more information."
     };
     
-    // Add specific guidance for rights issue queries
+    // Add specific guidance based on detected query type
     if (responseParams.prompt?.toLowerCase().includes('rights issue') || 
         (responseParams.financialQueryType === 'rights_issue')) {
-      enhancedParams.prompt += " SPECIFICALLY FOR RIGHTS ISSUE TIMETABLES: " +
-        "You MUST include all trading dates, nil-paid rights period, acceptance dates, and " +
-        "refund information. Ensure the timetable is COMPLETE with a clear structure.";
+      enhancedParams.prompt += " FOR RIGHTS ISSUE TIMETABLES: " +
+        "You MUST include ALL trading dates and nil-paid rights period in a well-structured table format. " +
+        "Present the timetable first before any explanations.";
+    } else if (responseParams.prompt?.toLowerCase().includes('connected transaction') ||
+              (responseParams.financialQueryType === 'connected_transaction')) {
+      enhancedParams.prompt += " FOR CONNECTED TRANSACTIONS: " +
+        "List ALL categories of connected persons and transaction thresholds at the beginning of your response.";
     }
     
-    console.log(`Enhanced Retry Parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}`);
+    console.log(`Enhanced Retry Parameters - Tokens: ${enhancedParams.maxTokens}, Temperature: ${enhancedParams.temperature}, Retry #${retryCount+1}`);
     return enhancedParams;
   };
 
   const determineMaxRetries = (isSimpleQuery: boolean, isAggregationQuery: boolean): number => {
-    if (isSimpleQuery) return 2; 
-    if (isAggregationQuery) return 3;
-    return 3; // Standard financial queries get 3 retries
+    // Increase maximum retries for complex queries
+    if (isSimpleQuery) return 1; // Simple queries need fewer retries
+    if (isAggregationQuery) return 3; // More complex queries get more retries
+    return 2; // Standard queries get 2 retries
   };
 
   return {
