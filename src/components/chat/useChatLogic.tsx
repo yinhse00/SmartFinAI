@@ -31,7 +31,8 @@ export const useChatLogic = () => {
     processingStage,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch
+    handleContinueBatch,
+    autoBatch
   } = useQueryProcessor(
     messages,
     setMessages,
@@ -66,9 +67,10 @@ export const useChatLogic = () => {
     retryLastQuery,
     processingStage,
 
-    // New: exposing multi-part response state/controls
+    // Batch/multi-part response state/controls
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
+    autoBatch
   };
 };

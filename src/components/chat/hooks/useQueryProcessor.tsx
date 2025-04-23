@@ -29,7 +29,7 @@ export const useQueryProcessor = (
   const batchNumber = useRef(1);
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
-  const [autoBatch, setAutoBatch] = useState(false);
+  const [autoBatch, setAutoBatch] = useState(true);
 
   // Auto-batch controller (when truncation is detected, keep fetching next parts until complete or max batches reached)
   const MAX_AUTO_BATCHES = 4;
@@ -39,7 +39,7 @@ export const useQueryProcessor = (
     // If continuing a batch, add special instruction
     let prompt = queryText;
     const isBatchContinuation = options.isBatchContinuation || false;
-    const autoBatchMode = options.autoBatch || false;
+    const autoBatchMode = options.autoBatch ?? autoBatch;
 
     if (isBatchContinuation && batchNumber.current > 1) {
       prompt = `${queryText} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
@@ -70,7 +70,7 @@ export const useQueryProcessor = (
           setIsBatching(true);
           setTimeout(() => {
             batchNumber.current += 1;
-            processQuery(queryText, { isBatchContinuation: true, autoBatch: true });
+            processQuery(queryText, { isBatchContinuation: true, autoBatch: autoBatchMode });
           }, 750);
         } else if (truncated) {
           setIsBatching(true);
