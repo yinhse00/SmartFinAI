@@ -16,7 +16,7 @@ export const useQueryProcessor = (
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
   const { retryLastQuery, setProcessQueryFn } = useRetryHandler(lastQuery, setInput);
-  const { isLoading, processQuery: processQueryOriginal, processingStage } = useQueryExecution(
+  const { isLoading, processQuery: executeQuery, processingStage } = useQueryExecution(
     messages,
     setMessages,
     setLastQuery,
@@ -25,17 +25,18 @@ export const useQueryProcessor = (
     isGrokApiKeySet,
     setApiKeyDialogOpen
   );
-  const { handleSend, handleKeyDown } = useQueryInputHandler(processQuery, input);
 
   // Batch/multi-part state
   const batchNumber = useRef(1);
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
 
-  // Internal: handle "Continue" for fetching next batch
-  const processQuery = async (queryText: string, { isBatchContinuation = false } = {}) => {
+  // Create our actual processQuery function
+  const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean } = {}) => {
     // If continuing a batch, add special instruction
     let prompt = queryText;
+    const isBatchContinuation = options.isBatchContinuation || false;
+    
     if (isBatchContinuation && batchNumber.current > 1) {
       prompt = `${queryText} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
     }
@@ -53,8 +54,8 @@ export const useQueryProcessor = (
 
     // Wrap setMessages to append messages
     const setMessagesBatch = (msgs: Message[]) => setMessages(msgs);
-    // Call the original processQuery from useQueryExecution, slightly modified to take batchInfo
-    await processQueryOriginal(
+    // Call the original processQuery from useQueryExecution
+    await executeQuery(
       prompt,
       batchInfo,
       async (truncated: boolean) => {
@@ -68,6 +69,9 @@ export const useQueryProcessor = (
     );
   };
 
+  // Initialize the input handler after processQuery is defined
+  const { handleSend, handleKeyDown } = useQueryInputHandler(processQuery, input);
+
   // Triggered when user clicks "Continue" for the next batch part
   const handleContinueBatch = () => {
     if (batchingPrompt) {
@@ -77,7 +81,7 @@ export const useQueryProcessor = (
   };
 
   useEffect(() => {
-    setProcessQueryFn((qt, opts) => processQuery(qt, opts));
+    setProcessQueryFn((query: string, opts = {}) => processQuery(query, opts));
   }, [processQuery, setProcessQueryFn]);
 
   return {

@@ -3,7 +3,7 @@
  * Hook for handling query input interactions
  */
 export const useQueryInputHandler = (
-  processQuery: (query: string) => Promise<void>,
+  processQuery: (query: string, options?: { isBatchContinuation?: boolean }) => Promise<void>,
   input: string
 ) => {
   const handleSend = () => {

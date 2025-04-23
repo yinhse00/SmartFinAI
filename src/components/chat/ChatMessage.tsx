@@ -1,23 +1,17 @@
-import React, { useState } from 'react';
-import { Info, RefreshCw } from 'lucide-react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Button } from '@/components/ui/button';
-import TypingAnimation from './TypingAnimation';
+import React from 'react';
 
 export interface Message {
   id: string;
-  content: string;
   sender: 'user' | 'bot';
+  content: string;
   timestamp: Date;
   references?: string[];
-  isError?: boolean;
   isUsingFallback?: boolean;
   reasoning?: string;
+  isError?: boolean;
   queryType?: string;
   isTruncated?: boolean;
+  isBatchPart?: boolean;
 }
 
 interface ChatMessageProps {
@@ -35,7 +29,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
     isUsingFallback, 
     reasoning,
     queryType,
-    isTruncated 
+    isTruncated,
+    isBatchPart 
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');

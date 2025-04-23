@@ -30,7 +30,7 @@ export const useResponseProcessor = (
       regulatoryContext,
       reasoning,
       isUsingFallback
-    );
+    ) as Message & { isBatchPart?: boolean };
 
     // If in batching mode, mark the message batch part.
     if (batchInfo && batchInfo.batchNumber > 1) {
