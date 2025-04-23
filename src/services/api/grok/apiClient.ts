@@ -1,4 +1,3 @@
-
 import { getGrokApiKey, trackTokenUsage, selectLeastUsedKey, selectBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
@@ -157,4 +156,3 @@ export const apiClient = {
     throw lastError || new Error("API call failed after maximum retries");
   }
 };
-
