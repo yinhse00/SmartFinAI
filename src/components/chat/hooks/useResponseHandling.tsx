@@ -41,20 +41,18 @@ export const useResponseHandling = (
       
       // Determine if this is a simple query
       const isSimpleQuery = isQuerySimple(queryText);
+      const isAggregationQuery = queryText.toLowerCase().includes('aggregate') || 
+                                 queryText.toLowerCase().includes('rule 7.19a');
       
-      // CRITICAL FIX: Use much higher token limits, especially for financial queries
-      let enhancedParams = { ...responseParams };
+      // Use the enhanced token limits
+      let enhancedParams = enhanceTokenLimits(
+        queryText, 
+        responseParams, 
+        isSimpleQuery,
+        isAggregationQuery
+      );
       
-      // For financial/regulatory queries, use very high token limits
-      if (financialQueryType === 'open_offer' || financialQueryType === 'rights_issue') {
-        enhancedParams.maxTokens = 10000; // High limit for timetable queries
-        enhancedParams.temperature = 0.1;  // Low temperature for accuracy
-        console.log(`Using enhanced parameters for ${financialQueryType}: tokens=${enhancedParams.maxTokens}, temp=${enhancedParams.temperature}`);
-      } else {
-        // For other queries, still use higher limits than before
-        enhancedParams.maxTokens = Math.max(4000, enhancedParams.maxTokens || 4000);
-        enhancedParams.temperature = Math.min(0.3, enhancedParams.temperature || 0.3);
-      }
+      console.log(`Using parameters: tokens=${enhancedParams.maxTokens}, temp=${enhancedParams.temperature}`);
       
       // Add instructions to prioritize completeness
       if (enhancedParams.prompt) {
@@ -82,20 +80,10 @@ export const useResponseHandling = (
       // Use consistent fallback detection
       const isUsingFallback = isFallbackResponse(apiResponse.text);
       
-      // Better debug logging
-      console.log("Fallback detection result:", {
-        isUsingFallback,
-        responseLength: apiResponse.text.length,
-        responseFirstChars: apiResponse.text.substring(0, 50) + '...',
-        hasBackupMetadata: apiResponse.metadata && apiResponse.metadata.isBackupResponse
-      });
-      
-      // Apply consistent fallback handling
       if (isUsingFallback) {
         console.log("Fallback response detected");
         handleFallbackResponse(isGrokApiKeySet);
         
-        // Ensure the response is properly marked as fallback for UI display
         if (apiResponse.metadata) {
           apiResponse.metadata.isBackupResponse = true;
         } else {
@@ -103,33 +91,20 @@ export const useResponseHandling = (
         }
       }
       
-      // CRITICAL FIX: Use much more lenient completeness checks based on query type
-      let completenessCheck;
-      
-      // For simple queries, skip complex analysis
-      if (isSimpleQuery || apiResponse.text.length < 1000) {
-        completenessCheck = { 
-          isComplete: true, 
-          reasons: [],
-          financialAnalysis: { missingElements: [] } 
-        };
-      } else {
-        // For complex queries like timetables, do a proper check but be more lenient
-        completenessCheck = analyzeResponseCompleteness(
-          apiResponse.text, 
-          financialQueryType, 
-          queryText, 
-          isSimpleQuery
-        );
-      }
+      // Check completeness with improved analysis
+      const completenessCheck = analyzeResponseCompleteness(
+        apiResponse.text, 
+        financialQueryType, 
+        queryText, 
+        isSimpleQuery
+      );
       
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
       
-      // Always show the partial response with proper truncation marking
+      // If response is incomplete, mark as truncated
       if (!completenessCheck.isComplete) {
         console.log("Response appears incomplete, marking as truncated");
         
-        // Mark as truncated for UI
         apiResponse.metadata = {
           ...apiResponse.metadata,
           responseCompleteness: {
@@ -139,18 +114,15 @@ export const useResponseHandling = (
           }
         };
         
-        // Add truncation notice directly to the response
         apiResponse.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Retry with higher limits' button for a more complete answer.]";
         
-        // Show toast but always display the partial response
         toast({
-          title: "Partial Response Available",
-          description: "The complete answer is not available. Showing partial information with retry option.",
+          title: "Partial Response",
+          description: "The complete answer was not generated. Click 'Retry' for a more complete response.",
           duration: 8000,
         });
       }
       
-      // Process and display response
       return processApiResponse(
         apiResponse,
         processedMessages,
