@@ -1,6 +1,7 @@
 
 import { logTruncation, LogLevel } from '@/utils/truncation';
 import { detectTruncation, checkUnbalancedConstructs } from '@/utils/truncation/basicDetection';
+import { analyzeFinancialResponse } from '@/utils/truncation/financialResponseAnalyzer';
 
 /**
  * Hook for specialized truncation detection
@@ -127,16 +128,4 @@ function isTradingArrangementComplete(content: string, queryType: string): boole
   return content.toLowerCase().includes('timetable') && 
          content.toLowerCase().includes('ex-date') && 
          content.toLowerCase().includes('record date');
-}
-
-// Implementation for the analyzeFinancialResponse function
-function analyzeFinancialResponse(content: string, queryType: string) {
-  // Updated implementation to match expected structure
-  return {
-    isComplete: true,
-    isPartial: false,
-    isTruncated: false,
-    missingElements: [],
-    confidence: 'high' as 'high' | 'medium' | 'low'
-  };
 }

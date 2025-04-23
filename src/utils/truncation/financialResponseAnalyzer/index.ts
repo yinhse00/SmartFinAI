@@ -1,8 +1,8 @@
 
-import { isExecutionProcessContent } from './executionProcess';
-import { evaluateRightsIssueContent } from './rightsIssue';
-import { evaluateOpenOfferContent } from './openOffer';
-import { evaluateTakeoverOfferContent } from './takeoverOffer';
+import { checkExecutionProcessCompleteness } from './executionProcess';
+import { analyzeRightsIssueResponse } from './rightsIssue';
+import { analyzeOpenOfferResponse } from './openOffer';
+import { analyzeTakeoverOfferResponse } from './takeoverOffer';
 
 /**
  * Main entry point for financial response analysis
@@ -140,6 +140,45 @@ export function analyzeFinancialResponse(content: string, queryType?: string) {
   }
 
   return result;
+}
+
+// Helper function to determine if content is related to execution process
+function isExecutionProcessContent(content: string): boolean {
+  const normalizedContent = content.toLowerCase();
+  
+  return normalizedContent.includes('execution process') ||
+         normalizedContent.includes('timeline') ||
+         normalizedContent.includes('timetable') ||
+         (normalizedContent.includes('process') && 
+         (normalizedContent.includes('step') || normalizedContent.includes('phase')));
+}
+
+// Helper functions for content evaluation
+function evaluateRightsIssueContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const { analyzeRightsIssueResponse } = require('./rightsIssue');
+  const analysis = analyzeRightsIssueResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
+}
+
+function evaluateOpenOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const { analyzeOpenOfferResponse } = require('./openOffer');
+  const analysis = analyzeOpenOfferResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
+}
+
+function evaluateTakeoverOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const { analyzeTakeoverOfferResponse } = require('./takeoverOffer');
+  const analysis = analyzeTakeoverOfferResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
 }
 
 // Re-export sub-components for direct use

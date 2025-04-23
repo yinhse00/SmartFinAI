@@ -46,6 +46,16 @@ export function checkExecutionProcessCompleteness(content: string, queryType: st
   return result;
 }
 
+export function isExecutionProcessContent(content: string): boolean {
+  const normalizedContent = content.toLowerCase();
+  
+  return normalizedContent.includes('execution process') ||
+         normalizedContent.includes('timeline') ||
+         normalizedContent.includes('timetable') ||
+         (normalizedContent.includes('process') && 
+         (normalizedContent.includes('step') || normalizedContent.includes('phase')));
+}
+
 function hasTimeframes(content: string): boolean {
   const dayRangeRegex = /\d+\s*-\s*\d+\s*(days|business days)/i;
   const specificDayRegex = /day\s+\d+/i;

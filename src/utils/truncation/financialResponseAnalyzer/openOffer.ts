@@ -32,3 +32,11 @@ export function analyzeOpenOfferResponse(content: string) {
 
   return analysis;
 }
+
+export function evaluateOpenOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const analysis = analyzeOpenOfferResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
+}

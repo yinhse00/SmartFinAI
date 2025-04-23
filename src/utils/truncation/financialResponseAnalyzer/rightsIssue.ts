@@ -30,3 +30,11 @@ export function analyzeRightsIssueResponse(content: string) {
 
   return analysis;
 }
+
+export function evaluateRightsIssueContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const analysis = analyzeRightsIssueResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
+}

@@ -33,3 +33,11 @@ export function analyzeTakeoverOfferResponse(content: string) {
 
   return analysis;
 }
+
+export function evaluateTakeoverOfferContent(content: string): { isComplete: boolean; missingElements: string[] } {
+  const analysis = analyzeTakeoverOfferResponse(content);
+  return {
+    isComplete: analysis.isComplete,
+    missingElements: analysis.missingElements || []
+  };
+}
