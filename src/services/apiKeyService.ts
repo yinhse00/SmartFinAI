@@ -11,7 +11,9 @@ const DEFAULT_DEPLOYMENT_KEYS = [
   'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3',
   'xai-wqG2hD4YSmX3mQtjr43pCeg8CCnvU9O2AEE73CTSEchgELJRDDgIdmcvZCCqB8N5T0Y00YhSCmtKBXMO',
   'xai-backup1KeyHere',
-  'xai-backup2KeyHere'
+  'xai-backup2KeyHere',
+  // Adding the new API key
+  'xai-7h1uCveS6tzIywYV6DS8fjVk49mMuggoG0usLyEV03iODdadLZojWQJhlttKw1UpXAXAHg29l7G5ZDLb'
 ];
 
 interface ApiKeyUsage {
