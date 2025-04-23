@@ -4,6 +4,8 @@ import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
 import { useResponseFormatter } from './useResponseFormatter';
 import { useFallbackDetection } from './useFallbackDetection';
+import { Button } from '@/components/ui/button';
+import { RefreshCw } from 'lucide-react';
 
 export const useResponseProcessor = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
