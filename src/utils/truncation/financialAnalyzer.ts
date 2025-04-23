@@ -1,3 +1,4 @@
+
 import { logTruncation, LogLevel } from './logLevel';
 import { detectTruncationComprehensive } from './advancedDetection';
 import { analyzeFinancialResponse as analyzeFinancialResponseDetails } from './financialResponseAnalyzer';
@@ -11,6 +12,13 @@ interface BaseAnalysis {
 interface FinancialAnalysis extends BaseAnalysis {
   isTruncated: boolean;
   diagnostics: Record<string, any>;
+}
+
+// Define the expected return type from financialResponseAnalyzer
+interface FinancialResponseAnalysis {
+  isComplete: boolean;
+  missingElements: string[];
+  confidence?: 'high' | 'medium' | 'low';
 }
 
 /**
@@ -111,8 +119,8 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     if (financialAnalysis.missingElements.length > 0) {
       analysis.isComplete = false;
       analysis.missingElements.push(...financialAnalysis.missingElements);
-      // Safely handle confidence with proper typing
-      analysis.confidence = financialAnalysis.confidence ?? 'medium';
+      // Type-safe handling of confidence property which may not exist
+      analysis.confidence = (financialAnalysis as FinancialResponseAnalysis).confidence ?? 'medium';
     }
   }
   
