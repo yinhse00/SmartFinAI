@@ -9,6 +9,7 @@ const TOKEN_LIMITS = {
   RIGHTS_ISSUE_TIMETABLE: 35000,  // was 7000, 5x
   DEFINITION_QUERY: 25000,  // was 5000, 5x
   CONNECTED_TRANSACTION: 27500,  // was 5500, 5x
+  SPECIALIST_TECHNOLOGY: 30000,  // New entry for Chapter 18C
   SIMPLE_QUERY: 12500,  // was 2500, 5x
 } as const;
 
@@ -29,6 +30,12 @@ export const tokenManagementService = {
 
     if (isRetryAttempt) {
       return TOKEN_LIMITS.RETRY;
+    }
+
+    if (queryType === 'specialist_technology' || 
+        prompt.toLowerCase().includes('chapter 18c') ||
+        prompt.toLowerCase().includes('specialist technology')) {
+      return TOKEN_LIMITS.SPECIALIST_TECHNOLOGY;
     }
 
     if (queryType === 'rights_issue' && 
@@ -66,6 +73,11 @@ export const tokenManagementService = {
 
     if (isRetryAttempt) {
       return 0.1;
+    }
+
+    if (queryType === 'specialist_technology' || 
+        prompt.toLowerCase().includes('chapter 18c')) {
+      return 0.05; // Lower temperature for more accurate Chapter 18C responses
     }
 
     if (queryType === 'rights_issue' && 

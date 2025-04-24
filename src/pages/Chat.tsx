@@ -1,3 +1,4 @@
+
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { useEffect, useState } from 'react';
@@ -32,34 +33,19 @@ const Chat = () => {
           }
         }
         
-        const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+        // For security reasons, don't hardcode API keys - user should provide them
+        setDemoMode(true);
+        console.log('No valid API key available');
         
-        try {
-          localStorage.setItem('GROK_API_KEY', defaultApiKey);
-          localStorage.setItem('grokApiKey', defaultApiKey);
-          setGrokApiKey(defaultApiKey);
-          
-          console.log('Default API key set');
-          
-          setTimeout(() => {
-            const storedKey = getGrokApiKey();
-            console.log('API Key verification:', {
-              keySet: !!storedKey,
-              keyValid: storedKey && storedKey.startsWith('xai-') && storedKey.length >= 20,
-              keyMatches: storedKey === defaultApiKey
-            });
-            
-            if (!storedKey || storedKey !== defaultApiKey) {
-              console.warn('API key storage verification failed');
-              setDemoMode(true);
-            } else {
-              setDemoMode(false);
-            }
-          }, 300);
-        } catch (error) {
-          console.error('Failed to set default API key:', error);
-          setDemoMode(false);
-        }
+        setTimeout(() => {
+          const storedKey = getGrokApiKey();
+          if (!storedKey || !storedKey.startsWith('xai-') || storedKey.length < 20) {
+            setDemoMode(true);
+          } else {
+            setDemoMode(false);
+          }
+        }, 300);
+        
       } catch (e) {
         console.error('Error in API key handling:', e);
       }
