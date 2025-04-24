@@ -9,7 +9,6 @@ import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
 
-// Update signature to match expected arguments
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,
@@ -22,7 +21,6 @@ export const useResponseHandling = (
   const { enhanceTokenLimits } = useTokenManagement();
   const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
 
-  // Updated to match the number of arguments used in useQueryExecution
   const handleApiResponse = async (
     queryText: string,
     responseParams: any,
