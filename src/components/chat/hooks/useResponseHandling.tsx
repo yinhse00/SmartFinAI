@@ -1,3 +1,4 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { Message } from '../ChatMessage';
@@ -69,6 +70,7 @@ export const useResponseHandling = (
               targetLanguage: 'zh'
             });
             apiResponse.text = translatedResponse.text;
+            console.log('Response successfully translated to Chinese');
           } catch (error) {
             console.error('Translation error:', error);
             toast({

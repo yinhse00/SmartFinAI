@@ -7,11 +7,14 @@ export const useQueryInputHandler = (
   input: string
 ) => {
   const handleSend = () => {
-    processQuery(input);
+    if (input.trim()) {
+      processQuery(input);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && input.trim()) {
+      e.preventDefault();
       handleSend();
     }
   };

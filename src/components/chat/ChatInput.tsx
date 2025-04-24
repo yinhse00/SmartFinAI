@@ -19,11 +19,19 @@ const ChatInput: React.FC<ChatInputProps> = ({
   setInput,
   handleSend,
   isLoading,
+  isGrokApiKeySet,
+  onOpenApiKeyDialog,
   handleKeyDown
 }) => {
+  // Prevent form submission from refreshing the page
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSend();
+  };
+
   return (
     <div className="p-4 border-t">
-      <div className="flex gap-2">
+      <form onSubmit={handleSubmit} className="flex gap-2">
         <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
           placeholder="Ask about HK listing rules, takeovers, or compliance requirements..."
@@ -33,13 +41,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
           disabled={isLoading}
         />
         <Button 
-          onClick={handleSend} 
+          type="submit"
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
           disabled={!input.trim() || isLoading}
         >
           {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
         </Button>
-      </div>
+      </form>
     </div>
   );
 };
