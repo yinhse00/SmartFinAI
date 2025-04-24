@@ -6,6 +6,8 @@ import { useQueryCore } from './useQueryCore';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
+import { isChineseText } from '@/utils/translation/languageDetector';
+import { translationService } from '@/services/translation/translationService';
 
 export const useQueryExecution = (
   messages: Message[],
@@ -42,14 +44,35 @@ export const useQueryExecution = (
   ) => {
     if (!startProcessing(queryText)) return;
     setLastQuery(queryText);
-    const updatedMessages = createUserMessage(queryText, messages);
+    
+    // Detect if input is Chinese and store original language
+    const isChineseInput = isChineseText(queryText);
+    let englishQuery = queryText;
+    
+    // Translate Chinese input to English for processing
+    if (isChineseInput) {
+      try {
+        console.log('Translating Chinese input to English');
+        const translatedQuery = await translationService.translateContent({
+          content: queryText,
+          sourceLanguage: 'zh',
+          targetLanguage: 'en'
+        });
+        englishQuery = translatedQuery.text;
+        console.log('Translated query:', englishQuery);
+      } catch (error) {
+        console.error('Translation error:', error);
+        englishQuery = queryText; // Fallback to original text
+      }
+    }
 
-    const setMessagesFunc = customSetMessages || setMessages;
-    await setMessagesFunc(updatedMessages);
+    // Create user message with original text
+    const updatedMessages = createUserMessage(queryText, messages);
+    await (customSetMessages || setMessages)(updatedMessages);
     setInput('');
 
     try {
-      logQueryStart(queryText);
+      logQueryStart(englishQuery);
 
       const {
         responseParams,
@@ -57,7 +80,7 @@ export const useQueryExecution = (
         isFaqQuery,
         actualTemperature,
         enhancedMaxTokens
-      } = prepareQuery(queryText);
+      } = prepareQuery(englishQuery);
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
@@ -70,7 +93,7 @@ export const useQueryExecution = (
         usedSummaryIndex,
         searchStrategy
       } = await retrieveRegulatoryContext(
-        queryText,
+        englishQuery,
         Boolean(isFaqQuery)
       );
 
@@ -86,20 +109,16 @@ export const useQueryExecution = (
 
       responseParams.searchStrategy = searchStrategy;
 
-      const processingStart = Date.now();
-
       const result = await handleApiResponse(
-        queryText,
+        englishQuery,
         responseParams,
         regulatoryContext,
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        batchInfo
+        batchInfo,
+        isChineseInput
       );
-
-      const processingTime = Date.now() - processingStart;
-      console.log(`Response generated in ${processingTime}ms`);
 
       setStage('finalizing');
 

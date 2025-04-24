@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { grokService } from '@/services/grokService';
 import { Message } from '../ChatMessage';
@@ -8,6 +7,7 @@ import { useFallbackDetection } from './useFallbackDetection';
 import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
+import { translationService } from '@/services/translation/translationService';
 
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -28,7 +28,8 @@ export const useResponseHandling = (
     reasoning: string | undefined,
     financialQueryType: string,
     processedMessages: Message[],
-    batchInfo?: { batchNumber: number, isContinuing: boolean }
+    batchInfo?: { batchNumber: number, isContinuing: boolean },
+    needsChineseTranslation: boolean = false
   ) => {
     try {
       console.log('Calling API for SmartFinAI response');
@@ -58,6 +59,26 @@ export const useResponseHandling = (
         apiResponse = await grokService.generateResponse(enhancedParams);
         const apiCallDuration = Date.now() - apiCallStartTime;
         console.log(`API call completed in ${apiCallDuration}ms`);
+
+        if (needsChineseTranslation && apiResponse.text) {
+          console.log('Translating response to Chinese');
+          try {
+            const translatedResponse = await translationService.translateContent({
+              content: apiResponse.text,
+              sourceLanguage: 'en',
+              targetLanguage: 'zh'
+            });
+            apiResponse.text = translatedResponse.text;
+          } catch (error) {
+            console.error('Translation error:', error);
+            toast({
+              title: "Translation Notice",
+              description: "Could not translate the response to Chinese. Showing English response instead.",
+              duration: 5000,
+            });
+          }
+        }
+
       } catch (error) {
         console.error("Initial API call failed:", error);
         const errorMessage = handleApiError(error, processedMessages);
