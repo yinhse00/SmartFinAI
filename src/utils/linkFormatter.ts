@@ -5,22 +5,22 @@
 export function processRegulatoryLinks(content: string): string {
   if (!content) return '';
 
-  // Replace chapter references
+  // Replace chapter references with clickable links (only the reference itself)
   content = content.replace(
-    /Chapter\s+(\d+[A-Z]?)/gi,
-    '<a href="https://en-rules.hkex.com.hk/rulebook/chapter-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">Chapter $1</a>'
+    /(Chapter\s+\d+[A-Z]?)/gi,
+    '<a href="https://en-rules.hkex.com.hk/rulebook/chapter-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">$1</a>'
   );
 
-  // Replace rule references (e.g., Rule 7.19A)
+  // Replace rule references with clickable links (e.g., Rule 7.19A)
   content = content.replace(
-    /Rule\s+(\d+\.\d+[A-Z]?|\d+)/gi,
-    '<a href="https://en-rules.hkex.com.hk/rulebook/rule-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">Rule $1</a>'
+    /(Rule\s+\d+\.\d+[A-Z]?|\d+)/gi,
+    '<a href="https://en-rules.hkex.com.hk/rulebook/rule-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">$1</a>'
   );
 
-  // Replace practice note references
+  // Replace practice note references with clickable links
   content = content.replace(
-    /Practice\s+Note\s+(\d+)/gi,
-    '<a href="https://en-rules.hkex.com.hk/rulebook/practice-note-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">Practice Note $1</a>'
+    /(Practice\s+Note\s+\d+)/gi,
+    '<a href="https://en-rules.hkex.com.hk/rulebook/practice-note-$1" target="_blank" class="text-finance-medium-blue hover:text-finance-dark-blue dark:text-finance-light-blue dark:hover:text-finance-medium-blue underline">$1</a>'
   );
 
   return content;
