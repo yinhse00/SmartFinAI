@@ -1,3 +1,4 @@
+
 import { useEffect, useRef, useState } from 'react';
 import { useRetryHandler } from './useRetryHandler';
 import { useQueryExecution } from './useQueryExecution';
@@ -38,10 +39,13 @@ export const useQueryProcessor = (
     let prompt = queryText;
     const isBatchContinuation = options.isBatchContinuation || false;
     const autoBatchMode = options.autoBatch ?? autoBatch;
+    
+    // Define originalLanguage with a default value
+    let originalLanguage: 'en' | 'zh' = 'en';
 
     if (isChineseText(queryText)) {
       console.log('Chinese text detected, translating to English');
-      let originalLanguage: 'en' | 'zh' = 'en';
+      originalLanguage = 'zh'; // Set to Chinese if Chinese text is detected
       try {
         const translatedQuery = await translationService.translateContent({
           content: queryText,
@@ -103,7 +107,7 @@ export const useQueryProcessor = (
     await executeQuery(
       prompt,
       batchInfo,
-      async (truncated: boolean) => {
+      (truncated: boolean) => {
         truncatedLastPart = truncated;
         if (truncated && autoBatchMode && batchNumber.current < MAX_AUTO_BATCHES) {
           setIsBatching(true);

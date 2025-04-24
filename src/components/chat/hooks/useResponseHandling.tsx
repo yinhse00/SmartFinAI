@@ -9,7 +9,7 @@ import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
 
-// Add batchInfo param
+// Update signature to match expected arguments
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,
@@ -22,7 +22,7 @@ export const useResponseHandling = (
   const { enhanceTokenLimits } = useTokenManagement();
   const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
 
-  // batchInfo: { batchNumber, isContinuing, onContinue }
+  // Updated to match the number of arguments used in useQueryExecution
   const handleApiResponse = async (
     queryText: string,
     responseParams: any,
@@ -30,7 +30,7 @@ export const useResponseHandling = (
     reasoning: string | undefined,
     financialQueryType: string,
     processedMessages: Message[],
-    batchInfo?: { batchNumber: number, isContinuing: boolean, onContinue?: () => void }
+    batchInfo?: { batchNumber: number, isContinuing: boolean }
   ) => {
     try {
       console.log('Calling API for SmartFinAI response');

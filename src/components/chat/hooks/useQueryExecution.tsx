@@ -1,3 +1,4 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { useQueryLogger } from './useQueryLogger';
 import { useResponseHandling } from './useResponseHandling';
@@ -94,8 +95,7 @@ export const useQueryExecution = (
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        batchInfo,
-        customSetMessages
+        batchInfo
       );
 
       const processingTime = Date.now() - processingStart;
