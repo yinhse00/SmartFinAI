@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { useQueryLogger } from './useQueryLogger';
 import { useResponseHandling } from './useResponseHandling';
@@ -7,7 +6,6 @@ import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
 
-// Add: batchInfo arg and onBatchTruncated callback
 export const useQueryExecution = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -35,23 +33,23 @@ export const useQueryExecution = (
 
   setupLogging();
 
-  // batchInfo: { batchNumber, isContinuing }, onBatchTruncated: callback
   const processQuery = async (
     queryText: string,
     batchInfo?: { batchNumber: number, isContinuing: boolean },
-    onBatchTruncated?: (isTruncated: boolean) => void
+    onBatchTruncated?: (isTruncated: boolean) => void,
+    customSetMessages?: (messages: Message[]) => Promise<void>
   ) => {
     if (!startProcessing(queryText)) return;
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
 
-    setMessages(updatedMessages);
+    const setMessagesFunc = customSetMessages || setMessages;
+    await setMessagesFunc(updatedMessages);
     setInput('');
 
     try {
       logQueryStart(queryText);
 
-      // Step 1: Prepare query parameters and determine query type (preliminary analysis)
       const {
         responseParams,
         financialQueryType,
@@ -64,7 +62,6 @@ export const useQueryExecution = (
 
       setStage('reviewing');
 
-      // Step 3: Retrieve regulatory context
       const {
         regulatoryContext,
         reasoning,
@@ -86,10 +83,8 @@ export const useQueryExecution = (
 
       setStage('processing');
 
-      // Add searchStrategy for prompt engineering
       responseParams.searchStrategy = searchStrategy;
 
-      // Step 4: Process response
       const processingStart = Date.now();
 
       const result = await handleApiResponse(
@@ -99,7 +94,8 @@ export const useQueryExecution = (
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        batchInfo
+        batchInfo,
+        customSetMessages
       );
 
       const processingTime = Date.now() - processingStart;
@@ -113,7 +109,6 @@ export const useQueryExecution = (
 
       finishLogging();
 
-      // Improved: will ALWAYS trigger batch continuation automatically if autoBatch is enabled by caller (see processor logic)
       if (batchInfo && result && result.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {
