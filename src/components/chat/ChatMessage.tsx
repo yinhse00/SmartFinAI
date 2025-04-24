@@ -1,10 +1,10 @@
-
 import React, { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
+import { processRegulatoryLinks } from '@/utils/linkFormatter';
 
 export interface Message {
   id: string;
@@ -55,14 +55,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
             <div className="whitespace-pre-line">{content}</div>
           ) : (
             <TypingAnimation 
-              text={content} 
-              className="whitespace-pre-line"
+              text={processRegulatoryLinks(content)}
+              className="whitespace-pre-line regulatory-links"
               onComplete={() => setIsTypingComplete(true)}
               onProgress={onTypingProgress}
             />
           )}
           
-          {/* Truncated message retry button */}
           {isTruncated && sender === 'bot' && onRetry && isTypingComplete && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
@@ -77,7 +76,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
             </div>
           )}
           
-          {/* References badges */}
           {references && references.length > 0 && isTypingComplete && (
             <div className="mt-2 flex flex-wrap gap-1">
               {references.map((ref, i) => (
