@@ -1,3 +1,4 @@
+
 /**
  * Create system prompt tailored to specific financial expertise areas with enhanced trading arrangement knowledge
  */
@@ -52,14 +53,6 @@ Always specify that rights issues are CORPORATE ACTIONS under Listing Rules Chap
   3. Previous approval does not exempt subsequent rights issues from the aggregation calculation
   4. All rights issues within 12 months must be counted toward the 50% threshold
 - Always provide a clear conclusion that directly answers whether approval is required or not
-- For Chapter 18C inquiries (Specialist Technology Companies), ensure complete assessment of:
-  1. Eligibility criteria including commercial revenue requirements
-  2. R&D investment thresholds and operational track record
-  3. Minimum market capitalization requirements
-  4. Working capital sufficiency requirements specific to Chapter 18C companies
-  5. Advanced technology requirements and how they're determined
-  6. Any additional listing requirements specific to Specialist Technology Companies
-- When addressing Chapter 18C requirements, compare them explicitly to standard listing requirements and highlight the differences
 
 EXECUTION PROCESS:
 For any Listing Rules corporate action execution inquiry, clearly outline:
@@ -179,28 +172,6 @@ When explaining takeover offer execution process, always include:
 4. Requirements for offer to become or be declared unconditional (Rule 15.5)
 5. Clarify that this is governed by the Takeovers Code, NOT Listing Rules Chapter 7`;
 
-    case 'specialist_technology':
-      return basePrompt + `For Chapter 18C Specialist Technology Companies inquiries:
-- CRITICAL: Ensure complete understanding of Chapter 18C listing requirements for Specialist Technology Companies
-- Explain eligibility criteria including revenue thresholds, R&D investment requirements, and valuation metrics
-- Detail the specific Specialist Technology sectors recognized under Chapter 18C
-- Clarify differences between Commercial Companies and Pre-Commercial Companies requirements
-- Provide precise guidance on minimum market capitalization requirements
-- Explain working capital sufficiency requirements specific to Chapter 18C companies
-- Outline lock-up period requirements for controlling shareholders
-- Detail any corporate governance requirements specific to Specialist Technology Companies
-- Explain the Sophisticated Independent Investor requirements and thresholds
-- Compare Chapter 18C listing requirements explicitly with standard listing requirements
-- Address waivers or modifications available to Specialist Technology Companies
-- Always provide a comprehensive assessment of whether a company meets Chapter 18C requirements
-
-EXECUTION PROCESS:
-For Chapter 18C listing inquiries, clearly outline:
-1. Pre-listing preparation and technology validation (2-3 months)
-2. Application preparation including technical expert validation (1-2 months)
-3. HKEX vetting process with specialist technology focus (2-4 months)
-4. Post-listing compliance requirements specific to Chapter 18C`;
-
     default:
       return basePrompt + `Provide comprehensive, technically precise analysis with specific regulatory citations. Format your response professionally with clear structure, headings, and bullet points where appropriate. For any trading arrangements, include detailed timetables with key dates and market implications. Always include a clear conclusion section summarizing your analysis and directly addressing the user's question.
 
@@ -208,15 +179,6 @@ CRITICAL REGULATORY DISTINCTION:
 1. "Open offers" are CORPORATE ACTIONS under Listing Rules Chapter 7 for capital raising by listed companies
 2. "General offers" or "Takeover offers" are acquisition mechanisms under the Takeovers Code for acquiring control
 These are completely different regulatory frameworks and should never be confused.
-
-CRITICAL CHAPTER 18C ASSESSMENT:
-For any queries related to Chapter 18C (Specialist Technology Companies):
-1. Always provide a complete assessment of eligibility criteria including commercial revenue requirements
-2. Explain R&D investment thresholds and required operational track record
-3. Detail minimum market capitalization requirements (at least HK$8 billion for Commercial Companies or HK$15 billion for Pre-Commercial Companies)
-4. Address working capital sufficiency specific to Chapter 18C companies
-5. Explain the requirement for Sophisticated Independent Investors
-6. Compare requirements with standard listing rules and highlight differences
 
 EXECUTION PROCESSES:
 For corporate actions under Listing Rules, the typical process involves:

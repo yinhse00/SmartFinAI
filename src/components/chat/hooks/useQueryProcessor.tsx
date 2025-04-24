@@ -1,11 +1,8 @@
-
 import { useEffect, useRef, useState } from 'react';
 import { useRetryHandler } from './useRetryHandler';
 import { useQueryExecution } from './useQueryExecution';
 import { useQueryInputHandler } from './useQueryInputHandler';
 import { Message } from '../ChatMessage';
-import { isChineseText } from '@/utils/translation/languageDetector';
-import { translationService } from '@/services/translation/translationService';
 
 export const useQueryProcessor = (
   messages: Message[],
@@ -28,42 +25,27 @@ export const useQueryProcessor = (
     setApiKeyDialogOpen
   );
 
+  // Batch/multi-part state
   const batchNumber = useRef(1);
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
   const [autoBatch, setAutoBatch] = useState(true);
 
+  // Auto-batch controller (when truncation is detected, keep fetching next parts until complete or max batches reached)
   const MAX_AUTO_BATCHES = 4;
 
+  // Create our actual processQuery function
   const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean, autoBatch?: boolean } = {}) => {
+    // If continuing a batch, add special instruction
     let prompt = queryText;
     const isBatchContinuation = options.isBatchContinuation || false;
     const autoBatchMode = options.autoBatch ?? autoBatch;
-    
-    // Define originalLanguage with a default value
-    let originalLanguage: 'en' | 'zh' = 'en';
-
-    if (isChineseText(queryText)) {
-      console.log('Chinese text detected, translating to English');
-      originalLanguage = 'zh'; // Set to Chinese if Chinese text is detected
-      try {
-        const translatedQuery = await translationService.translateContent({
-          content: queryText,
-          sourceLanguage: 'zh',
-          targetLanguage: 'en'
-        });
-        prompt = translatedQuery.text;
-        console.log('Translated query:', prompt);
-      } catch (error) {
-        console.error('Translation error:', error);
-        prompt = queryText;
-      }
-    }
 
     if (isBatchContinuation && batchNumber.current > 1) {
-      prompt = `${prompt} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
+      prompt = `${queryText} [CONTINUE_BATCH_PART ${batchNumber.current}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
     }
 
+    // Store for UI
     if (!isBatchContinuation) {
       setBatchingPrompt(queryText);
       batchNumber.current = 1;
@@ -75,39 +57,14 @@ export const useQueryProcessor = (
       ? { batchNumber: batchNumber.current, isContinuing: true }
       : undefined;
 
-    const setMessagesWithTranslation = async (msgs: Message[]) => {
-      if (originalLanguage === 'zh') {
-        const lastMsg = msgs[msgs.length - 1];
-        if (lastMsg && lastMsg.sender === 'bot') {
-          try {
-            const translatedResponse = await translationService.translateContent({
-              content: lastMsg.content,
-              sourceLanguage: 'en',
-              targetLanguage: 'zh'
-            });
-            
-            const translatedMsgs = msgs.map((msg, index) => 
-              index === msgs.length - 1 
-                ? { ...msg, content: translatedResponse.text }
-                : msg
-            );
-            
-            setMessages(translatedMsgs);
-            return;
-          } catch (error) {
-            console.error('Translation error:', error);
-          }
-        }
-      }
-      setMessages(msgs);
-    };
+    const setMessagesBatch = (msgs: Message[]) => setMessages(msgs);
 
     let truncatedLastPart = false;
 
     await executeQuery(
       prompt,
       batchInfo,
-      (truncated: boolean) => {
+      async (truncated: boolean) => {
         truncatedLastPart = truncated;
         if (truncated && autoBatchMode && batchNumber.current < MAX_AUTO_BATCHES) {
           setIsBatching(true);
@@ -120,15 +77,16 @@ export const useQueryProcessor = (
         } else {
           setIsBatching(false);
         }
-      },
-      setMessagesWithTranslation
+      }
     );
   };
 
+  // Initialize input handler after processQuery is defined
   const { handleSend, handleKeyDown } = useQueryInputHandler(
     (q, opt = {}) => processQuery(q, { ...opt, autoBatch }), input
   );
 
+  // Triggered when user clicks "Continue" for the next batch part
   const handleContinueBatch = () => {
     if (batchingPrompt) {
       batchNumber.current += 1;

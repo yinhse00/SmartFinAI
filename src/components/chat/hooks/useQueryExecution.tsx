@@ -6,9 +6,8 @@ import { useQueryCore } from './useQueryCore';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
-import { isChineseText } from '@/utils/translation/languageDetector';
-import { translationService } from '@/services/translation/translationService';
 
+// Add: batchInfo arg and onBatchTruncated callback
 export const useQueryExecution = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -36,56 +35,36 @@ export const useQueryExecution = (
 
   setupLogging();
 
+  // batchInfo: { batchNumber, isContinuing }, onBatchTruncated: callback
   const processQuery = async (
     queryText: string,
     batchInfo?: { batchNumber: number, isContinuing: boolean },
-    onBatchTruncated?: (isTruncated: boolean) => void,
-    customSetMessages?: (messages: Message[]) => Promise<void>
+    onBatchTruncated?: (isTruncated: boolean) => void
   ) => {
     if (!startProcessing(queryText)) return;
     setLastQuery(queryText);
-    
-    // Detect if input is Chinese and store original language
-    const isChineseInput = isChineseText(queryText);
-    let englishQuery = queryText;
-    
-    // Translate Chinese input to English for processing only
-    if (isChineseInput) {
-      try {
-        console.log('Translating Chinese input to English for processing');
-        const translatedQuery = await translationService.translateContent({
-          content: queryText,
-          sourceLanguage: 'zh',
-          targetLanguage: 'en'
-        });
-        englishQuery = translatedQuery.text;
-        console.log('Translated query for processing:', englishQuery);
-      } catch (error) {
-        console.error('Translation error:', error);
-        englishQuery = queryText; // Fallback to original text
-      }
-    }
-
-    // Create user message with original text only
     const updatedMessages = createUserMessage(queryText, messages);
-    await (customSetMessages || setMessages)(updatedMessages);
+
+    setMessages(updatedMessages);
     setInput('');
 
     try {
-      logQueryStart(englishQuery);
+      logQueryStart(queryText);
 
+      // Step 1: Prepare query parameters and determine query type (preliminary analysis)
       const {
         responseParams,
         financialQueryType,
         isFaqQuery,
         actualTemperature,
         enhancedMaxTokens
-      } = prepareQuery(englishQuery);
+      } = prepareQuery(queryText);
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
       setStage('reviewing');
 
+      // Step 3: Retrieve regulatory context
       const {
         regulatoryContext,
         reasoning,
@@ -93,7 +72,7 @@ export const useQueryExecution = (
         usedSummaryIndex,
         searchStrategy
       } = await retrieveRegulatoryContext(
-        englishQuery,
+        queryText,
         Boolean(isFaqQuery)
       );
 
@@ -107,18 +86,24 @@ export const useQueryExecution = (
 
       setStage('processing');
 
+      // Add searchStrategy for prompt engineering
       responseParams.searchStrategy = searchStrategy;
 
+      // Step 4: Process response
+      const processingStart = Date.now();
+
       const result = await handleApiResponse(
-        englishQuery,
+        queryText,
         responseParams,
         regulatoryContext,
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        batchInfo,
-        isChineseInput
+        batchInfo
       );
+
+      const processingTime = Date.now() - processingStart;
+      console.log(`Response generated in ${processingTime}ms`);
 
       setStage('finalizing');
 
@@ -128,6 +113,7 @@ export const useQueryExecution = (
 
       finishLogging();
 
+      // Improved: will ALWAYS trigger batch continuation automatically if autoBatch is enabled by caller (see processor logic)
       if (batchInfo && result && result.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {
