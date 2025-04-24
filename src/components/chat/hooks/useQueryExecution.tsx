@@ -49,24 +49,24 @@ export const useQueryExecution = (
     const isChineseInput = isChineseText(queryText);
     let englishQuery = queryText;
     
-    // Translate Chinese input to English for processing
+    // Translate Chinese input to English for processing only
     if (isChineseInput) {
       try {
-        console.log('Translating Chinese input to English');
+        console.log('Translating Chinese input to English for processing');
         const translatedQuery = await translationService.translateContent({
           content: queryText,
           sourceLanguage: 'zh',
           targetLanguage: 'en'
         });
         englishQuery = translatedQuery.text;
-        console.log('Translated query:', englishQuery);
+        console.log('Translated query for processing:', englishQuery);
       } catch (error) {
         console.error('Translation error:', error);
         englishQuery = queryText; // Fallback to original text
       }
     }
 
-    // Create user message with original text
+    // Create user message with original text only
     const updatedMessages = createUserMessage(queryText, messages);
     await (customSetMessages || setMessages)(updatedMessages);
     setInput('');
