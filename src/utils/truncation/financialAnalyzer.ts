@@ -3,21 +3,39 @@ import { logTruncation, LogLevel } from './logLevel';
 import { detectTruncationComprehensive } from './advancedDetection';
 import { analyzeFinancialResponse as analyzeFinancialResponseDetails } from './financialResponseAnalyzer';
 
+interface BaseAnalysis {
+  isComplete: boolean;
+  missingElements: string[];
+  confidence: 'high' | 'medium' | 'low';
+}
+
+interface FinancialAnalysis extends BaseAnalysis {
+  isTruncated: boolean;
+  diagnostics: Record<string, any>;
+}
+
+// Define the expected return type from financialResponseAnalyzer
+interface FinancialResponseAnalysis {
+  isComplete: boolean;
+  missingElements: string[];
+  confidence?: 'high' | 'medium' | 'low';
+}
+
 /**
  * Analyzes a financial response for completeness with enhanced detection
  * @param content Response content
  * @param financialQueryType Type of financial query
  * @returns Analysis result with details about completeness
  */
-export const analyzeFinancialResponse = (content: string, financialQueryType?: string) => {
-  const analysis = {
+export const analyzeFinancialResponse = (content: string, financialQueryType?: string): FinancialAnalysis => {
+  const analysis: FinancialAnalysis = {
     isComplete: true,
     isTruncated: false,
-    missingElements: [] as string[],
-    confidence: 'high' as 'high' | 'medium' | 'low',
-    diagnostics: {} as any
+    missingElements: [],
+    confidence: 'high',
+    diagnostics: {}
   };
-  
+
   // Basic truncation detection - look for obvious markers
   if (content.endsWith('...') || 
       content.endsWith('…') || 
@@ -28,7 +46,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     analysis.confidence = 'high';
     return analysis;
   }
-  
+
   // Check for unbalanced constructs (brackets, quotes, etc.)
   const { isUnbalanced, details } = checkUnbalancedConstructs(content);
   if (isUnbalanced) {
@@ -38,7 +56,7 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     analysis.diagnostics.unbalancedDetails = details;
     analysis.confidence = 'medium';
   }
-  
+
   // Check for incomplete sentences at the end (if response is substantial)
   if (content.length > 300) {
     const lastParagraph = content.split('\n').filter(p => p.trim().length > 0).pop() || '';
@@ -101,7 +119,8 @@ export const analyzeFinancialResponse = (content: string, financialQueryType?: s
     if (financialAnalysis.missingElements.length > 0) {
       analysis.isComplete = false;
       analysis.missingElements.push(...financialAnalysis.missingElements);
-      analysis.confidence = financialAnalysis.confidence || 'medium';
+      // Type-safe handling of confidence property which may not exist
+      analysis.confidence = (financialAnalysis as FinancialResponseAnalysis).confidence ?? 'medium';
     }
   }
   
