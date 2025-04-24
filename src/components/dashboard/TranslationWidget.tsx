@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
@@ -152,11 +151,6 @@ const TranslationWidget = () => {
         <TranslationInput
           content={content}
           setContent={setContent}
-          isDragging={isDragging}
-          onDragEnter={handleDragEnter}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
         />
         <TranslationOutput translatedContent={translatedContent} />
       </CardContent>
