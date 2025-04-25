@@ -1,3 +1,4 @@
+
 /**
  * Utilities for processing text and extracting terms
  */
@@ -124,4 +125,133 @@ function isValidChapterNumber(chapter: string): boolean {
  */
 function isValidRuleNumber(rule: string): boolean {
   return /^\d+(?:\.\d+)?(?:\(\d+\))?$/.test(rule);
+}
+
+/**
+ * Calculate Levenshtein distance for fuzzy matching
+ */
+export function calculateLevenshteinDistance(a: string, b: string): number {
+  const matrix: number[][] = [];
+  
+  // Initialize the matrix
+  for (let i = 0; i <= a.length; i++) {
+    matrix[i] = [i];
+  }
+  
+  for (let j = 1; j <= b.length; j++) {
+    matrix[0][j] = j;
+  }
+  
+  // Fill the matrix
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a.charAt(i - 1) === b.charAt(j - 1) ? 0 : 1;
+      matrix[i][j] = Math.min(
+        matrix[i - 1][j] + 1,      // deletion
+        matrix[i][j - 1] + 1,      // insertion
+        matrix[i - 1][j - 1] + cost // substitution
+      );
+    }
+  }
+  
+  return matrix[a.length][b.length];
+}
+
+/**
+ * Calculate similarity score between two strings (0-1 where 1 is exact match)
+ */
+export function calculateSimilarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+  if (a === b) return 1; // Exact match
+  
+  const distance = calculateLevenshteinDistance(a.toLowerCase(), b.toLowerCase());
+  const maxLength = Math.max(a.length, b.length);
+  
+  return maxLength === 0 ? 1 : 1 - distance / maxLength;
+}
+
+/**
+ * Check if a string contains a fuzzy match to any of the search terms
+ */
+export function hasFuzzyMatch(text: string, searchTerms: string[], threshold = 0.8): boolean {
+  if (!text || !searchTerms.length) return false;
+  const textLower = text.toLowerCase();
+  
+  // First check for exact substrings (faster)
+  if (searchTerms.some(term => textLower.includes(term.toLowerCase()))) {
+    return true;
+  }
+  
+  // Split text into words for word-level fuzzy matching
+  const words = textLower.split(/\s+/);
+  
+  // Check each search term against each word
+  return searchTerms.some(term => {
+    const termLower = term.toLowerCase();
+    return words.some(word => {
+      // Skip very short words to avoid false positives
+      if (word.length < 3) return false;
+      
+      // Calculate similarity
+      const similarity = calculateSimilarity(word, termLower);
+      return similarity >= threshold;
+    });
+  });
+}
+
+/**
+ * Calculate relevance score for search results
+ */
+export function calculateRelevanceScore(text: string, title: string, searchTerms: string[]): number {
+  if (!text || !searchTerms.length) return 0;
+  
+  let score = 0;
+  const textLower = text.toLowerCase();
+  const titleLower = title.toLowerCase();
+  
+  // Process search terms
+  for (const term of searchTerms) {
+    const termLower = term.toLowerCase();
+    
+    // Exact matches in title are highly valuable
+    if (titleLower.includes(termLower)) {
+      score += 10;
+      
+      // Exact title match is even more valuable
+      if (titleLower === termLower) {
+        score += 50;
+      }
+      
+      // Title starting with the term is also valuable
+      if (titleLower.startsWith(termLower)) {
+        score += 5;
+      }
+    }
+    
+    // Exact matches in content
+    if (textLower.includes(termLower)) {
+      score += 5;
+      
+      // Count occurrences in content
+      const occurrences = (textLower.match(new RegExp(termLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+      score += Math.min(occurrences, 10); // Cap at 10 to avoid over-weighting
+    }
+    
+    // Fuzzy matches in title
+    if (!titleLower.includes(termLower) && hasFuzzyMatch(titleLower, [termLower], 0.85)) {
+      score += 3;
+    }
+    
+    // Fuzzy matches in content
+    if (!textLower.includes(termLower) && hasFuzzyMatch(textLower, [termLower], 0.85)) {
+      score += 1;
+    }
+  }
+  
+  // Bonus for shorter documents (more focused)
+  const lengthPenalty = Math.log(text.length) / 10;
+  score -= lengthPenalty;
+  
+  // Ensure score doesn't go negative due to length penalty
+  return Math.max(0, score);
 }

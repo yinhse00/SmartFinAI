@@ -10,3 +10,16 @@ export interface SearchResults {
 export interface ReferenceSearchResults {
   referenceDocuments: ReferenceDocument[];
 }
+
+export interface ScoredEntry<T> {
+  entry: T;
+  score: number;
+}
+
+export interface SearchOptions {
+  fuzzyMatching?: boolean;
+  fuzzyThreshold?: number;
+  includePartialMatches?: boolean;
+  maxResults?: number;
+  sortByRelevance?: boolean;
+}
