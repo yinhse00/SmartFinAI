@@ -1,4 +1,3 @@
-
 /**
  * Utilities for processing text and extracting terms
  */
@@ -14,15 +13,15 @@ export function extractKeyTerms(text: string): string[] {
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.includes(word));
   
-  // Enhanced rule patterns with strict chapter-specific contexts
+  // Enhanced rule patterns with strict validation
   const rulePatterns = [
-    // Standard rule numbers with optional subsections (e.g., 14.44, 14.44(1))
+    // Standard rule numbers (e.g., 14.44)
     /(?:rule\s+)?(\d+\.\d+[A-Z]?\(\d+\)?)/gi,
     // Chapter-specific rules (e.g., 14A.44)
     /(?:rule\s+)?(\d+[A-Z]\.\d+[A-Z]?\(\d+\)?)/gi,
     // Chapter references
     /chapter\s+(\d+[A-Z]?)/gi,
-    // Rules with chapter context (e.g., Chapter 14A rule 44)
+    // Rules with chapter context
     /chapter\s+(\d+[A-Z]?)\s+rule\s+(\d+)/gi
   ];
   
@@ -30,13 +29,28 @@ export function extractKeyTerms(text: string): string[] {
   const ruleNumbers = rulePatterns.flatMap(pattern => {
     const matches = Array.from(text.matchAll(pattern));
     return matches.map(match => {
-      // Preserve full match to maintain context
-      return match[0].toLowerCase();
-    });
+      const fullMatch = match[0].toLowerCase();
+      // Add validation to ensure proper rule format
+      if (!isValidRuleFormat(fullMatch)) {
+        console.warn(`Invalid rule format detected: ${fullMatch}`);
+        return null;
+      }
+      return fullMatch;
+    }).filter(Boolean); // Remove null values
   });
   
-  // Add normalized rule numbers to terms
   return [...terms, ...ruleNumbers];
+}
+
+/**
+ * Validate rule number format
+ */
+function isValidRuleFormat(rule: string): boolean {
+  // Basic format validation
+  const basicFormat = /^(?:rule\s+)?\d+[A-Z]?\.\d+(?:\(\d+\))?$/i;
+  const chapterFormat = /^chapter\s+\d+[A-Z]?\s+rule\s+\d+$/i;
+  
+  return basicFormat.test(rule) || chapterFormat.test(rule);
 }
 
 /**
@@ -84,11 +98,30 @@ function normalizeRuleNumber(text: string): string {
   // Extract chapter and rule parts if present
   const chapterMatch = normalized.match(/chapter\s+(\d+[A-Z]?)\s+(?:rule\s+)?(\d+)/i);
   if (chapterMatch) {
-    // Convert "Chapter 14A rule 44" to "14A.44"
-    normalized = `${chapterMatch[1]}.${chapterMatch[2]}`;
+    // Convert "Chapter 14A rule 44" to "14A.44" with validation
+    const chapterNum = chapterMatch[1];
+    const ruleNum = chapterMatch[2];
+    if (isValidChapterNumber(chapterNum) && isValidRuleNumber(ruleNum)) {
+      normalized = `${chapterNum}.${ruleNum}`;
+    } else {
+      console.warn(`Invalid chapter/rule combination: Chapter ${chapterNum} Rule ${ruleNum}`);
+      return text; // Return original if invalid
+    }
   }
   
-  // Remove any remaining spaces
   return normalized.replace(/\s+/g, '');
 }
 
+/**
+ * Validate chapter number format
+ */
+function isValidChapterNumber(chapter: string): boolean {
+  return /^\d+[A-Z]?$/.test(chapter);
+}
+
+/**
+ * Validate rule number format
+ */
+function isValidRuleNumber(rule: string): boolean {
+  return /^\d+(?:\.\d+)?(?:\(\d+\))?$/.test(rule);
+}

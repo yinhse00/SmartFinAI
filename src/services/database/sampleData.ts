@@ -1,4 +1,3 @@
-
 /**
  * Sample data for the regulatory database
  */
@@ -21,6 +20,16 @@ export const initializeSampleData = () => {
       source: "HKEX Listing Rules Chapter 14A",
       section: "Chapter 14A",
       lastUpdated: new Date("2023-05-15"),
+      status: "active"
+    });
+    
+    databaseService.addSampleEntry({
+      title: "Rule 14.44 - Major Transaction Requirements",
+      content: "Rule 14.44 of the Hong Kong Listing Rules states that: Shareholders' approval for a major transaction shall be given by a majority vote at a general meeting of the shareholders of the issuer unless all the following conditions are met, in which case written shareholders' approval may, subject to rule 14.86, be accepted in lieu of holding a general meeting (Note 1).",
+      category: "listing_rules",
+      source: "HKEX Listing Rules Chapter 14",
+      section: "Rule 14.44",
+      lastUpdated: new Date("2024-01-15"),
       status: "active"
     });
     
