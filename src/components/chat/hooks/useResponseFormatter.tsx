@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { extractReferences } from '@/services/contextUtils';
 import { getTruncationDiagnostics, analyzeFinancialResponse } from '@/utils/truncation';
@@ -27,7 +26,11 @@ export const useResponseFormatter = () => {
     const financialAnalysis = analyzeFinancialResponse(response.text, response.queryType);
     
     // Combined check for truncation from multiple sources
-    const isTruncated = diagnostics.isTruncated || financialAnalysis.isTruncated || 
+    // Safe access to isTruncated with fallback
+    const isAnalysisTruncated = 'isTruncated' in financialAnalysis ? financialAnalysis.isTruncated : !financialAnalysis.isComplete;
+    
+    const isTruncated = diagnostics.isTruncated || 
+                        isAnalysisTruncated || 
                         !financialAnalysis.isComplete || 
                         (response.metadata?.responseCompleteness?.isComplete === false);
     

@@ -16,6 +16,7 @@ export function analyzeFinancialResponse(content: string, queryType: string) {
   // Default result structure
   let result = {
     isComplete: true,
+    isTruncated: false,  // Added the isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };
@@ -53,6 +54,7 @@ export function analyzeFinancialResponse(content: string, queryType: string) {
   
   if (!hasConclusion && content.length > 2000) {
     result.isComplete = false;
+    result.isTruncated = true;  // Set isTruncated to true when incomplete
     result.missingElements.push('Missing conclusion section');
     result.confidence = 'medium';
   }
