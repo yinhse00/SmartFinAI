@@ -14,26 +14,28 @@ export function extractKeyTerms(text: string): string[] {
     .split(/\s+/)
     .filter(word => word.length > 2 && !stopWords.includes(word));
   
-  // Enhanced rule number pattern matching
+  // Enhanced rule patterns with strict chapter-specific contexts
   const rulePatterns = [
-    // Standard rule numbers (e.g., 14.44)
-    /\d+\.\d+[A-Z]?/g,
+    // Standard rule numbers with optional subsections (e.g., 14.44, 14.44(1))
+    /(?:rule\s+)?(\d+\.\d+[A-Z]?\(\d+\)?)/gi,
     // Chapter-specific rules (e.g., 14A.44)
-    /\d+[A-Z]\.\d+[A-Z]?/g,
-    // Rules with subsections (e.g., 14.44(1))
-    /\d+\.\d+[A-Z]?\(\d+\)/g,
-    // Chapter-specific rules with subsections (e.g., 14A.44(1))
-    /\d+[A-Z]\.\d+[A-Z]?\(\d+\)/g,
-    // Chapter numbers
-    /chapter\s+\d+[A-Z]?/gi
+    /(?:rule\s+)?(\d+[A-Z]\.\d+[A-Z]?\(\d+\)?)/gi,
+    // Chapter references
+    /chapter\s+(\d+[A-Z]?)/gi,
+    // Rules with chapter context (e.g., Chapter 14A rule 44)
+    /chapter\s+(\d+[A-Z]?)\s+rule\s+(\d+)/gi
   ];
   
-  // Extract all rule numbers using the enhanced patterns
-  const ruleNumbers = rulePatterns.flatMap(pattern => 
-    text.match(pattern) || []
-  );
+  // Extract all rule numbers preserving chapter context
+  const ruleNumbers = rulePatterns.flatMap(pattern => {
+    const matches = Array.from(text.matchAll(pattern));
+    return matches.map(match => {
+      // Preserve full match to maintain context
+      return match[0].toLowerCase();
+    });
+  });
   
-  // Combine terms with extracted rule numbers
+  // Add normalized rule numbers to terms
   return [...terms, ...ruleNumbers];
 }
 
@@ -44,20 +46,23 @@ export function countMatches(keywords: string[], queryTerms: string[]): number {
   let count = 0;
   
   for (const term of queryTerms) {
-    // Enhanced matching for rule numbers to consider chapter context
     const termLower = term.toLowerCase();
     const isRuleMatch = keywords.some(keyword => {
       const keywordLower = keyword.toLowerCase();
-      // Exact match
-      if (keywordLower.includes(termLower)) {
+      
+      // Exact match check
+      if (keywordLower === termLower) {
         return true;
       }
-      // Rule number match considering chapter context
+      
+      // Rule number match with chapter context
       if (termLower.match(/\d+[A-Z]?\.\d+/) && keywordLower.match(/\d+[A-Z]?\.\d+/)) {
-        const normalizedTerm = termLower.replace(/rule\s+/i, '');
-        const normalizedKeyword = keywordLower.replace(/rule\s+/i, '');
+        // Normalize both terms for comparison
+        const normalizedTerm = normalizeRuleNumber(termLower);
+        const normalizedKeyword = normalizeRuleNumber(keywordLower);
         return normalizedTerm === normalizedKeyword;
       }
+      
       return false;
     });
     
@@ -68,3 +73,22 @@ export function countMatches(keywords: string[], queryTerms: string[]): number {
   
   return count;
 }
+
+/**
+ * Normalize rule numbers for consistent comparison
+ */
+function normalizeRuleNumber(text: string): string {
+  // Remove "rule" and extra spaces
+  let normalized = text.toLowerCase().replace(/rule\s+/i, '').trim();
+  
+  // Extract chapter and rule parts if present
+  const chapterMatch = normalized.match(/chapter\s+(\d+[A-Z]?)\s+(?:rule\s+)?(\d+)/i);
+  if (chapterMatch) {
+    // Convert "Chapter 14A rule 44" to "14A.44"
+    normalized = `${chapterMatch[1]}.${chapterMatch[2]}`;
+  }
+  
+  // Remove any remaining spaces
+  return normalized.replace(/\s+/g, '');
+}
+
