@@ -1,12 +1,20 @@
-
 import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
-// Set appropriate maximum token limit for Grok API (reduced to safer limits)
-const MAX_TOKEN_LIMIT = 4000; 
-const RETRY_TOKEN_LIMIT = 7000;
+// Remove hardcoded token limits and use service values
+const MAX_TOKEN_LIMIT = tokenManagementService.getTokenLimit({
+  queryType: 'general',
+  prompt: '',
+  isSimpleQuery: true
+});
+
+const RETRY_TOKEN_LIMIT = tokenManagementService.getTokenLimit({
+  queryType: 'general',
+  isRetryAttempt: true,
+  prompt: ''
+});
 
 /**
  * Core response generation functionality
@@ -22,15 +30,18 @@ export const responseGeneratorCore = {
       const isRetryAttempt = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                             requestBody.messages.find(m => m.role === 'user').content.includes('[RETRY_ATTEMPT]');
       const userMessage = requestBody.messages.find((m: any) => m.role === 'user')?.content || '';
+      
+      // Use token management service directly for limits
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         isRetryAttempt,
         prompt: userMessage
       });
       
-      if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
-        console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${effectiveTokenLimit}, capping at limit`);
-        requestBody.max_tokens = effectiveTokenLimit;
+      // Only cap tokens if they exceed the safe limit by a large margin (2x)
+      if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit * 2) {
+        console.log(`Requested ${requestBody.max_tokens} tokens significantly exceeds safe limit of ${effectiveTokenLimit}, capping at double limit`);
+        requestBody.max_tokens = effectiveTokenLimit * 2;
       }
       
       const temperature = tokenManagementService.getTemperature({
@@ -50,7 +61,6 @@ export const responseGeneratorCore = {
   
   /**
    * Make backup API call with simplified parameters
-   * Enhanced with more resilient configuration
    */
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
@@ -95,22 +105,20 @@ export const responseGeneratorCore = {
   
   /**
    * Check if response needs to be truncated due to token limits
-   * Returns a message to be appended to the response if truncation occurred
    */
   checkAndHandleTokenLimit: (responseText: string, tokenCount: number): {
     truncated: boolean,
     text: string
   } => {
-    // If token count is near limit, mark as truncated
-    if (tokenCount > MAX_TOKEN_LIMIT * 0.95) {
-      console.log(`Response near token limit (${tokenCount}), marking as truncated`);
-      const truncationMessage = "\n\n[NOTE: Response has been truncated due to token limit. This represents the analysis completed so far.]";
+    // Use a more generous safety margin (98% instead of 95%)
+    if (tokenCount > MAX_TOKEN_LIMIT * 0.98) {
+      console.log(`Response near token limit (${tokenCount}/${MAX_TOKEN_LIMIT}), marking as truncated`);
+      const truncationMessage = "\n\n[NOTE: Response has been truncated due to length. You can try the 'Continue' button for more information.]";
       return {
         truncated: true,
         text: responseText + truncationMessage
       };
     }
-    // No truncation needed
     return {
       truncated: false,
       text: responseText
