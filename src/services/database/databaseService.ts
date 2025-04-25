@@ -78,6 +78,3 @@ export const databaseService = {
     return newEntry;
   }
 };
-
-// Re-export search service from new location
-export { searchService } from './search/searchService';

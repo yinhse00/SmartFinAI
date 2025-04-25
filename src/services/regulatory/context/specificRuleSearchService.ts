@@ -1,3 +1,4 @@
+
 import { RegulatoryEntry } from '../../database/types';
 import { searchService } from '../../databaseService';
 import { findFAQDocuments } from './faqSearchService';
@@ -12,97 +13,47 @@ export const specificRuleSearchService = {
   findSpecificRulesDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
     let ruleResults: RegulatoryEntry[] = [];
     
-    // Enhanced rule reference pattern with validation
-    const rulePatterns = [
-      // Standard format with validation
-      /(?:rule|Rule)\s+(\d+\.\d+[A-Z]?(?:\(\d+\))?)/i,
-      // Chapter context format
-      /(?:Chapter|chapter)\s+(\d+[A-Z]?)\.(\d+[A-Z]?(?:\(\d+\))?)/i,
-      // Chapter with separate rule
-      /(?:Chapter|chapter)\s+(\d+[A-Z]?)\s+(?:rule|Rule)\s+(\d+)/i
-    ];
+    // Check for specific rule references
+    const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?|10\.29|7\.19A?)/i);
     
-    let ruleNumber: string | null = null;
-    let chapterContext: string | null = null;
-    
-    // Try each pattern to find matches with validation
-    for (const pattern of rulePatterns) {
-      const matches = query.match(pattern);
-      if (matches) {
-        if (matches[2]) {
-          // Handle chapter-specific format with validation
-          const chapterNum = matches[1];
-          const ruleNum = matches[2];
-          if (isValidChapterAndRule(chapterNum, ruleNum)) {
-            chapterContext = chapterNum;
-            ruleNumber = `${chapterNum}.${ruleNum}`;
-          }
-        } else {
-          ruleNumber = matches[1];
-          // Extract chapter context if present
-          const chapterMatch = ruleNumber.match(/^(\d+[A-Z]?)\./);
-          if (chapterMatch && isValidChapterNumber(chapterMatch[1])) {
-            chapterContext = chapterMatch[1];
-          }
+    if (ruleMatches) {
+      const ruleNumber = ruleMatches[1];
+      console.log(`Found reference to Rule ${ruleNumber}, searching specifically`);
+      
+      // Check if this is rule 10.4 which relates to FAQs
+      if (ruleNumber === '10.4') {
+        const faqResults = await findFAQDocuments(query);
+        if (faqResults.length > 0) {
+          return faqResults;
         }
-        break;
+      }
+      
+      // Search for the exact rule number
+      ruleResults = await searchService.search(`rule ${ruleNumber}`, 'listing_rules');
+      
+      // If found specific rule references, return immediately
+      if (ruleResults.length > 0) {
+        return ruleResults;
       }
     }
     
-    if (ruleNumber) {
-      console.log(`Found reference to Rule ${ruleNumber}${chapterContext ? ` in Chapter ${chapterContext}` : ''}, searching specifically`);
+    // Special case for aggregation requirements in rights issues
+    if ((query.toLowerCase().includes('aggregate') || query.toLowerCase().includes('aggregation')) && 
+        (query.toLowerCase().includes('rights issue') || query.toLowerCase().includes('rights issues'))) {
       
-      // Search with strict validation
-      const searchQuery = chapterContext 
-        ? `chapter ${chapterContext} rule ${ruleNumber}`
-        : `rule ${ruleNumber}`;
+      console.log('Rights issue aggregation requirements query detected, searching for specific rules');
       
-      ruleResults = await searchService.search(searchQuery, 'listing_rules');
+      // First try with rule 7.19A specifically
+      const specificResults = await searchService.search('rule 7.19A aggregate requirements', 'listing_rules');
       
-      // Enhanced filtering with exact match prioritization
-      ruleResults = ruleResults.filter(entry => {
-        const entryContent = entry.content.toLowerCase();
-        const rulePattern = new RegExp(
-          `rule\\s+${ruleNumber.replace('.', '\\.')}\\b`,
-          'i'
-        );
-        
-        // Check for exact rule number match
-        const hasExactMatch = rulePattern.test(entryContent);
-        
-        // If chapter context exists, verify it matches
-        if (chapterContext) {
-          const chapterPattern = new RegExp(
-            `chapter\\s+${chapterContext}`,
-            'i'
-          );
-          return hasExactMatch && chapterPattern.test(entryContent);
-        }
-        
-        return hasExactMatch;
-      });
+      if (specificResults.length > 0) {
+        return specificResults;
+      }
       
-      // Sort by relevance with exact matches first
-      ruleResults.sort((a, b) => {
-        const aExact = new RegExp(`rule\\s+${ruleNumber}\\b`, 'i').test(a.content);
-        const bExact = new RegExp(`rule\\s+${ruleNumber}\\b`, 'i').test(b.content);
-        
-        if (aExact && !bExact) return -1;
-        if (!aExact && bExact) return 1;
-        return 0;
-      });
+      // Then try broader search for rights issue with aggregation
+      return await searchService.search('rights issue aggregate independent shareholders', 'listing_rules');
     }
     
     return ruleResults;
   }
 };
-
-// Helper function to validate chapter and rule combination
-function isValidChapterAndRule(chapter: string, rule: string): boolean {
-  return /^\d+[A-Z]?$/.test(chapter) && /^\d+(?:\.\d+)?(?:\(\d+\))?$/.test(rule);
-}
-
-// Helper function to validate chapter number format
-function isValidChapterNumber(chapter: string): boolean {
-  return /^\d+[A-Z]?$/.test(chapter);
-}

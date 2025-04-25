@@ -1,3 +1,4 @@
+
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { GUIDE_COVERED_ACTIONS } from '../../constants/financialConstants';
 import { systemMessageBuilder } from './messages/systemMessageBuilder';
@@ -28,7 +29,7 @@ export const requestBuilder = {
     }
     
     // Add database and FAQ instructions
-    systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST ONLY use information that exists in the provided regulatory database. DO NOT synthesize or generate rule content. If a specific rule or requirement is mentioned in a query but not found in the database, explicitly state 'I cannot find the specific rule X in the database. Please verify the rule number.' rather than attempting to generate content.";
+    systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the provided database content, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
     
     if (isFaqQuery) {
       systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";

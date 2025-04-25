@@ -8,7 +8,6 @@
 export function checkListingRulesResponse(content: string) {
   const result = {
     isComplete: true,
-    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };
@@ -19,7 +18,6 @@ export function checkListingRulesResponse(content: string) {
       !content.toLowerCase().includes('to summarize') &&
       content.length > 2000) {
     result.isComplete = false;
-    result.isTruncated = true;  // Set isTruncated when incomplete
     result.missingElements.push("Missing conclusion section");
     result.confidence = 'medium';
   }

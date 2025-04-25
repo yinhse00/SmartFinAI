@@ -5,11 +5,10 @@ export * from './basicDetection';
 export * from './advancedDetection';
 export * from './diagnostics';
 export * from './financialDetection';
-
-// Import and export the function properly to avoid circular dependencies
-import { analyzeFinancialResponse } from './financialResponseAnalyzer';
-export { analyzeFinancialResponse };
-
+export { analyzeFinancialResponse } from './financialAnalyzer';
+export * from './financialResponseAnalyzer';
+export * from './tradingArrangementDetection';
+export * from './tradingArrangementChecks';
 // Import and re-export from contentHelpers, excluding isComparisonQuery which is already exported from checkers
 export { hasConclusion, extractDates } from './utils/contentHelpers';
 export * from './checkers';
@@ -18,5 +17,3 @@ export * from './checkers';
 export * from './checkers/comparisonChecker';
 export * from './checkers/rightsIssueChecker';
 export * from './checkers/openOfferChecker';
-export * from './tradingArrangementDetection';
-export * from './tradingArrangementChecks';
