@@ -16,7 +16,7 @@ export function analyzeFinancialResponse(content: string, queryType: string) {
   // Default result structure
   let result = {
     isComplete: true,
-    isTruncated: false,  // Added the isTruncated property
+    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };

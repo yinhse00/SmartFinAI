@@ -8,7 +8,7 @@
 export function checkListingRulesResponse(content: string) {
   const result = {
     isComplete: true,
-    isTruncated: false,  // Added the isTruncated property
+    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };

@@ -27,7 +27,7 @@ export const useResponseFormatter = () => {
     const financialAnalysis = analyzeFinancialResponse(response.text, response.queryType);
     
     // Combined check for truncation from multiple sources
-    // Safe access to isTruncated with fallback
+    // Safely check if isTruncated exists and is a boolean, otherwise fallback to !isComplete
     const isAnalysisTruncated = typeof financialAnalysis.isTruncated === 'boolean' 
       ? financialAnalysis.isTruncated 
       : !financialAnalysis.isComplete;
