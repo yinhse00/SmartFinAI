@@ -8,6 +8,7 @@
 export function checkComparisonResponse(content: string, queryType: string) {
   const result = {
     isComplete: true,
+    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };
@@ -26,6 +27,7 @@ export function checkComparisonResponse(content: string, queryType: string) {
     
     if (missingRightsTerms.length > 0) {
       result.isComplete = false;
+      result.isTruncated = true;  // Set isTruncated when incomplete
       missingRightsTerms.forEach(term => {
         result.missingElements.push(`Missing key rights issue term: ${term}`);
       });
@@ -33,6 +35,7 @@ export function checkComparisonResponse(content: string, queryType: string) {
     
     if (missingOpenOfferTerms.length > 0) {
       result.isComplete = false;
+      result.isTruncated = true;  // Set isTruncated when incomplete
       missingOpenOfferTerms.forEach(term => {
         result.missingElements.push(`Missing key open offer term: ${term}`);
       });
@@ -44,6 +47,7 @@ export function checkComparisonResponse(content: string, queryType: string) {
       const dateMatches = content.match(/\b(day \d+|t[\+\-]\d+|\d{1,2}\/\d{1,2}|\w+ \d{1,2})\b/gi) || [];
       if (dateMatches.length < 8) { // We need more dates when comparing two timetables
         result.isComplete = false;
+        result.isTruncated = true;  // Set isTruncated when incomplete
         result.missingElements.push(`Insufficient key dates for comparison (found ${dateMatches.length})`);
       }
     }
@@ -54,6 +58,7 @@ export function checkComparisonResponse(content: string, queryType: string) {
         !lowerContent.includes('key differences:') && 
         !lowerContent.includes('summary of differences')) {
       result.isComplete = false;
+      result.isTruncated = true;  // Set isTruncated when incomplete
       result.missingElements.push("Missing conclusion section in comparison");
     }
   }

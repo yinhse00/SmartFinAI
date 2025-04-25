@@ -8,6 +8,7 @@
 export function checkRightsIssueResponse(content: string) {
   const result = {
     isComplete: true,
+    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };
@@ -30,6 +31,7 @@ export function checkRightsIssueResponse(content: string) {
   
   if (missingElements.length > 0) {
     result.isComplete = false;
+    result.isTruncated = true;  // Set isTruncated when incomplete
     result.missingElements.push(
       ...missingElements.map(e => e.description)
     );
@@ -38,6 +40,7 @@ export function checkRightsIssueResponse(content: string) {
   // Check for timetable information which is crucial for rights issues
   if (!lowerContent.includes('timetable')) {
     result.isComplete = false;
+    result.isTruncated = true;  // Set isTruncated when incomplete
     result.missingElements.push('Rights issue timetable');
   }
   
@@ -47,6 +50,7 @@ export function checkRightsIssueResponse(content: string) {
       !lowerContent.includes('in summary') && 
       !lowerContent.includes('to summarize')) {
     result.isComplete = false;
+    result.isTruncated = true;  // Set isTruncated when incomplete
     if (!result.missingElements.includes('Conclusion section')) {
       result.missingElements.push('Conclusion section');
     }

@@ -8,6 +8,7 @@
 export function checkConnectedTransactionResponse(content: string) {
   const result = {
     isComplete: true,
+    isTruncated: false,  // Explicitly include isTruncated property
     missingElements: [] as string[],
     confidence: 'high' as 'high' | 'medium' | 'low'
   };
@@ -29,6 +30,7 @@ export function checkConnectedTransactionResponse(content: string) {
   
   if (missingElements.length > 0) {
     result.isComplete = false;
+    result.isTruncated = true;  // Set isTruncated when incomplete
     result.missingElements.push(
       ...missingElements.map(e => e.description)
     );
