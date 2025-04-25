@@ -1,5 +1,5 @@
 
-import { checkListingRulesResponse } from './listingRulesResponse';
+import { checkListingRulesResponse } from './listingRulesChecker';
 import { checkAggregationResponse } from './aggregationChecker';
 import { checkConnectedTransactionResponse } from './connectedTransactionChecker';
 import { checkTradingArrangementResponse } from './tradingArrangementChecker';
