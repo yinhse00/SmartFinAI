@@ -137,6 +137,16 @@ export const initializeSampleData = () => {
       lastUpdated: new Date("2023-12-01"),
       status: "active"
     });
+
+  databaseService.addSampleEntry({
+    title: "Rule 13.39 - Independent Financial Adviser Requirements",
+    content: "Rule 13.39(5) of the Listing Rules states: The issuer must appoint an independent financial adviser acceptable to the Exchange to advise the independent board committee and the independent shareholders as to (a) whether the terms of the transaction are fair and reasonable; and (b) how to vote on the transaction. This requirement applies to transactions requiring shareholder approval where independent advice is needed.",
+    category: "listing_rules",
+    source: "HKEX Listing Rules Chapter 13",
+    section: "Rule 13.39",
+    lastUpdated: new Date("2024-01-15"),
+    status: "active"
+  });
     
     console.log("Added sample regulatory data");
   }
