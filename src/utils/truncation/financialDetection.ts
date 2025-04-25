@@ -1,5 +1,5 @@
 
-import { analyzeFinancialResponse } from './financialAnalyzer';
+import { analyzeFinancialResponse } from './financialResponseAnalyzer';
 import { isTradingArrangementComplete } from './tradingArrangementDetection';
 import { detectTruncationComprehensive } from './advancedDetection';
 import { getTruncationDiagnostics } from './diagnostics';
@@ -14,3 +14,4 @@ export {
 
 // Export additional utils for backwards compatibility
 export * from './tradingArrangementChecks';
+

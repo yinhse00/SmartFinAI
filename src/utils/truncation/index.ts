@@ -5,7 +5,7 @@ export * from './basicDetection';
 export * from './advancedDetection';
 export * from './diagnostics';
 export * from './financialDetection';
-export { analyzeFinancialResponse } from './financialAnalyzer';
+export { analyzeFinancialResponse } from './financialResponseAnalyzer';
 export * from './financialResponseAnalyzer';
 export * from './tradingArrangementDetection';
 export * from './tradingArrangementChecks';
@@ -17,3 +17,4 @@ export * from './checkers';
 export * from './checkers/comparisonChecker';
 export * from './checkers/rightsIssueChecker';
 export * from './checkers/openOfferChecker';
+

@@ -1,59 +1,61 @@
 
-import { checkRightsIssueResponse } from '../checkers/rightsIssueChecker';
-import { checkOpenOfferResponse } from '../checkers/openOfferChecker';
-import { isComparisonQuery } from '../checkers/rightsIssueChecker';
-import { checkChapter18CResponse } from '../checkers/chapter18cChecker';
+import { checkListingRulesResponse } from './listingRulesResponse';
+import { checkAggregationResponse } from './aggregationChecker';
+import { checkConnectedTransactionResponse } from './connectedTransactionChecker';
+import { checkTradingArrangementResponse } from './tradingArrangementChecker';
+import { checkRightsIssueResponse } from './rightsIssueChecker';
 
 /**
- * Analyze financial response completeness based on query type
+ * Core function to analyze financial responses based on query type
+ * 
+ * @param content The response content to analyze
+ * @param queryType The type of financial query
+ * @returns Analysis result with completeness status and missing elements
  */
 export function analyzeFinancialResponse(content: string, queryType: string) {
-  if (!content || !queryType) {
-    return { isComplete: true, missingElements: [] };
+  // Default result structure
+  let result = {
+    isComplete: true,
+    missingElements: [] as string[],
+    confidence: 'high' as 'high' | 'medium' | 'low'
+  };
+  
+  // Normalize query type
+  const normalizedType = queryType.toLowerCase();
+  
+  // Check for specific query types
+  if (normalizedType.includes('aggregate') || normalizedType.includes('rule 7.19a')) {
+    return checkAggregationResponse(content);
   }
   
-  // Check if content contains Chapter 18C references
-  const isChapter18CContent = content.toLowerCase().includes('chapter 18c') || 
-                             content.toLowerCase().includes('specialist technology') || 
-                             queryType === 'specialist_technology';
-  
-  // Conduct specialized analysis based on query type or content
-  switch (queryType) {
-    case 'rights_issue':
-      return checkRightsIssueResponse(content);
-    case 'open_offer':
-      return checkOpenOfferResponse(content);
-    case 'takeover_offer':
-    case 'takeovers_code':
-      // Missing checker implementation, return default result
-      return { isComplete: true, missingElements: [] };
-    case 'connected_transactions':
-      // Missing checker implementation, return default result
-      return { isComplete: true, missingElements: [] };
-    case 'specialist_technology':
-      return checkChapter18CResponse(content);
-    case 'listing_rules':
-      // First check if this content mentions Chapter 18C
-      if (isChapter18CContent) {
-        return checkChapter18CResponse(content);
-      }
-      
-      // Check for rights issue aggregation rules
-      if (content.toLowerCase().includes('7.19a') || 
-          content.toLowerCase().includes('aggregate')) {
-        // Missing aggregation checker, return default result
-        return { isComplete: true, missingElements: [] };
-      }
-      
-      // Default listing rules check - missing checker
-      return { isComplete: true, missingElements: [] };
-    default:
-      // For other cases, check content for specialized topics
-      if (isChapter18CContent) {
-        return checkChapter18CResponse(content);
-      }
-      
-      // Default response for general queries
-      return { isComplete: true, missingElements: [] };
+  if (normalizedType.includes('connected') || normalizedType.includes('chapter 14a')) {
+    return checkConnectedTransactionResponse(content);
   }
+  
+  if (normalizedType.includes('trading') || normalizedType.includes('arrangement') || 
+      normalizedType.includes('timetable')) {
+    return checkTradingArrangementResponse(content);
+  }
+  
+  if (normalizedType.includes('rights issue')) {
+    return checkRightsIssueResponse(content);
+  }
+  
+  if (normalizedType.includes('rule') || normalizedType.includes('listing rules') || 
+      normalizedType.includes('chapter')) {
+    return checkListingRulesResponse(content);
+  }
+  
+  // For generic financial queries, check for basic completeness
+  const hasConclusion = content.toLowerCase().includes('conclusion') || 
+                      content.toLowerCase().includes('in summary') || 
+                      content.toLowerCase().includes('to summarize');
+  
+  if (!hasConclusion && content.length > 2000) {
+    result.isComplete = false;
+    result.missingElements.push('Missing conclusion section');
+    result.confidence = 'medium';
+  }
+  
+  return result;
 }
