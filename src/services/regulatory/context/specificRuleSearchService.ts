@@ -13,11 +13,18 @@ export const specificRuleSearchService = {
   findSpecificRulesDocuments: async (query: string): Promise<RegulatoryEntry[]> => {
     let ruleResults: RegulatoryEntry[] = [];
     
-    // Check for specific rule references
-    const ruleMatches = query.match(/rule\s+(\d+\.\d+[A-Z]?|10\.29|7\.19A?)/i);
+    // Enhanced rule reference pattern to handle chapter-specific rules
+    const ruleMatches = query.match(/(?:rule|Rule)\s+(\d+[A-Z]?\.?\d*[A-Z]?(?:\(\d+\))?)/i) ||
+                       query.match(/(?:Chapter|chapter)\s+(\d+[A-Z]?)\.(\d+[A-Z]?(?:\(\d+\))?)/i);
     
     if (ruleMatches) {
-      const ruleNumber = ruleMatches[1];
+      let ruleNumber = ruleMatches[1];
+      
+      // Handle chapter-specific format (e.g., "14A.44")
+      if (ruleMatches[2]) {
+        ruleNumber = `${ruleMatches[1]}.${ruleMatches[2]}`;
+      }
+      
       console.log(`Found reference to Rule ${ruleNumber}, searching specifically`);
       
       // Check if this is rule 10.4 which relates to FAQs
@@ -28,8 +35,16 @@ export const specificRuleSearchService = {
         }
       }
       
-      // Search for the exact rule number
-      ruleResults = await searchService.search(`rule ${ruleNumber}`, 'listing_rules');
+      // Search for the exact rule number, considering chapter context
+      const searchQuery = `rule ${ruleNumber}`;
+      ruleResults = await searchService.search(searchQuery, 'listing_rules');
+      
+      // Verify results are from correct chapter context
+      ruleResults = ruleResults.filter(entry => {
+        const entryContent = entry.content.toLowerCase();
+        const rulePattern = new RegExp(`rule\\s+${ruleNumber.replace('.', '\\.')}\\b`, 'i');
+        return rulePattern.test(entryContent);
+      });
       
       // If found specific rule references, return immediately
       if (ruleResults.length > 0) {
