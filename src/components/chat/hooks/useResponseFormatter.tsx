@@ -27,21 +27,22 @@ export const useResponseFormatter = () => {
     const financialAnalysis = analyzeFinancialResponse(response.text, response.queryType);
     
     // Combined check for truncation from multiple sources
-    // Safely check if isTruncated exists and is a boolean, otherwise fallback to !isComplete
-    const isAnalysisTruncated = typeof financialAnalysis.isTruncated === 'boolean' 
-      ? financialAnalysis.isTruncated 
-      : !financialAnalysis.isComplete;
+    // Safely check if isTruncated exists and is a boolean before using it
+    const isAnalysisTruncated = 
+      typeof financialAnalysis?.isTruncated === 'boolean' 
+        ? financialAnalysis.isTruncated 
+        : !financialAnalysis?.isComplete;
     
     const isTruncated = diagnostics.isTruncated || 
                         isAnalysisTruncated || 
-                        !financialAnalysis.isComplete || 
+                        !financialAnalysis?.isComplete || 
                         (response.metadata?.responseCompleteness?.isComplete === false);
     
     // Log detailed truncation analysis for debugging
     if (isTruncated) {
       console.log('Response truncation detected:', {
         basicDiagnostics: diagnostics.reasons,
-        financialAnalysis: financialAnalysis.missingElements,
+        financialAnalysis: financialAnalysis?.missingElements || [],
         metadataIndicators: response.metadata?.responseCompleteness
       });
     }

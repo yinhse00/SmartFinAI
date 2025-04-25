@@ -61,8 +61,19 @@ export const useTruncationDetection = () => {
       }
     }
     
-    // Financial content-specific analysis
-    const financialAnalysis = analyzeFinancialResponse(content, queryType);
+    // Financial content-specific analysis with proper error handling
+    let financialAnalysis;
+    try {
+      financialAnalysis = analyzeFinancialResponse(content, queryType);
+    } catch (error) {
+      console.error("Error in financial analysis:", error);
+      financialAnalysis = { 
+        isComplete: true,
+        isTruncated: false,
+        missingElements: [],
+        confidence: 'medium' as 'high' | 'medium' | 'low' 
+      };
+    }
     
     // Only check for trading arrangement truncation if not already detected
     const isTradingArrangementTruncated = !diagnosticsResult.isTruncated && 
@@ -83,9 +94,13 @@ export const useTruncationDetection = () => {
       reasons.push("Trading arrangement information incomplete");
     }
     
-    if (!financialAnalysis.isComplete) {
+    // Safely check if financialAnalysis object exists and has expected properties
+    if (financialAnalysis && financialAnalysis.isComplete === false) {
       isComplete = false;
-      financialAnalysis.missingElements.forEach((element: string) => {
+      
+      // Safely handle missing elements array
+      const missingElements = financialAnalysis.missingElements || [];
+      missingElements.forEach((element: string) => {
         reasons.push(`Missing ${element}`);
       });
     }
@@ -105,7 +120,11 @@ export const useTruncationDetection = () => {
     return {
       isComplete: isComplete,
       reasons: reasons,
-      financialAnalysis: financialAnalysis
+      financialAnalysis: financialAnalysis || { 
+        isComplete: true, 
+        missingElements: [],
+        confidence: 'medium'
+      }
     };
   };
 

@@ -49,11 +49,17 @@ const ChatInterface = () => {
       ) {
         const content = lastMessage.content;
         const queryType = lastMessage.queryType || '';
+        
+        // Safely handle possible undefined response
         const financialAnalysis = analyzeFinancialResponse(content, queryType);
-        const isTruncated = financialAnalysis.isComplete === false;
+        // Check if analysis exists and has isComplete property
+        const isTruncated = financialAnalysis && typeof financialAnalysis.isComplete !== 'undefined'
+          ? financialAnalysis.isComplete === false
+          : false;
+          
         if (isTruncated) {
           console.log('Response appears incomplete:', {
-            financialAnalysis: financialAnalysis.missingElements
+            financialAnalysis: financialAnalysis?.missingElements || []
           });
           const updatedMessages = [...messages];
           updatedMessages[updatedMessages.length - 1].isTruncated = true;

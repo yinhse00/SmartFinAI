@@ -5,7 +5,11 @@ export * from './basicDetection';
 export * from './advancedDetection';
 export * from './diagnostics';
 export * from './financialDetection';
-export { analyzeFinancialResponse } from './financialResponseAnalyzer';
+
+// Import and export the function properly to avoid circular dependencies
+import { analyzeFinancialResponse } from './financialResponseAnalyzer';
+export { analyzeFinancialResponse };
+
 // Import and re-export from contentHelpers, excluding isComparisonQuery which is already exported from checkers
 export { hasConclusion, extractDates } from './utils/contentHelpers';
 export * from './checkers';

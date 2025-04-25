@@ -1,5 +1,11 @@
 
-import { analyzeFinancialResponse as analyzeResponse } from './financialResponseAnalyzer';
+/**
+ * This file is meant to be the entry point for financial analysis,
+ * keeping it separate from the implementation to avoid circular dependencies
+ */
+
+// Import the implementation directly
+import { analyzeFinancialResponse as analyzeFinancialResponseImpl } from './financialResponseAnalyzer/index';
 
 /**
  * Analyzes financial responses to check for completeness
@@ -9,6 +15,6 @@ import { analyzeFinancialResponse as analyzeResponse } from './financialResponse
  * @returns Analysis result with completeness status and missing elements
  */
 export function analyzeFinancialResponse(content: string, queryType: string) {
-  // Forward to the main implementation in the financialResponseAnalyzer module
-  return analyzeResponse(content, queryType);
+  // Forward to the implementation without creating a circular reference
+  return analyzeFinancialResponseImpl(content, queryType);
 }

@@ -1,4 +1,5 @@
 
+// Import from the direct file to avoid circular dependencies
 import { analyzeFinancialResponse } from './financialResponseAnalyzer';
 import { isTradingArrangementComplete } from './tradingArrangementDetection';
 import { detectTruncationComprehensive } from './advancedDetection';
