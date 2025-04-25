@@ -14,4 +14,3 @@ export const summaryIndexService = {
 
 // Re-export types
 export type { SearchResult, SummarySearchOptions };
-
