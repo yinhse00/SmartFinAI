@@ -22,6 +22,7 @@ export const useFileUpload = (options: FileValidationOptions = {}) => {
   } = options;
 
   const validateFiles = (files: FileList): boolean => {
+    // Validate file types
     const invalidFiles = Array.from(files).filter(
       file => !allowedTypes.includes(file.type)
     );
@@ -35,6 +36,7 @@ export const useFileUpload = (options: FileValidationOptions = {}) => {
       return false;
     }
 
+    // Check file sizes
     const oversizedFiles = Array.from(files).filter(
       file => file.size > maxSize
     );
