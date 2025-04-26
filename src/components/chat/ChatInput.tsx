@@ -3,6 +3,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
+import FileUploadButton from './FileUploadButton';
 
 interface ChatInputProps {
   input: string;
@@ -12,6 +13,7 @@ interface ChatInputProps {
   isGrokApiKeySet: boolean;
   onOpenApiKeyDialog: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  onFileSelect?: (files: FileList) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -19,11 +21,30 @@ const ChatInput: React.FC<ChatInputProps> = ({
   setInput,
   handleSend,
   isLoading,
-  handleKeyDown
+  handleKeyDown,
+  onFileSelect
 }) => {
+  const handleFileUpload = (files: FileList) => {
+    if (onFileSelect) {
+      onFileSelect(files);
+    }
+  };
+
   return (
     <div className="p-4 border-t">
       <div className="flex gap-2">
+        <div className="flex gap-2">
+          <FileUploadButton 
+            onFileSelect={handleFileUpload}
+            icon="upload"
+          />
+          <FileUploadButton 
+            onFileSelect={handleFileUpload}
+            accept="image/*"
+            icon="camera"
+            multiple={false}
+          />
+        </div>
         <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
           placeholder="Ask about HK listing rules, takeovers, or compliance requirements..."
