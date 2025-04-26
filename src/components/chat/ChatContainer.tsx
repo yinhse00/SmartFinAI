@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
-import ChatHistory from './ChatHistory';
+import ChatContent from './components/ChatContent';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
+import TruncationWarning from './components/TruncationWarning';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -29,21 +30,24 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onOpenApiKeyDialog,
   retryLastQuery
 }) => {
+  // Check if any messages are truncated
+  const hasTruncatedMessages = messages.some(message => message.isTruncated);
+
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
-      <CardContent 
-        className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
-      >
-        <ChatHistory 
-          messages={messages} 
-          isLoading={isLoading} 
-          onRetry={retryLastQuery}
-        />
-      </CardContent>
+      
+      {hasTruncatedMessages && <TruncationWarning onRetry={retryLastQuery} />}
+      
+      <ChatContent 
+        messages={messages}
+        isLoading={isLoading}
+        retryLastQuery={retryLastQuery}
+      />
+      
       <ChatInput 
         input={input}
         setInput={setInput}
