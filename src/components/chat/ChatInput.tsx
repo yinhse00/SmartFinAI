@@ -26,7 +26,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   return (
     <div className="p-4 border-t">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         {onFileSelect && <UploadButtons onFileSelect={onFileSelect} />}
         <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"

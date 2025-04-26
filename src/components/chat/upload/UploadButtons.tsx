@@ -1,6 +1,7 @@
 
 import React from 'react';
 import FileUploadButton from './FileUploadButton';
+import { Paperclip } from 'lucide-react';
 
 interface UploadButtonsProps {
   onFileSelect: (files: FileList) => void;
@@ -8,16 +9,12 @@ interface UploadButtonsProps {
 
 const UploadButtons: React.FC<UploadButtonsProps> = ({ onFileSelect }) => {
   return (
-    <div className="flex gap-2">
+    <div className="flex items-center gap-2">
       <FileUploadButton 
         onFileSelect={onFileSelect}
-        icon="upload"
-      />
-      <FileUploadButton 
-        onFileSelect={onFileSelect}
-        accept="image/*"
-        icon="camera"
-        multiple={false}
+        icon="file-input"
+        tooltip="Attach files"
+        multiple={true}
       />
     </div>
   );

@@ -1,21 +1,24 @@
 
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Upload, Camera } from 'lucide-react';
+import { FileInput, Camera } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface FileUploadButtonProps {
   onFileSelect: (files: FileList) => void;
   accept?: string;
   multiple?: boolean;
-  icon?: 'upload' | 'camera';
+  icon?: 'file-input' | 'camera';
+  tooltip?: string;
 }
 
 const FileUploadButton: React.FC<FileUploadButtonProps> = ({
   onFileSelect,
   accept = '.pdf,.doc,.docx,.xls,.xlsx,image/*',
   multiple = true,
-  icon = 'upload'
+  icon = 'file-input',
+  tooltip = 'Upload files'
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { validateFiles } = useFileUpload();
@@ -34,25 +37,42 @@ const FileUploadButton: React.FC<FileUploadButtonProps> = ({
     }
   };
 
+  const renderIcon = () => {
+    switch(icon) {
+      case 'file-input': return <FileInput size={18} />;
+      case 'camera': return <Camera size={18} />;
+      default: return <FileInput size={18} />;
+    }
+  };
+
   return (
-    <>
-      <input
-        type="file"
-        ref={fileInputRef}
-        onChange={handleFileChange}
-        accept={accept}
-        multiple={multiple}
-        className="hidden"
-      />
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={handleClick}
-        className="h-10 w-10"
-      >
-        {icon === 'upload' ? <Upload size={18} /> : <Camera size={18} />}
-      </Button>
-    </>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div>
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileChange}
+              accept={accept}
+              multiple={multiple}
+              className="hidden"
+            />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={handleClick}
+              className="h-9 w-9"
+            >
+              {renderIcon()}
+            </Button>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p>{tooltip}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 };
 
