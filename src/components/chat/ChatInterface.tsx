@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
@@ -37,6 +38,15 @@ const ChatInterface = () => {
     autoBatch
   } = useChatLogic();
 
+  const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
+
+  // Before sending any message, check if it contains Chinese
+  const handleSendWithCheck = () => {
+    const containsChinese = /[\u4e00-\u9fa5]/.test(input);
+    setLastInputWasChinese(containsChinese);
+    handleSend();
+  };
+
   useEffect(() => {
     const processLatestMessage = async () => {
       if (messages.length > 0) {
@@ -44,7 +54,7 @@ const ChatInterface = () => {
         if (
           lastMessage.sender === 'bot' &&
           lastMessage.content &&
-          /[\u4e00-\u9fa5]/.test(input)
+          lastInputWasChinese
         ) {
           try {
             const translatedResponse = await translationService.translateContent({
@@ -69,7 +79,7 @@ const ChatInterface = () => {
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, input]);
+  }, [messages, isLoading, lastInputWasChinese]);
 
   useEffect(() => {
     if (messages.length > 0) {
@@ -134,7 +144,7 @@ const ChatInterface = () => {
             isGrokApiKeySet={isGrokApiKeySet}
             input={input}
             setInput={setInput}
-            handleSend={handleSend}
+            handleSend={handleSendWithCheck}
             handleKeyDown={handleKeyDown}
             onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
             retryLastQuery={retryLastQuery}

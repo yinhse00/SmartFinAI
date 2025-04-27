@@ -30,12 +30,19 @@ export const useQueryProcessor = (
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
   const [autoBatch, setAutoBatch] = useState(true);
+  
+  // Store whether input was in Chinese for post-processing response
+  const [isChineseInput, setIsChineseInput] = useState(false);
 
   // Auto-batch controller (when truncation is detected, keep fetching next parts until complete or max batches reached)
   const MAX_AUTO_BATCHES = 4;
 
   // Create our actual processQuery function
   const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean, autoBatch?: boolean } = {}) => {
+    // Check if input contains Chinese characters and save this state
+    const containsChinese = /[\u4e00-\u9fa5]/.test(queryText);
+    setIsChineseInput(containsChinese);
+    
     // If continuing a batch, add special instruction
     let prompt = queryText;
     const isBatchContinuation = options.isBatchContinuation || false;
@@ -56,8 +63,6 @@ export const useQueryProcessor = (
     const batchInfo = isBatchContinuation
       ? { batchNumber: batchNumber.current, isContinuing: true }
       : undefined;
-
-    const setMessagesBatch = (msgs: Message[]) => setMessages(msgs);
 
     let truncatedLastPart = false;
 
@@ -108,6 +113,7 @@ export const useQueryProcessor = (
     isBatching,
     currentBatchNumber: batchNumber.current,
     handleContinueBatch,
-    autoBatch
+    autoBatch,
+    isChineseInput
   };
 };

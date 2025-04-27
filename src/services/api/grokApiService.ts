@@ -8,4 +8,3 @@ export const grokApiService = {
   callChatCompletions: apiClient.callChatCompletions,
   generateOfflineResponseFormat: offlineResponseGenerator.generateOfflineResponseFormat
 };
-
