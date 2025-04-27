@@ -38,22 +38,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     
     if (containsChinese) {
       try {
-        // Translate Chinese to English
-        const translatedInput = await translationService.translateContent({
-          content: input,
-          sourceLanguage: 'zh',
-          targetLanguage: 'en'
-        });
-        
         // Store original input for reference
         const originalInput = input;
         
-        // Set translated input and trigger send
-        setInput(translatedInput.text);
+        // Translate Chinese to English (we'll let the parent component handle this)
         await handleSend();
-        
-        // Restore original input
-        setInput(originalInput);
       } catch (error) {
         console.error('Translation error:', error);
         handleSend(); // Fallback to original behavior
