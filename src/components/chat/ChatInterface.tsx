@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
@@ -31,14 +30,46 @@ const ChatInterface = () => {
     handleSend,
     handleKeyDown,
     retryLastQuery,
-    // Batch/continue:
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
     autoBatch
   } = useChatLogic();
 
-  // Enhanced truncation detection for incomplete responses
+  useEffect(() => {
+    const processLatestMessage = async () => {
+      if (messages.length > 0) {
+        const lastMessage = messages[messages.length - 1];
+        if (
+          lastMessage.sender === 'bot' &&
+          lastMessage.content &&
+          /[\u4e00-\u9fa5]/.test(input)
+        ) {
+          try {
+            const translatedResponse = await translationService.translateContent({
+              content: lastMessage.content,
+              sourceLanguage: 'en',
+              targetLanguage: 'zh'
+            });
+            
+            const updatedMessages = [...messages];
+            updatedMessages[updatedMessages.length - 1] = {
+              ...lastMessage,
+              content: translatedResponse.text
+            };
+            setMessages(updatedMessages);
+          } catch (error) {
+            console.error('Translation error:', error);
+          }
+        }
+      }
+    };
+
+    if (!isLoading) {
+      processLatestMessage();
+    }
+  }, [messages, isLoading, input]);
+
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
@@ -81,15 +112,11 @@ const ChatInterface = () => {
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
       <div className="flex-1">
-        {/* API Connection Status */}
         <ApiConnectionStatus onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)} />
 
-        {/* SmartFinAI Chat Window */}
         <div className="flex-1 flex flex-col">
-          {/* Show processing indicator with all stages */}
           {isLoading && <ProcessingIndicator isVisible={true} stage={processingStage} />}
 
-          {/* Enhanced database review status indicator */}
           {isLoading && processingStage === 'reviewing' && (
             <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue dark:text-finance-light-blue">
               <Database size={14} className="animate-pulse" />
@@ -112,7 +139,6 @@ const ChatInterface = () => {
             retryLastQuery={retryLastQuery}
           />
 
-          {/* Multi-part batch answer controls */}
           {isBatching && !autoBatch && (
             <div className="flex justify-center my-4">
               <Button
@@ -127,7 +153,6 @@ const ChatInterface = () => {
         </div>
       </div>
 
-      {/* API Key Dialog */}
       <APIKeyDialog
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}

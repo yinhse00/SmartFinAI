@@ -5,6 +5,7 @@ import ChatHeader from './ChatHeader';
 import ChatHistory from './ChatHistory';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
+import { translationService } from '@/services/translation/translationService';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -29,6 +30,39 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onOpenApiKeyDialog,
   retryLastQuery
 }) => {
+  const handleTranslatedSend = async () => {
+    if (!input.trim()) return;
+    
+    // Check if input contains Chinese characters
+    const containsChinese = /[\u4e00-\u9fa5]/.test(input);
+    
+    if (containsChinese) {
+      try {
+        // Translate Chinese to English
+        const translatedInput = await translationService.translateContent({
+          content: input,
+          sourceLanguage: 'zh',
+          targetLanguage: 'en'
+        });
+        
+        // Store original input for reference
+        const originalInput = input;
+        
+        // Set translated input and trigger send
+        setInput(translatedInput.text);
+        await handleSend();
+        
+        // Restore original input
+        setInput(originalInput);
+      } catch (error) {
+        console.error('Translation error:', error);
+        handleSend(); // Fallback to original behavior
+      }
+    } else {
+      handleSend();
+    }
+  };
+
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
@@ -47,7 +81,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       <ChatInput 
         input={input}
         setInput={setInput}
-        handleSend={handleSend}
+        handleSend={handleTranslatedSend}
         isLoading={isLoading}
         isGrokApiKeySet={isGrokApiKeySet}
         onOpenApiKeyDialog={onOpenApiKeyDialog}
