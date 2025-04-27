@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
@@ -40,7 +39,6 @@ const ChatInterface = () => {
 
   const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
 
-  // Before sending any message, check if it contains Chinese
   const handleSendWithCheck = () => {
     const containsChinese = /[\u4e00-\u9fa5]/.test(input);
     setLastInputWasChinese(containsChinese);
@@ -58,33 +56,20 @@ const ChatInterface = () => {
           !lastMessage.isTranslating
         ) {
           try {
-            // Mark message as translating
-            const updatedMessages = [...messages];
-            updatedMessages[updatedMessages.length - 1] = {
-              ...lastMessage,
-              isTranslating: true,
-              originalContent: lastMessage.content
-            };
-            setMessages(updatedMessages);
-            
-            // Start translation in background
+            const tempMessages = messages.slice(0, -1);
             const translatedResponse = await translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
               targetLanguage: 'zh'
             });
-            
-            // Update with translated content
-            const finalMessages = [...messages];
-            finalMessages[finalMessages.length - 1] = {
+            const finalMessages = [...tempMessages, {
               ...lastMessage,
               content: translatedResponse.text,
               isTranslating: false
-            };
+            }];
             setMessages(finalMessages);
           } catch (error) {
             console.error('Translation error:', error);
-            // Remove translating indicator if error
             const errorMessages = [...messages];
             errorMessages[errorMessages.length - 1] = {
               ...lastMessage,

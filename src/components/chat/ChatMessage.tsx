@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -39,7 +38,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
     queryType,
     isTruncated,
     isBatchPart,
-    isTranslating
+    isTranslating,
+    originalContent
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
@@ -63,13 +63,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
               onComplete={() => setIsTypingComplete(true)}
               onProgress={onTypingProgress}
             />
-          )}
-          
-          {/* Translation indicator */}
-          {isTranslating && sender === 'bot' && (
-            <div className="mt-2 text-xs text-finance-medium-blue dark:text-finance-light-blue animate-pulse">
-              正在翻译... (Translating...)
-            </div>
           )}
           
           {/* Truncated message retry button */}
