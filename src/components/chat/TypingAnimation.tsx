@@ -11,7 +11,7 @@ interface TypingAnimationProps {
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({ 
   text, 
-  speed = 1, // Super fast typing speed (1ms per character)
+  speed = 0.5, // Even faster typing speed (0.5ms per character)
   className = "", 
   onComplete,
   onProgress
@@ -19,31 +19,38 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   const [displayedText, setDisplayedText] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isComplete, setIsComplete] = useState(false);
-
+  
+  // When text changes completely, reset the animation
   useEffect(() => {
-    // Reset when text changes
     setDisplayedText("");
     setCurrentIndex(0);
     setIsComplete(false);
   }, [text]);
 
+  // Use a more efficient typing animation with batch updates
   useEffect(() => {
-    if (currentIndex < text.length) {
-      const timer = setTimeout(() => {
-        setDisplayedText(prev => prev + text[currentIndex]);
-        setCurrentIndex(prevIndex => prevIndex + 1);
-        
-        // Notify parent about typing progress on each character
-        if (onProgress) {
-          onProgress();
-        }
-      }, speed);
-
-      return () => clearTimeout(timer);
-    } else if (!isComplete) {
-      setIsComplete(true);
-      onComplete?.();
+    if (currentIndex >= text.length) {
+      if (!isComplete) {
+        setIsComplete(true);
+        onComplete?.();
+      }
+      return;
     }
+    
+    // Process characters in batches for better performance
+    const batchSize = Math.min(10, text.length - currentIndex); 
+    const timer = setTimeout(() => {
+      const nextBatch = text.substring(currentIndex, currentIndex + batchSize);
+      setDisplayedText(prev => prev + nextBatch);
+      setCurrentIndex(prevIndex => prevIndex + batchSize);
+      
+      // Notify parent about typing progress
+      if (onProgress) {
+        onProgress();
+      }
+    }, speed * batchSize); // Adjust timing based on batch size
+
+    return () => clearTimeout(timer);
   }, [currentIndex, text, speed, isComplete, onComplete, onProgress]);
 
   return (

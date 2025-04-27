@@ -54,23 +54,43 @@ const ChatInterface = () => {
         if (
           lastMessage.sender === 'bot' &&
           lastMessage.content &&
-          lastInputWasChinese
+          lastInputWasChinese &&
+          !lastMessage.isTranslating
         ) {
           try {
+            // Mark message as translating
+            const updatedMessages = [...messages];
+            updatedMessages[updatedMessages.length - 1] = {
+              ...lastMessage,
+              isTranslating: true,
+              originalContent: lastMessage.content
+            };
+            setMessages(updatedMessages);
+            
+            // Start translation in background
             const translatedResponse = await translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
               targetLanguage: 'zh'
             });
             
-            const updatedMessages = [...messages];
-            updatedMessages[updatedMessages.length - 1] = {
+            // Update with translated content
+            const finalMessages = [...messages];
+            finalMessages[finalMessages.length - 1] = {
               ...lastMessage,
-              content: translatedResponse.text
+              content: translatedResponse.text,
+              isTranslating: false
             };
-            setMessages(updatedMessages);
+            setMessages(finalMessages);
           } catch (error) {
             console.error('Translation error:', error);
+            // Remove translating indicator if error
+            const errorMessages = [...messages];
+            errorMessages[errorMessages.length - 1] = {
+              ...lastMessage,
+              isTranslating: false
+            };
+            setMessages(errorMessages);
           }
         }
       }

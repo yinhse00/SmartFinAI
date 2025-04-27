@@ -43,7 +43,7 @@ export const translationService = {
           messages: [
             { 
               role: 'system', 
-              content: `You are a professional translator. Translate the following content from ${sourceLang} to ${targetLang}. Translate only the text provided and do not add any explanations, context, or metadata. Do not include phrases like "Content extracted from" in your translation.` 
+              content: `You are a professional translator. Translate the following content from ${sourceLang} to ${targetLang}. Translate only the text provided and do not add any explanations, context, or metadata. Do not include phrases like "Content extracted from" in your translation. Use a natural, fluent style appropriate for ${targetLang}.` 
             },
             { 
               role: 'user', 

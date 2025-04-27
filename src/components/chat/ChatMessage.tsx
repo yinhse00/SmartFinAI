@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,8 @@ export interface Message {
   queryType?: string;
   isTruncated?: boolean;
   isBatchPart?: boolean;
+  isTranslating?: boolean;
+  originalContent?: string;
 }
 
 interface ChatMessageProps {
@@ -36,7 +38,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
     reasoning,
     queryType,
     isTruncated,
-    isBatchPart 
+    isBatchPart,
+    isTranslating
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
@@ -60,6 +63,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
               onComplete={() => setIsTypingComplete(true)}
               onProgress={onTypingProgress}
             />
+          )}
+          
+          {/* Translation indicator */}
+          {isTranslating && sender === 'bot' && (
+            <div className="mt-2 text-xs text-finance-medium-blue dark:text-finance-light-blue animate-pulse">
+              正在翻译... (Translating...)
+            </div>
           )}
           
           {/* Truncated message retry button */}
