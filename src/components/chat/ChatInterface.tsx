@@ -11,6 +11,7 @@ import {
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, Database } from 'lucide-react';
+import { translationService } from '@/services/translation/translationService';
 
 const ChatInterface = () => {
   const { toast } = useToast();
