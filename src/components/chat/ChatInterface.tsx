@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
@@ -11,8 +11,9 @@ import {
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Database } from 'lucide-react';
+import { RefreshCw, Database, AlertCircle } from 'lucide-react';
 import { translationService } from '@/services/translation/translationService';
+import { Message } from './ChatMessage';
 
 const ChatInterface = () => {
   const { toast } = useToast();
@@ -40,6 +41,7 @@ const ChatInterface = () => {
 
   const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
   const [translatingMessageIds, setTranslatingMessageIds] = useState<string[]>([]);
+  const translationInProgressRef = useRef(false);
 
   // Check if input contains Chinese characters
   const handleSendWithCheck = () => {
@@ -51,26 +53,45 @@ const ChatInterface = () => {
   // Handle translation of responses for Chinese input
   useEffect(() => {
     const processLatestMessage = async () => {
+      // If already processing a translation, skip
+      if (translationInProgressRef.current || isLoading) {
+        return;
+      }
+      
       if (messages.length > 0) {
         const lastMessage = messages[messages.length - 1];
         
-        // Only translate if the message is from the bot, there's content, 
-        // the last input was Chinese, and the message is not already translated
+        // Only translate if:
+        // 1. The message is from the bot
+        // 2. There's content
+        // 3. The last input was Chinese
+        // 4. The message is not already translated
+        // 5. The message is not currently being translated
         if (
           lastMessage.sender === 'bot' &&
           lastMessage.content &&
           lastInputWasChinese &&
-          !lastMessage.isTranslated && // Check if not already translated
-          !translatingMessageIds.includes(lastMessage.id) // Not currently being translated
+          !lastMessage.isTranslated && 
+          !translatingMessageIds.includes(lastMessage.id)
         ) {
           try {
+            console.log(`Starting translation for message ${lastMessage.id}`);
+            
+            // Set the translation flag to prevent multiple translation attempts
+            translationInProgressRef.current = true;
+            
             // Mark this message as being translated
             setTranslatingMessageIds(prev => [...prev, lastMessage.id]);
             
-            // Create a new array with all messages except the last one
-            const messagesWithoutLast = messages.slice(0, -1);
+            // Create a temporary message with an indicator that translation is in progress
+            const messagesWithTranslating = [...messages];
+            const translatingIndex = messagesWithTranslating.length - 1;
+            
+            // Store original content before updating
+            const originalContent = lastMessage.content;
             
             // Translate the content
+            console.log('Calling translation service...');
             const translatedResponse = await translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
@@ -80,18 +101,29 @@ const ChatInterface = () => {
             // Remove this message ID from the translating list
             setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
             
-            // Add the translated message back to the array
-            const finalMessages = [...messagesWithoutLast, {
+            // Create a new array with the translated message
+            const finalMessages = [...messages];
+            finalMessages[finalMessages.length - 1] = {
               ...lastMessage,
               content: translatedResponse.text,
-              isTranslated: true, // Mark as translated to prevent infinite loop
-              originalContent: lastMessage.content // Store original content for reference
-            }];
+              isTranslated: true,
+              originalContent: originalContent
+            };
             
             // Update messages state with translated content
             setMessages(finalMessages);
+            
+            console.log(`Translation complete for message ${lastMessage.id}`);
           } catch (error) {
             console.error('Translation error:', error);
+            
+            // Show error toast
+            toast({
+              title: "翻译错误",
+              description: "无法完成翻译，请稍后再试。",
+              variant: "destructive"
+            });
+            
             // Remove from translating list even if there was an error
             setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
             
@@ -102,6 +134,9 @@ const ChatInterface = () => {
               isTranslated: true // Prevent further translation attempts
             };
             setMessages(updatedMessages);
+          } finally {
+            // Reset the translation flag
+            translationInProgressRef.current = false;
           }
         }
       }
@@ -111,7 +146,7 @@ const ChatInterface = () => {
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, lastInputWasChinese, setMessages, translatingMessageIds]);
+  }, [messages, isLoading, lastInputWasChinese, setMessages, translatingMessageIds, toast]);
 
   // Truncation detection and handling
   useEffect(() => {

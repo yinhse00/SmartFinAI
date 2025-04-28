@@ -50,6 +50,11 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
+
+  // Debug output
+  if (isTranslating) {
+    console.log(`Message ${id} is currently being translated`);
+  }
   
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -61,7 +66,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
               : 'bg-gray-50 dark:bg-gray-800'
         }`}>
-          {sender === 'user' ? (
+          {sender === 'user' || isTranslating ? (
             <div className="whitespace-pre-line">{content}</div>
           ) : (
             <TypingAnimation 
@@ -73,7 +78,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Truncated message retry button */}
-          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && (
+          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="outline" 
@@ -88,7 +93,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* References badges */}
-          {references && references.length > 0 && isTypingComplete && (
+          {references && references.length > 0 && isTypingComplete && !isTranslating && (
             <div className="mt-2 flex flex-wrap gap-1">
               {references.map((ref, i) => (
                 <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">

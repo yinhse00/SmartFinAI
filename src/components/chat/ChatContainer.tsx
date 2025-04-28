@@ -31,6 +31,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   retryLastQuery,
   translatingMessageIds = []
 }) => {
+  // Debug log to track message status
+  if (translatingMessageIds.length > 0) {
+    console.log(`Currently translating ${translatingMessageIds.length} messages: ${translatingMessageIds.join(', ')}`);
+  }
+  
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
