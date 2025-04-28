@@ -36,6 +36,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     console.log(`Currently translating ${translatingMessageIds.length} messages: ${translatingMessageIds.join(', ')}`);
   }
   
+  // Check if any Chinese text exists in input or messages
+  const containsChinese = input.match(/[\u4e00-\u9fa5]/g) || 
+    messages.some(m => m.content && m.content.match(/[\u4e00-\u9fa5]/g));
+  
+  // Get most recent user message language for UI labels
+  const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
+  const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
+  
   return (
     <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
@@ -60,6 +68,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isGrokApiKeySet={isGrokApiKeySet}
         onOpenApiKeyDialog={onOpenApiKeyDialog}
         handleKeyDown={handleKeyDown}
+        placeholder={lastUserMessageIsChinese ? "输入您的查询..." : "Type your query..."}
       />
     </Card>
   );

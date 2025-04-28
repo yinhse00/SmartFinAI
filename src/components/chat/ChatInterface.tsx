@@ -11,7 +11,7 @@ import {
   analyzeFinancialResponse
 } from '@/utils/truncation';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Database, AlertCircle } from 'lucide-react';
+import { RefreshCw, Database, AlertCircle, Languages } from 'lucide-react';
 import { translationService } from '@/services/translation/translationService';
 import { Message } from './ChatMessage';
 
@@ -36,7 +36,8 @@ const ChatInterface = () => {
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
-    autoBatch
+    autoBatch,
+    isChineseInput
   } = useChatLogic();
 
   const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
@@ -90,6 +91,13 @@ const ChatInterface = () => {
             // Store original content before updating
             const originalContent = lastMessage.content;
             
+            // Show toast to indicate translation is in progress
+            toast({
+              title: "正在翻译",
+              description: "正在将回复翻译成中文，请稍候...",
+              duration: 5000,
+            });
+            
             // Translate the content
             console.log('Calling translation service...');
             const translatedResponse = await translationService.translateContent({
@@ -114,6 +122,18 @@ const ChatInterface = () => {
             setMessages(finalMessages);
             
             console.log(`Translation complete for message ${lastMessage.id}`);
+            
+            // Show completion toast
+            toast({
+              title: "翻译完成",
+              description: "您可以点击消息底部的按钮切换查看原文或翻译版本",
+              duration: 5000,
+              action: (
+                <Button variant="outline" size="sm" className="flex items-center gap-1">
+                  <Languages size={14} />
+                </Button>
+              )
+            });
           } catch (error) {
             console.error('Translation error:', error);
             
@@ -146,7 +166,7 @@ const ChatInterface = () => {
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, lastInputWasChinese, setMessages, translatingMessageIds, toast]);
+  }, [messages, isLoading, lastInputWasChinese, setMessages, toast]);
 
   // Truncation detection and handling
   useEffect(() => {
@@ -170,8 +190,10 @@ const ChatInterface = () => {
           setMessages(updatedMessages);
 
           toast({
-            title: "Incomplete Response",
-            description: "The response appears to have been cut off. You can retry your query to get a complete answer.",
+            title: lastInputWasChinese ? "回复不完整" : "Incomplete Response",
+            description: lastInputWasChinese 
+              ? "回复似乎被截断了。您可以重试您的查询以获取完整答案。" 
+              : "The response appears to have been cut off. You can retry your query to get a complete answer.",
             duration: 15000,
             action: <Button
               onClick={retryLastQuery}
@@ -180,13 +202,13 @@ const ChatInterface = () => {
               className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
             >
               <RefreshCw size={14} />
-              Retry query
+              {lastInputWasChinese ? "重试查询" : "Retry query"}
             </Button>
           });
         }
       }
     }
-  }, [messages, toast, retryLastQuery, setMessages]);
+  }, [messages, toast, retryLastQuery, setMessages, lastInputWasChinese]);
 
   return (
     <div className="flex flex-col h-[calc(100vh-14rem)]">
@@ -226,7 +248,7 @@ const ChatInterface = () => {
                 className="flex items-center gap-2 bg-finance-accent-blue text-white"
                 onClick={handleContinueBatch}
               >
-                <RefreshCw size={16} /> Continue to Next Part (Part {currentBatchNumber + 1})
+                <RefreshCw size={16} /> {lastInputWasChinese ? `继续下一部分 (第 ${currentBatchNumber + 1} 部分)` : `Continue to Next Part (Part ${currentBatchNumber + 1})`}
               </Button>
             </div>
           )}

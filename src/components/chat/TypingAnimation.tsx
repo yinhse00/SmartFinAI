@@ -41,8 +41,8 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
     // Adjust batch size based on language and display speed needs
     const containsChinese = /[\u4e00-\u9fa5]/.test(text);
     const batchSize = containsChinese 
-      ? Math.min(40, text.length - currentIndex) 
-      : Math.min(30, text.length - currentIndex);
+      ? Math.min(30, text.length - currentIndex) 
+      : Math.min(25, text.length - currentIndex);
 
     const timer = setTimeout(() => {
       const nextBatch = text.substring(currentIndex, currentIndex + batchSize);

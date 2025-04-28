@@ -50,11 +50,15 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
-
+  const [showOriginal, setShowOriginal] = useState(false);
+  
   // Debug output
   if (isTranslating) {
     console.log(`Message ${id} is currently being translated`);
   }
+
+  // Determine which content to display
+  const displayContent = showOriginal && originalContent ? originalContent : content;
   
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -67,14 +71,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
               : 'bg-gray-50 dark:bg-gray-800'
         }`}>
           {sender === 'user' || isTranslating ? (
-            <div className="whitespace-pre-line">{content}</div>
+            <div className="whitespace-pre-line">{displayContent}</div>
           ) : (
             <TypingAnimation 
-              text={content} 
+              text={displayContent} 
               className="whitespace-pre-line"
               onComplete={() => setIsTypingComplete(true)}
               onProgress={onTypingProgress}
             />
+          )}
+          
+          {/* Toggle original/translated content option for bot messages */}
+          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && (
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowOriginal(!showOriginal)} 
+                className="text-xs text-finance-medium-blue dark:text-finance-light-blue"
+              >
+                {showOriginal ? "查看翻译" : "View original (English)"}
+              </Button>
+            </div>
           )}
           
           {/* Truncated message retry button */}

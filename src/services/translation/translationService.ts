@@ -41,7 +41,8 @@ export const translationService = {
         // Ensure we're sending just the raw content without any prefixes or metadata
         const contentToTranslate = params.content.trim();
         
-        // Enhanced translation prompt with specific instructions for financial content
+        // Improved translation prompt specifically for translating from English to Chinese
+        // ensuring we maintain all details and information from the original response
         const requestBody = {
           messages: [
             { 
@@ -60,8 +61,13 @@ export const translationService = {
               7. The translation MUST BE THE SAME LENGTH or LONGER than the original to ensure no information is lost
               8. Pay special attention to translate all numerical data, dates, and percentages accurately
               9. If you cannot translate a term, keep the original term and add the translation in parentheses
+              10. When translating Hong Kong Listing Rules or regulatory terms, use the officially recognized Chinese translations where available
+              11. For Chapter 14A connected persons, ensure ALL categories and relationships described in the original text are included in your translation
+              12. NEVER summarize or condense the content - translate EVERYTHING comprehensively
               
-              Your translation must be comprehensive and maintain ALL the information, numbers, and details from the original text.` 
+              Your translation must be comprehensive and maintain ALL the information, numbers, and details from the original text.
+              
+              THIS IS EXTREMELY IMPORTANT: If the source text contains information about connected persons under Chapter 14A, ensure ALL categories of connected persons, exemption thresholds, and regulatory requirements are completely preserved in the translation.` 
             },
             { 
               role: 'user', 
@@ -70,7 +76,7 @@ export const translationService = {
           ],
           model: "grok-3-mini-beta",
           temperature: 0.1, // Lower temperature for more accurate translations
-          max_tokens: 8000,  // High token limit to prevent truncation
+          max_tokens: 10000,  // Increased token limit to prevent truncation
           top_p: 0.95        // Maintain high coherence
         };
         
@@ -136,6 +142,41 @@ export const translationService = {
         
         if (suspiciouslyShort) {
           console.warn(`Suspicious translation length ratio (${lengthRatio.toFixed(2)}), may indicate truncation or incomplete translation`);
+          
+          // For English to Chinese translations with suspiciously low ratio, try again with a different prompt
+          if (isEnToCh && apiCallSuccess && lengthRatio < 0.4) {
+            console.log('Attempting a second translation with modified prompt due to suspicious length ratio');
+            
+            const retryRequestBody = {
+              ...requestBody,
+              messages: [
+                { 
+                  role: 'system', 
+                  content: `You are a professional translator. Your task is to translate the following English text into Chinese. 
+                  The translation MUST be comprehensive and include ALL details from the original text. 
+                  Do not summarize or shorten the text in any way. This is extremely important.
+                  
+                  Translate EVERY SINGLE WORD and ensure the Chinese translation is as detailed as the original English text.`
+                },
+                { role: 'user', content: contentToTranslate }
+              ],
+              temperature: 0.05 // Even lower temperature for more literal translation
+            };
+            
+            try {
+              const retryData = await grokApiService.callChatCompletions(retryRequestBody);
+              const retryTranslation = retryData.choices[0].message.content;
+              
+              // Check if retry translation is more comprehensive
+              if (retryTranslation && retryTranslation.length > translatedContent.length * 1.2) {
+                console.log('Using retry translation as it appears more comprehensive');
+                return { text: retryTranslation };
+              }
+            } catch (retryError) {
+              console.warn('Retry translation attempt failed, using original translation:', retryError);
+              // Continue with the original translation if retry fails
+            }
+          }
         }
         
         console.log(`Translation completed successfully: ${contentToTranslate.substring(0, 50)}...`);
