@@ -34,16 +34,17 @@ export const translationService = {
       const targetLang = params.targetLanguage === 'en' ? 'English' : 'Chinese';
       
       try {
-        console.log("Connecting to Grok API for translation");
+        console.log(`Translating from ${sourceLang} to ${targetLang}`);
         
         // Ensure we're sending just the raw content without any prefixes or metadata
         const contentToTranslate = params.content.trim();
         
+        // Enhanced translation prompt for improved accuracy
         const requestBody = {
           messages: [
             { 
               role: 'system', 
-              content: `You are a professional translator. Translate the following content from ${sourceLang} to ${targetLang}. Translate only the text provided and do not add any explanations, context, or metadata. Do not include phrases like "Content extracted from" in your translation. Use a natural, fluent style appropriate for ${targetLang}.` 
+              content: `You are a professional financial translator specializing in Hong Kong regulations and markets. Translate the following content from ${sourceLang} to ${targetLang} with high accuracy and financial terminology precision. Maintain formal tone appropriate for financial documents. Do not add any explanations or metadata. Translate the entire content completely.` 
             },
             { 
               role: 'user', 
@@ -51,11 +52,14 @@ export const translationService = {
             }
           ],
           model: "grok-3-mini-beta",
-          temperature: 0.3, // Lower temperature for more accurate translations
-          max_tokens: 4000  // Allow for longer translations
+          temperature: 0.2, // Lower temperature for more accurate translations
+          max_tokens: 5000  // Increased token limit to prevent truncated translations
         };
         
         const data = await grokApiService.callChatCompletions(requestBody);
+        
+        // Log translation completion
+        console.log(`Translation completed successfully: ${contentToTranslate.substring(0, 50)}...`);
         
         return {
           text: data.choices?.[0]?.message?.content || "Translation failed."

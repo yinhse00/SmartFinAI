@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,7 +18,7 @@ export interface Message {
   queryType?: string;
   isTruncated?: boolean;
   isBatchPart?: boolean;
-  isTranslating?: boolean;
+  isTranslated?: boolean;
   originalContent?: string;
 }
 
@@ -38,7 +39,6 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
     queryType,
     isTruncated,
     isBatchPart,
-    isTranslating,
     originalContent
   } = message;
   

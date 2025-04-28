@@ -11,7 +11,7 @@ interface TypingAnimationProps {
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({ 
   text, 
-  speed = 0.5, // Even faster typing speed (0.5ms per character)
+  speed = 0.2, // Faster typing speed for better UX
   className = "", 
   onComplete,
   onProgress
@@ -27,7 +27,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
     setIsComplete(false);
   }, [text]);
 
-  // Use a more efficient typing animation with batch updates
+  // Optimize the typing animation with larger batch processing for Chinese text
   useEffect(() => {
     if (currentIndex >= text.length) {
       if (!isComplete) {
@@ -37,8 +37,13 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
       return;
     }
     
-    // Process characters in batches for better performance
-    const batchSize = Math.min(10, text.length - currentIndex); 
+    // Process characters in larger batches for better performance, especially for Chinese
+    // Chinese characters are detected using Unicode range
+    const containsChinese = /[\u4e00-\u9fa5]/.test(text);
+    const batchSize = containsChinese 
+      ? Math.min(20, text.length - currentIndex) 
+      : Math.min(15, text.length - currentIndex); 
+
     const timer = setTimeout(() => {
       const nextBatch = text.substring(currentIndex, currentIndex + batchSize);
       setDisplayedText(prev => prev + nextBatch);

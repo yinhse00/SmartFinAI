@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
@@ -45,47 +46,62 @@ const ChatInterface = () => {
     handleSend();
   };
 
+  // Handle translation of responses for Chinese input
   useEffect(() => {
     const processLatestMessage = async () => {
       if (messages.length > 0) {
         const lastMessage = messages[messages.length - 1];
+        
+        // Only translate if the message is from the bot, there's content, 
+        // the last input was Chinese, and the message is not already translated
         if (
           lastMessage.sender === 'bot' &&
           lastMessage.content &&
           lastInputWasChinese &&
-          !lastMessage.isTranslating
+          !lastMessage.isTranslated // Check if not already translated
         ) {
           try {
-            const tempMessages = messages.slice(0, -1);
+            // Create a new array with all messages except the last one
+            const messagesWithoutLast = messages.slice(0, -1);
+            
+            // Translate the content
             const translatedResponse = await translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
               targetLanguage: 'zh'
             });
-            const finalMessages = [...tempMessages, {
+            
+            // Add the translated message back to the array
+            const finalMessages = [...messagesWithoutLast, {
               ...lastMessage,
               content: translatedResponse.text,
-              isTranslating: false
+              isTranslated: true, // Mark as translated to prevent infinite loop
+              originalContent: lastMessage.content // Store original content for reference
             }];
+            
+            // Update messages state with translated content
             setMessages(finalMessages);
           } catch (error) {
             console.error('Translation error:', error);
-            const errorMessages = [...messages];
-            errorMessages[errorMessages.length - 1] = {
+            // Mark as translated even if there was an error to prevent infinite loops
+            const updatedMessages = [...messages];
+            updatedMessages[updatedMessages.length - 1] = {
               ...lastMessage,
-              isTranslating: false
+              isTranslated: true // Prevent further translation attempts
             };
-            setMessages(errorMessages);
+            setMessages(updatedMessages);
           }
         }
       }
     };
 
+    // Only run translation when not loading
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, lastInputWasChinese]);
+  }, [messages, isLoading, lastInputWasChinese, setMessages]);
 
+  // Truncation detection and handling
   useEffect(() => {
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
