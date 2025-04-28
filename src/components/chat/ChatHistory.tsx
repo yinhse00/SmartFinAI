@@ -7,9 +7,10 @@ interface ChatHistoryProps {
   messages: Message[];
   isLoading: boolean;
   onRetry?: () => void;
+  translatingMessageIds?: string[];
 }
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry }) => {
+const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom on new messages
@@ -49,7 +50,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry 
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
             }
-          }} 
+          }}
+          isTranslating={translatingMessageIds.includes(message.id)}
         />
       ))}
       

@@ -39,7 +39,9 @@ const ChatInterface = () => {
   } = useChatLogic();
 
   const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
+  const [translatingMessageIds, setTranslatingMessageIds] = useState<string[]>([]);
 
+  // Check if input contains Chinese characters
   const handleSendWithCheck = () => {
     const containsChinese = /[\u4e00-\u9fa5]/.test(input);
     setLastInputWasChinese(containsChinese);
@@ -58,9 +60,13 @@ const ChatInterface = () => {
           lastMessage.sender === 'bot' &&
           lastMessage.content &&
           lastInputWasChinese &&
-          !lastMessage.isTranslated // Check if not already translated
+          !lastMessage.isTranslated && // Check if not already translated
+          !translatingMessageIds.includes(lastMessage.id) // Not currently being translated
         ) {
           try {
+            // Mark this message as being translated
+            setTranslatingMessageIds(prev => [...prev, lastMessage.id]);
+            
             // Create a new array with all messages except the last one
             const messagesWithoutLast = messages.slice(0, -1);
             
@@ -70,6 +76,9 @@ const ChatInterface = () => {
               sourceLanguage: 'en',
               targetLanguage: 'zh'
             });
+            
+            // Remove this message ID from the translating list
+            setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
             
             // Add the translated message back to the array
             const finalMessages = [...messagesWithoutLast, {
@@ -83,6 +92,9 @@ const ChatInterface = () => {
             setMessages(finalMessages);
           } catch (error) {
             console.error('Translation error:', error);
+            // Remove from translating list even if there was an error
+            setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
+            
             // Mark as translated even if there was an error to prevent infinite loops
             const updatedMessages = [...messages];
             updatedMessages[updatedMessages.length - 1] = {
@@ -99,7 +111,7 @@ const ChatInterface = () => {
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, lastInputWasChinese, setMessages]);
+  }, [messages, isLoading, lastInputWasChinese, setMessages, translatingMessageIds]);
 
   // Truncation detection and handling
   useEffect(() => {
@@ -169,6 +181,7 @@ const ChatInterface = () => {
             handleKeyDown={handleKeyDown}
             onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
             retryLastQuery={retryLastQuery}
+            translatingMessageIds={translatingMessageIds}
           />
 
           {isBatching && !autoBatch && (

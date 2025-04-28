@@ -26,9 +26,15 @@ interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
   onTypingProgress?: () => void;
+  isTranslating?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingProgress }) => {
+const ChatMessage: React.FC<ChatMessageProps> = ({ 
+  message, 
+  onRetry, 
+  onTypingProgress,
+  isTranslating = false
+}) => {
   const { 
     sender, 
     content, 
@@ -39,7 +45,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingPro
     queryType,
     isTruncated,
     isBatchPart,
-    originalContent
+    originalContent,
+    id
   } = message;
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');

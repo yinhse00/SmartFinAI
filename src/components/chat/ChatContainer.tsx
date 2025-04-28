@@ -16,6 +16,7 @@ interface ChatContainerProps {
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
+  translatingMessageIds?: string[];
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -27,7 +28,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   handleSend,
   handleKeyDown,
   onOpenApiKeyDialog,
-  retryLastQuery
+  retryLastQuery,
+  translatingMessageIds = []
 }) => {
   return (
     <Card className="finance-card h-full flex flex-col">
@@ -42,6 +44,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
           messages={messages} 
           isLoading={isLoading} 
           onRetry={retryLastQuery}
+          translatingMessageIds={translatingMessageIds}
         />
       </CardContent>
       <ChatInput 

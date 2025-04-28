@@ -39,12 +39,25 @@ export const translationService = {
         // Ensure we're sending just the raw content without any prefixes or metadata
         const contentToTranslate = params.content.trim();
         
-        // Enhanced translation prompt for improved accuracy
+        // Enhanced translation prompt for improved quality and completeness
         const requestBody = {
           messages: [
             { 
               role: 'system', 
-              content: `You are a professional financial translator specializing in Hong Kong regulations and markets. Translate the following content from ${sourceLang} to ${targetLang} with high accuracy and financial terminology precision. Maintain formal tone appropriate for financial documents. Do not add any explanations or metadata. Translate the entire content completely.` 
+              content: `You are a professional financial translator specializing in Hong Kong regulations and markets. 
+              Translate the following content from ${sourceLang} to ${targetLang} with high accuracy, maintaining the 
+              same level of detail, comprehensiveness, and technical precision as the original text. 
+              
+              IMPORTANT INSTRUCTIONS:
+              1. Ensure the translation is COMPLETE and contains ALL information from the source text
+              2. Maintain all technical financial terms accurately 
+              3. Keep the same structure and format as the original
+              4. Translate everything including examples, citations, and references
+              5. Do not add any explanations, metadata, or personal comments
+              6. Do not omit any information or summarize the content
+              7. Maintain formal tone appropriate for financial/regulatory documents
+              
+              Translate the entire text completely, keeping ALL information from the original.` 
             },
             { 
               role: 'user', 
@@ -52,8 +65,8 @@ export const translationService = {
             }
           ],
           model: "grok-3-mini-beta",
-          temperature: 0.2, // Lower temperature for more accurate translations
-          max_tokens: 5000  // Increased token limit to prevent truncated translations
+          temperature: 0.1, // Lower temperature for more accurate translations
+          max_tokens: 8000  // Increased token limit to prevent truncated translations
         };
         
         const data = await grokApiService.callChatCompletions(requestBody);
