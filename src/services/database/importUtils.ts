@@ -53,8 +53,9 @@ export const parseRegulatoryText = (
   content: string,
   category: DocumentCategory,
   sourceDocumentId?: string
-): { provisions: RegulationProvision[]; errors: string[] } => {
-  const provisions: RegulationProvision[] = [];
+): { provisions: Omit<RegulationProvision, 'id'>[], errors: string[] } => {
+  // Changed return type to use Omit to indicate id will be missing
+  const provisions: Omit<RegulationProvision, 'id'>[] = [];
   const errors: string[] = [];
   
   try {
@@ -154,6 +155,7 @@ export const importRegulatoryContent = async (
     }
     
     // Add provisions to the database
+    // The addProvisions method will handle assigning IDs since we're now explicitly passing partial objects
     const addedCount = await regulatoryDatabaseService.addProvisions(provisions);
     result.provisionsAdded = addedCount;
     

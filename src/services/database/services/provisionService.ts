@@ -27,7 +27,7 @@ export const provisionService = {
   /**
    * Add a provision to the database
    */
-  addProvision: async (provision: RegulationProvision): Promise<RegulationProvision | null> => {
+  addProvision: async (provision: Omit<RegulationProvision, 'id'>): Promise<RegulationProvision | null> => {
     const { data, error } = await supabase
       .from('regulatory_provisions')
       .insert(provision)
@@ -45,7 +45,7 @@ export const provisionService = {
   /**
    * Add multiple provisions in a batch operation
    */
-  addProvisions: async (provisions: RegulationProvision[]): Promise<number> => {
+  addProvisions: async (provisions: Omit<RegulationProvision, 'id'>[]): Promise<number> => {
     const { data, error } = await supabase
       .from('regulatory_provisions')
       .insert(provisions);
