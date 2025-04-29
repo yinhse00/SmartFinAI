@@ -53,13 +53,13 @@ export const useChatLogic = () => {
     currentStep,
     stepProgress,
     executeWorkflow
-  } = useWorkflowProcessor(
+  } = useWorkflowProcessor({
     messages,
     setMessages,
     setLastQuery,
     isGrokApiKeySet,
     setApiKeyDialogOpen
-  );
+  });
 
   // Handle sending messages
   const handleSend = () => {
