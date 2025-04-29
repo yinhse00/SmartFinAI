@@ -17,6 +17,16 @@ export class TextProcessor extends BaseDocumentProcessor {
       console.log(`Processing text file: ${file.name}`);
       
       const text = await this.readTextFile(file);
+      
+      // Enhanced processing for larger text files
+      if (text.length > 10000) {
+        console.log(`Large text file detected (${text.length} chars). Performing chapter detection...`);
+        const detectedChapter = this.detectChapter(text);
+        if (detectedChapter) {
+          console.log(`Detected chapter: ${detectedChapter} in text file`);
+        }
+      }
+      
       return {
         content: text,
         source: file.name
@@ -51,6 +61,26 @@ export class TextProcessor extends BaseDocumentProcessor {
       
       reader.readAsText(file);
     });
+  }
+  
+  /**
+   * Detect chapter from text content
+   * This helps categorize regulatory content
+   */
+  private detectChapter(content: string): string | null {
+    const chapter14Regex = /Chapter\s*14\s*(?:Notifiable\s*Transactions)/i;
+    const chapter14aRegex = /Chapter\s*14A\s*(?:Connected\s*Transactions)/i;
+    const chapter13Regex = /Chapter\s*13\s*(?:Equity\s*Securities)/i;
+    
+    if (chapter14aRegex.test(content)) {
+      return '14A';
+    } else if (chapter14Regex.test(content)) {
+      return '14';
+    } else if (chapter13Regex.test(content)) {
+      return '13';
+    }
+    
+    return null;
   }
 }
 

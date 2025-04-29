@@ -35,6 +35,24 @@ export class PdfProcessor extends BaseDocumentProcessor {
       };
     }
   }
+  
+  /**
+   * Enhanced error handling to provide more detailed diagnostic information
+   */
+  protected createApiUnavailableMessage(file: File, fileType: string): { content: string; source: string } {
+    console.log(`Creating fallback message for ${fileType} file: ${file.name}`);
+    return {
+      content: `Unable to process ${fileType} file: ${file.name} because the API is unavailable. 
+      
+This file type requires the Grok Vision API to be configured. For DOCX files, consider converting to PDF or TXT format for more reliable processing.
+
+File details:
+- Name: ${file.name}
+- Size: ${(file.size / 1024).toFixed(2)} KB
+- Type: ${file.type || 'Unknown'}`,
+      source: file.name
+    };
+  }
 }
 
 export const pdfProcessor = new PdfProcessor();
