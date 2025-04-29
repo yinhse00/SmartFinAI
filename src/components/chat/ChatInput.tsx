@@ -14,6 +14,7 @@ interface ChatInputProps {
   onOpenApiKeyDialog: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onFileSelect?: (files: FileList) => void;
+  placeholder?: string;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -22,7 +23,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   handleSend,
   isLoading,
   handleKeyDown,
-  onFileSelect
+  onFileSelect,
+  placeholder = "Ask about HK listing rules, takeovers, or compliance requirements..."
 }) => {
   return (
     <div className="p-4 border-t">
@@ -30,7 +32,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {onFileSelect && <UploadButtons onFileSelect={onFileSelect} />}
         <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-          placeholder="Ask about HK listing rules, takeovers, or compliance requirements..."
+          placeholder={placeholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}

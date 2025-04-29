@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '@/components/ui/card';
 import APIKeyDialog from './APIKeyDialog';
@@ -36,8 +35,7 @@ const ChatInterface = () => {
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
-    autoBatch,
-    isChineseInput
+    autoBatch
   } = useChatLogic();
 
   const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
