@@ -1,6 +1,7 @@
 
 import { AlertCircle, BookOpen, FileText, CheckCircle2, BarChart2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useEffect, useState } from 'react';
 
 interface WorkflowStep {
   id: string;
@@ -52,10 +53,47 @@ export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicat
   // Find current step index
   const currentStepIndex = steps.findIndex(step => step.id === currentStep);
   
+  // Calculate percentage of completion
+  const totalSteps = steps.length;
+  const completionPercentage = currentStep === 'complete' 
+    ? 100 
+    : Math.round(((currentStepIndex + 0.5) / totalSteps) * 100);
+  
+  // Track elapsed time
+  const [elapsedTime, setElapsedTime] = useState(0);
+  
+  // Start timer when we enter a new step
+  useEffect(() => {
+    if (currentStep === 'complete') return;
+    
+    const startTime = Date.now();
+    const timer = setInterval(() => {
+      setElapsedTime(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [currentStep]);
+  
+  // Format elapsed time for display
+  const formatElapsedTime = (seconds: number) => {
+    if (seconds < 60) {
+      return `${seconds}s`;
+    } else {
+      const minutes = Math.floor(seconds / 60);
+      const remainingSeconds = seconds % 60;
+      return `${minutes}m ${remainingSeconds}s`;
+    }
+  };
+  
   return (
-    <div className="mb-4 pt-2">
-      <div className="flex items-center justify-center mb-1">
+    <div className="mb-4 pt-2 bg-background">
+      <div className="flex items-center justify-between mb-1">
         <span className="text-xs text-gray-500 dark:text-gray-400">{stepProgress}</span>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="font-medium text-finance-dark-blue">{completionPercentage}% complete</span>
+          <span className="text-gray-500">•</span>
+          <span className="text-gray-500">{formatElapsedTime(elapsedTime)} elapsed</span>
+        </div>
       </div>
       
       <div className="flex justify-between items-center max-w-xs mx-auto">
