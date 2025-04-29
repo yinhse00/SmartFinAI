@@ -35,9 +35,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let checklistContext = '';
     
-    // Explicitly check if checklistResponse is null before accessing properties
-    if (checklistResponse) {
-      if (typeof checklistResponse === 'object' && checklistResponse !== null && 'text' in checklistResponse) {
+    // Safe handling of potentially null checklistResponse
+    if (checklistResponse !== null && checklistResponse !== undefined) {
+      if (typeof checklistResponse === 'object' && 'text' in checklistResponse) {
         checklistContext = checklistResponse.text || '';
       } else if (typeof checklistResponse === 'string') {
         checklistContext = checklistResponse;
@@ -56,9 +56,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let workingPlanContext = '';
     
-    // Explicitly check if workingPlanResponse is null before accessing properties
-    if (workingPlanResponse) {
-      if (typeof workingPlanResponse === 'object' && workingPlanResponse !== null && 'text' in workingPlanResponse) {
+    // Safe handling of potentially null workingPlanResponse
+    if (workingPlanResponse !== null && workingPlanResponse !== undefined) {
+      if (typeof workingPlanResponse === 'object' && 'text' in workingPlanResponse) {
         workingPlanContext = workingPlanResponse.text || '';
       } else if (typeof workingPlanResponse === 'string') {
         workingPlanContext = workingPlanResponse;
@@ -77,9 +77,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let timetableContext = '';
     
-    // Explicitly check if timetableResponse is null before accessing properties
-    if (timetableResponse) {
-      if (typeof timetableResponse === 'object' && timetableResponse !== null && 'text' in timetableResponse) {
+    // Safe handling of potentially null timetableResponse
+    if (timetableResponse !== null && timetableResponse !== undefined) {
+      if (typeof timetableResponse === 'object' && 'text' in timetableResponse) {
         timetableContext = timetableResponse.text || '';
       } else if (typeof timetableResponse === 'string') {
         timetableContext = timetableResponse;

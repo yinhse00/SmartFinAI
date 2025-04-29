@@ -19,9 +19,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     
     let listingRulesContext = '';
     
-    // Explicitly check if response is null before accessing properties
-    if (response) {
-      if (typeof response === 'object' && response !== null && 'text' in response) {
+    // Safe handling of potentially null response
+    if (response !== null && response !== undefined) {
+      if (typeof response === 'object' && 'text' in response) {
         listingRulesContext = response.text || '';
       } else if (typeof response === 'string') {
         listingRulesContext = response;
@@ -48,9 +48,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         
         let chapterContext = '';
         
-        // Explicitly check if chapterResponse is null before accessing properties
-        if (chapterResponse) {
-          if (typeof chapterResponse === 'object' && chapterResponse !== null && 'text' in chapterResponse) {
+        // Safe handling of potentially null chapterResponse
+        if (chapterResponse !== null && chapterResponse !== undefined) {
+          if (typeof chapterResponse === 'object' && 'text' in chapterResponse) {
             chapterContext = chapterResponse.text || '';
           } else if (typeof chapterResponse === 'string') {
             chapterContext = chapterResponse;

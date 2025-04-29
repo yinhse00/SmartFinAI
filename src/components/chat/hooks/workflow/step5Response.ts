@@ -29,10 +29,13 @@ export const executeStep5 = async (
     const response = await grokService.generateResponse(responseParams);
     let responseText = '';
     
-    if (typeof response === 'object' && response !== null && 'text' in response) {
-      responseText = response.text || '';
-    } else if (typeof response === 'string') {
-      responseText = response;
+    // Safe handling of potentially null response
+    if (response !== null && response !== undefined) {
+      if (typeof response === 'object' && 'text' in response) {
+        responseText = response.text || '';
+      } else if (typeof response === 'string') {
+        responseText = response;
+      }
     }
     
     // Step 5(b): If original input was Chinese, translate response
@@ -48,10 +51,13 @@ export const executeStep5 = async (
         
         let translatedText = '';
         
-        if (typeof translation === 'object' && translation !== null && 'text' in translation) {
-          translatedText = translation.text || '';
-        } else if (typeof translation === 'string') {
-          translatedText = translation;
+        // Safe handling of potentially null translation response
+        if (translation !== null && translation !== undefined) {
+          if (typeof translation === 'object' && 'text' in translation) {
+            translatedText = translation.text || '';
+          } else if (typeof translation === 'string') {
+            translatedText = translation;
+          }
         }
         
         return {
