@@ -1,8 +1,7 @@
-
 import { apiClient } from '../api/grok/apiClient';
 import { getGrokApiKey } from '../apiKeyService';
-import * as pdfParse from 'pdf-parse';
-import * as mammoth from 'mammoth';
+import pdfParse from 'pdf-parse';
+import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 
 /**
