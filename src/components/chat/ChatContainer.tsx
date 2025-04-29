@@ -21,6 +21,8 @@ interface ChatContainerProps {
   translatingMessageIds?: string[];
   onFileSelect?: (files: FileList) => void;
   isProcessingFiles?: boolean;
+  attachedFiles?: File[];
+  onFileRemove?: (index: number) => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -35,7 +37,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   retryLastQuery,
   translatingMessageIds = [],
   onFileSelect,
-  isProcessingFiles = false
+  isProcessingFiles = false,
+  attachedFiles = [],
+  onFileRemove
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -82,6 +86,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         placeholder={getPlaceholder()}
         onFileSelect={handleFileSelect}
         isProcessingFiles={isProcessingFiles}
+        attachedFiles={attachedFiles}
+        onFileRemove={onFileRemove}
       />
     </Card>
   );

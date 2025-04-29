@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
 import UnifiedUploadButton from './upload/UnifiedUploadButton';
+import AttachedFilesList from './upload/AttachedFilesList';
 
 interface ChatInputProps {
   input: string;
@@ -16,6 +17,8 @@ interface ChatInputProps {
   onFileSelect?: (files: FileList) => void;
   placeholder?: string;
   isProcessingFiles?: boolean;
+  attachedFiles?: File[];
+  onFileRemove?: (index: number) => void;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -26,10 +29,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
   handleKeyDown,
   onFileSelect,
   placeholder = "Ask about HK listing rules, takeovers, or compliance requirements...",
-  isProcessingFiles = false
+  isProcessingFiles = false,
+  attachedFiles = [],
+  onFileRemove
 }) => {
+  const hasAttachedFiles = attachedFiles.length > 0;
+  
   return (
     <div className="p-4 border-t">
+      {hasAttachedFiles && onFileRemove && (
+        <AttachedFilesList 
+          files={attachedFiles}
+          onRemove={onFileRemove}
+        />
+      )}
       <div className="flex gap-2 items-center">
         {onFileSelect && (
           <UnifiedUploadButton 
@@ -39,7 +52,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         )}
         <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
-          placeholder={placeholder}
+          placeholder={hasAttachedFiles ? "Type your question about the attached files..." : placeholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
@@ -48,9 +61,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <Button 
           onClick={handleSend} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={!input.trim() || isLoading || isProcessingFiles}
+          disabled={(hasAttachedFiles ? false : !input.trim()) || isLoading || isProcessingFiles}
         >
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
+          {isLoading || isProcessingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
         </Button>
       </div>
     </div>
