@@ -37,7 +37,7 @@ export const useStructuredDatabase = () => {
           toast({
             title: "Processing completed with warnings",
             description: `${result.errors.length} warning(s) occurred during processing.`,
-            variant: "warning",
+            variant: "destructive", // Changed from "warning" to "destructive"
             duration: 6000,
           });
         }
