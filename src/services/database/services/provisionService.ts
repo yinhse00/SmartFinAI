@@ -43,6 +43,7 @@ export const provisionService = {
    */
   addProvision: async (provision: Omit<RegulationProvision, 'id'>): Promise<string | null> => {
     try {
+      // Remove the ON CONFLICT clause and simply insert the record
       const { data, error } = await supabase
         .from('regulatory_provisions')
         .insert(provision)
