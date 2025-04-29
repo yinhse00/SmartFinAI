@@ -39,38 +39,31 @@ export const enhancedFileProcessingService = {
         
         // Determine category from filename or override
         const category = overrideCategory || determineCategory(file.name);
+        console.log(`Using category: ${category} for file: ${file.name}`);
         
         try {
           // Use existing file processing service to extract text
           const processingResult = await fileProcessingService.processFile(file);
           
-          if (!processingResult.content) {
-            result.errors.push(`Failed to extract content from ${file.name}`);
+          if (!processingResult.content || processingResult.content.trim().length === 0) {
+            const errorMsg = `Failed to extract content from ${file.name}`;
+            result.errors.push(errorMsg);
+            console.error(errorMsg);
+            
+            toast({
+              title: "File processing failed",
+              description: errorMsg,
+              variant: "destructive"
+            });
             continue;
           }
 
-          console.log(`Successfully extracted content from ${file.name}. Processing for import...`);
-          
-          // Check content to determine if it's a specific chapter
-          let detectedCategory = category;
-          if (file.name.toLowerCase().includes('chapter 13') || 
-              processingResult.content.includes('Chapter 13') || 
-              processingResult.content.includes('13.01')) {
-            console.log(`Detected Chapter 13 content in ${file.name}`);
-          } else if (file.name.toLowerCase().includes('chapter 14a') || 
-                    processingResult.content.includes('Chapter 14A') || 
-                    processingResult.content.includes('14A.01')) {
-            console.log(`Detected Chapter 14A content in ${file.name}`);
-          } else if (file.name.toLowerCase().includes('chapter 14') || 
-                    processingResult.content.includes('Chapter 14') || 
-                    processingResult.content.includes('14.01')) {
-            console.log(`Detected Chapter 14 content in ${file.name}`);
-          }
+          console.log(`Successfully extracted content from ${file.name} (${processingResult.content.length} chars). Processing for import...`);
           
           // Import the extracted content into the structured database
           const importResult = await importRegulatoryContent(
             processingResult.content,
-            detectedCategory,
+            category,
             undefined // For now, not linking to source document
           );
           
@@ -91,9 +84,9 @@ export const enhancedFileProcessingService = {
               );
             }
           } else {
-            result.errors.push(
-              `Failed to import content from ${file.name}: ${importResult.errors.join(', ')}`
-            );
+            const errorMsg = `Failed to import content from ${file.name}: ${importResult.errors.join(', ')}`;
+            result.errors.push(errorMsg);
+            console.error(errorMsg);
 
             toast({
               title: "Import Warning",
@@ -103,19 +96,44 @@ export const enhancedFileProcessingService = {
             });
           }
         } catch (error) {
-          result.errors.push(
-            `Error processing ${file.name}: ${error instanceof Error ? error.message : String(error)}`
-          );
+          const errorMsg = `Error processing ${file.name}: ${error instanceof Error ? error.message : String(error)}`;
+          result.errors.push(errorMsg);
+          console.error(errorMsg);
+          
+          toast({
+            title: "Processing Error",
+            description: `Error processing ${file.name}`,
+            variant: "destructive",
+          });
         }
       }
       
       // Mark as successful if at least one file was processed
       result.success = result.filesProcessed > 0;
       
+      if (result.success) {
+        toast({
+          title: "Processing Complete",
+          description: `Successfully processed ${result.filesProcessed} file(s), added ${result.provisionsAdded} provisions.`,
+        });
+      } else {
+        toast({
+          title: "Processing Failed",
+          description: "No files were successfully processed.",
+          variant: "destructive",
+        });
+      }
+      
     } catch (error) {
-      result.errors.push(
-        `Unexpected error during file processing: ${error instanceof Error ? error.message : String(error)}`
-      );
+      const errorMsg = `Unexpected error during file processing: ${error instanceof Error ? error.message : String(error)}`;
+      result.errors.push(errorMsg);
+      console.error(errorMsg);
+      
+      toast({
+        title: "Processing Error",
+        description: "An unexpected error occurred during processing.",
+        variant: "destructive",
+      });
     }
     
     return result;

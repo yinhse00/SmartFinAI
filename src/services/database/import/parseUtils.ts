@@ -19,7 +19,8 @@ export const detectChapter = (content: string): string | undefined => {
   const chapterPatterns = [
     /Chapter\s+(\d+[A-Z]?)/i,
     /CHAPTER\s+(\d+[A-Z]?)/,
-    /^(\d+[A-Z]?)\.\s+/m  // Match lines starting with chapter numbers
+    /^(\d+[A-Z]?)\.\s+/m,  // Match lines starting with chapter numbers
+    /\b(\d+[A-Z]?)\.(\d+)/  // Match patterns like "14.1" or "14A.2"
   ];
   
   for (const pattern of chapterPatterns) {
@@ -30,17 +31,17 @@ export const detectChapter = (content: string): string | undefined => {
   }
   
   // Special check for known chapters
-  if (content.includes("Connected Transactions") && 
+  if (content.toLowerCase().includes("connected transactions") && 
       (content.includes("Chapter 14A") || content.includes("14A"))) {
     return "14A";
   }
   
-  if (content.includes("Notifiable Transactions") && 
+  if (content.toLowerCase().includes("notifiable transactions") && 
       (content.includes("Chapter 14") || content.includes("14 "))) {
     return "14";
   }
   
-  if (content.toLowerCase().includes("connected transactions") && 
+  if (content.toLowerCase().includes("equity securities") && 
       (content.includes("Chapter 13") || content.includes("13."))) {
     return "13";
   }
@@ -60,75 +61,55 @@ export const parseRegulatoryText = (
   const errors: string[] = [];
   
   try {
+    if (!content || content.trim().length === 0) {
+      errors.push('Empty content provided');
+      return { provisions, errors };
+    }
+
+    console.log(`Parsing content (${content.length} chars) for category: ${category}`);
+    
     // First try to detect global chapter for the entire document
     const documentChapter = detectChapter(content);
+    console.log(`Detected document chapter: ${documentChapter || 'None'}`);
     
-    // Simple parsing - split by rule numbers
-    // Enhanced pattern to better match listing rule formats in chapters 13, 14, 14A
-    const rulePattern = /(\d+[A-Z]?\.\d+(?:\.\d+)*)\s+([^.]+)\.([^]*?)(?=\d+[A-Z]?\.\d+|$)/g;
+    // Try multiple parsing approaches
+    const parseApproaches = [
+      parseRuleNumberBasedApproach,
+      parseNumberedListApproach,
+      parseHeadingBasedApproach
+    ];
     
-    let match;
-    while ((match = rulePattern.exec(content)) !== null) {
-      const ruleNumber = match[1].trim();
-      const title = match[2].trim();
-      let ruleContent = match[3].trim();
-      
-      // Check for minimum valid content
-      if (ruleContent.length < 10) {
-        errors.push(`Rule ${ruleNumber} has suspiciously short content, might be parsing error`);
-        continue;
+    for (const parseApproach of parseApproaches) {
+      const parsedProvisions = parseApproach(content, documentChapter, sourceDocumentId);
+      if (parsedProvisions.length > 0) {
+        console.log(`Successfully parsed ${parsedProvisions.length} provisions using ${parseApproach.name}`);
+        provisions.push(...parsedProvisions);
+        break;
       }
+    }
+    
+    // Fall back to a single provision if no structured parsing worked
+    if (provisions.length === 0) {
+      console.log("Falling back to single provision for entire content");
+      let title = "Regulatory Content";
+      let ruleNumber = documentChapter ? `${documentChapter}.0` : "0.0";
       
-      // First try to get chapter from rule number, then fallback to document chapter
-      let chapter = extractChapter(ruleNumber);
-      if (!chapter && documentChapter) {
-        chapter = documentChapter;
+      // Try to extract a title from the first line or first heading
+      const firstLineMatch = content.match(/^\s*(.*?)\r?\n/);
+      if (firstLineMatch && firstLineMatch[1].trim().length > 0) {
+        title = firstLineMatch[1].trim();
       }
       
       provisions.push({
         rule_number: ruleNumber,
-        title: title, 
-        content: ruleContent,
-        chapter: chapter,
+        title: title,
+        content: content,
+        chapter: documentChapter,
         source_document_id: sourceDocumentId
       });
     }
     
-    // Special handling for chapters 13, 14, 14A when no provisions are found
-    if (provisions.length === 0) {
-      // Try an alternative parsing approach for structured content
-      // Split by sections that look like rules
-      const alternativeRulePattern = /((?:\d+[A-Z]?\.)+\d+)\s+([^\n]+)/g;
-      
-      while ((match = alternativeRulePattern.exec(content)) !== null) {
-        const ruleNumber = match[1].trim();
-        const title = match[2].trim();
-        
-        // Find the end of this section (start of next rule or end of content)
-        const startPos = match.index + match[0].length;
-        const nextRuleMatch = alternativeRulePattern.exec(content);
-        alternativeRulePattern.lastIndex = match.index + match[0].length; // Reset position
-        
-        const endPos = nextRuleMatch ? nextRuleMatch.index : content.length;
-        const ruleContent = content.substring(startPos, endPos).trim();
-        
-        if (ruleContent.length < 10) continue;
-        
-        let chapter = extractChapter(ruleNumber);
-        if (!chapter && documentChapter) {
-          chapter = documentChapter;
-        }
-        
-        provisions.push({
-          rule_number: ruleNumber,
-          title: title, 
-          content: ruleContent,
-          chapter: chapter,
-          source_document_id: sourceDocumentId
-        });
-      }
-    }
-    
+    // Log issues if no provisions found after all attempts
     if (provisions.length === 0) {
       errors.push('No provisions were successfully parsed from the content');
     }
@@ -137,4 +118,157 @@ export const parseRegulatoryText = (
   }
   
   return { provisions, errors };
+};
+
+/**
+ * Parse content using rule number based approach
+ */
+const parseRuleNumberBasedApproach = (
+  content: string, 
+  documentChapter?: string,
+  sourceDocumentId?: string
+): Omit<RegulationProvision, 'id'>[] => {
+  const provisions: Omit<RegulationProvision, 'id'>[] = [];
+  
+  // Enhanced pattern to better match listing rule formats in chapters 13, 14, 14A
+  const rulePattern = /(\d+[A-Z]?\.\d+(?:\.\d+)*)\s+([^.]+)\.([^]*?)(?=\d+[A-Z]?\.\d+|$)/g;
+  
+  let match;
+  while ((match = rulePattern.exec(content)) !== null) {
+    const ruleNumber = match[1].trim();
+    const title = match[2].trim();
+    let ruleContent = match[3].trim();
+    
+    // Skip entries with insufficient content (likely false positives)
+    if (ruleContent.length < 5) {
+      continue;
+    }
+    
+    // First try to get chapter from rule number, then fallback to document chapter
+    let chapter = extractChapter(ruleNumber);
+    if (!chapter && documentChapter) {
+      chapter = documentChapter;
+    }
+    
+    provisions.push({
+      rule_number: ruleNumber,
+      title: title, 
+      content: ruleContent,
+      chapter: chapter,
+      source_document_id: sourceDocumentId
+    });
+  }
+  
+  return provisions;
+};
+
+/**
+ * Parse content using numbered list approach
+ */
+const parseNumberedListApproach = (
+  content: string, 
+  documentChapter?: string,
+  sourceDocumentId?: string
+): Omit<RegulationProvision, 'id'>[] => {
+  const provisions: Omit<RegulationProvision, 'id'>[] = [];
+  
+  // Patterns that look for numbered sections
+  const numberPattern = /^\s*(\d+[A-Z]?(?:\.\d+)*)\s+([^\n.]+)(?:\.|\n)([^]*?)(?=^\s*\d+[A-Z]?(?:\.\d+)*\s|$)/gm;
+  
+  let match;
+  while ((match = numberPattern.exec(content)) !== null) {
+    const ruleNumber = match[1].trim();
+    const title = match[2].trim();
+    let ruleContent = match[3].trim();
+    
+    // Skip entries with insufficient content
+    if (ruleContent.length < 5 || title.length < 2) {
+      continue;
+    }
+    
+    // First try to get chapter from rule number, then fallback to document chapter
+    let chapter = extractChapter(ruleNumber);
+    if (!chapter && documentChapter) {
+      chapter = documentChapter;
+    }
+    
+    provisions.push({
+      rule_number: ruleNumber,
+      title: title, 
+      content: ruleContent,
+      chapter: chapter,
+      source_document_id: sourceDocumentId
+    });
+  }
+  
+  return provisions;
+};
+
+/**
+ * Parse content using heading based approach
+ */
+const parseHeadingBasedApproach = (
+  content: string, 
+  documentChapter?: string,
+  sourceDocumentId?: string
+): Omit<RegulationProvision, 'id'>[] => {
+  const provisions: Omit<RegulationProvision, 'id'>[] = [];
+  
+  // Split by headings (lines in all caps or with specific formatting)
+  const lines = content.split('\n');
+  let currentTitle = "";
+  let currentContent = "";
+  let currentIndex = 1;
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Detect headings (all caps, starts with numbers, etc)
+    if (line.length > 0 && (
+        line === line.toUpperCase() || 
+        /^\d+\.\s+[A-Z]/.test(line) ||
+        /^[A-Z][a-z]+\s+[A-Z][a-z]+/.test(line))) {
+      
+      // Save previous section if exists
+      if (currentTitle && currentContent) {
+        const ruleNumber = documentChapter 
+          ? `${documentChapter}.${currentIndex}` 
+          : `${currentIndex}`;
+        
+        provisions.push({
+          rule_number: ruleNumber,
+          title: currentTitle, 
+          content: currentContent,
+          chapter: documentChapter,
+          source_document_id: sourceDocumentId
+        });
+        
+        currentIndex++;
+      }
+      
+      // Start new section
+      currentTitle = line;
+      currentContent = "";
+    } else if (currentTitle) {
+      // Add content to current section
+      currentContent += line + "\n";
+    }
+  }
+  
+  // Add final section
+  if (currentTitle && currentContent) {
+    const ruleNumber = documentChapter 
+      ? `${documentChapter}.${currentIndex}` 
+      : `${currentIndex}`;
+    
+    provisions.push({
+      rule_number: ruleNumber,
+      title: currentTitle, 
+      content: currentContent,
+      chapter: documentChapter,
+      source_document_id: sourceDocumentId
+    });
+  }
+  
+  return provisions;
 };
