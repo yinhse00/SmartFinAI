@@ -40,7 +40,7 @@ export const executeStep5 = async (
       setStepProgress('Translating response to Chinese');
       
       try {
-        const translation = await grokService.translateContent(responseText, 'zh');
+        const translation = await grokService.translateContent(responseText);
         let translatedText = '';
         
         if (typeof translation === 'object' && translation.text) {

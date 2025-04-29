@@ -1,6 +1,7 @@
 
 import { checkIsChineseInput } from '../useLanguageState';
 import { grokService } from '@/services/grokService';
+import { WorkflowStep } from './types';
 
 /**
  * Step 1: Initial Processing
@@ -25,7 +26,7 @@ export const executeStep1 = async (
     setStepProgress('Translating Chinese query to English');
     try {
       // Translate Chinese to English for processing
-      const translation = await grokService.translateContent(queryText, 'en');
+      const translation = await grokService.translateContent(queryText);
       if (typeof translation === 'object' && translation.text) {
         processedQuery = translation.text;
         storeTranslation(queryText, processedQuery);
