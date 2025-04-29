@@ -1,4 +1,3 @@
-
 import { apiClient } from '../api/grok/apiClient';
 import { getGrokApiKey } from '../apiKeyService';
 
@@ -152,12 +151,8 @@ function fileToBase64(file: File): Promise<string> {
 
 /**
  * Extract text content from PDF files
- * Note: This is a simplified implementation. In a real-world scenario, 
- * you would use a PDF parsing library.
  */
 async function extractPdfText(file: File): Promise<{ content: string; source: string }> {
-  // In a real implementation, you would use a library like pdf.js
-  // For now, return a placeholder message
   return { 
     content: `PDF text extraction would process the content of ${file.name}. In a complete implementation, this would use a library like pdf.js to extract actual text content.`, 
     source: file.name 
@@ -168,7 +163,6 @@ async function extractPdfText(file: File): Promise<{ content: string; source: st
  * Extract text content from Word documents
  */
 async function extractWordText(file: File): Promise<{ content: string; source: string }> {
-  // In a real implementation, you would use a library for DOCX parsing
   return { 
     content: `Word document text extraction would process the content of ${file.name}. In a complete implementation, this would use a specialized library to extract text from .doc/.docx files.`, 
     source: file.name 
@@ -179,7 +173,6 @@ async function extractWordText(file: File): Promise<{ content: string; source: s
  * Extract text content from Excel files
  */
 async function extractExcelText(file: File): Promise<{ content: string; source: string }> {
-  // In a real implementation, you would use a library for Excel parsing
   return { 
     content: `Excel spreadsheet text extraction would process the content of ${file.name}. In a complete implementation, this would use a specialized library to extract data from Excel files and format it as text.`, 
     source: file.name 
