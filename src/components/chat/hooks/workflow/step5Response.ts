@@ -6,6 +6,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * Step 5: Response Generation
  * - Compile final response from all context
  * - Translate to Chinese if original query was Chinese
+ * - Support automatic batching for long responses
  */
 export const executeStep5 = async (
   params: any, 
@@ -21,9 +22,19 @@ export const executeStep5 = async (
                            params.listingRulesContext || 
                            params.takeoversCodeContext || '';
     
+    // Check if the query is likely to need batching
+    const isPotentiallyLongResponse = params.query.length > 300 || 
+                                     params.query.toLowerCase().includes('timetable') ||
+                                     params.query.toLowerCase().includes('rights issue') ||
+                                     params.query.toLowerCase().includes('connected transaction');
+    
     const responseParams = {
-      prompt: params.query,
-      regulatoryContext: responseContext
+      prompt: isPotentiallyLongResponse 
+        ? `${params.query} [NOTE: This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.]` 
+        : params.query,
+      regulatoryContext: responseContext,
+      // Set a modest token limit to encourage batching rather than one huge response
+      maxTokens: isPotentiallyLongResponse ? 4000 : undefined
     };
     
     // Generate response using Grok
@@ -31,6 +42,18 @@ export const executeStep5 = async (
     
     // Extract response text safely using our utility
     const responseText = safelyExtractText(response);
+    
+    // Check if the response appears truncated or incomplete
+    const appearsTruncated = responseText.includes('...') || 
+                            responseText.includes('to be continued') ||
+                            responseText.includes('in the next part') ||
+                            responseText.length > 3500;
+    
+    const metadata = {
+      ...response.metadata,
+      mayRequireBatching: isPotentiallyLongResponse || appearsTruncated,
+      batchSuggestion: appearsTruncated ? "This response appears to be incomplete. Consider using the Continue button to see additional information." : undefined
+    };
     
     // Step 5(b): If original input was Chinese, translate response
     if (lastInputWasChinese) {
@@ -50,7 +73,8 @@ export const executeStep5 = async (
           completed: true,
           originalResponse: responseText,
           translatedResponse: translatedText,
-          requiresTranslation: true
+          requiresTranslation: true,
+          metadata
         };
       } catch (translationError) {
         console.error('Translation error:', translationError);
@@ -60,7 +84,8 @@ export const executeStep5 = async (
           completed: true,
           response: responseText,
           translationError,
-          requiresTranslation: true
+          requiresTranslation: true,
+          metadata
         };
       }
     }
@@ -68,7 +93,8 @@ export const executeStep5 = async (
     // Return English response
     return {
       completed: true,
-      response: responseText
+      response: responseText,
+      metadata
     };
   } catch (error) {
     console.error('Error in step 5:', error);
