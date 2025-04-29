@@ -1,11 +1,12 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
+import ApiConnectionStatus from './ApiConnectionStatus';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -34,7 +35,13 @@ const ChatInterface: React.FC = () => {
   } = useChatLogic();
 
   const { toast } = useToast();
-  const { processFiles, isProcessing } = useFileProcessing();
+  const { 
+    processFiles, 
+    isProcessing, 
+    isOfflineMode, 
+    tryReconnect 
+  } = useFileProcessing();
+  
   const { 
     attachedFiles, 
     handleFileSelect, 
@@ -42,6 +49,18 @@ const ChatInterface: React.FC = () => {
     removeAttachedFile, 
     hasAttachedFiles 
   } = useFileAttachments();
+
+  // Show warning if in offline mode and there are attached files
+  useEffect(() => {
+    if (isOfflineMode && hasAttachedFiles) {
+      toast({
+        title: "Limited File Processing",
+        description: "You're in offline mode. File processing will be limited.",
+        variant: "warning",
+        duration: 5000,
+      });
+    }
+  }, [isOfflineMode, hasAttachedFiles, toast]);
 
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
@@ -76,6 +95,12 @@ const ChatInterface: React.FC = () => {
   return (
     <>
       <div className="container mx-auto py-6">
+        <ApiConnectionStatus 
+          onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
+          isOfflineMode={isOfflineMode}
+          onTryReconnect={tryReconnect}
+        />
+        
         <ChatContainer
           messages={messages}
           isLoading={isLoading || isProcessing}
@@ -98,6 +123,7 @@ const ChatInterface: React.FC = () => {
           isProcessingFiles={isProcessing}
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
+          isOfflineMode={isOfflineMode}
         />
       </div>
       

@@ -7,9 +7,15 @@ import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
+  isOfflineMode?: boolean; // New prop to indicate offline mode
+  onTryReconnect?: () => Promise<boolean>; // New callback for reconnection attempts
 }
 
-const ApiConnectionStatus = ({ onOpenApiKeyDialog }: ApiConnectionStatusProps) => {
+const ApiConnectionStatus = ({ 
+  onOpenApiKeyDialog, 
+  isOfflineMode: externalOfflineMode, // Provided from parent
+  onTryReconnect 
+}: ApiConnectionStatusProps) => {
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean | null;
     message: string;
@@ -22,7 +28,45 @@ const ApiConnectionStatus = ({ onOpenApiKeyDialog }: ApiConnectionStatusProps) =
     isOfflineMode: false
   });
 
+  // Update internal state when external offline mode changes
+  useEffect(() => {
+    if (externalOfflineMode !== undefined) {
+      setConnectionStatus(prev => ({
+        ...prev,
+        success: !externalOfflineMode,
+        isOfflineMode: externalOfflineMode,
+        loading: false,
+        message: externalOfflineMode 
+          ? 'API is unreachable. Operating in offline mode with limited functionality.' 
+          : 'API connection is active.'
+      }));
+    }
+  }, [externalOfflineMode]);
+
   const checkConnection = async () => {
+    // If external reconnect handler is provided, use it
+    if (onTryReconnect) {
+      setConnectionStatus(prev => ({
+        ...prev,
+        loading: true,
+        message: 'Checking API connection...'
+      }));
+      
+      const success = await onTryReconnect();
+      
+      setConnectionStatus({
+        success,
+        message: success 
+          ? 'API connection restored successfully.' 
+          : 'API is still unreachable. Please check your internet connection and API key.',
+        loading: false,
+        isOfflineMode: !success
+      });
+      
+      return;
+    }
+    
+    // Fallback to original implementation
     setConnectionStatus({
       success: null,
       message: 'Checking API connection...',
@@ -66,8 +110,11 @@ const ApiConnectionStatus = ({ onOpenApiKeyDialog }: ApiConnectionStatusProps) =
   };
 
   useEffect(() => {
-    checkConnection();
-  }, []);
+    // Only check connection if external offline mode is not provided
+    if (externalOfflineMode === undefined) {
+      checkConnection();
+    }
+  }, [externalOfflineMode]);
 
   return (
     <div className="mb-4">
