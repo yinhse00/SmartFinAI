@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { RegulationProvision } from '../types';
+import { RegulationProvision } from '../types/index';
 
 export const provisionService = {
   /**
