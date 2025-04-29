@@ -72,7 +72,7 @@ export const useResponseFormatter = () => {
       reasoning: reasoning,
       queryType: response.queryType,
       isTruncated: isTruncated,
-      batchPart: response.batchPart
+      isBatchPart: response.batchPart ? true : false
     };
     
     return botMessage;

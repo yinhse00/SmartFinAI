@@ -16,7 +16,7 @@ export const useResponseProcessor = (
   const { isFallbackResponse } = useFallbackDetection();
 
   const processApiResponse = (
-    apiResponse: GrokResponse,
+    apiResponse: GrokResponse & { batchPart?: number },
     processedMessages: Message[],
     regulatoryContext: string | undefined,
     reasoning: string | undefined,
@@ -32,7 +32,7 @@ export const useResponseProcessor = (
       regulatoryContext,
       reasoning,
       isUsingFallback
-    ) as Message & { isBatchPart?: boolean };
+    ) as Message;
 
     // If in batching mode, mark the message batch part.
     if (batchInfo && batchInfo.batchNumber > 1) {

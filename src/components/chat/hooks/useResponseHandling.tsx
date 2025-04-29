@@ -99,16 +99,18 @@ export const useResponseHandling = (
 
       console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
 
-      // Inject batch part number into the response for formatting
-      if (batchInfo && batchInfo.batchNumber) {
-        apiResponse.batchPart = batchInfo.batchNumber;
-      }
+      // Add batch part to our extended API response
+      const apiResponseWithBatch = {
+        ...apiResponse,
+        // Add this property for internal use only - won't be part of the GrokResponse type
+        batchPart: batchInfo?.batchNumber
+      };
 
       if (!completenessCheck.isComplete) {
         console.log("Response appears incomplete, marking as truncated");
 
-        apiResponse.metadata = {
-          ...apiResponse.metadata,
+        apiResponseWithBatch.metadata = {
+          ...apiResponseWithBatch.metadata,
           responseCompleteness: {
             isComplete: false,
             confidence: completenessCheck.financialAnalysis?.confidence || 'medium',
@@ -118,7 +120,7 @@ export const useResponseHandling = (
 
         // Only add this note if it's not a batch continuation
         if (!batchInfo || batchInfo.batchNumber <= 1) {
-          apiResponse.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Continue' button for the next part.]";
+          apiResponseWithBatch.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Continue' button for the next part.]";
         }
 
         // Proactively handle batch continuation
@@ -132,7 +134,7 @@ export const useResponseHandling = (
       }
 
       return processApiResponse(
-        apiResponse,
+        apiResponseWithBatch,
         processedMessages,
         regulatoryContext,
         reasoning,

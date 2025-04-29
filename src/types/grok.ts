@@ -11,6 +11,7 @@ export interface GrokRequestParams {
 export interface GrokResponse {
   text: string;
   queryType: string;
+  batchPart?: number;
   metadata?: {
     contextUsed?: boolean;
     relevanceScore?: number;
