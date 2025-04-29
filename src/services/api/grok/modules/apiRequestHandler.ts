@@ -12,15 +12,8 @@ import { extractPromptText } from './requestHelper';
  */
 export const handleChatCompletions = async (requestBody: any, providedApiKey?: string): Promise<any> => {
   try {
-    // Add environment consistency flag to ensure same behavior in dev and production
-    const enhancedRequestBody = {
-      ...requestBody,
-      environmentConsistency: true,
-      useStableParameters: true
-    };
-    
     // Process the request through our optimized request processor
-    const data = await processApiRequest(enhancedRequestBody, providedApiKey);
+    const data = await processApiRequest(requestBody, providedApiKey);
     
     // Track token usage and response quality
     trackApiResponseMetrics(providedApiKey || '', data);
