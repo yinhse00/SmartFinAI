@@ -1,0 +1,77 @@
+
+import { supabase } from '@/integrations/supabase/client';
+import { RegulationProvision } from '../types';
+
+/**
+ * Service for managing regulatory provisions
+ */
+export const provisionService = {
+  /**
+   * Get all provisions for a specific chapter
+   */
+  getProvisionsByChapter: async (chapter: string): Promise<RegulationProvision[]> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .select('*')
+      .eq('chapter', chapter)
+      .order('rule_number');
+    
+    if (error) {
+      console.error(`Error fetching provisions for chapter ${chapter}:`, error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  /**
+   * Add a provision to the database
+   */
+  addProvision: async (provision: RegulationProvision): Promise<RegulationProvision | null> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .insert(provision)
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error adding provision:', error);
+      return null;
+    }
+    
+    return data;
+  },
+  
+  /**
+   * Add multiple provisions in a batch operation
+   */
+  addProvisions: async (provisions: RegulationProvision[]): Promise<number> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .insert(provisions);
+    
+    if (error) {
+      console.error('Error adding provisions in batch:', error);
+      return 0;
+    }
+    
+    return provisions.length;
+  },
+
+  /**
+   * Get provisions by source document ID
+   */
+  getProvisionsBySourceDocument: async (documentId: string): Promise<RegulationProvision[]> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .select('*')
+      .eq('source_document_id', documentId);
+    
+    if (error) {
+      console.error(`Error fetching provisions for document ${documentId}:`, error);
+      return [];
+    }
+    
+    return data || [];
+  }
+};

@@ -8,15 +8,7 @@ import { regulatoryDatabaseService } from '@/services/database/regulatoryDatabas
 import { toast } from '@/components/ui/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-
-interface RegulationProvision {
-  id: string;
-  rule_number: string;
-  title: string;
-  content: string;
-  chapter?: string;
-  section?: string;
-}
+import { RegulationProvision } from '@/services/database/types';
 
 const RegulatorySearch = () => {
   const [searchQuery, setSearchQuery] = useState('');
