@@ -10,6 +10,7 @@ import { Database, BookOpen, FileText, BarChart2, MessageSquare } from 'lucide-r
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useTruncationAnalyzer } from './analysis/TruncationAnalyzer';
 import BatchContinuation from './batch/BatchContinuation';
+import WorkflowIndicator from './workflow/WorkflowIndicator';
 
 const ChatInterface = () => {
   const {
@@ -52,38 +53,20 @@ const ChatInterface = () => {
     lastInputWasChinese
   });
 
-  // Helper function to render the appropriate workflow indicator
-  const renderWorkflowIndicator = () => {
-    if (!isLoading) return null;
-    
-    const getIcon = () => {
-      switch (currentStep) {
-        case 'initial':
-          return <MessageSquare size={14} className="animate-pulse" />;
-        case 'listingRules':
-          return <BookOpen size={14} className="animate-pulse" />;
-        case 'takeoversCode':
-          return <FileText size={14} className="animate-pulse" />;
-        case 'execution':
-          return <BarChart2 size={14} className="animate-pulse" />;
-        default:
-          return <Database size={14} className="animate-pulse" />;
-      }
-    };
-    
-    return (
-      <div className="flex items-center justify-center mb-2 gap-2 text-xs text-finance-medium-blue dark:text-finance-light-blue">
-        {getIcon()}
-        <span className="font-medium">{stepProgress}</span>
-        <span className="text-[10px] bg-finance-light-blue/20 dark:bg-finance-medium-blue/30 px-1.5 py-0.5 rounded-full">
-          {currentStep === 'initial' && 'Analyzing query'}
-          {currentStep === 'listingRules' && 'Checking Listing Rules'}
-          {currentStep === 'takeoversCode' && 'Reviewing Takeovers Code'}
-          {currentStep === 'execution' && 'Finding execution guidance'}
-          {currentStep === 'response' && 'Preparing response'}
-        </span>
-      </div>
-    );
+  // Helper function to map workflow steps to processing stage
+  const mapWorkflowToProcessingStage = (workflowStep: string): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
+    switch (workflowStep) {
+      case 'initial':
+        return 'preparing';
+      case 'listingRules':
+      case 'takeoversCode':
+        return 'reviewing';
+      case 'execution':
+        return 'processing';
+      case 'response':
+      default:
+        return 'finalizing';
+    }
   };
 
   return (
@@ -92,9 +75,15 @@ const ChatInterface = () => {
         <ApiConnectionStatus onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)} />
 
         <div className="flex-1 flex flex-col">
-          {isLoading && <ProcessingIndicator isVisible={true} stage={currentStep} />}
+          {isLoading && <ProcessingIndicator 
+            isVisible={true} 
+            stage={mapWorkflowToProcessingStage(currentStep)} 
+          />}
 
-          {renderWorkflowIndicator()}
+          {isLoading && <WorkflowIndicator 
+            currentStep={currentStep} 
+            stepProgress={stepProgress}
+          />}
 
           <ChatContainer
             messages={messages}

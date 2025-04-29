@@ -58,7 +58,7 @@ export const useWorkflowProcessor = (
     
     try {
       // Check if query is related to Listing Rules or Takeovers Code
-      const { regulatoryContext, reasoning } = await retrieveRegulatoryContext(processedQuery, false);
+      const { regulatoryContext, reasoning } = await retrieveRegulatoryContext(processedQuery);
       
       // Step 1(f): If not related to regulations, skip to response
       if (!regulatoryContext || regulatoryContext.trim() === '') {
@@ -123,9 +123,12 @@ export const useWorkflowProcessor = (
     
     try {
       // Step 2(a): Search Summary and Keyword Index for Listing Rules
-      const { context: listingRulesContext, reasoning } = await grokService.getRegulatoryContext(
+      const response = await grokService.getRegulatoryContext(
         `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
       );
+      
+      const listingRulesContext = response.text || '';
+      const reasoning = '';
       
       // Step 2(b-c): Check if search was positive or negative
       const searchPositive = listingRulesContext && listingRulesContext.trim() !== '';
@@ -139,9 +142,11 @@ export const useWorkflowProcessor = (
         
         if (chapterMatch && chapterMatch[1]) {
           const chapterNum = chapterMatch[1];
-          const { context: chapterContext } = await grokService.getRegulatoryContext(
+          const chapterResponse = await grokService.getRegulatoryContext(
             `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
           );
+          
+          const chapterContext = chapterResponse.text || '';
           
           if (chapterContext) {
             enhancedContext += "\n\n--- Detailed Chapter Information ---\n\n" + chapterContext;
@@ -242,9 +247,12 @@ export const useWorkflowProcessor = (
     
     try {
       // Step 3(a): Search Summary and Index for Takeovers Code
-      const { context: takeoversCodeContext, reasoning } = await grokService.getRegulatoryContext(
+      const response = await grokService.getRegulatoryContext(
         `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
       );
+      
+      const takeoversCodeContext = response.text || '';
+      const reasoning = '';
       
       // Step 3(b-c): Check if search was positive
       const searchPositive = takeoversCodeContext && takeoversCodeContext.trim() !== '';
@@ -253,9 +261,11 @@ export const useWorkflowProcessor = (
         setStepProgress('Found relevant Takeovers Code information');
         
         // Search in the codes on takeovers and mergers document
-        const { context: detailedTakeoverContext } = await grokService.getRegulatoryContext(
+        const detailedResponse = await grokService.getRegulatoryContext(
           `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
         );
+        
+        const detailedTakeoverContext = detailedResponse.text || '';
         
         let enhancedContext = takeoversCodeContext;
         if (detailedTakeoverContext) {
@@ -362,9 +372,11 @@ export const useWorkflowProcessor = (
       
       // Step 4(a): Check Documents Checklist
       setStepProgress('Checking document requirements');
-      const { context: checklistContext } = await grokService.getRegulatoryContext(
+      const checklistResponse = await grokService.getRegulatoryContext(
         `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
       );
+      
+      const checklistContext = checklistResponse.text || '';
       
       if (checklistContext && checklistContext.trim() !== '') {
         executionContexts.push("--- Document Requirements ---\n\n" + checklistContext);
@@ -372,9 +384,11 @@ export const useWorkflowProcessor = (
       
       // Step 4(b): Check Working Plan
       setStepProgress('Retrieving working plan information');
-      const { context: workingPlanContext } = await grokService.getRegulatoryContext(
+      const workingPlanResponse = await grokService.getRegulatoryContext(
         `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
       );
+      
+      const workingPlanContext = workingPlanResponse.text || '';
       
       if (workingPlanContext && workingPlanContext.trim() !== '') {
         executionContexts.push("--- Working Plan ---\n\n" + workingPlanContext);
@@ -382,9 +396,11 @@ export const useWorkflowProcessor = (
       
       // Step 4(c): Check Timetable
       setStepProgress('Getting timetable information');
-      const { context: timetableContext } = await grokService.getRegulatoryContext(
+      const timetableResponse = await grokService.getRegulatoryContext(
         `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
       );
+      
+      const timetableContext = timetableResponse.text || '';
       
       if (timetableContext && timetableContext.trim() !== '') {
         executionContexts.push("--- Transaction Timeline ---\n\n" + timetableContext);

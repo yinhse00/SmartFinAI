@@ -9,7 +9,7 @@ import { extractKeyTerms } from '@/services/database/utils/textProcessing';
 export const useContextRetrieval = () => {
   const retrieveRegulatoryContext = async (
     queryText: string,
-    isFaqQuery: boolean
+    isFaqQuery: boolean = false
   ) => {
     let regulatoryContext = '';
     let reasoning = '';
