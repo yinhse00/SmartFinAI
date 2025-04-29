@@ -1,7 +1,5 @@
 import { apiClient } from '../api/grok/apiClient';
 import { getGrokApiKey } from '../apiKeyService';
-import pdfParse from 'pdf-parse';
-import mammoth from 'mammoth';
 import * as XLSX from 'xlsx';
 
 /**
@@ -153,28 +151,14 @@ function fileToBase64(file: File): Promise<string> {
 }
 
 /**
- * Extract text content from PDF files
+ * Extract text content from PDF files using browser-compatible approach
  */
 async function extractPdfText(file: File): Promise<{ content: string; source: string }> {
   try {
     console.log(`Processing PDF: ${file.name}`);
     
-    // Convert file to ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    
-    // Parse PDF using pdf-parse
-    const pdfData = await pdfParse(uint8Array);
-    
-    // Get text content
-    const textContent = pdfData.text || '';
-    
-    console.log(`Successfully extracted ${textContent.length} characters from PDF ${file.name}`);
-    
-    return {
-      content: textContent,
-      source: file.name
-    };
+    // Since pdf-parse uses Node.js fs, we'll use Grok Vision as a fallback for PDFs in the browser
+    return await extractDocumentWithGrok(file, 'PDF');
   } catch (error) {
     console.error(`Error extracting PDF text from ${file.name}:`, error);
     return {
@@ -191,19 +175,8 @@ async function extractWordText(file: File): Promise<{ content: string; source: s
   try {
     console.log(`Processing Word document: ${file.name}`);
     
-    // Convert file to ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    
-    // Extract text using mammoth
-    const result = await mammoth.extractRawText({ arrayBuffer });
-    const textContent = result.value || '';
-    
-    console.log(`Successfully extracted ${textContent.length} characters from Word document ${file.name}`);
-    
-    return {
-      content: textContent,
-      source: file.name
-    };
+    // Since mammoth uses Node.js dependencies, we'll use Grok Vision as a fallback
+    return await extractDocumentWithGrok(file, 'Word');
   } catch (error) {
     console.error(`Error extracting Word text from ${file.name}:`, error);
     return {
@@ -215,6 +188,7 @@ async function extractWordText(file: File): Promise<{ content: string; source: s
 
 /**
  * Extract text content from Excel files
+ * XLSX.js is browser compatible, so we can keep this implementation
  */
 async function extractExcelText(file: File): Promise<{ content: string; source: string }> {
   try {
@@ -256,6 +230,69 @@ async function extractExcelText(file: File): Promise<{ content: string; source: 
     console.error(`Error extracting Excel data from ${file.name}:`, error);
     return {
       content: `Error extracting data from Excel file ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      source: file.name
+    };
+  }
+}
+
+/**
+ * Use Grok Vision to extract text from documents as a fallback method
+ */
+async function extractDocumentWithGrok(file: File, documentType: string): Promise<{ content: string; source: string }> {
+  try {
+    console.log(`Processing ${documentType} with Grok Vision: ${file.name}`);
+    
+    // Convert file to base64
+    const base64Data = await fileToBase64(file);
+    if (!base64Data) {
+      throw new Error(`Failed to convert ${documentType} to base64`);
+    }
+    
+    // Prepare request for Grok Vision API
+    const apiKey = getGrokApiKey();
+    if (!apiKey) {
+      throw new Error('Grok API key not found');
+    }
+    
+    const requestBody = {
+      model: "grok-2-vision-latest",
+      messages: [
+        {
+          role: "user", 
+          content: [
+            { 
+              type: "text", 
+              text: `Extract all the text from this ${documentType} file. Format it in a clear, readable way maintaining paragraphs, headings, and bullet points if present.` 
+            },
+            { 
+              type: "image_url", 
+              image_url: { 
+                url: base64Data 
+              } 
+            }
+          ]
+        }
+      ],
+      temperature: 0.1,
+      max_tokens: 4000,
+    };
+    
+    // Call Grok API
+    const response = await apiClient.callChatCompletions(requestBody, apiKey);
+    
+    // Extract the text content from the response
+    const extractedText = response.choices[0]?.message?.content || `No text was extracted from the ${documentType} file`;
+    
+    console.log(`Successfully extracted text from ${documentType} ${file.name}`);
+    
+    return {
+      content: extractedText,
+      source: file.name
+    };
+  } catch (error) {
+    console.error(`Error in ${documentType} processing for ${file.name}:`, error);
+    return {
+      content: `Error extracting text from ${documentType} ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
       source: file.name
     };
   }
