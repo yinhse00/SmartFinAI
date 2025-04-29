@@ -10,7 +10,7 @@ import { statsService } from './services/statsService';
 export type { 
   RegulationProvision,
   RegulationCategory,
-  RegulationDefinition
+  RegulationDefinition 
 } from './types';
 
 /**
