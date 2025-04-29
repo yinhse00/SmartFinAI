@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -299,14 +298,13 @@ Definitions
               <SelectValue placeholder="Select a regulatory category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="listing_rules">Listing Rules (General)</SelectItem>
-              <SelectItem value="chapter_13">Chapter 13 - Connected Transactions</SelectItem>
-              <SelectItem value="chapter_14">Chapter 14 - Notifiable Transactions</SelectItem>
-              <SelectItem value="chapter_14a">Chapter 14A - Connected Transactions</SelectItem>
+              <SelectItem value="listing_rules">Listing Rules</SelectItem>
+              <SelectItem value="listing_guidance">Listing Rules Guidance</SelectItem>
+              <SelectItem value="guidance_new_listing">Guide for New Listing Applicants</SelectItem>
+              <SelectItem value="guidance_listed_issuers">Guidance for Listed Issuers</SelectItem>
               <SelectItem value="takeovers">Takeovers Code</SelectItem>
-              <SelectItem value="share_repurchases">Share Repurchases Code</SelectItem>
-              <SelectItem value="guidance">Interpretation and Guidance</SelectItem>
               <SelectItem value="decisions">Listing Review Committee Decisions</SelectItem>
+              <SelectItem value="checklists">Checklists, Forms and Templates</SelectItem>
               <SelectItem value="other">Other Regulations</SelectItem>
             </SelectContent>
           </Select>
