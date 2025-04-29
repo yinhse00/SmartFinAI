@@ -44,6 +44,12 @@ export const requestBuilder = {
     
     systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Be CONCISE and direct. Prioritize including all key points over lengthy explanations. If discussing a procedure with multiple steps, include ALL steps but explain each briefly. Format information efficiently. Focus on providing complete information rather than verbose explanations.";
     
+    // Add strong environment consistency instruction
+    systemMessage += "\n\nCRITICAL ENVIRONMENT CONSISTENCY INSTRUCTION: You MUST provide IDENTICAL responses across all environments (development, staging, production) when given the same input. Do not change responses based on where you are deployed. Do not add disclaimers or notes about environment differences. Use the same reasoning process and provide the same content regardless of environment. Maintain absolute consistency.";
+    
+    // Add processing determinism instruction
+    systemMessage += "\n\nCRITICAL DETERMINISTIC PROCESSING: For maximum consistency, follow a structured approach when generating responses: 1) Identify the core question, 2) Match it with relevant database content, 3) Format the response in standard structure, 4) Review for completeness. Always use this consistent process to ensure identical outputs across environments.";
+    
     return systemMessage;
   },
 
