@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
-import { RegulationProvision } from '@/services/database/types';
+import { RegulationProvision } from '@/services/database/types/index';
 
 interface ChapterListProps {
   provisionsByChapter: Record<string, RegulationProvision[]>;

@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { RegulationDefinition } from '../types';
+import { RegulationDefinition } from '../types/index';
 
 /**
  * Service for managing regulatory definitions

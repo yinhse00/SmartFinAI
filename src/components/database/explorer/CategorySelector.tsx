@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Loader2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import { RegulationCategory } from '@/services/database/types';
+import { RegulationCategory } from '@/services/database/types/index';
 
 interface CategorySelectorProps {
   onSelectCategory: (categoryId: string) => void;

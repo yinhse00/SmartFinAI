@@ -1,7 +1,7 @@
 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { RegulationProvision } from '@/services/database/types';
+import { RegulationProvision } from '@/services/database/types/index';
 
 interface ProvisionDialogProps {
   provision: RegulationProvision | null;

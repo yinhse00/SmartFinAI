@@ -1,6 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { RegulationCategory } from '../types';
+import { RegulationCategory } from '../types/index';
 
 /**
  * Service for managing regulatory categories

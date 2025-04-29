@@ -11,7 +11,7 @@ export type {
   RegulationProvision,
   RegulationCategory,
   RegulationDefinition 
-} from './types';
+} from './types/index';
 
 /**
  * Combined service for regulatory database operations

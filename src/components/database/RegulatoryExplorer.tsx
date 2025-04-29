@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { RegulationProvision } from '@/services/database/types';
+import { RegulationProvision } from '@/services/database/types/index';
 import CategorySelector from './explorer/CategorySelector';
 import ChapterList from './explorer/ChapterList';
 import ProvisionDialog from './explorer/ProvisionDialog';
