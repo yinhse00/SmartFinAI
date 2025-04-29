@@ -40,9 +40,31 @@ const ChatInterface: React.FC = () => {
     const newFiles = Array.from(files);
     setSelectedFiles(prev => [...prev, ...newFiles]);
     
+    // Determine file type for better user feedback
+    const fileTypes = Array.from(files).map(file => {
+      if (file.type.includes('image')) return 'image';
+      if (file.type.includes('pdf')) return 'PDF';
+      if (file.type.includes('word') || file.name.endsWith('.doc') || file.name.endsWith('.docx')) return 'document';
+      if (file.type.includes('excel') || file.name.endsWith('.xls') || file.name.endsWith('.xlsx')) return 'spreadsheet';
+      return 'file';
+    });
+    
+    // Count file types for better messaging
+    const imageCount = fileTypes.filter(type => type === 'image').length;
+    const documentCount = fileTypes.length - imageCount;
+    
+    let description = `${newFiles.length} file(s) have been selected.`;
+    if (imageCount > 0 && documentCount > 0) {
+      description = `${imageCount} image(s) and ${documentCount} document(s) have been selected.`;
+    } else if (imageCount > 0) {
+      description = `${imageCount} image(s) have been selected.`;
+    } else if (documentCount > 0) {
+      description = `${documentCount} document(s) have been selected.`;
+    }
+    
     toast({
       title: "Files uploaded",
-      description: `${newFiles.length} file(s) have been selected.`,
+      description,
     });
     
     // Process the files to extract content

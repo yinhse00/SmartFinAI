@@ -3,7 +3,7 @@ import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2 } from 'lucide-react';
-import UploadButtons from './upload/UploadButtons';
+import UnifiedUploadButton from './upload/UnifiedUploadButton';
 
 interface ChatInputProps {
   input: string;
@@ -32,7 +32,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     <div className="p-4 border-t">
       <div className="flex gap-2 items-center">
         {onFileSelect && (
-          <UploadButtons 
+          <UnifiedUploadButton 
             onFileSelect={onFileSelect} 
             isProcessing={isProcessingFiles}
           />
