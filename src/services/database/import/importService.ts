@@ -73,7 +73,8 @@ export const importRegulatoryContent = async (
       console.log(`Using category code: ${categoryCode}`);
     }
     
-    const categoryId = await regulatoryDatabaseService.getCategoryIdByCode(categoryCode);
+    // Changed from const to let since we need to reassign it later
+    let categoryId = await regulatoryDatabaseService.getCategoryIdByCode(categoryCode);
     
     if (!categoryId) {
       result.errors.push(`Could not find category ID for code: ${categoryCode}`);
