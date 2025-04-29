@@ -77,9 +77,8 @@ export const useChatLogic = () => {
   
   // Handle batch continuation
   const handleContinueBatch = async () => {
-    // The issue is here - we need to make this an async function that returns a Promise
-    // to match the expected type signature from the useBatchHandling hook
-    continueBatch(async (query, options) => {
+    // Create a Promise-returning function that wraps executeWorkflow
+    await continueBatch(async (query, options) => {
       checkIsChineseInput(query);
       await executeWorkflow(query);
       return Promise.resolve();

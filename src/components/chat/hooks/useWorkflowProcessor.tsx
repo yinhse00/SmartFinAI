@@ -26,7 +26,7 @@ export const useWorkflowProcessor = ({
   const [stepProgress, setStepProgress] = useState<string>('');
   
   const { createUserMessage, handleProcessingError } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
-  const { lastInputWasChinese, checkIsChineseInput, storeTranslation } = useLanguageState();
+  const { lastInputWasChinese, storeTranslation } = useLanguageState();
   const { retrieveRegulatoryContext } = useContextRetrieval();
 
   /**
@@ -88,7 +88,7 @@ export const useWorkflowProcessor = ({
       let stepResult: StepResult | undefined;
       
       // Execute subsequent steps based on the workflow
-      while (nextStep !== 'response' || !stepResult?.completed) {
+      while (nextStep !== 'complete') {
         switch (nextStep) {
           case 'listingRules':
             setCurrentStep('listingRules');
@@ -118,15 +118,15 @@ export const useWorkflowProcessor = ({
             };
             
             setMessages([...updatedMessages, botMessage]);
-            nextStep = 'complete' as any;
+            nextStep = 'complete';
             break;
             
           default:
-            nextStep = 'complete' as any;
+            nextStep = 'complete';
             break;
         }
         
-        if (stepResult && stepResult.nextStep) {
+        if (stepResult && stepResult.nextStep && nextStep !== 'complete') {
           nextStep = stepResult.nextStep;
           currentParams = { ...currentParams, ...stepResult };
         } else if (nextStep !== 'complete') {

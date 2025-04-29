@@ -11,6 +11,7 @@ import { useMessageTranslator } from './translation/MessageTranslator';
 import { useTruncationAnalyzer } from './analysis/TruncationAnalyzer';
 import BatchContinuation from './batch/BatchContinuation';
 import WorkflowIndicator from './workflow/WorkflowIndicator';
+import { WorkflowStep } from './hooks/workflow/types';
 
 const ChatInterface = () => {
   const {
@@ -54,7 +55,7 @@ const ChatInterface = () => {
   });
 
   // Helper function to map workflow steps to processing stage
-  const mapWorkflowToProcessingStage = (workflowStep: string): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
+  const mapWorkflowToProcessingStage = (workflowStep: WorkflowStep): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
     switch (workflowStep) {
       case 'initial':
         return 'preparing';
@@ -64,6 +65,7 @@ const ChatInterface = () => {
       case 'execution':
         return 'processing';
       case 'response':
+      case 'complete':
       default:
         return 'finalizing';
     }

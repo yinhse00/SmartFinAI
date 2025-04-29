@@ -41,3 +41,8 @@ export const useLanguageState = () => {
     clearTranslation
   };
 };
+
+// Export standalone version for use in other files
+export const checkIsChineseInput = (input: string): boolean => {
+  return /[\u4e00-\u9fa5]/.test(input);
+};

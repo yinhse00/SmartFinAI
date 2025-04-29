@@ -13,7 +13,7 @@ export const executeStep1 = async (
   queryText: string,
   storeTranslation: (original: string, translated: string) => void,
   setStepProgress: (progress: string) => void,
-  retrieveRegulatoryContext: (queryText: string, isFaqQuery?: boolean) => Promise<any>
+  retrieveRegulatoryContext: (queryText: string) => Promise<any>
 ) => {
   setStepProgress('Receiving query and performing initial analysis');
   
@@ -26,9 +26,11 @@ export const executeStep1 = async (
     try {
       // Translate Chinese to English for processing
       const translation = await grokService.translateContent(queryText, 'en');
-      processedQuery = translation.text;
-      storeTranslation(queryText, processedQuery);
-      console.log('Translated query:', processedQuery);
+      if (typeof translation === 'object' && translation.text) {
+        processedQuery = translation.text;
+        storeTranslation(queryText, processedQuery);
+        console.log('Translated query:', processedQuery);
+      }
     } catch (error) {
       console.error('Translation error:', error);
       // Continue with original text if translation fails
@@ -40,7 +42,9 @@ export const executeStep1 = async (
   
   try {
     // Check if query is related to Listing Rules or Takeovers Code
-    const { regulatoryContext, reasoning } = await retrieveRegulatoryContext(processedQuery);
+    const result = await retrieveRegulatoryContext(processedQuery);
+    const regulatoryContext = result.regulatoryContext || '';
+    const reasoning = result.reasoning || '';
     
     // Step 1(f): If not related to regulations, skip to response
     if (!regulatoryContext || regulatoryContext.trim() === '') {

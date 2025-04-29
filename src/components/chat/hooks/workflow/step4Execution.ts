@@ -32,7 +32,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
     );
     
-    const checklistContext = checklistResponse.text || '';
+    const checklistContext = typeof checklistResponse === 'object' && checklistResponse.text ? 
+                            checklistResponse.text : 
+                            typeof checklistResponse === 'string' ? checklistResponse : '';
     
     if (checklistContext && checklistContext.trim() !== '') {
       executionContexts.push("--- Document Requirements ---\n\n" + checklistContext);
@@ -44,7 +46,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
     );
     
-    const workingPlanContext = workingPlanResponse.text || '';
+    const workingPlanContext = typeof workingPlanResponse === 'object' && workingPlanResponse.text ? 
+                              workingPlanResponse.text : 
+                              typeof workingPlanResponse === 'string' ? workingPlanResponse : '';
     
     if (workingPlanContext && workingPlanContext.trim() !== '') {
       executionContexts.push("--- Working Plan ---\n\n" + workingPlanContext);
@@ -56,7 +60,9 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
     );
     
-    const timetableContext = timetableResponse.text || '';
+    const timetableContext = typeof timetableResponse === 'object' && timetableResponse.text ? 
+                            timetableResponse.text : 
+                            typeof timetableResponse === 'string' ? timetableResponse : '';
     
     if (timetableContext && timetableContext.trim() !== '') {
       executionContexts.push("--- Transaction Timeline ---\n\n" + timetableContext);

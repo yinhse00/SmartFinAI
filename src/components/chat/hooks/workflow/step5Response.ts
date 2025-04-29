@@ -27,18 +27,32 @@ export const executeStep5 = async (
     
     // Generate response using Grok
     const response = await grokService.generateResponse(responseParams);
+    let responseText = '';
+    
+    if (typeof response === 'object' && response.text) {
+      responseText = response.text;
+    } else if (typeof response === 'string') {
+      responseText = response;
+    }
     
     // Step 5(b): If original input was Chinese, translate response
     if (lastInputWasChinese) {
       setStepProgress('Translating response to Chinese');
       
       try {
-        const translation = await grokService.translateContent(response.text, 'zh');
+        const translation = await grokService.translateContent(responseText, 'zh');
+        let translatedText = '';
+        
+        if (typeof translation === 'object' && translation.text) {
+          translatedText = translation.text;
+        } else if (typeof translation === 'string') {
+          translatedText = translation;
+        }
         
         return {
           completed: true,
-          originalResponse: response.text,
-          translatedResponse: translation.text,
+          originalResponse: responseText,
+          translatedResponse: translatedText,
           requiresTranslation: true
         };
       } catch (translationError) {
@@ -47,7 +61,7 @@ export const executeStep5 = async (
         // Return original response if translation fails
         return {
           completed: true,
-          response: response.text,
+          response: responseText,
           translationError,
           requiresTranslation: true
         };
@@ -57,7 +71,7 @@ export const executeStep5 = async (
     // Return English response
     return {
       completed: true,
-      response: response.text
+      response: responseText
     };
   } catch (error) {
     console.error('Error in step 5:', error);

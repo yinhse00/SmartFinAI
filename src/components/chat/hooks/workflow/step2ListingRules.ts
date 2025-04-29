@@ -16,7 +16,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
-    const listingRulesContext = response.text || '';
+    const listingRulesContext = typeof response === 'object' && response.text ? response.text : 
+                               typeof response === 'string' ? response : '';
     const reasoning = '';
     
     // Step 2(b-c): Check if search was positive or negative
@@ -35,7 +36,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
         );
         
-        const chapterContext = chapterResponse.text || '';
+        const chapterContext = typeof chapterResponse === 'object' && chapterResponse.text ? 
+                              chapterResponse.text : 
+                              typeof chapterResponse === 'string' ? chapterResponse : '';
         
         if (chapterContext) {
           enhancedContext += "\n\n--- Detailed Chapter Information ---\n\n" + chapterContext;
