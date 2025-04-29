@@ -36,7 +36,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     let checklistContext = '';
     
     if (checklistResponse) {
-      if (typeof checklistResponse === 'object' && 'text' in checklistResponse) {
+      if (typeof checklistResponse === 'object' && checklistResponse !== null && 'text' in checklistResponse) {
         checklistContext = checklistResponse.text || '';
       } else if (typeof checklistResponse === 'string') {
         checklistContext = checklistResponse;
@@ -56,7 +56,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     let workingPlanContext = '';
     
     if (workingPlanResponse) {
-      if (typeof workingPlanResponse === 'object' && 'text' in workingPlanResponse) {
+      if (typeof workingPlanResponse === 'object' && workingPlanResponse !== null && 'text' in workingPlanResponse) {
         workingPlanContext = workingPlanResponse.text || '';
       } else if (typeof workingPlanResponse === 'string') {
         workingPlanContext = workingPlanResponse;
@@ -76,7 +76,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     let timetableContext = '';
     
     if (timetableResponse) {
-      if (typeof timetableResponse === 'object' && 'text' in timetableResponse) {
+      if (typeof timetableResponse === 'object' && timetableResponse !== null && 'text' in timetableResponse) {
         timetableContext = timetableResponse.text || '';
       } else if (typeof timetableResponse === 'string') {
         timetableContext = timetableResponse;

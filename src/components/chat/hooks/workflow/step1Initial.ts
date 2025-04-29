@@ -32,8 +32,8 @@ export const executeStep1 = async (
         targetLanguage: 'en'
       });
       
-      if (typeof translation === 'object' && translation.text) {
-        processedQuery = translation.text;
+      if (typeof translation === 'object' && translation !== null && 'text' in translation) {
+        processedQuery = translation.text || '';
         storeTranslation(queryText, processedQuery);
         console.log('Translated query:', processedQuery);
       }

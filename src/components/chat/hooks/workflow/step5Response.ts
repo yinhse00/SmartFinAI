@@ -29,7 +29,7 @@ export const executeStep5 = async (
     const response = await grokService.generateResponse(responseParams);
     let responseText = '';
     
-    if (typeof response === 'object' && response.text) {
+    if (typeof response === 'object' && response !== null && 'text' in response) {
       responseText = response.text;
     } else if (typeof response === 'string') {
       responseText = response;
@@ -48,8 +48,8 @@ export const executeStep5 = async (
         
         let translatedText = '';
         
-        if (typeof translation === 'object' && translation.text) {
-          translatedText = translation.text;
+        if (typeof translation === 'object' && translation !== null && 'text' in translation) {
+          translatedText = translation.text || '';
         } else if (typeof translation === 'string') {
           translatedText = translation;
         }

@@ -20,7 +20,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     let takeoversCodeContext = '';
     
     if (response) {
-      if (typeof response === 'object' && 'text' in response) {
+      if (typeof response === 'object' && response !== null && 'text' in response) {
         takeoversCodeContext = response.text || '';
       } else if (typeof response === 'string') {
         takeoversCodeContext = response;
@@ -43,7 +43,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       let detailedTakeoverContext = '';
       
       if (detailedResponse) {
-        if (typeof detailedResponse === 'object' && 'text' in detailedResponse) {
+        if (typeof detailedResponse === 'object' && detailedResponse !== null && 'text' in detailedResponse) {
           detailedTakeoverContext = detailedResponse.text || '';
         } else if (typeof detailedResponse === 'string') {
           detailedTakeoverContext = detailedResponse;

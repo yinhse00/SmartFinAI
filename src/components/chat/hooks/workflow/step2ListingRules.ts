@@ -20,7 +20,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     let listingRulesContext = '';
     
     if (response) {
-      if (typeof response === 'object' && 'text' in response) {
+      if (typeof response === 'object' && response !== null && 'text' in response) {
         listingRulesContext = response.text || '';
       } else if (typeof response === 'string') {
         listingRulesContext = response;
@@ -48,7 +48,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         let chapterContext = '';
         
         if (chapterResponse) {
-          if (typeof chapterResponse === 'object' && 'text' in chapterResponse) {
+          if (typeof chapterResponse === 'object' && chapterResponse !== null && 'text' in chapterResponse) {
             chapterContext = chapterResponse.text || '';
           } else if (typeof chapterResponse === 'string') {
             chapterContext = chapterResponse;
