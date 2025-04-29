@@ -27,12 +27,12 @@ export const extractDefinitions = (content: string, categoryId: string | undefin
   ];
   
   for (const pattern of definitionPatterns) {
-    let match;
-    while ((match = pattern.exec(content)) !== null) {
-      if (match[1] && match[2] && match[1].trim().length > 0 && match[2].trim().length > 0) {
+    let matchResult;
+    while ((matchResult = pattern.exec(content)) !== null) {
+      if (matchResult[1] && matchResult[2] && matchResult[1].trim().length > 0 && matchResult[2].trim().length > 0) {
         definitions.push({
-          term: match[1].trim(),
-          definition: match[2].trim()
+          term: matchResult[1].trim(),
+          definition: matchResult[2].trim()
         });
       }
     }
@@ -40,11 +40,12 @@ export const extractDefinitions = (content: string, categoryId: string | undefin
   
   // Look for definition lists
   const definitionListPattern = /\(([^)]+)\)\s+(?:means|refers to|is defined as)\s+([^.]+\.)/g;
-  while ((match = definitionListPattern.exec(content)) !== null) {
-    if (match[1] && match[2] && match[1].trim().length > 0 && match[2].trim().length > 0) {
+  let listMatch;
+  while ((listMatch = definitionListPattern.exec(content)) !== null) {
+    if (listMatch[1] && listMatch[2] && listMatch[1].trim().length > 0 && listMatch[2].trim().length > 0) {
       definitions.push({
-        term: match[1].trim(),
-        definition: match[2].trim()
+        term: listMatch[1].trim(),
+        definition: listMatch[2].trim()
       });
     }
   }
