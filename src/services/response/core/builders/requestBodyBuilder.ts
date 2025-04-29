@@ -20,6 +20,11 @@ export const requestBodyBuilder = {
       isRetryAttempt
     );
     
+    // Create a deterministic request ID based on prompt content
+    // This helps ensure consistent responses across environments
+    const contentHash = this.createSimpleHash(enhancedPrompt);
+    const requestId = `req-${contentHash}`;
+    
     return {
       messages: [
         { role: 'system', content: systemMessage },
@@ -28,6 +33,11 @@ export const requestBodyBuilder = {
       model: "grok-3-mini-beta",
       temperature: finalTemperature,
       max_tokens: finalTokens,
+      environmentConsistency: true,
+      requestId: requestId,
+      useStableParameters: true,
+      envSignature: 'unified-env-2.0',
+      seed: contentHash // Use consistent seed for deterministic outputs
     };
   },
 
@@ -70,9 +80,24 @@ export const requestBodyBuilder = {
       };
     }
     
+    // Always use extremely low temperature for maximum consistency
     return {
       finalTokens: maxTokens,
-      finalTemperature: temperature
+      finalTemperature: Math.min(0.05, temperature) // Always use very low temperature for consistency
     };
+  },
+  
+  // Simple deterministic hashing function for generating consistent request IDs
+  createSimpleHash(text: string): number {
+    let hash = 0;
+    if (text.length === 0) return hash;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    return Math.abs(hash);
   }
 };

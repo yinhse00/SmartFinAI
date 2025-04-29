@@ -16,7 +16,9 @@ export const handleChatCompletions = async (requestBody: any, providedApiKey?: s
     const enhancedRequestBody = {
       ...requestBody,
       environmentConsistency: true,
-      useStableParameters: true
+      useStableParameters: true,
+      envSignature: 'unified-env-2.0',
+      preserveConsistency: true
     };
     
     // Process the request through our optimized request processor
