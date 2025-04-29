@@ -26,7 +26,12 @@ export const executeStep1 = async (
     setStepProgress('Translating Chinese query to English');
     try {
       // Translate Chinese to English for processing
-      const translation = await grokService.translateContent(queryText);
+      const translation = await grokService.translateContent({
+        content: queryText,
+        sourceLanguage: 'zh',
+        targetLanguage: 'en'
+      });
+      
       if (typeof translation === 'object' && translation.text) {
         processedQuery = translation.text;
         storeTranslation(queryText, processedQuery);

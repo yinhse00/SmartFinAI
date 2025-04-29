@@ -17,9 +17,16 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
-    const takeoversCodeContext = typeof response === 'object' && response ? 
-                               (response.text || '') : 
-                               (typeof response === 'string' ? response : '');
+    let takeoversCodeContext = '';
+    
+    if (response) {
+      if (typeof response === 'object' && 'text' in response) {
+        takeoversCodeContext = response.text || '';
+      } else if (typeof response === 'string') {
+        takeoversCodeContext = response;
+      }
+    }
+    
     const reasoning = '';
     
     // Step 3(b-c): Check if search was positive
@@ -33,9 +40,15 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
       );
       
-      const detailedTakeoverContext = typeof detailedResponse === 'object' && detailedResponse ? 
-                                     (detailedResponse.text || '') : 
-                                     (typeof detailedResponse === 'string' ? detailedResponse : '');
+      let detailedTakeoverContext = '';
+      
+      if (detailedResponse) {
+        if (typeof detailedResponse === 'object' && 'text' in detailedResponse) {
+          detailedTakeoverContext = detailedResponse.text || '';
+        } else if (typeof detailedResponse === 'string') {
+          detailedTakeoverContext = detailedResponse;
+        }
+      }
       
       let enhancedContext = takeoversCodeContext;
       if (detailedTakeoverContext) {

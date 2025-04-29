@@ -33,9 +33,15 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
     );
     
-    const checklistContext = typeof checklistResponse === 'object' && checklistResponse ? 
-                            (checklistResponse.text || '') : 
-                            (typeof checklistResponse === 'string' ? checklistResponse : '');
+    let checklistContext = '';
+    
+    if (checklistResponse) {
+      if (typeof checklistResponse === 'object' && 'text' in checklistResponse) {
+        checklistContext = checklistResponse.text || '';
+      } else if (typeof checklistResponse === 'string') {
+        checklistContext = checklistResponse;
+      }
+    }
     
     if (checklistContext && checklistContext.trim() !== '') {
       executionContexts.push("--- Document Requirements ---\n\n" + checklistContext);
@@ -47,9 +53,15 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
     );
     
-    const workingPlanContext = typeof workingPlanResponse === 'object' && workingPlanResponse ? 
-                              (workingPlanResponse.text || '') : 
-                              (typeof workingPlanResponse === 'string' ? workingPlanResponse : '');
+    let workingPlanContext = '';
+    
+    if (workingPlanResponse) {
+      if (typeof workingPlanResponse === 'object' && 'text' in workingPlanResponse) {
+        workingPlanContext = workingPlanResponse.text || '';
+      } else if (typeof workingPlanResponse === 'string') {
+        workingPlanContext = workingPlanResponse;
+      }
+    }
     
     if (workingPlanContext && workingPlanContext.trim() !== '') {
       executionContexts.push("--- Working Plan ---\n\n" + workingPlanContext);
@@ -61,9 +73,15 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
     );
     
-    const timetableContext = typeof timetableResponse === 'object' && timetableResponse ? 
-                            (timetableResponse.text || '') : 
-                            (typeof timetableResponse === 'string' ? timetableResponse : '');
+    let timetableContext = '';
+    
+    if (timetableResponse) {
+      if (typeof timetableResponse === 'object' && 'text' in timetableResponse) {
+        timetableContext = timetableResponse.text || '';
+      } else if (typeof timetableResponse === 'string') {
+        timetableContext = timetableResponse;
+      }
+    }
     
     if (timetableContext && timetableContext.trim() !== '') {
       executionContexts.push("--- Transaction Timeline ---\n\n" + timetableContext);
