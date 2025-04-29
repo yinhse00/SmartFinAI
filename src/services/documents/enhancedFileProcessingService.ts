@@ -62,7 +62,9 @@ export const enhancedFileProcessingService = {
           console.log(`Successfully extracted content from ${file.name} (${processingResult.content.length} chars). Processing for import...`);
           
           // Generate a unique sourceDocumentId for this file
-          const sourceDocumentId = uuidv4();
+          // We can now safely pass this as null since we updated the database
+          // to make the foreign key constraint optional
+          const sourceDocumentId = null;
           
           // Import the extracted content into the structured database
           const importResult = await importRegulatoryContent(

@@ -4,79 +4,60 @@
  */
 
 import { BaseDocumentProcessor } from './baseProcessor';
-import { fileConverter } from '../utils/fileConverter';
+import * as mammoth from 'mammoth';
 
 /**
  * Specialized processor for Word documents
  */
 export class WordProcessor extends BaseDocumentProcessor {
   /**
-   * Extract text from Word documents
+   * Extract text from Word documents using Mammoth
    */
   public async extractText(file: File): Promise<{ content: string; source: string }> {
     try {
       console.log(`Processing Word document: ${file.name}`);
       
-      // Check if API is available
+      // Check if API is available (same as in PDF processor)
       const isApiAvailable = await this.isApiAvailable();
-
+      
       if (isApiAvailable) {
-        // Use Grok Vision for Word documents
-        return await this.processWithGrokVision(file, 'Word');
+        // Use Grok Vision API for processing if available
+        return await this.processWithGrokVision(file, 'DOCX');
       } else {
-        // Fallback - client-side basic extraction for Word
-        console.warn("Grok API unavailable, using client-side fallback for Word document");
-        
-        try {
-          // Try to use browser-side extraction if available
-          const text = await this.extractTextClientSide(file);
-          return {
-            content: `[Limited Processing Mode: API Unreachable]\n\n${text}`,
-            source: file.name
-          };
-        } catch (fallbackError) {
-          console.error("Client-side fallback failed:", fallbackError);
-          return this.createApiUnavailableMessage(file, 'Word document');
-        }
+        // Use Mammoth.js for local processing when API is unavailable
+        const result = await this.extractWithMammoth(file);
+        return {
+          content: result,
+          source: file.name
+        };
       }
     } catch (error) {
-      console.error(`Error extracting Word text from ${file.name}:`, error);
+      console.error(`Error extracting Word document text from ${file.name}:`, error);
       return {
         content: `Error extracting text from Word document ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         source: file.name
       };
     }
   }
-
+  
   /**
-   * Extract text from a document using client-side methods
+   * Use Mammoth.js to extract text from DOCX files
    */
-  private async extractTextClientSide(file: File): Promise<string> {
+  private async extractWithMammoth(file: File): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       
       reader.onload = async (e) => {
-        try {
-          if (!e.target?.result) {
-            reject(new Error("Failed to read file"));
-            return;
+        if (e.target?.result) {
+          try {
+            const arrayBuffer = e.target.result as ArrayBuffer;
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            resolve(result.value);
+          } catch (err) {
+            reject(new Error(`Mammoth processing error: ${err instanceof Error ? err.message : String(err)}`));
           }
-          
-          // For Word documents (.docx, .doc), extract what we can
-          if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-            // Basic extraction that works in browser
-            const text = await fileConverter.getPlainTextFromDocx(e.target.result);
-            if (text) {
-              resolve(text);
-            } else {
-              reject(new Error("Could not extract text from Word document"));
-            }
-            return;
-          }
-          
-          reject(new Error("Unsupported file type for client-side extraction"));
-        } catch (error) {
-          reject(error);
+        } else {
+          reject(new Error("Failed to read file content"));
         }
       };
       
