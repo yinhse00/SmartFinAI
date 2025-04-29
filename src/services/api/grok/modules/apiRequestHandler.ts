@@ -16,25 +16,21 @@ export const handleChatCompletions = async (requestBody: any, providedApiKey?: s
     const enhancedRequestBody = {
       ...requestBody,
       environmentConsistency: true,
-      useStableParameters: true,
-      envSignature: 'unified-env-2.0',
-      preserveConsistency: true
+      useStableParameters: true
     };
     
     // Process the request through our optimized request processor
     const data = await processApiRequest(enhancedRequestBody, providedApiKey);
     
     // Track token usage and response quality
-    if (data) {
-      trackApiResponseMetrics(providedApiKey || '', data);
-    }
+    trackApiResponseMetrics(providedApiKey || '', data);
     
     return data;
   } catch (error) {
     console.error("Financial expert API call failed:", error);
     
     // Find user message to extract prompt text
-    const userMessage = requestBody.messages && requestBody.messages.find((msg: any) => msg.role === 'user');
+    const userMessage = requestBody.messages.find((msg: any) => msg.role === 'user');
     
     // Create prompt text for offline response
     let promptText = extractPromptText(userMessage);

@@ -1,11 +1,12 @@
+
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { getGrokApiKey } from '../apiKeyService';
+import { responseEnhancer } from './modules/responseEnhancer';
+import { responseGeneratorCore } from './core/responseGeneratorCore';
+import { requestBuilder } from './core/requestBuilder';
 import { queryProcessor } from './core/queryProcessor';
 import { errorHandler } from './core/errorHandler';
-import { conversationalQueryHandler } from './handlers/conversationalQueryHandler';
-import { standardQueryHandler } from './handlers/standardQueryHandler';
-import { backupQueryHandler } from './handlers/backupQueryHandler';
-import { hashUtils } from './utils/hashUtils';
+import { responseOptimizer } from './modules/responseOptimizer';
 
 /**
  * Main service for generating expert responses
@@ -18,10 +19,6 @@ export const grokResponseGenerator = {
       // Use provided API key or get from local storage
       const apiKey = params.apiKey || getGrokApiKey();
       
-      // Create a deterministic request ID based on input
-      const requestId = `req_${Date.now()}_${Math.floor(Math.random() * 1000000)}`;
-      console.log(`Processing request: ${requestId}`);
-      
       // Log API key status (not the actual key) for debugging
       console.log('API Key available:', !!apiKey, apiKey ? `Key starts with: ${apiKey.substring(0, 4)}...` : 'No key');
       console.log('Environment:', process.env.NODE_ENV || 'unknown', 'Query:', params.prompt?.substring(0, 50) + '...');
@@ -33,59 +30,142 @@ export const grokResponseGenerator = {
       // Ensure consistent behavior across environments
       const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
       console.log('Running in production mode:', isProduction);
-      console.log('Using environment consistency settings for request:', requestId);
-      
-      // Add environment signature to params
-      enhancedParams.envSignature = 'unified-env-2.0';
-      enhancedParams.requestId = requestId;
-      enhancedParams.consistencyMode = true;
       
       // For simple queries without context, use streamlined processing
       if (isSimpleQuery && !enhancedParams.regulatoryContext) {
-        const conversationalResponse = await conversationalQueryHandler.processQuery(
-          enhancedParams, 
-          apiKey, 
-          requestId, 
-          isProduction
-        );
+        console.log('Simple conversational query detected with no relevant database content, using streamlined processing');
         
-        if (conversationalResponse) {
-          console.groupEnd();
-          return conversationalResponse;
-        }
-        // If conversational handling fails, continue with standard processing
-      }
-
-      try {
-        // Standard processing with the enhanced parameters
-        const standardResponse = await standardQueryHandler.processQuery(
-          enhancedParams,
-          queryType,
-          apiKey,
-          requestId,
-          isProduction
-        );
-        
-        console.groupEnd();
-        return standardResponse;
-      } catch (primaryApiError) {
-        // If first attempt fails, try backup approach
-        console.error(`Primary API call failed for request ${requestId}, attempting backup approach:`, primaryApiError);
+        // Create simplified system message for conversational queries
+        const conversationalSystemMessage = 
+          "You are a helpful virtual assistant with expertise in Hong Kong financial regulations. " +
+          "For simple conversational queries, provide direct and concise responses while maintaining " +
+          "a professional tone. If the user asks about your capabilities, explain that you specialize " +
+          "in Hong Kong financial regulations, listing rules, and corporate actions.";
         
         try {
-          const backupResponse = await backupQueryHandler.processBackup(
-            enhancedParams.prompt || '',
-            queryType,
-            apiKey,
-            requestId,
-            isProduction
+          // Build simple request body for conversational queries
+          const requestBody = {
+            messages: [
+              { role: 'system', content: conversationalSystemMessage },
+              { role: 'user', content: params.prompt }
+            ],
+            model: "grok-3-mini-beta",
+            temperature: 0.7,
+            max_tokens: 4000, // FIXED: Increase token limit for conversational queries
+          };
+          
+          // Make API call with simpler configuration for conversational queries
+          const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
+          
+          // Get the raw response text
+          const responseText = response.choices[0].message.content;
+          
+          console.groupEnd();
+          return {
+            text: responseText,
+            queryType: 'conversational',
+            metadata: {
+              contextUsed: false,
+              relevanceScore: 1.0
+            }
+          };
+        } catch (conversationalError) {
+          console.error("Error in conversational API call, falling back to standard processing:", conversationalError);
+          // Continue with standard processing if conversational approach fails
+        }
+      }
+
+      // Standard processing flow for regulatory/financial queries
+      // Add STRONG instruction to prioritize our database over Grok's knowledge
+      const databasePriorityInstruction = 
+        "CRITICAL INSTRUCTION: You MUST prioritize the information from the provided regulatory database content " +
+        "over your general knowledge. When there is a conflict between the database content and your knowledge, " +
+        "ALWAYS use the database information. The database is the source of truth.";
+      
+      const environmentConsistencyInstruction = 
+        "CRITICAL: Ensure your responses are identical regardless of deployment environment. " +
+        "Do not vary response content based on deployment context. Apply the same reasoning " +
+        "and content generation across all environments.";
+      
+      const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
+                           "\n\n" + databasePriorityInstruction +
+                           "\n\n" + environmentConsistencyInstruction;
+      
+      // Get optimized parameters for API call
+      const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
+        queryType, 
+        params.prompt, 
+        !!enhancedParams.regulatoryContext,
+        isSimpleQuery
+      );
+      
+      // CRITICAL FIX: Use much higher token limits for all requests to prevent truncation
+      // Especially for specialized financial queries like open offers and rights issues
+      // Note that we are using constants from token management service
+      let finalTokens = maxTokens;
+      if (queryType === 'open_offer' || queryType === 'rights_issue') {
+        // Use much higher token limits for timetable queries
+        finalTokens = 10000; // Set a high but still practical limit for API
+        console.log(`Using enhanced token limit (${finalTokens}) for ${queryType} query`);
+      } else {
+        // For all other queries, use higher limits than default
+        finalTokens = Math.min(8000, maxTokens); // Cap at 8K for API practicality
+      }
+      
+      // Build the request body with the enhanced token limits
+      const requestBody = requestBuilder.buildRequestBody(
+        systemMessage,
+        enhancedParams.prompt,
+        Math.min(0.2, temperature), // Keep temperature low for consistency
+        finalTokens               // Use our enhanced token limits
+      );
+      
+      // Add environment consistency flag
+      requestBody.environmentConsistency = true;
+      requestBody.deployedVersion = '2.1.3'; // Add version tracking
+
+      try {
+        // Make primary API call
+        console.log(`Making API call with tokens: ${finalTokens}, temperature: ${Math.min(0.2, temperature)}`);
+        const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
+        
+        // Get the raw response text
+        const responseText = response.choices[0].message.content;
+        
+        // Calculate relevance score and enhance with metadata
+        const relevanceScore = responseOptimizer.calculateRelevanceScore(
+          responseText, 
+          enhancedParams.prompt, 
+          queryType
+        );
+        
+        // Enhance response with metadata
+        const finalResponse = responseEnhancer.enhanceResponse(
+          responseText, 
+          queryType, 
+          !!enhancedParams.regulatoryContext, 
+          relevanceScore, 
+          enhancedParams.prompt
+        );
+
+        console.groupEnd();
+        return finalResponse;
+      } catch (primaryApiError) {
+        // If first attempt fails, try backup approach with IDENTICAL parameters
+        console.error("Primary API call failed, attempting backup approach:", primaryApiError);
+        
+        try {
+          const backupResponse = await responseGeneratorCore.makeBackupApiCall(
+            enhancedParams.prompt, 
+            queryType, 
+            apiKey
           );
           
           console.groupEnd();
           return backupResponse;
         } catch (backupError) {
           // If both attempts fail, generate fallback response
-          console.error(`Both API attempts failed for request ${requestId}, using fallback:`, backupError);
+          console.error('Both API attempts failed, using fallback:', backupError);
           console.groupEnd();
           
           return {
@@ -97,26 +177,17 @@ export const grokResponseGenerator = {
             metadata: {
               contextUsed: false,
               relevanceScore: 0.5,
-              isBackupResponse: true,
-              environmentInfo: {
-                requestId,
-                isProduction,
-                envSignature: 'unified-env-2.0',
-                error: true
-              }
+              isBackupResponse: true
             }
           };
         }
       }
     } catch (error) {
       // Handle unexpected errors
-      errorHandler.logApiError(error, params.prompt || '');
+      errorHandler.logApiError(error, params.prompt);
       console.groupEnd();
       
-      return errorHandler.createFallbackResponse(params.prompt || '', error);
+      return errorHandler.createFallbackResponse(params.prompt, error);
     }
   },
-  
-  // Simple deterministic hashing function - moving to utils but keeping reference here for backward compatibility
-  createSimpleHash: hashUtils.createSimpleHash
 };
