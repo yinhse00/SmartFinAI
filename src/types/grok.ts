@@ -12,6 +12,8 @@ export interface GrokRequestParams {
   consistencyMode?: boolean;
   seed?: number;
   useStableParameters?: boolean;
+  // System message for advanced configuration
+  systemMessage?: string;
 }
 
 export interface GrokResponse {
