@@ -1,6 +1,5 @@
 
 // Main entry point file that re-exports all services
-import { RegulationProvision, RegulationCategory, RegulationDefinition } from './types';
 import { categoryService } from './services/categoryService';
 import { provisionService } from './services/provisionService';
 import { definitionService } from './services/definitionService';
@@ -12,7 +11,7 @@ export type {
   RegulationProvision,
   RegulationCategory,
   RegulationDefinition
-};
+} from './types';
 
 /**
  * Combined service for regulatory database operations
