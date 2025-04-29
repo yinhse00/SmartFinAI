@@ -1,5 +1,9 @@
+
 import { apiClient } from '../api/grok/apiClient';
 import { getGrokApiKey } from '../apiKeyService';
+import * as pdfParse from 'pdf-parse';
+import * as mammoth from 'mammoth';
+import * as XLSX from 'xlsx';
 
 /**
  * Service for processing different file types and extracting text content
@@ -153,28 +157,107 @@ function fileToBase64(file: File): Promise<string> {
  * Extract text content from PDF files
  */
 async function extractPdfText(file: File): Promise<{ content: string; source: string }> {
-  return { 
-    content: `PDF text extraction would process the content of ${file.name}. In a complete implementation, this would use a library like pdf.js to extract actual text content.`, 
-    source: file.name 
-  };
+  try {
+    console.log(`Processing PDF: ${file.name}`);
+    
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    const uint8Array = new Uint8Array(arrayBuffer);
+    
+    // Parse PDF using pdf-parse
+    const pdfData = await pdfParse(uint8Array);
+    
+    // Get text content
+    const textContent = pdfData.text || '';
+    
+    console.log(`Successfully extracted ${textContent.length} characters from PDF ${file.name}`);
+    
+    return {
+      content: textContent,
+      source: file.name
+    };
+  } catch (error) {
+    console.error(`Error extracting PDF text from ${file.name}:`, error);
+    return {
+      content: `Error extracting text from PDF ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      source: file.name
+    };
+  }
 }
 
 /**
  * Extract text content from Word documents
  */
 async function extractWordText(file: File): Promise<{ content: string; source: string }> {
-  return { 
-    content: `Word document text extraction would process the content of ${file.name}. In a complete implementation, this would use a specialized library to extract text from .doc/.docx files.`, 
-    source: file.name 
-  };
+  try {
+    console.log(`Processing Word document: ${file.name}`);
+    
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Extract text using mammoth
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const textContent = result.value || '';
+    
+    console.log(`Successfully extracted ${textContent.length} characters from Word document ${file.name}`);
+    
+    return {
+      content: textContent,
+      source: file.name
+    };
+  } catch (error) {
+    console.error(`Error extracting Word text from ${file.name}:`, error);
+    return {
+      content: `Error extracting text from Word document ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      source: file.name
+    };
+  }
 }
 
 /**
  * Extract text content from Excel files
  */
 async function extractExcelText(file: File): Promise<{ content: string; source: string }> {
-  return { 
-    content: `Excel spreadsheet text extraction would process the content of ${file.name}. In a complete implementation, this would use a specialized library to extract data from Excel files and format it as text.`, 
-    source: file.name 
-  };
+  try {
+    console.log(`Processing Excel file: ${file.name}`);
+    
+    // Convert file to ArrayBuffer
+    const arrayBuffer = await file.arrayBuffer();
+    
+    // Parse the Excel file
+    const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+    
+    // Extract text from all sheets
+    const sheetNames = workbook.SheetNames;
+    let textContent = '';
+    
+    for (const sheetName of sheetNames) {
+      const worksheet = workbook.Sheets[sheetName];
+      const sheetData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      
+      textContent += `Sheet: ${sheetName}\n`;
+      
+      // Convert rows and cells to formatted text
+      for (const row of sheetData as any[][]) {
+        if (row && row.length > 0) {
+          textContent += row.join('\t') + '\n';
+        }
+      }
+      
+      textContent += '\n\n';
+    }
+    
+    console.log(`Successfully extracted ${textContent.length} characters from Excel file ${file.name}`);
+    
+    return {
+      content: textContent,
+      source: file.name
+    };
+  } catch (error) {
+    console.error(`Error extracting Excel data from ${file.name}:`, error);
+    return {
+      content: `Error extracting data from Excel file ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      source: file.name
+    };
+  }
 }
