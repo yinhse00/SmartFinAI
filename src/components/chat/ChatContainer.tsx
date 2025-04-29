@@ -23,7 +23,9 @@ interface ChatContainerProps {
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
-  isOfflineMode?: boolean; // New prop for offline mode
+  isOfflineMode?: boolean;
+  currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  stepProgress?: string;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -41,7 +43,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   isProcessingFiles = false,
   attachedFiles = [],
   onFileRemove,
-  isOfflineMode = false // Default to false
+  isOfflineMode = false,
+  currentStep,
+  stepProgress
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -77,6 +81,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onRetry={retryLastQuery}
         translatingMessageIds={translatingMessageIds}
         isOfflineMode={isOfflineMode}
+        currentStep={currentStep}
+        stepProgress={stepProgress}
       />
       
       <ChatInput 

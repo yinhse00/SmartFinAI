@@ -38,6 +38,10 @@ export const useQueryExecution = (
       return;
     }
     
+    // Add request identifier to ensure consistency across environments
+    const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    console.log(`Processing request ${requestId} with query: ${queryText.substring(0, 50)}...`);
+    
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
 
@@ -55,6 +59,10 @@ export const useQueryExecution = (
         actualTemperature,
         enhancedMaxTokens
       } = prepareQuery(queryText);
+      
+      // Add consistency markers
+      responseParams.requestId = requestId;
+      responseParams.consistencyMode = true;
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
@@ -96,7 +104,7 @@ export const useQueryExecution = (
       );
 
       const processingTime = Date.now() - processingStart;
-      console.log(`Response generated in ${processingTime}ms`);
+      console.log(`Response generated in ${processingTime}ms for request ${requestId}`);
 
       setProcessingStage('finalizing');
 
@@ -114,6 +122,7 @@ export const useQueryExecution = (
       }
 
     } catch (error) {
+      console.error(`Error processing request ${requestId}:`, error);
       handleProcessingError(error, updatedMessages);
     }
   };

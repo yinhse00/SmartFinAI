@@ -4,6 +4,7 @@ import { importRegulatoryContent } from '@/services/database/import/importServic
 import { DocumentCategory } from '@/types/references';
 import { determineCategory } from '@/services/database/categoryUtils';
 import { toast } from '@/components/ui/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 /**
  * Enhanced file processing service that uses structured database
@@ -60,11 +61,16 @@ export const enhancedFileProcessingService = {
 
           console.log(`Successfully extracted content from ${file.name} (${processingResult.content.length} chars). Processing for import...`);
           
+          // Generate a unique sourceDocumentId for this file
+          // We can now safely pass this as null since we updated the database
+          // to make the foreign key constraint optional
+          const sourceDocumentId = null;
+          
           // Import the extracted content into the structured database
           const importResult = await importRegulatoryContent(
             processingResult.content,
             category,
-            undefined // For now, not linking to source document
+            sourceDocumentId
           );
           
           if (importResult.success) {
@@ -90,7 +96,7 @@ export const enhancedFileProcessingService = {
 
             toast({
               title: "Import Warning",
-              description: `Failed to import all content from ${file.name}`,
+              description: `Failed to import all content from ${file.name}. ${importResult.errors[0] || ''}`,
               variant: "destructive",
               duration: 5000,
             });
