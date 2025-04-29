@@ -9,13 +9,15 @@ interface ChatContentProps {
   isLoading: boolean;
   onRetry?: () => void;
   translatingMessageIds?: string[];
+  isOfflineMode?: boolean; // Added missing prop
 }
 
 const ChatContent: React.FC<ChatContentProps> = ({
   messages,
   isLoading,
   onRetry,
-  translatingMessageIds = []
+  translatingMessageIds = [],
+  isOfflineMode = false // Added default value
 }) => {
   return (
     <CardContent 

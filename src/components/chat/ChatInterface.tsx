@@ -56,7 +56,7 @@ const ChatInterface: React.FC = () => {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "warning",
+        variant: "destructive", // Changed from "warning" to "destructive"
         duration: 5000,
       });
     }
