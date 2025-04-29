@@ -73,8 +73,7 @@ export const importRegulatoryContent = async (
       console.log(`Using category code: ${categoryCode}`);
     }
     
-    // Changed from const to let so it can be reassigned later
-    let categoryId = await regulatoryDatabaseService.getCategoryIdByCode(categoryCode);
+    const categoryId = await regulatoryDatabaseService.getCategoryIdByCode(categoryCode);
     
     if (!categoryId) {
       result.errors.push(`Could not find category ID for code: ${categoryCode}`);
@@ -97,11 +96,9 @@ export const importRegulatoryContent = async (
           categoryId = data.id;
         } else if (error) {
           console.error('Error creating category:', error);
-          result.errors.push(`Failed to create category: ${error.message}`);
         }
       } catch (err) {
         console.error('Error creating missing category:', err);
-        result.errors.push(`Exception creating category: ${err instanceof Error ? err.message : String(err)}`);
       }
     }
     
@@ -124,49 +121,28 @@ export const importRegulatoryContent = async (
       provisions.forEach(provision => {
         provision.category_id = categoryId;
       });
-    } else {
-      result.errors.push('No valid category ID available, cannot add provisions');
-      return result;
     }
     
-    // Add provisions to the database with proper error handling
-    try {
-      const addedCount = await regulatoryDatabaseService.addProvisions(provisions);
-      result.provisionsAdded = addedCount;
+    // Add provisions to the database
+    // The addProvisions method will handle assigning IDs since we're now explicitly passing partial objects
+    const addedCount = await regulatoryDatabaseService.addProvisions(provisions);
+    result.provisionsAdded = addedCount;
+    
+    // Process definitions - process all provisions
+    if (provisions.length > 0 && categoryId) {
+      // Get the provisions IDs after insertion
+      const insertedProvisions = await regulatoryDatabaseService.getProvisionsBySourceDocument(sourceDocumentId || '');
       
-      if (addedCount === 0) {
-        result.errors.push('Failed to add provisions to database');
-        return result;
-      }
-    } catch (error) {
-      console.error('Error adding provisions:', error);
-      result.errors.push(`Database error: ${error instanceof Error ? error.message : String(error)}`);
-      return result;
-    }
-    
-    // Process definitions - only if we have a valid sourceDocumentId
-    if (provisions.length > 0 && categoryId && sourceDocumentId) {
-      try {
-        // Get the provisions IDs after insertion
-        const insertedProvisions = await regulatoryDatabaseService.getProvisionsBySourceDocument(sourceDocumentId);
+      if (insertedProvisions.length > 0) {
+        console.log(`Found ${insertedProvisions.length} inserted provisions to process for definitions`);
         
-        if (insertedProvisions.length > 0) {
-          console.log(`Found ${insertedProvisions.length} inserted provisions to process for definitions`);
-          
-          for (const provision of insertedProvisions) {
-            const definitionsAdded = await processDefinitions(provision, categoryId);
-            result.definitionsAdded += definitionsAdded;
-          }
-        } else {
-          console.warn('No inserted provisions found after insertion');
+        for (const provision of insertedProvisions) {
+          const definitionsAdded = await processDefinitions(provision, categoryId);
+          result.definitionsAdded += definitionsAdded;
         }
-      } catch (err) {
-        console.error('Error processing definitions:', err);
-        result.errors.push(`Failed to process definitions: ${err instanceof Error ? err.message : String(err)}`);
+      } else {
+        console.warn('No inserted provisions found after insertion');
       }
-    } else if (!sourceDocumentId) {
-      // Skip definition processing for content without a source document ID
-      console.log('Skipping definition processing - no source document ID provided');
     }
     
     result.success = result.provisionsAdded > 0;
@@ -176,12 +152,6 @@ export const importRegulatoryContent = async (
       toast({
         title: "Import successful",
         description: `Added ${result.provisionsAdded} provisions and ${result.definitionsAdded} definitions.`,
-      });
-    } else {
-      toast({
-        title: "Import warning",
-        description: `No provisions were added to the database. ${result.errors[0] || ''}`,
-        variant: "destructive"
       });
     }
   } catch (error) {
