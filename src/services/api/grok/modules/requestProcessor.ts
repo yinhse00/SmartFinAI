@@ -43,14 +43,6 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Apply environment consistency parameters
-  requestBody = {
-    ...requestBody,
-    environmentConsistency: true,
-    envSignature: 'unified-env-2.0',
-    unifiedProcessing: true
-  };
-  
   // Ensure token limits are properly applied
   if (!requestBody.max_tokens) {
     const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
@@ -65,16 +57,12 @@ export const processApiRequest = async (
   console.log("Max tokens:", requestBody.max_tokens);
   console.log("Using API Key:", apiKey.substring(0, 8) + "***");
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
-  console.log("Environment signature:", requestBody.envSignature);
   
   try {
     // First try using the local proxy if available
     try {
-      // Add timestamp to track response time
-      const startTime = Date.now();
       const data = await attemptProxyRequest(requestBody, apiKey);
-      const responseTime = Date.now() - startTime;
-      console.log(`Financial expert API response received successfully via proxy (${responseTime}ms)`);
+      console.log("Financial expert API response received successfully via proxy");
       return data;
     } catch (proxyError) {
       console.warn("Proxy request failed:", proxyError);
@@ -82,13 +70,11 @@ export const processApiRequest = async (
     }
     
     // Attempt direct API calls with retries
-    const startTime = Date.now();
     const data = await executeWithRetry(async () => {
       return await attemptDirectRequest(requestBody, apiKey);
     });
     
-    const responseTime = Date.now() - startTime;
-    console.log(`Financial expert API response received successfully via direct call (${responseTime}ms)`);
+    console.log("Financial expert API response received successfully via direct call");
     return data;
   } catch (error) {
     console.error("Financial expert API call failed:", error);
