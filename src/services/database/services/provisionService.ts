@@ -25,6 +25,25 @@ export const provisionService = {
   },
   
   /**
+   * Get all provisions (with optional limit)
+   */
+  getAllProvisions: async (limit: number = 1000): Promise<RegulationProvision[]> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .select('*')
+      .order('chapter', { ascending: true })
+      .order('rule_number', { ascending: true })
+      .limit(limit);
+    
+    if (error) {
+      console.error(`Error fetching all provisions:`, error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  /**
    * Add a provision to the database
    */
   addProvision: async (provision: Omit<RegulationProvision, 'id'>): Promise<RegulationProvision | null> => {

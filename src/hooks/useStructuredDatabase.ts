@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { enhancedFileProcessingService } from '@/services/documents/enhancedFileProcessingService';
 import { regulatoryDatabaseService } from '@/services/database/regulatoryDatabaseService';
+import { DocumentCategory } from '@/types/references';
 
 export const useStructuredDatabase = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -12,7 +13,7 @@ export const useStructuredDatabase = () => {
   /**
    * Process regulatory files and import to structured database
    */
-  const processRegulatoryFiles = async (files: File[]): Promise<boolean> => {
+  const processRegulatoryFiles = async (files: File[], specificCategory?: DocumentCategory): Promise<boolean> => {
     if (files.length === 0) return false;
     
     setIsProcessing(true);
@@ -23,7 +24,7 @@ export const useStructuredDatabase = () => {
         description: `Processing ${files.length} file(s) for regulatory content...`,
       });
       
-      const result = await enhancedFileProcessingService.processRegulatoryFiles(files);
+      const result = await enhancedFileProcessingService.processRegulatoryFiles(files, specificCategory);
       
       if (result.success) {
         toast({
@@ -37,7 +38,7 @@ export const useStructuredDatabase = () => {
           toast({
             title: "Processing completed with warnings",
             description: `${result.errors.length} warning(s) occurred during processing.`,
-            variant: "destructive", // Changed from "warning" to "destructive"
+            variant: "destructive",
             duration: 6000,
           });
         }
@@ -90,9 +91,24 @@ export const useStructuredDatabase = () => {
     }
   };
   
+  /**
+   * Get existing chapters that have been imported
+   */
+  const getImportedChapters = async (): Promise<string[]> => {
+    try {
+      const provisions = await regulatoryDatabaseService.getAllProvisions();
+      const chapters = [...new Set(provisions.map(p => p.chapter).filter(Boolean))];
+      return chapters as string[];
+    } catch (error) {
+      console.error("Error getting imported chapters:", error);
+      return [];
+    }
+  };
+  
   return {
     processRegulatoryFiles,
     searchRegulations,
+    getImportedChapters,
     isProcessing,
     isLoading
   };

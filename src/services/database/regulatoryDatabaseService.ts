@@ -23,6 +23,7 @@ export const regulatoryDatabaseService = {
   
   // Provision operations
   getProvisionsByChapter: provisionService.getProvisionsByChapter,
+  getAllProvisions: provisionService.getAllProvisions,
   addProvision: provisionService.addProvision,
   addProvisions: provisionService.addProvisions,
   getProvisionsBySourceDocument: provisionService.getProvisionsBySourceDocument,
