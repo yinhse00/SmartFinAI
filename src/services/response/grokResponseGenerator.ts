@@ -21,10 +21,15 @@ export const grokResponseGenerator = {
       
       // Log API key status (not the actual key) for debugging
       console.log('API Key available:', !!apiKey, apiKey ? `Key starts with: ${apiKey.substring(0, 4)}...` : 'No key');
+      console.log('Environment:', process.env.NODE_ENV || 'unknown', 'Query:', params.prompt?.substring(0, 50) + '...');
 
       // Process the query and enhance with context
       const { enhancedParams, queryType, isSimpleQuery, isFaqQuery } = 
         await queryProcessor.processQuery(params);
+      
+      // Ensure consistent behavior across environments
+      const isProduction = typeof window !== 'undefined' && window.location.hostname !== 'localhost';
+      console.log('Running in production mode:', isProduction);
       
       // For simple queries without context, use streamlined processing
       if (isSimpleQuery && !enhancedParams.regulatoryContext) {
@@ -77,8 +82,14 @@ export const grokResponseGenerator = {
         "over your general knowledge. When there is a conflict between the database content and your knowledge, " +
         "ALWAYS use the database information. The database is the source of truth.";
       
+      const environmentConsistencyInstruction = 
+        "CRITICAL: Ensure your responses are identical regardless of deployment environment. " +
+        "Do not vary response content based on deployment context. Apply the same reasoning " +
+        "and content generation across all environments.";
+      
       const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
-                           "\n\n" + databasePriorityInstruction;
+                           "\n\n" + databasePriorityInstruction +
+                           "\n\n" + environmentConsistencyInstruction;
       
       // Get optimized parameters for API call
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
@@ -108,6 +119,10 @@ export const grokResponseGenerator = {
         Math.min(0.2, temperature), // Keep temperature low for consistency
         finalTokens               // Use our enhanced token limits
       );
+      
+      // Add environment consistency flag
+      requestBody.environmentConsistency = true;
+      requestBody.deployedVersion = '2.1.3'; // Add version tracking
 
       try {
         // Make primary API call
