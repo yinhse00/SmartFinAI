@@ -83,7 +83,7 @@ export const useWorkflowProcessor = ({
       }
       
       // Determine next step based on Step 1 result
-      let nextStep = step1Result.nextStep;
+      let nextStep: WorkflowStep = step1Result.nextStep;
       let currentParams = { ...step1Result };
       let stepResult: StepResult | undefined;
       

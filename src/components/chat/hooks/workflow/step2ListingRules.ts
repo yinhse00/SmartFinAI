@@ -1,5 +1,6 @@
 
 import { grokService } from '@/services/grokService';
+import { WorkflowStep } from './types';
 
 /**
  * Step 2: Listing Rules Search
@@ -16,7 +17,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
-    const listingRulesContext = typeof response === 'object' && response.text ? response.text : 
+    const listingRulesContext = typeof response === 'object' && response?.text ? response.text : 
                                typeof response === 'string' ? response : '';
     const reasoning = '';
     
@@ -36,7 +37,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
         );
         
-        const chapterContext = typeof chapterResponse === 'object' && chapterResponse.text ? 
+        const chapterContext = typeof chapterResponse === 'object' && chapterResponse?.text ? 
                               chapterResponse.text : 
                               typeof chapterResponse === 'string' ? chapterResponse : '';
         
@@ -54,7 +55,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (takeoverRelated) {
         return {
           shouldContinue: true,
-          nextStep: 'takeoversCode' as const,
+          nextStep: 'takeoversCode' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
           takeoversCodeRelated: true
@@ -73,7 +74,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as const,
+          nextStep: 'execution' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
           executionRequired: true
@@ -82,7 +83,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as const,
+        nextStep: 'response' as WorkflowStep,
         query: params.query,
         listingRulesContext: enhancedContext,
         regulatoryContext: enhancedContext,
@@ -103,7 +104,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as const,
+          nextStep: 'execution' as WorkflowStep,
           query: params.query,
           executionRequired: true
         };
@@ -111,7 +112,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as const,
+        nextStep: 'response' as WorkflowStep,
         query: params.query,
         listingRulesSearchNegative: true
       };
@@ -120,7 +121,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 2:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as const, 
+      nextStep: 'response' as WorkflowStep, 
       query: params.query,
       error
     };

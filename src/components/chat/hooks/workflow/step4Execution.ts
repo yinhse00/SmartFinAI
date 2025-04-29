@@ -1,5 +1,6 @@
 
 import { grokService } from '@/services/grokService';
+import { WorkflowStep } from './types';
 
 /**
  * Step 4: Execution Guidance
@@ -32,7 +33,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
     );
     
-    const checklistContext = typeof checklistResponse === 'object' && checklistResponse.text ? 
+    const checklistContext = typeof checklistResponse === 'object' && checklistResponse?.text ? 
                             checklistResponse.text : 
                             typeof checklistResponse === 'string' ? checklistResponse : '';
     
@@ -46,7 +47,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
     );
     
-    const workingPlanContext = typeof workingPlanResponse === 'object' && workingPlanResponse.text ? 
+    const workingPlanContext = typeof workingPlanResponse === 'object' && workingPlanResponse?.text ? 
                               workingPlanResponse.text : 
                               typeof workingPlanResponse === 'string' ? workingPlanResponse : '';
     
@@ -60,7 +61,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
     );
     
-    const timetableContext = typeof timetableResponse === 'object' && timetableResponse.text ? 
+    const timetableContext = typeof timetableResponse === 'object' && timetableResponse?.text ? 
                             timetableResponse.text : 
                             typeof timetableResponse === 'string' ? timetableResponse : '';
     
@@ -81,7 +82,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     return {
       shouldContinue: true,
-      nextStep: 'response' as const,
+      nextStep: 'response' as WorkflowStep,
       query: params.query,
       executionContext: combinedContext,
       regulatoryContext: combinedContext
@@ -90,7 +91,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 4:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as const, 
+      nextStep: 'response' as WorkflowStep, 
       query: params.query,
       error
     };

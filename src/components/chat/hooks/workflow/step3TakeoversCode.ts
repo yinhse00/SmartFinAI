@@ -1,5 +1,6 @@
 
 import { grokService } from '@/services/grokService';
+import { WorkflowStep } from './types';
 
 /**
  * Step 3: Takeovers Code Search
@@ -16,7 +17,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
-    const takeoversCodeContext = typeof response === 'object' && response.text ? response.text : 
+    const takeoversCodeContext = typeof response === 'object' && response?.text ? response.text : 
                                 typeof response === 'string' ? response : '';
     const reasoning = '';
     
@@ -31,7 +32,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
       );
       
-      const detailedTakeoverContext = typeof detailedResponse === 'object' && detailedResponse.text ? 
+      const detailedTakeoverContext = typeof detailedResponse === 'object' && detailedResponse?.text ? 
                                      detailedResponse.text : 
                                      typeof detailedResponse === 'string' ? detailedResponse : '';
       
@@ -57,7 +58,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as const,
+          nextStep: 'execution' as WorkflowStep,
           query: params.query,
           takeoversCodeContext: enhancedContext,
           regulatoryContext: enhancedContext,
@@ -67,7 +68,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as const,
+        nextStep: 'response' as WorkflowStep,
         query: params.query,
         takeoversCodeContext: enhancedContext,
         regulatoryContext: enhancedContext,
@@ -88,7 +89,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as const,
+          nextStep: 'execution' as WorkflowStep,
           query: params.query,
           executionRequired: true
         };
@@ -96,7 +97,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as const,
+        nextStep: 'response' as WorkflowStep,
         query: params.query,
         takeoversCodeSearchNegative: true
       };
@@ -105,7 +106,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 3:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as const, 
+      nextStep: 'response' as WorkflowStep, 
       query: params.query,
       error
     };

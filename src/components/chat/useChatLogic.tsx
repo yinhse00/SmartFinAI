@@ -78,10 +78,9 @@ export const useChatLogic = () => {
   // Handle batch continuation
   const handleContinueBatch = async () => {
     // Create a Promise-returning function that wraps executeWorkflow
-    await continueBatch(async (query, options) => {
+    await continueBatch(async (query) => {
       checkIsChineseInput(query);
       await executeWorkflow(query);
-      return Promise.resolve();
     });
   };
   

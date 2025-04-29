@@ -51,7 +51,7 @@ export const executeStep1 = async (
       console.log('Query not related to financial regulations, skipping to response');
       return { 
         shouldContinue: false, 
-        nextStep: 'response' as const, 
+        nextStep: 'response' as WorkflowStep, 
         query: processedQuery,
         isRegulatoryRelated: false
       };
@@ -68,7 +68,7 @@ export const executeStep1 = async (
       regulatoryContext.toLowerCase().includes('general offer');
     
     // Decide on next step based on content relevance
-    let nextStep: 'listingRules' | 'takeoversCode' | 'response' = 'response';
+    let nextStep: WorkflowStep = 'response';
     
     if (isListingRulesRelated) {
       nextStep = 'listingRules';
@@ -90,9 +90,10 @@ export const executeStep1 = async (
     console.error('Error in step 1:', error);
     return { 
       shouldContinue: false, 
-      nextStep: 'response' as const, 
+      nextStep: 'response' as WorkflowStep, 
       query: processedQuery,
-      error
+      error,
+      isRegulatoryRelated: false
     };
   }
 };
