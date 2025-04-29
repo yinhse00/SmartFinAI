@@ -30,7 +30,7 @@ export const useFileProcessing = () => {
           toast({
             title: "Limited Processing Mode",
             description: "The Grok API is currently unreachable. Files will be processed with limited functionality.",
-            variant: "warning",
+            variant: "destructive", // Changed from "warning" to "destructive"
             duration: 6000,
           });
         }
@@ -61,7 +61,7 @@ export const useFileProcessing = () => {
         toast({
           title: "Limited file processing",
           description: "Some files were processed with limited functionality due to API connectivity issues.",
-          variant: "warning",
+          variant: "destructive", // Changed from "warning" to "destructive"
           duration: 5000,
         });
       } else {

@@ -32,8 +32,8 @@ export const fileConverter = {
     // If mammoth.js is available, use it
     try {
       if (typeof window !== 'undefined' && 'mammoth' in window) {
-        // @ts-ignore - mammoth might be loaded as a global
-        const mammoth = window.mammoth;
+        // Use type assertion to tell TypeScript what mammoth is
+        const mammoth = (window as any).mammoth;
         if (typeof buffer === 'string') {
           // Convert base64 to ArrayBuffer if needed
           const base64 = buffer.split(',')[1];
