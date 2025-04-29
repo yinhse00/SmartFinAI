@@ -1,8 +1,7 @@
 
-import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Message } from '../ChatMessage';
-import { useQueryLogger, setupLogging, logQueryStart, logContextInfo, logQueryParameters, finishLogging } from './useQueryLogger';
+import { useQueryLogger } from './useQueryLogger';
 
 /**
  * Core functionality for query execution
@@ -12,24 +11,9 @@ export const useQueryCore = (
   isGrokApiKeySet: boolean,
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
 ) => {
-  const [isLoading, setIsLoading] = useState(false);
-  const [processingStage, setProcessingStage] = useState<'preparing' | 'processing' | 'finalizing' | 'reviewing'>('preparing');
   const { toast } = useToast();
 
-  const startProcessing = (queryText: string) => {
-    if (!queryText.trim()) return false;
-    
-    if (!isGrokApiKeySet) {
-      setApiKeyDialogOpen(true);
-      return false;
-    }
-    
-    setIsLoading(true);
-    // Always start with database review stage
-    setProcessingStage('reviewing');
-    return true;
-  };
-  
+  // Create a user message for the query
   const createUserMessage = (queryText: string, messages: Message[]): Message[] => {
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -40,15 +24,8 @@ export const useQueryCore = (
     
     return [...messages, userMessage];
   };
-  
-  const finishProcessing = () => {
-    setIsLoading(false);
-  };
-  
-  const setStage = (stage: 'preparing' | 'processing' | 'finalizing' | 'reviewing') => {
-    setProcessingStage(stage);
-  };
 
+  // Handle processing errors in a consistent way
   const handleProcessingError = (error: any, updatedMessages: Message[]) => {
     console.error("Error in financial chat process:", error);
     
@@ -68,18 +45,10 @@ export const useQueryCore = (
       description: "An unexpected error occurred. Please try again.",
       variant: "destructive"
     });
-    
-    setIsLoading(false);
   };
 
   return {
-    isLoading,
-    processingStage,
-    startProcessing,
     createUserMessage,
-    finishProcessing,
-    setStage,
-    handleProcessingError,
-    setupLogging
+    handleProcessingError
   };
 };

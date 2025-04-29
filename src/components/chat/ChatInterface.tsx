@@ -31,17 +31,9 @@ const ChatInterface = () => {
     isBatching,
     currentBatchNumber,
     handleContinueBatch,
-    autoBatch
+    autoBatch,
+    lastInputWasChinese
   } = useChatLogic();
-
-  const [lastInputWasChinese, setLastInputWasChinese] = useState(false);
-
-  // Check if input contains Chinese characters
-  const handleSendWithCheck = () => {
-    const containsChinese = /[\u4e00-\u9fa5]/.test(input);
-    setLastInputWasChinese(containsChinese);
-    handleSend();
-  };
   
   // Use the extracted message translation logic
   const { translatingMessageIds } = useMessageTranslator({
@@ -83,7 +75,7 @@ const ChatInterface = () => {
             isGrokApiKeySet={isGrokApiKeySet}
             input={input}
             setInput={setInput}
-            handleSend={handleSendWithCheck}
+            handleSend={handleSend}
             handleKeyDown={handleKeyDown}
             onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
             retryLastQuery={retryLastQuery}

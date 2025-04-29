@@ -7,7 +7,6 @@ import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
 
-// Add: batchInfo arg and onBatchTruncated callback
 export const useQueryExecution = (
   messages: Message[],
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -15,33 +14,30 @@ export const useQueryExecution = (
   setInput: React.Dispatch<React.SetStateAction<string>>,
   retryLastQuery: () => void,
   isGrokApiKeySet: boolean,
-  setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>
+  setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
+  setProcessingStage: React.Dispatch<React.SetStateAction<'preparing' | 'processing' | 'finalizing' | 'reviewing'>>
 ) => {
   const { toast } = useToast();
   const { logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
   const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
-  const {
-    isLoading,
-    processingStage,
-    startProcessing,
-    createUserMessage,
-    finishProcessing,
-    setStage,
-    handleProcessingError,
-    setupLogging
-  } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
+  const { createUserMessage, handleProcessingError } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
 
-  setupLogging();
-
-  // batchInfo: { batchNumber, isContinuing }, onBatchTruncated: callback
-  const processQuery = async (
+  // The main execution function
+  const executeQuery = async (
     queryText: string,
     batchInfo?: { batchNumber: number, isContinuing: boolean },
     onBatchTruncated?: (isTruncated: boolean) => void
   ) => {
-    if (!startProcessing(queryText)) return;
+    if (!queryText.trim()) return;
+    
+    if (!isGrokApiKeySet) {
+      setApiKeyDialogOpen(true);
+      return;
+    }
+    
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
 
@@ -51,7 +47,7 @@ export const useQueryExecution = (
     try {
       logQueryStart(queryText);
 
-      // Step 1: Prepare query parameters and determine query type (preliminary analysis)
+      // Step 1: Prepare query parameters and determine query type
       const {
         responseParams,
         financialQueryType,
@@ -62,9 +58,9 @@ export const useQueryExecution = (
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
-      setStage('reviewing');
+      setProcessingStage('reviewing');
 
-      // Step 3: Retrieve regulatory context
+      // Step 2: Retrieve regulatory context
       const {
         regulatoryContext,
         reasoning,
@@ -84,12 +80,9 @@ export const useQueryExecution = (
         searchStrategy
       );
 
-      setStage('processing');
+      setProcessingStage('processing');
 
-      // Add searchStrategy for prompt engineering
-      responseParams.searchStrategy = searchStrategy;
-
-      // Step 4: Process response
+      // Step 3: Process response
       const processingStart = Date.now();
 
       const result = await handleApiResponse(
@@ -105,7 +98,7 @@ export const useQueryExecution = (
       const processingTime = Date.now() - processingStart;
       console.log(`Response generated in ${processingTime}ms`);
 
-      setStage('finalizing');
+      setProcessingStage('finalizing');
 
       const isSimpleQuery = financialQueryType === 'conversational';
       const finalizingTime = isSimpleQuery ? 150 : 250;
@@ -113,7 +106,7 @@ export const useQueryExecution = (
 
       finishLogging();
 
-      // Improved: will ALWAYS trigger batch continuation automatically if autoBatch is enabled by caller (see processor logic)
+      // Handle batch truncation
       if (batchInfo && result && result.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {
@@ -122,14 +115,10 @@ export const useQueryExecution = (
 
     } catch (error) {
       handleProcessingError(error, updatedMessages);
-    } finally {
-      finishProcessing();
     }
   };
 
   return {
-    isLoading,
-    processingStage,
-    processQuery
+    executeQuery
   };
 };
