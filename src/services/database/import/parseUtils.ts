@@ -19,8 +19,8 @@ export const detectChapter = (content: string): string | undefined => {
   const chapterPatterns = [
     /Chapter\s+(\d+[A-Z]?)/i,
     /CHAPTER\s+(\d+[A-Z]?)/,
-    /^(\d+[A-Z]?)\.\s+/m,  // Match lines starting with chapter numbers
-    /\b(\d+[A-Z]?)\.(\d+)/  // Match patterns like "14.1" or "14A.2"
+    /^(\d+[A-Z]?)\.(\d+)/m,  // Match patterns like "14.1" or "14A.2" at line start
+    /\b(\d+[A-Z]?)\.(\d+)/   // Match patterns like "14.1" or "14A.2" anywhere
   ];
   
   for (const pattern of chapterPatterns) {
@@ -30,7 +30,7 @@ export const detectChapter = (content: string): string | undefined => {
     }
   }
   
-  // Special check for known chapters
+  // Special check for known chapters based on content
   if (content.toLowerCase().includes("connected transactions") && 
       (content.includes("Chapter 14A") || content.includes("14A"))) {
     return "14A";
@@ -72,7 +72,7 @@ export const parseRegulatoryText = (
     const documentChapter = detectChapter(content);
     console.log(`Detected document chapter: ${documentChapter || 'None'}`);
     
-    // Try multiple parsing approaches
+    // Try multiple parsing approaches in sequence until one works
     const parseApproaches = [
       parseRuleNumberBasedApproach,
       parseNumberedListApproach,
@@ -109,12 +109,13 @@ export const parseRegulatoryText = (
       });
     }
     
-    // Log issues if no provisions found after all attempts
+    // Double-check after all attempts that we have at least one provision
     if (provisions.length === 0) {
       errors.push('No provisions were successfully parsed from the content');
     }
   } catch (error) {
     errors.push(`Error parsing regulatory text: ${error instanceof Error ? error.message : String(error)}`);
+    console.error("Parsing error:", error);
   }
   
   return { provisions, errors };
@@ -130,7 +131,8 @@ const parseRuleNumberBasedApproach = (
 ): Omit<RegulationProvision, 'id'>[] => {
   const provisions: Omit<RegulationProvision, 'id'>[] = [];
   
-  // Enhanced pattern to better match listing rule formats in chapters 13, 14, 14A
+  // Pattern for matching rule numbers and their content
+  // Enhanced to better match listing rule formats in chapters 13, 14, 14A
   const rulePattern = /(\d+[A-Z]?\.\d+(?:\.\d+)*)\s+([^.]+)\.([^]*?)(?=\d+[A-Z]?\.\d+|$)/g;
   
   let match;
