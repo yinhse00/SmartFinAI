@@ -1,16 +1,33 @@
+
 import { getGrokApiKey, trackTokenUsage, selectLeastUsedKey, selectBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
-import { GrokChatRequestBody } from './types';
+import { GrokChatRequestBody, MessageContent } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
 import { tokenManagementService } from '../../response/modules/tokenManagementService';
 
 // Local proxy endpoint if available
 const LOCAL_PROXY = '/api/grok/chat/completions';
 
+// Helper function to determine if content is a string or complex object array
+const isStringContent = (content: MessageContent): content is string => {
+  return typeof content === 'string';
+};
+
 export const apiClient = {
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
     // Check if this is a retry attempt
-    const userContent = requestBody.messages.find(msg => msg.role === 'user')?.content || '';
-    const isRetryAttempt = userContent.includes('[RETRY_ATTEMPT]');
+    const userMessage = requestBody.messages.find(msg => msg.role === 'user');
+    const userContent = userMessage?.content || '';
+    
+    // Get retry info from user message
+    let isRetryAttempt = false;
+    if (isStringContent(userContent)) {
+      isRetryAttempt = userContent.includes('[RETRY_ATTEMPT]');
+    } else {
+      // Check if any text content in the array includes the retry marker
+      isRetryAttempt = userContent.some(item => 
+        item.type === 'text' && item.text?.includes('[RETRY_ATTEMPT]')
+      );
+    }
     
     // Use provided key, or select the best key based on context and load balancing
     const apiKey = providedApiKey || 
@@ -29,10 +46,24 @@ export const apiClient = {
     
     // Ensure token limits are properly applied
     if (!requestBody.max_tokens) {
+      // Extract prompt text for token management
+      let promptText = '';
+      if (userMessage) {
+        if (isStringContent(userMessage.content)) {
+          promptText = userMessage.content;
+        } else {
+          // Concatenate text from array items
+          promptText = userMessage.content
+            .filter(item => item.type === 'text' && item.text)
+            .map(item => item.text)
+            .join(' ');
+        }
+      }
+      
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: 'general',
         isRetryAttempt,
-        prompt: userContent
+        prompt: promptText
       });
       console.log(`No token limit specified, using configured limit: ${effectiveTokenLimit}`);
       requestBody.max_tokens = effectiveTokenLimit;
@@ -159,7 +190,22 @@ export const apiClient = {
           await new Promise(resolve => setTimeout(resolve, backoffTime));
         } else {
           console.error("Financial expert API call failed after all retries:", error);
-          return offlineResponseGenerator.generateOfflineResponseFormat(userContent, error);
+          
+          // Create prompt text for offline response
+          let promptText = '';
+          if (userMessage) {
+            if (isStringContent(userMessage.content)) {
+              promptText = userMessage.content;
+            } else {
+              // Create a text summary of the content for offline responses
+              promptText = "Image analysis request: " + userMessage.content
+                .filter(item => item.type === 'text' && item.text)
+                .map(item => item.text)
+                .join(' ');
+            }
+          }
+          
+          return offlineResponseGenerator.generateOfflineResponseFormat(promptText, error);
         }
       }
     }
