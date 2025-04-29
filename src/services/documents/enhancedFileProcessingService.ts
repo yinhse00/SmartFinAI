@@ -1,6 +1,6 @@
 
 import { fileProcessingService } from '@/services/documents/fileProcessingService';
-import { importRegulatoryContent } from '@/services/database/importUtils';
+import { importRegulatoryContent } from '@/services/database/import/importService';
 import { DocumentCategory } from '@/types/references';
 import { determineCategory } from '@/services/database/categoryUtils';
 import { toast } from '@/components/ui/use-toast';
