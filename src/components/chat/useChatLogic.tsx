@@ -2,13 +2,13 @@
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
-import { useQueryProcessor } from './hooks/useQueryProcessor';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { useBatchHandling } from './hooks/useBatchHandling';
 import { useLanguageState } from './hooks/useLanguageState';
+import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
 
 /**
- * Main hook that orchestrates chat functionality by composing smaller, focused hooks
+ * Main hook that orchestrates chat functionality with the new structured workflow
  */
 export const useChatLogic = () => {
   // Message state management
@@ -47,60 +47,25 @@ export const useChatLogic = () => {
     startBatching
   } = useBatchHandling();
 
-  // Query processing
+  // New workflow processor implementing the structured steps
   const {
     isLoading,
-    processingStage,
-    processQuery: executeQuery
-  } = useQueryProcessor(
+    currentStep,
+    stepProgress,
+    executeWorkflow
+  } = useWorkflowProcessor(
     messages,
     setMessages,
     setLastQuery,
-    setInput,
-    lastQuery,
     isGrokApiKeySet,
     setApiKeyDialogOpen
   );
 
-  // Compose the processor with batch handling
-  const processQuery = async (queryText: string, options: { isBatchContinuation?: boolean, autoBatch?: boolean } = {}) => {
-    // Check language
-    checkIsChineseInput(queryText);
-    
-    // Handle batching setup
-    const isBatchContinuation = options.isBatchContinuation || false;
-    const autoBatchMode = options.autoBatch ?? autoBatch;
-    
-    let prompt = queryText;
-    
-    if (isBatchContinuation && currentBatchNumber > 1) {
-      prompt = `${queryText} [CONTINUE_BATCH_PART ${currentBatchNumber}] Please continue the previous answer immediately after the last word, avoiding unnecessary repetition or summary.`;
-    }
-    
-    // Initialize batch state
-    if (!isBatchContinuation) {
-      startBatching(queryText, autoBatchMode);
-    }
-    
-    const batchInfo = isBatchContinuation
-      ? { batchNumber: currentBatchNumber, isContinuing: true }
-      : undefined;
-      
-    await executeQuery(
-      prompt,
-      batchInfo,
-      (truncated: boolean) => {
-        const result = handleBatchResult(truncated, queryText, autoBatchMode);
-        if (result.shouldContinue) {
-          processQuery(queryText, { isBatchContinuation: true, autoBatch: autoBatchMode });
-        }
-      }
-    );
-  };
-  
   // Handle sending messages
   const handleSend = () => {
-    processQuery(input);
+    checkIsChineseInput(input);
+    executeWorkflow(input);
+    setInput('');
   };
   
   // Handle keyboard input
@@ -112,13 +77,16 @@ export const useChatLogic = () => {
   
   // Handle batch continuation
   const handleContinueBatch = () => {
-    continueBatch((query, options) => processQuery(query, options));
+    continueBatch((query, options) => {
+      checkIsChineseInput(query);
+      executeWorkflow(query);
+    });
   };
   
   // Handle retrying queries
   const retryLastQuery = () => {
     if (lastQuery) {
-      processQuery(`${lastQuery} [RETRY_ATTEMPT]`);
+      executeWorkflow(`${lastQuery} [RETRY_ATTEMPT]`);
     }
   };
 
@@ -145,9 +113,10 @@ export const useChatLogic = () => {
     isLoading,
     handleSend,
     handleKeyDown,
-    processQuery,
+    processQuery: executeWorkflow,  // Renamed for backward compatibility
     retryLastQuery,
-    processingStage,
+    currentStep,
+    stepProgress,
 
     // Batch handling
     isBatching,
