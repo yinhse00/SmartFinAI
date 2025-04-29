@@ -1,6 +1,7 @@
 
 import { grokService } from '@/services/grokService';
 import { WorkflowStep } from './types';
+import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
  * Step 4: Execution Guidance
@@ -33,17 +34,8 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
     );
     
-    // Initialize with empty string
-    let checklistContext = '';
-    
-    // Only access properties if checklistResponse exists and is not null
-    if (checklistResponse) {
-      if (typeof checklistResponse === 'object' && 'text' in checklistResponse) {
-        checklistContext = checklistResponse.text || '';
-      } else if (typeof checklistResponse === 'string') {
-        checklistContext = checklistResponse;
-      }
-    }
+    // Use utility function to safely extract text
+    const checklistContext = safelyExtractText(checklistResponse);
     
     if (checklistContext && checklistContext.trim() !== '') {
       executionContexts.push("--- Document Requirements ---\n\n" + checklistContext);
@@ -55,17 +47,8 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
     );
     
-    // Initialize with empty string
-    let workingPlanContext = '';
-    
-    // Only access properties if workingPlanResponse exists and is not null
-    if (workingPlanResponse) {
-      if (typeof workingPlanResponse === 'object' && 'text' in workingPlanResponse) {
-        workingPlanContext = workingPlanResponse.text || '';
-      } else if (typeof workingPlanResponse === 'string') {
-        workingPlanContext = workingPlanResponse;
-      }
-    }
+    // Use utility function to safely extract text
+    const workingPlanContext = safelyExtractText(workingPlanResponse);
     
     if (workingPlanContext && workingPlanContext.trim() !== '') {
       executionContexts.push("--- Working Plan ---\n\n" + workingPlanContext);
@@ -77,17 +60,8 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
     );
     
-    // Initialize with empty string
-    let timetableContext = '';
-    
-    // Only access properties if timetableResponse exists and is not null
-    if (timetableResponse) {
-      if (typeof timetableResponse === 'object' && 'text' in timetableResponse) {
-        timetableContext = timetableResponse.text || '';
-      } else if (typeof timetableResponse === 'string') {
-        timetableContext = timetableResponse;
-      }
-    }
+    // Use utility function to safely extract text
+    const timetableContext = safelyExtractText(timetableResponse);
     
     if (timetableContext && timetableContext.trim() !== '') {
       executionContexts.push("--- Transaction Timeline ---\n\n" + timetableContext);

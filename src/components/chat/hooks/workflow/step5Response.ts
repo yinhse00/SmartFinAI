@@ -1,5 +1,6 @@
 
 import { grokService } from '@/services/grokService';
+import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
  * Step 5: Response Generation
@@ -28,17 +29,8 @@ export const executeStep5 = async (
     // Generate response using Grok
     const response = await grokService.generateResponse(responseParams);
     
-    // Initialize with empty string
-    let responseText = '';
-    
-    // Only access properties if response exists and is not null
-    if (response) {
-      if (typeof response === 'object' && 'text' in response) {
-        responseText = response.text || '';
-      } else if (typeof response === 'string') {
-        responseText = response;
-      }
-    }
+    // Extract response text safely using our utility
+    const responseText = safelyExtractText(response);
     
     // Step 5(b): If original input was Chinese, translate response
     if (lastInputWasChinese) {
@@ -51,17 +43,8 @@ export const executeStep5 = async (
           targetLanguage: 'zh'
         });
         
-        // Initialize with empty string
-        let translatedText = '';
-        
-        // Only access properties if translation exists and is not null
-        if (translation) {
-          if (typeof translation === 'object' && 'text' in translation) {
-            translatedText = translation.text || '';
-          } else if (typeof translation === 'string') {
-            translatedText = translation;
-          }
-        }
+        // Extract translated text safely using our utility
+        const translatedText = safelyExtractText(translation);
         
         return {
           completed: true,

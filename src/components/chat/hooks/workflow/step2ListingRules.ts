@@ -1,6 +1,7 @@
 
 import { grokService } from '@/services/grokService';
 import { WorkflowStep } from './types';
+import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
  * Step 2: Listing Rules Search
@@ -17,18 +18,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
-    // Initialize with empty string to avoid null/undefined
-    let listingRulesContext = '';
-    
-    // Only access properties if response exists and is not null
-    if (response) {
-      if (typeof response === 'object' && 'text' in response) {
-        listingRulesContext = response.text || '';
-      } else if (typeof response === 'string') {
-        listingRulesContext = response;
-      }
-    }
-    
+    // Use utility function to safely extract text
+    const listingRulesContext = safelyExtractText(response);
     const reasoning = '';
     
     // Step 2(b-c): Check if search was positive or negative
@@ -47,17 +38,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
         );
         
-        // Initialize with empty string
-        let chapterContext = '';
-        
-        // Only access properties if chapterResponse exists and is not null
-        if (chapterResponse) {
-          if (typeof chapterResponse === 'object' && 'text' in chapterResponse) {
-            chapterContext = chapterResponse.text || '';
-          } else if (typeof chapterResponse === 'string') {
-            chapterContext = chapterResponse;
-          }
-        }
+        // Use utility function to safely extract text
+        const chapterContext = safelyExtractText(chapterResponse);
         
         if (chapterContext) {
           enhancedContext += "\n\n--- Detailed Chapter Information ---\n\n" + chapterContext;
