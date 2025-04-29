@@ -12,7 +12,7 @@ interface APIKeyDialogProps {
   onOpenChange: (open: boolean) => void;
   grokApiKeyInput: string;
   setGrokApiKeyInput: (key: string) => void;
-  onSave: () => void;
+  handleSaveApiKeys: () => void;  // Added this missing prop
 }
 
 const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
@@ -20,7 +20,7 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
   onOpenChange,
   grokApiKeyInput,
   setGrokApiKeyInput,
-  onSave
+  handleSaveApiKeys
 }) => {
   const [keyError, setKeyError] = useState<string | null>(null);
   
@@ -32,7 +32,7 @@ const APIKeyDialog: React.FC<APIKeyDialogProps> = ({
     }
     
     setKeyError(null);
-    onSave();
+    handleSaveApiKeys();
   };
   
   return (
