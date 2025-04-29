@@ -80,6 +80,7 @@ export const grokResponseGenerator = {
               response.choices && 
               Array.isArray(response.choices) && 
               response.choices.length > 0 && 
+              response.choices[0] && // Add explicit check for first item
               response.choices[0].message) {
             responseText = response.choices[0].message.content || '';
           }
@@ -178,6 +179,7 @@ export const grokResponseGenerator = {
             response.choices && 
             Array.isArray(response.choices) && 
             response.choices.length > 0 && 
+            response.choices[0] && // Add explicit check for first item
             response.choices[0].message) {
           responseText = response.choices[0].message.content || '';
         }
