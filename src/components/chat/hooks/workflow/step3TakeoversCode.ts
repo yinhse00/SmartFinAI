@@ -19,6 +19,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     
     let takeoversCodeContext = '';
     
+    // Explicitly check if response is null before accessing properties
     if (response) {
       if (typeof response === 'object' && response !== null && 'text' in response) {
         takeoversCodeContext = response.text || '';
@@ -42,6 +43,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       
       let detailedTakeoverContext = '';
       
+      // Explicitly check if detailedResponse is null before accessing properties
       if (detailedResponse) {
         if (typeof detailedResponse === 'object' && detailedResponse !== null && 'text' in detailedResponse) {
           detailedTakeoverContext = detailedResponse.text || '';

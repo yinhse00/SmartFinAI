@@ -35,6 +35,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let checklistContext = '';
     
+    // Explicitly check if checklistResponse is null before accessing properties
     if (checklistResponse) {
       if (typeof checklistResponse === 'object' && checklistResponse !== null && 'text' in checklistResponse) {
         checklistContext = checklistResponse.text || '';
@@ -55,6 +56,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let workingPlanContext = '';
     
+    // Explicitly check if workingPlanResponse is null before accessing properties
     if (workingPlanResponse) {
       if (typeof workingPlanResponse === 'object' && workingPlanResponse !== null && 'text' in workingPlanResponse) {
         workingPlanContext = workingPlanResponse.text || '';
@@ -75,6 +77,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     let timetableContext = '';
     
+    // Explicitly check if timetableResponse is null before accessing properties
     if (timetableResponse) {
       if (typeof timetableResponse === 'object' && timetableResponse !== null && 'text' in timetableResponse) {
         timetableContext = timetableResponse.text || '';

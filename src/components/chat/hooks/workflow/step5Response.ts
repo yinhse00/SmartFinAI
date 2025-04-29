@@ -30,7 +30,7 @@ export const executeStep5 = async (
     let responseText = '';
     
     if (typeof response === 'object' && response !== null && 'text' in response) {
-      responseText = response.text;
+      responseText = response.text || '';
     } else if (typeof response === 'string') {
       responseText = response;
     }
