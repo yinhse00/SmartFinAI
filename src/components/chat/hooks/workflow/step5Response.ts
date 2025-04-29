@@ -27,10 +27,12 @@ export const executeStep5 = async (
     
     // Generate response using Grok
     const response = await grokService.generateResponse(responseParams);
+    
+    // Initialize with empty string
     let responseText = '';
     
-    // Safe handling of potentially null response
-    if (response !== null && response !== undefined) {
+    // Only access properties if response exists and is not null
+    if (response) {
       if (typeof response === 'object' && 'text' in response) {
         responseText = response.text || '';
       } else if (typeof response === 'string') {
@@ -49,10 +51,11 @@ export const executeStep5 = async (
           targetLanguage: 'zh'
         });
         
+        // Initialize with empty string
         let translatedText = '';
         
-        // Safe handling of potentially null translation response
-        if (translation !== null && translation !== undefined) {
+        // Only access properties if translation exists and is not null
+        if (translation) {
           if (typeof translation === 'object' && 'text' in translation) {
             translatedText = translation.text || '';
           } else if (typeof translation === 'string') {

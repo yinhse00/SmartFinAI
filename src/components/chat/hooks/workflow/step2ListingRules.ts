@@ -17,10 +17,11 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
+    // Initialize with empty string to avoid null/undefined
     let listingRulesContext = '';
     
-    // Safe handling of potentially null response
-    if (response !== null && response !== undefined) {
+    // Only access properties if response exists and is not null
+    if (response) {
       if (typeof response === 'object' && 'text' in response) {
         listingRulesContext = response.text || '';
       } else if (typeof response === 'string') {
@@ -46,10 +47,11 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
         );
         
+        // Initialize with empty string
         let chapterContext = '';
         
-        // Safe handling of potentially null chapterResponse
-        if (chapterResponse !== null && chapterResponse !== undefined) {
+        // Only access properties if chapterResponse exists and is not null
+        if (chapterResponse) {
           if (typeof chapterResponse === 'object' && 'text' in chapterResponse) {
             chapterContext = chapterResponse.text || '';
           } else if (typeof chapterResponse === 'string') {

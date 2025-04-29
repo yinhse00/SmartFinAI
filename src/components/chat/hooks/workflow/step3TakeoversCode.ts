@@ -17,10 +17,11 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
+    // Initialize with empty string
     let takeoversCodeContext = '';
     
-    // Safe handling of potentially null response
-    if (response !== null && response !== undefined) {
+    // Only access properties if response exists and is not null
+    if (response) {
       if (typeof response === 'object' && 'text' in response) {
         takeoversCodeContext = response.text || '';
       } else if (typeof response === 'string') {
@@ -41,10 +42,11 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
       );
       
+      // Initialize with empty string
       let detailedTakeoverContext = '';
       
-      // Safe handling of potentially null detailedResponse
-      if (detailedResponse !== null && detailedResponse !== undefined) {
+      // Only access properties if detailedResponse exists and is not null
+      if (detailedResponse) {
         if (typeof detailedResponse === 'object' && 'text' in detailedResponse) {
           detailedTakeoverContext = detailedResponse.text || '';
         } else if (typeof detailedResponse === 'string') {
