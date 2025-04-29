@@ -76,7 +76,8 @@ export const parseRegulatoryText = (
     const parseApproaches = [
       parseRuleNumberBasedApproach,
       parseNumberedListApproach,
-      parseHeadingBasedApproach
+      parseHeadingBasedApproach,
+      parseParagraphBasedApproach  // New fallback approach
     ];
     
     for (const parseApproach of parseApproaches) {
@@ -267,6 +268,48 @@ const parseHeadingBasedApproach = (
       rule_number: ruleNumber,
       title: currentTitle, 
       content: currentContent,
+      chapter: documentChapter,
+      source_document_id: sourceDocumentId
+    });
+  }
+  
+  return provisions;
+};
+
+/**
+ * Parse content by paragraphs if all else fails
+ */
+const parseParagraphBasedApproach = (
+  content: string, 
+  documentChapter?: string,
+  sourceDocumentId?: string
+): Omit<RegulationProvision, 'id'>[] => {
+  const provisions: Omit<RegulationProvision, 'id'>[] = [];
+  
+  // Split content into paragraphs (separated by double newlines)
+  const paragraphs = content.split(/\n\s*\n/);
+  
+  if (paragraphs.length <= 1) {
+    return []; // Not enough paragraphs to parse
+  }
+  
+  let title = "Chapter Content";
+  // Try to use first paragraph as title if it's short enough
+  if (paragraphs[0].length < 100) {
+    title = paragraphs[0].trim();
+    paragraphs.shift();
+  }
+  
+  // Combine remaining paragraphs as content
+  if (paragraphs.length > 0) {
+    const ruleNumber = documentChapter 
+      ? `${documentChapter}.1` 
+      : `1.0`;
+    
+    provisions.push({
+      rule_number: ruleNumber,
+      title: title,
+      content: paragraphs.join('\n\n'),
       chapter: documentChapter,
       source_document_id: sourceDocumentId
     });

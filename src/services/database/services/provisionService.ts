@@ -1,13 +1,27 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { RegulationProvision } from '../types/index';
+import { RegulationProvision } from '../types';
 
-/**
- * Service for managing regulatory provisions
- */
 export const provisionService = {
   /**
-   * Get all provisions for a specific chapter
+   * Get all provisions
+   */
+  getAllProvisions: async (): Promise<RegulationProvision[]> => {
+    const { data, error } = await supabase
+      .from('regulatory_provisions')
+      .select('*')
+      .order('rule_number');
+    
+    if (error) {
+      console.error('Error fetching provisions:', error);
+      return [];
+    }
+    
+    return data || [];
+  },
+  
+  /**
+   * Get provisions by chapter
    */
   getProvisionsByChapter: async (chapter: string): Promise<RegulationProvision[]> => {
     const { data, error } = await supabase
@@ -25,72 +39,82 @@ export const provisionService = {
   },
   
   /**
-   * Get all provisions (with optional limit)
+   * Add a single provision
    */
-  getAllProvisions: async (limit: number = 1000): Promise<RegulationProvision[]> => {
-    const { data, error } = await supabase
-      .from('regulatory_provisions')
-      .select('*')
-      .order('chapter', { ascending: true })
-      .order('rule_number', { ascending: true })
-      .limit(limit);
-    
-    if (error) {
-      console.error(`Error fetching all provisions:`, error);
-      return [];
-    }
-    
-    return data || [];
-  },
-  
-  /**
-   * Add a provision to the database
-   */
-  addProvision: async (provision: Omit<RegulationProvision, 'id'>): Promise<RegulationProvision | null> => {
-    const { data, error } = await supabase
-      .from('regulatory_provisions')
-      .insert(provision)
-      .select()
-      .single();
-    
-    if (error) {
-      console.error('Error adding provision:', error);
+  addProvision: async (provision: Omit<RegulationProvision, 'id'>): Promise<string | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('regulatory_provisions')
+        .insert(provision)
+        .select('id')
+        .single();
+      
+      if (error) {
+        console.error('Error adding provision:', error);
+        return null;
+      }
+      
+      return data?.id || null;
+    } catch (err) {
+      console.error('Exception adding provision:', err);
       return null;
     }
-    
-    return data;
   },
   
   /**
-   * Add multiple provisions in a batch operation
+   * Add multiple provisions
    */
   addProvisions: async (provisions: Omit<RegulationProvision, 'id'>[]): Promise<number> => {
-    const { data, error } = await supabase
-      .from('regulatory_provisions')
-      .insert(provisions);
-    
-    if (error) {
-      console.error('Error adding provisions in batch:', error);
+    if (!provisions || provisions.length === 0) {
       return 0;
     }
     
-    return provisions.length;
+    try {
+      // Add provisions one by one to avoid batch errors
+      let addedCount = 0;
+      for (const provision of provisions) {
+        try {
+          const result = await provisionService.addProvision(provision);
+          if (result) {
+            addedCount++;
+          }
+        } catch (err) {
+          console.error('Error adding provision:', err);
+        }
+      }
+      
+      return addedCount;
+    } catch (err) {
+      console.error('Error adding provisions in batch:', err);
+      return 0;
+    }
   },
 
   /**
    * Get provisions by source document ID
    */
-  getProvisionsBySourceDocument: async (documentId: string): Promise<RegulationProvision[]> => {
-    const { data, error } = await supabase
-      .from('regulatory_provisions')
-      .select('*')
-      .eq('source_document_id', documentId);
-    
-    if (error) {
-      console.error(`Error fetching provisions for document ${documentId}:`, error);
+  getProvisionsBySourceDocument: async (sourceDocumentId: string): Promise<RegulationProvision[]> => {
+    // If sourceDocumentId is empty, return empty array to avoid SQL errors
+    if (!sourceDocumentId) {
+      console.warn('Empty sourceDocumentId provided to getProvisionsBySourceDocument');
       return [];
     }
     
-    return data || [];
+    try {
+      const { data, error } = await supabase
+        .from('regulatory_provisions')
+        .select('*')
+        .eq('source_document_id', sourceDocumentId);
+      
+      if (error) {
+        console.error(`Error fetching provisions for document ${sourceDocumentId}:`, error);
+        return [];
+      }
+      
+      return data || [];
+    } catch (err) {
+      console.error(`Error fetching provisions for document ${sourceDocumentId}:`, err);
+      return [];
+    }
   }
 };
