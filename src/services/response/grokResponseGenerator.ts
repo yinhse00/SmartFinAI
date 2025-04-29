@@ -73,8 +73,16 @@ export const grokResponseGenerator = {
           // Make API call with simpler configuration for conversational queries
           const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
           
-          // Get the raw response text - FIX: Add null check for response and choices
-          const responseText = response?.choices?.[0]?.message?.content || '';
+          // FIX: Add comprehensive null checks for response and choices
+          // Access content safely with proper null checking
+          let responseText = '';
+          if (response && 
+              response.choices && 
+              Array.isArray(response.choices) && 
+              response.choices.length > 0 && 
+              response.choices[0].message) {
+            responseText = response.choices[0].message.content || '';
+          }
           
           console.groupEnd();
           return {
@@ -163,8 +171,16 @@ export const grokResponseGenerator = {
         const responseTime = Date.now() - startTime;
         console.log(`API response received in ${responseTime}ms for request ${requestId}`);
         
-        // Get the raw response text - FIX: Add null check for response and choices
-        const responseText = response?.choices?.[0]?.message?.content || '';
+        // FIX: Add comprehensive null checks for response and choices
+        // Access content safely with proper null checking
+        let responseText = '';
+        if (response && 
+            response.choices && 
+            Array.isArray(response.choices) && 
+            response.choices.length > 0 && 
+            response.choices[0].message) {
+          responseText = response.choices[0].message.content || '';
+        }
         
         // Calculate relevance score and enhance with metadata
         const relevanceScore = responseOptimizer.calculateRelevanceScore(
