@@ -101,8 +101,15 @@ export const responseGeneratorCore = {
     truncated: boolean,
     text: string
   } => {
+    // Define a token limit constant based on the tokenManagementService
+    const DEFAULT_TOKEN_LIMIT = tokenManagementService.getTokenLimit({
+      queryType: 'general',
+      prompt: '',
+      isRetryAttempt: false
+    });
+    
     // If token count is near limit, mark as truncated
-    if (tokenCount > MAX_TOKEN_LIMIT * 0.95) {
+    if (tokenCount > DEFAULT_TOKEN_LIMIT * 0.95) {
       console.log(`Response near token limit (${tokenCount}), marking as truncated`);
       const truncationMessage = "\n\n[NOTE: Response has been truncated due to token limit. This represents the analysis completed so far.]";
       return {
