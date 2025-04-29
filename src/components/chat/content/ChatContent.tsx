@@ -28,9 +28,11 @@ const ChatContent: React.FC<ChatContentProps> = ({
     <CardContent 
       className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
     >
-      {isLoading && currentStep && stepProgress && (
-        <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />
-      )}
+      <div className="sticky top-0 z-10 bg-background">
+        {currentStep && stepProgress && (
+          <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />
+        )}
+      </div>
       <ChatHistory 
         messages={messages} 
         isLoading={isLoading} 

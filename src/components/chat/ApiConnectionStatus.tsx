@@ -23,7 +23,7 @@ const ApiConnectionStatus = ({
     isOfflineMode: boolean;
   }>({
     success: null,
-    message: 'Checking API connection...',
+    message: 'Checking AI connection...',
     loading: true,
     isOfflineMode: false
   });
@@ -37,8 +37,8 @@ const ApiConnectionStatus = ({
         isOfflineMode: externalOfflineMode,
         loading: false,
         message: externalOfflineMode 
-          ? 'API is unreachable. Operating in offline mode with limited functionality.' 
-          : 'API connection is active.'
+          ? 'AI is unreachable. Operating in offline mode with limited functionality.' 
+          : 'AI connection is active.'
       }));
     }
   }, [externalOfflineMode]);
@@ -49,7 +49,7 @@ const ApiConnectionStatus = ({
       setConnectionStatus(prev => ({
         ...prev,
         loading: true,
-        message: 'Checking API connection...'
+        message: 'Checking AI connection...'
       }));
       
       const success = await onTryReconnect();
@@ -57,8 +57,8 @@ const ApiConnectionStatus = ({
       setConnectionStatus({
         success,
         message: success 
-          ? 'API connection restored successfully.' 
-          : 'API is still unreachable. Please check your internet connection and API key.',
+          ? 'AI connection restored successfully.' 
+          : 'AI is still unreachable. Please check your internet connection and API key.',
         loading: false,
         isOfflineMode: !success
       });
@@ -69,7 +69,7 @@ const ApiConnectionStatus = ({
     // Fallback to original implementation
     setConnectionStatus({
       success: null,
-      message: 'Checking API connection...',
+      message: 'Checking AI connection...',
       loading: true,
       isOfflineMode: false
     });
@@ -92,7 +92,7 @@ const ApiConnectionStatus = ({
       setConnectionStatus({
         success: false,
         message: isNetworkError 
-          ? 'Network connectivity issue. The API may be unreachable due to CORS restrictions or network configuration.'
+          ? 'Network connectivity issue. The AI may be unreachable due to CORS restrictions or network configuration.'
           : error instanceof Error ? error.message : 'Unknown connection error',
         loading: false,
         isOfflineMode: isNetworkError
@@ -121,13 +121,13 @@ const ApiConnectionStatus = ({
       {connectionStatus.loading ? (
         <Alert className="bg-finance-light-blue/10 border-finance-light-blue">
           <RefreshCw className="h-4 w-4 animate-spin text-finance-medium-blue" />
-          <AlertTitle>Testing API Connection</AlertTitle>
+          <AlertTitle>Testing AI Connection</AlertTitle>
           <AlertDescription>Please wait while we verify the connection...</AlertDescription>
         </Alert>
       ) : connectionStatus.success ? (
         <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertTitle>API Connected</AlertTitle>
+          <AlertTitle>AI Connected</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>SmartFinAI is ready to answer your queries.</span>
             <Button 
@@ -171,7 +171,7 @@ const ApiConnectionStatus = ({
       ) : (
         <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
           <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <AlertTitle>API Connection Issue</AlertTitle>
+          <AlertTitle>AI Connection Issue</AlertTitle>
           <AlertDescription className="flex flex-col space-y-2">
             <span>{connectionStatus.message}</span>
             <div className="flex gap-2 mt-1">
