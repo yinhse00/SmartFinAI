@@ -3,7 +3,7 @@
  * Core API request processing logic
  */
 import { getGrokApiKey, selectLeastUsedKey, selectBestPerformingKey } from '../../../apiKeyService';
-import { attemptProxyRequest, attemptDirectRequest } from './endpointManager';
+import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability } from './endpointManager';
 import { executeWithRetry } from './retryHandler';
 import { isRetryAttempt } from './requestHelper';
 import { prepareRequestParameters } from './queryParameterBuilder';
@@ -34,6 +34,13 @@ export const processApiRequest = async (
   if (!apiKey.startsWith('xai-')) {
     console.error("Invalid financial expert API key format");
     throw new Error("Invalid financial expert API key format");
+  }
+  
+  // First check API availability to fail fast
+  const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
+  if (!isApiAvailable) {
+    console.error("Grok API is unreachable - all endpoints appear to be down");
+    throw new Error("Grok API is unreachable");
   }
   
   // Ensure token limits are properly applied
