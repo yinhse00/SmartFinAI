@@ -1,123 +1,80 @@
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
-import ProcessingIndicator from './ProcessingIndicator';
-import ApiConnectionStatus from './ApiConnectionStatus';
 import { useChatLogic } from './useChatLogic';
-import { Button } from '@/components/ui/button';
-import { Database, BookOpen, FileText, BarChart2, MessageSquare } from 'lucide-react';
-import { useMessageTranslator } from './translation/MessageTranslator';
-import { useTruncationAnalyzer } from './analysis/TruncationAnalyzer';
-import BatchContinuation from './batch/BatchContinuation';
-import WorkflowIndicator from './workflow/WorkflowIndicator';
-import { WorkflowStep } from './hooks/workflow/types';
+import { useToast } from '@/hooks/use-toast';
 
-const ChatInterface = () => {
+const ChatInterface: React.FC = () => {
   const {
-    input,
-    setInput,
+    messages,
+    setMessages,
+    clearConversationMemory,
     grokApiKeyInput,
     setGrokApiKeyInput,
     isGrokApiKeySet,
-    messages,
-    setMessages,
-    isLoading,
-    currentStep,
-    stepProgress,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
+    input,
+    setInput,
+    lastQuery,
+    isLoading,
     handleSend,
     handleKeyDown,
+    processQuery,
     retryLastQuery,
+    currentStep,
+    stepProgress,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch,
-    autoBatch,
-    lastInputWasChinese
+    handleContinueBatch
   } = useChatLogic();
-  
-  // Use the extracted message translation logic
-  const { translatingMessageIds } = useMessageTranslator({
-    messages,
-    setMessages,
-    lastInputWasChinese,
-    isLoading
-  });
-  
-  // Use the extracted truncation analysis logic
-  useTruncationAnalyzer({
-    messages,
-    setMessages,
-    retryLastQuery,
-    lastInputWasChinese
-  });
 
-  // Helper function to map workflow steps to processing stage
-  const mapWorkflowToProcessingStage = (workflowStep: WorkflowStep): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
-    switch (workflowStep) {
-      case 'initial':
-        return 'preparing';
-      case 'listingRules':
-      case 'takeoversCode':
-        return 'reviewing';
-      case 'execution':
-        return 'processing';
-      case 'response':
-      case 'complete':
-      default:
-        return 'finalizing';
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const { toast } = useToast();
+
+  const handleFileSelect = (files: FileList) => {
+    const newFiles = Array.from(files);
+    setSelectedFiles(prev => [...prev, ...newFiles]);
+    
+    toast({
+      title: "Files uploaded",
+      description: `${newFiles.length} file(s) have been selected.`,
+    });
+    
+    // Optionally, you could append file info to the message
+    if (files.length > 0) {
+      const fileNames = Array.from(files).map(file => file.name).join(', ');
+      setInput(prev => prev + (prev ? '\n' : '') + `I've uploaded: ${fileNames}`);
     }
   };
 
   return (
-    <div className="flex flex-col h-[calc(100vh-14rem)]">
-      <div className="flex-1">
-        <ApiConnectionStatus onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)} />
-
-        <div className="flex-1 flex flex-col">
-          {isLoading && <ProcessingIndicator 
-            isVisible={true} 
-            stage={mapWorkflowToProcessingStage(currentStep)} 
-          />}
-
-          {isLoading && <WorkflowIndicator 
-            currentStep={currentStep} 
-            stepProgress={stepProgress}
-          />}
-
-          <ChatContainer
-            messages={messages}
-            isLoading={isLoading}
-            isGrokApiKeySet={isGrokApiKeySet}
-            input={input}
-            setInput={setInput}
-            handleSend={handleSend}
-            handleKeyDown={handleKeyDown}
-            onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
-            retryLastQuery={retryLastQuery}
-            translatingMessageIds={translatingMessageIds}
-          />
-
-          <BatchContinuation 
-            isBatching={isBatching}
-            autoBatch={autoBatch}
-            currentBatchNumber={currentBatchNumber}
-            handleContinueBatch={handleContinueBatch}
-            lastInputWasChinese={lastInputWasChinese}
-          />
-        </div>
+    <>
+      <div className="container mx-auto py-6">
+        <ChatContainer
+          messages={messages}
+          isLoading={isLoading}
+          isGrokApiKeySet={isGrokApiKeySet}
+          input={input}
+          setInput={setInput}
+          handleSend={handleSend}
+          handleKeyDown={handleKeyDown}
+          onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
+          retryLastQuery={retryLastQuery}
+          onFileSelect={handleFileSelect}
+        />
       </div>
-
+      
       <APIKeyDialog
         open={apiKeyDialogOpen}
         onOpenChange={setApiKeyDialogOpen}
         grokApiKeyInput={grokApiKeyInput}
         setGrokApiKeyInput={setGrokApiKeyInput}
-        onSave={handleSaveApiKeys}
+        handleSaveApiKeys={handleSaveApiKeys}
       />
-    </div>
+    </>
   );
 };
 

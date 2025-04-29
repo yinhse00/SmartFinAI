@@ -6,6 +6,7 @@ import ChatContent from './content/ChatContent';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
+import { useToast } from '@/hooks/use-toast';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -18,6 +19,7 @@ interface ChatContainerProps {
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
+  onFileSelect?: (files: FileList) => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -30,7 +32,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   handleKeyDown,
   onOpenApiKeyDialog,
   retryLastQuery,
-  translatingMessageIds = []
+  translatingMessageIds = [],
+  onFileSelect
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -38,6 +41,19 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   }
   
   const { lastUserMessageIsChinese, getPlaceholder } = useLanguageDetection(messages, input);
+  const { toast } = useToast();
+  
+  // Handle file uploads if no explicit handler is provided
+  const handleFileSelect = (files: FileList) => {
+    if (onFileSelect) {
+      onFileSelect(files);
+    } else {
+      toast({
+        title: "Files selected",
+        description: `${files.length} file(s) selected. File handling will be implemented soon.`,
+      });
+    }
+  };
   
   return (
     <Card className="finance-card h-full flex flex-col">
@@ -62,6 +78,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onOpenApiKeyDialog={onOpenApiKeyDialog}
         handleKeyDown={handleKeyDown}
         placeholder={getPlaceholder()}
+        onFileSelect={handleFileSelect}
       />
     </Card>
   );
