@@ -1,10 +1,11 @@
 
 import React from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
-import ChatHistory from './ChatHistory';
+import ChatContent from './content/ChatContent';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
+import { useLanguageDetection } from './hooks/useLanguageDetection';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -36,13 +37,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
     console.log(`Currently translating ${translatingMessageIds.length} messages: ${translatingMessageIds.join(', ')}`);
   }
   
-  // Check if any Chinese text exists in input or messages
-  const containsChinese = input.match(/[\u4e00-\u9fa5]/g) || 
-    messages.some(m => m.content && m.content.match(/[\u4e00-\u9fa5]/g));
-  
-  // Get most recent user message language for UI labels
-  const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
-  const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
+  const { lastUserMessageIsChinese, getPlaceholder } = useLanguageDetection(messages, input);
   
   return (
     <Card className="finance-card h-full flex flex-col">
@@ -50,16 +45,14 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
       />
-      <CardContent 
-        className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
-      >
-        <ChatHistory 
-          messages={messages} 
-          isLoading={isLoading} 
-          onRetry={retryLastQuery}
-          translatingMessageIds={translatingMessageIds}
-        />
-      </CardContent>
+      
+      <ChatContent
+        messages={messages}
+        isLoading={isLoading}
+        onRetry={retryLastQuery}
+        translatingMessageIds={translatingMessageIds}
+      />
+      
       <ChatInput 
         input={input}
         setInput={setInput}
@@ -68,7 +61,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isGrokApiKeySet={isGrokApiKeySet}
         onOpenApiKeyDialog={onOpenApiKeyDialog}
         handleKeyDown={handleKeyDown}
-        placeholder={lastUserMessageIsChinese ? "输入您的查询..." : "Type your query..."}
+        placeholder={getPlaceholder()}
       />
     </Card>
   );
