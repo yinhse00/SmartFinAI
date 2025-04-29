@@ -50,9 +50,7 @@ const ChatInterface: React.FC = () => {
     
     // Format the extracted content to add to the input
     if (processedResults.length > 0) {
-      const extractedContent = processedResults.map(result => 
-        `[From ${result.source}]:\n${result.content}`
-      ).join('\n\n');
+      const extractedContent = processedResults.map(result => result.content).join('\n\n');
       
       setInput(prev => {
         const separator = prev ? '\n\n' : '';
@@ -75,6 +73,7 @@ const ChatInterface: React.FC = () => {
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
+          isProcessingFiles={isProcessing}
         />
       </div>
       

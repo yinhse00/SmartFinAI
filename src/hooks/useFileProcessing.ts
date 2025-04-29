@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { fileProcessingService } from '@/services/documents/fileProcessingService';
+import { formatExtractedContent } from '@/utils/fileContentFormatter';
 
 export const useFileProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -25,12 +26,18 @@ export const useFileProcessing = () => {
         files.map(file => fileProcessingService.processFile(file))
       );
       
+      // Format each result with the appropriate header
+      const formattedResults = results.map(result => ({
+        content: formatExtractedContent(result.source, result.content),
+        source: result.source
+      }));
+      
       toast({
         title: "File processing complete",
         description: `Successfully processed ${files.length} file(s).`,
       });
       
-      return results;
+      return formattedResults;
     } catch (error) {
       toast({
         title: "Error processing files",

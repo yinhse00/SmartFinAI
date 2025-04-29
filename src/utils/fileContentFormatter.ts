@@ -10,7 +10,7 @@ export const formatExtractedContent = (source: string, content: string): string 
   const fileType = getFileTypeFromName(source);
   const icon = getFileIcon(fileType);
   
-  return `📄 *Content extracted from ${source}*\n\n${content}\n\n`;
+  return `${icon} **Content extracted from ${source}**\n\n${content}\n\n`;
 };
 
 /**
