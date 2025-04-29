@@ -54,7 +54,7 @@ export const useQueryExecution = (
     
     // Generate a deterministic request ID that will be the same in both environments
     const contentHash = createSimpleHash(queryText);
-    const requestId = `req_${contentHash}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    const requestId = `req_${contentHash}_${Date.now()}`;
     console.log(`Processing request ${requestId} with query: ${queryText.substring(0, 50)}...`);
     
     setLastQuery(queryText);

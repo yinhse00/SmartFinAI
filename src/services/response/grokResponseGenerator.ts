@@ -74,7 +74,7 @@ export const grokResponseGenerator = {
           const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
           
           // Get the raw response text
-          const responseText = response.choices[0].message.content;
+          const responseText = response?.choices?.[0]?.message?.content || '';
           
           console.groupEnd();
           return {
@@ -116,7 +116,7 @@ export const grokResponseGenerator = {
       // Get optimized parameters for API call
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
         queryType, 
-        params.prompt, 
+        params.prompt || '', 
         !!enhancedParams.regulatoryContext,
         isSimpleQuery
       );
@@ -140,7 +140,7 @@ export const grokResponseGenerator = {
       // Build the request body with the enhanced token limits
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
-        enhancedParams.prompt,
+        enhancedParams.prompt || '',
         Math.min(0.05, temperature), // Keep temperature extremely low for consistency
         finalTokens               // Use our enhanced token limits
       );
@@ -164,12 +164,12 @@ export const grokResponseGenerator = {
         console.log(`API response received in ${responseTime}ms for request ${requestId}`);
         
         // Get the raw response text
-        const responseText = response.choices[0].message.content;
+        const responseText = response?.choices?.[0]?.message?.content || '';
         
         // Calculate relevance score and enhance with metadata
         const relevanceScore = responseOptimizer.calculateRelevanceScore(
           responseText, 
-          enhancedParams.prompt, 
+          enhancedParams.prompt || '', 
           queryType
         );
         
@@ -179,18 +179,19 @@ export const grokResponseGenerator = {
           queryType, 
           !!enhancedParams.regulatoryContext, 
           relevanceScore, 
-          enhancedParams.prompt
+          enhancedParams.prompt || ''
         );
         
         // Add environment metadata for debugging
-        finalResponse.metadata = {
-          ...finalResponse.metadata,
-          environmentInfo: {
-            requestId,
-            isProduction,
-            envSignature: 'unified-env-2.0',
-            processingTime: responseTime
-          }
+        if (!finalResponse.metadata) {
+          finalResponse.metadata = {};
+        }
+        
+        finalResponse.metadata.environmentInfo = {
+          requestId,
+          isProduction,
+          envSignature: 'unified-env-2.0',
+          processingTime: responseTime
         };
 
         console.groupEnd();
@@ -202,7 +203,7 @@ export const grokResponseGenerator = {
         try {
           const startTime = Date.now();
           const backupResponse = await responseGeneratorCore.makeBackupApiCall(
-            enhancedParams.prompt, 
+            enhancedParams.prompt || '', 
             queryType, 
             apiKey
           );
@@ -210,15 +211,16 @@ export const grokResponseGenerator = {
           console.log(`Backup API response received in ${responseTime}ms for request ${requestId}`);
           
           // Add environment metadata for debugging
-          backupResponse.metadata = {
-            ...backupResponse.metadata,
-            environmentInfo: {
-              requestId,
-              isProduction,
-              envSignature: 'unified-env-2.0',
-              processingTime: responseTime,
-              isBackupResponse: true
-            }
+          if (!backupResponse.metadata) {
+            backupResponse.metadata = {};
+          }
+          
+          backupResponse.metadata.environmentInfo = {
+            requestId,
+            isProduction,
+            envSignature: 'unified-env-2.0',
+            processingTime: responseTime,
+            isBackupResponse: true
           };
           
           console.groupEnd();
@@ -250,10 +252,10 @@ export const grokResponseGenerator = {
       }
     } catch (error) {
       // Handle unexpected errors
-      errorHandler.logApiError(error, params.prompt);
+      errorHandler.logApiError(error, params.prompt || '');
       console.groupEnd();
       
-      return errorHandler.createFallbackResponse(params.prompt, error);
+      return errorHandler.createFallbackResponse(params.prompt || '', error);
     }
   },
   
