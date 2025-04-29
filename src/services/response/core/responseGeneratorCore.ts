@@ -4,10 +4,6 @@ import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
-// Set appropriate maximum token limit for Grok API (reduced to safer limits)
-const MAX_TOKEN_LIMIT = 4000; 
-const RETRY_TOKEN_LIMIT = 7000;
-
 /**
  * Core response generation functionality
  */
@@ -30,6 +26,10 @@ export const responseGeneratorCore = {
       
       if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
         console.log(`Requested ${requestBody.max_tokens} tokens exceeds safe limit of ${effectiveTokenLimit}, capping at limit`);
+        requestBody.max_tokens = effectiveTokenLimit;
+      } else if (!requestBody.max_tokens || requestBody.max_tokens < effectiveTokenLimit) {
+        // This is the key fix: ensure we're using the higher token limits if none specified or lower than configured
+        console.log(`Setting token limit to configured value: ${effectiveTokenLimit}`);
         requestBody.max_tokens = effectiveTokenLimit;
       }
       

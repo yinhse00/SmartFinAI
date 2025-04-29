@@ -1,16 +1,20 @@
 
 /**
  * Constants for token limits across different query types and scenarios
- * All limits are QUINTUPLED for expanded token allowance
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 20000,  // was 4000, 5x
-  RETRY: 30000,    // was 6000, 5x
-  RIGHTS_ISSUE_TIMETABLE: 35000,  // was 7000, 5x
-  DEFINITION_QUERY: 25000,  // was 5000, 5x
-  CONNECTED_TRANSACTION: 27500,  // was 5500, 5x
-  SPECIALIST_TECHNOLOGY: 30000,  // New entry for Chapter 18C
-  SIMPLE_QUERY: 12500,  // was 2500, 5x
+  DEFAULT: 20000,
+  RETRY: 30000,
+  RIGHTS_ISSUE_TIMETABLE: 35000,
+  DEFINITION_QUERY: 25000,
+  CONNECTED_TRANSACTION: 27500,
+  SPECIALIST_TECHNOLOGY: 30000,
+  SIMPLE_QUERY: 12500,
+  
+  // Enhanced retry limits with progressive increases
+  RETRY_ATTEMPT_1: 40000,
+  RETRY_ATTEMPT_2: 50000,
+  RETRY_ATTEMPT_3: 60000,
 } as const;
 
 /**
@@ -25,11 +29,15 @@ export const tokenManagementService = {
     isRetryAttempt?: boolean;
     prompt: string;
     isSimpleQuery?: boolean;
+    retryCount?: number;
   }): number {
-    const { queryType, isRetryAttempt, prompt, isSimpleQuery } = params;
+    const { queryType, isRetryAttempt, prompt, isSimpleQuery, retryCount = 0 } = params;
 
+    // For retry attempts, use progressively larger token limits
     if (isRetryAttempt) {
-      return TOKEN_LIMITS.RETRY;
+      if (retryCount >= 2) return TOKEN_LIMITS.RETRY_ATTEMPT_3;
+      if (retryCount === 1) return TOKEN_LIMITS.RETRY_ATTEMPT_2;
+      return TOKEN_LIMITS.RETRY_ATTEMPT_1;
     }
 
     if (queryType === 'specialist_technology' || 
@@ -50,7 +58,8 @@ export const tokenManagementService = {
     }
 
     if (prompt.toLowerCase().includes('connected person') || 
-        prompt.toLowerCase().includes('connected transaction')) {
+        prompt.toLowerCase().includes('connected transaction') ||
+        queryType === 'connected_transaction') {
       return TOKEN_LIMITS.CONNECTED_TRANSACTION;
     }
 

@@ -1,14 +1,23 @@
 
 import { GrokResponse } from '@/types/grok';
+import { tokenManagementService } from '@/services/response/modules/tokenManagementService';
 
 export const useRetryStrategies = () => {
   const enhanceParamsForRetry = (
     responseParams: any, 
     retryCount: number
   ) => {
-    // Even more aggressive token scaling - x5 on first retry, x6 on second, x7 on later
-    const tokenMultiplier = retryCount === 0 ? 5 : (retryCount === 1 ? 6 : 7);
-    const increasedTokens = Math.floor(responseParams.maxTokens * tokenMultiplier);
+    // Get token limit for retry from service
+    const queryType = responseParams.financialQueryType || 'general';
+    const prompt = responseParams.prompt || '';
+    
+    // Use the service to get the retry token limit
+    const increasedTokens = tokenManagementService.getTokenLimit({
+      queryType,
+      isRetryAttempt: true,
+      prompt,
+      retryCount
+    });
 
     // Use extremely low temperature on retries for maximum determinism
     const reducedTemperature = 0.05;
@@ -16,7 +25,7 @@ export const useRetryStrategies = () => {
     // Build enhanced parameters for retry with specialized prompting techniques
     const enhancedParams = {
       ...responseParams,
-      maxTokens: Math.min(increasedTokens, 40000), // Much higher token cap for completeness (old 10k cap, now upped)
+      maxTokens: increasedTokens,
       temperature: reducedTemperature,
       prompt: responseParams.prompt +
         " CRITICAL: This is a RETRY attempt. You MUST provide a COMPLETE and COMPREHENSIVE response. " +

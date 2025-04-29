@@ -1,5 +1,6 @@
 
 import { useCallback } from 'react';
+import { tokenManagementService } from '@/services/response/modules/tokenManagementService';
 
 /**
  * Hook for managing token limits and API parameters
@@ -13,53 +14,45 @@ export const useTokenManagement = () => {
   ) => {
     let enhancedParams = { ...responseParams };
     
-    // Base token settings
-    const DEFAULT_TOKEN_LIMIT = isSimpleQuery ? 4000 : 6000;
-    const COMPLEX_TOKEN_LIMIT = 8000;
-    const RETRY_TOKEN_LIMIT = 10000;
-    
-    // Detect if this is a retry attempt
+    // Use token limits from centralized token management service
     const isRetryAttempt = queryText.includes('[RETRY_ATTEMPT]');
     
-    // Determine token limit based on query characteristics
-    let maxTokens = DEFAULT_TOKEN_LIMIT;
+    // Determine query type from context
+    let queryType = 'general';
     
-    if (isRetryAttempt) {
-      // Significantly increase tokens for retry attempts
-      maxTokens = RETRY_TOKEN_LIMIT;
-      console.log('Using retry token limit:', maxTokens);
-    } else if (isAggregationQuery) {
-      // Use higher limits for aggregation queries
-      maxTokens = COMPLEX_TOKEN_LIMIT;
-      console.log('Using aggregation query token limit:', maxTokens);
+    if (isAggregationQuery) {
+      queryType = 'aggregation';
+    } else if (queryText.toLowerCase().includes('rights issue')) {
+      queryType = 'rights_issue';
+    } else if (queryText.toLowerCase().includes('connected transaction')) {
+      queryType = 'connected_transaction';
     } else if (queryText.toLowerCase().includes('timetable') || 
                queryText.toLowerCase().includes('schedule') ||
                queryText.toLowerCase().includes('timeline')) {
-      // Timetables/schedules need more tokens to be complete
-      maxTokens = COMPLEX_TOKEN_LIMIT;
-      console.log('Using timetable query token limit:', maxTokens);
-    } else if (queryText.toLowerCase().includes('rights issue') || 
-               queryText.toLowerCase().includes('open offer')) {
-      // Corporate actions need more complete responses
-      maxTokens = COMPLEX_TOKEN_LIMIT - 1000;
-      console.log('Using corporate action token limit:', maxTokens);
-    } else if (queryText.length > 200) {
-      // Longer queries generally need more tokens
-      maxTokens = DEFAULT_TOKEN_LIMIT + 1000;
-      console.log('Using long query token limit:', maxTokens);
+      queryType = 'timetable';
+    } else if (isSimpleQuery) {
+      queryType = 'simple';
     }
+    
+    // Get token limit from service
+    const maxTokens = tokenManagementService.getTokenLimit({
+      queryType,
+      isRetryAttempt,
+      prompt: queryText,
+      isSimpleQuery
+    });
+    
+    console.log(`Using token limit for ${queryType} query: ${maxTokens}`);
     
     // Override parameters with enhanced values
     enhancedParams.maxTokens = maxTokens;
     
-    // Also reduce temperature for retries for more deterministic/complete responses
-    if (isRetryAttempt) {
-      enhancedParams.temperature = 0.1; // Very low temperature for retries
-    } else if (queryText.toLowerCase().includes('timetable') ||
-               queryText.toLowerCase().includes('rights issue') ||
-               isAggregationQuery) {
-      enhancedParams.temperature = 0.2; // Low temperature for precision-critical queries
-    }
+    // Get temperature from service
+    enhancedParams.temperature = tokenManagementService.getTemperature({
+      queryType,
+      isRetryAttempt,
+      prompt: queryText
+    });
     
     return enhancedParams;
   }, []);

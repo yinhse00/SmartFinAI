@@ -1,15 +1,7 @@
-
 import { getGrokApiKey, trackTokenUsage, selectLeastUsedKey, selectBestPerformingKey, trackResponseQuality } from '../../apiKeyService';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
-
-// List of potential Grok API endpoints to try
-const API_ENDPOINTS = [
-  'https://api.grok.ai/v1/chat/completions',
-  'https://grok-api.com/v1/chat/completions',
-  'https://grok.x.ai/v1/chat/completions',
-  'https://api.x.ai/v1/chat/completions'
-];
+import { tokenManagementService } from '../../response/modules/tokenManagementService';
 
 // Local proxy endpoint if available
 const LOCAL_PROXY = '/api/grok/chat/completions';
@@ -33,6 +25,17 @@ export const apiClient = {
     if (!apiKey.startsWith('xai-')) {
       console.error("Invalid financial expert API key format");
       throw new Error("Invalid financial expert API key format");
+    }
+    
+    // Ensure token limits are properly applied
+    if (!requestBody.max_tokens) {
+      const effectiveTokenLimit = tokenManagementService.getTokenLimit({
+        queryType: 'general',
+        isRetryAttempt,
+        prompt: userContent
+      });
+      console.log(`No token limit specified, using configured limit: ${effectiveTokenLimit}`);
+      requestBody.max_tokens = effectiveTokenLimit;
     }
     
     console.log("Making API call to Grok financial expert API");
@@ -90,6 +93,13 @@ export const apiClient = {
     while (retries <= maxRetries) {
       try {
         // Try each endpoint
+        const API_ENDPOINTS = [
+          'https://api.grok.ai/v1/chat/completions',
+          'https://grok-api.com/v1/chat/completions',
+          'https://grok.x.ai/v1/chat/completions',
+          'https://api.x.ai/v1/chat/completions'
+        ];
+        
         for (const apiEndpoint of API_ENDPOINTS) {
           try {
             console.log(`Attempting direct API call to: ${apiEndpoint}`);
