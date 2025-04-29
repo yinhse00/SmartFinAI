@@ -1,9 +1,19 @@
 
 import { handleChatCompletions } from './modules/apiRequestHandler';
-import { MessageContent } from './types';
+import { GrokChatRequestBody } from './types';
 
+/**
+ * API client for Grok AI chat completions
+ */
 export const apiClient = {
-  callChatCompletions: async (requestBody: any, providedApiKey?: string): Promise<any> => {
+  /**
+   * Call the Grok AI chat completions API
+   * 
+   * @param requestBody - The request body for the chat completions API
+   * @param providedApiKey - Optional API key to use for the request
+   * @returns Promise resolving to the API response
+   */
+  callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
     return await handleChatCompletions(requestBody, providedApiKey);
   }
 };
