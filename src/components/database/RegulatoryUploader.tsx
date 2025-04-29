@@ -1,20 +1,23 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { toast } from '@/components/ui/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Loader2, Upload, FileText, AlertCircle, List, BookOpen } from 'lucide-react';
-import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Upload } from 'lucide-react';
 import FileDropZone from '../references/FileDropZone';
 import FileList from '../references/FileList';
 import { useFileSelection } from '../references/hooks/useFileSelection';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { enhancedFileProcessingService } from '@/services/documents/enhancedFileProcessingService';
 import { useStructuredDatabase } from '@/hooks/useStructuredDatabase';
 import { DocumentCategory } from '@/types/references';
-import { Badge } from '@/components/ui/badge';
+
+// Import refactored components
+import ImportedChaptersDisplay from './uploader/ImportedChaptersDisplay';
+import QuickImportSection from './uploader/QuickImportSection';
+import ManualContentInput from './uploader/ManualContentInput';
+import CategorySelector from './uploader/CategorySelector';
+import ImportErrorDisplay from './uploader/ImportErrorDisplay';
+import { sampleChapter13, sampleChapter14, sampleChapter14A } from './uploader/SampleChapterData';
 
 const RegulatoryUploader = () => {
   const {
@@ -116,7 +119,7 @@ const RegulatoryUploader = () => {
       });
 
       const textBlob = new Blob([chapterContent], { type: 'text/plain' });
-      const fileName = `${chapterCategory.replace('chapter_', 'Chapter ')}.txt`;
+      const fileName = `${chapterCategory.replace('_', ' ').charAt(0).toUpperCase()}${chapterCategory.replace('_', ' ').slice(1)}.txt`;
       const textFile = new File([textBlob], fileName, { type: 'text/plain' });
       
       const result = await processRegulatoryFiles([textFile], chapterCategory);
@@ -139,50 +142,6 @@ const RegulatoryUploader = () => {
     }
   };
 
-  // Sample data for quick import of chapters
-  const sampleChapter13 = `
-Chapter 13 - Connected Transactions
-
-13.01 The connected transaction rules ensure that the interests of shareholders as a whole are taken into account by a listed issuer when the listed issuer enters into connected transactions.
-
-13.02 The rules set out in this Chapter also provide certain safeguards against listed issuers' directors, chief executives or substantial shareholders (or their associates) taking advantage of their positions.
-
-13.03 This Chapter applies to connected transactions entered into by:
-(1) a listed issuer's group; and
-(2) a "connected person" at the listed issuer level.
-
-13.04 This Chapter also applies to connected transactions entered into by:
-(1) a listed issuer's group with third parties where the transaction involves assets in which a director, chief executive, substantial shareholder of the listed issuer (or an associate of any of them) has an interest; and
-(2) a listed issuer's group with third parties who are connected with the listed issuer's subsidiary or holding company.
-`;
-
-  const sampleChapter14 = `
-Chapter 14 - Notifiable Transactions
-
-14.01 This Chapter deals with certain transactions, principally acquisitions and disposals, by a listed issuer. It describes how they are classified, the details that are required to be disclosed in respect of them and whether shareholders' approval is required. It also sets out provisions to deter circumvention of new listing requirements and considers additional requirements in respect of takeovers and mergers.
-
-14.02 If any transaction for the purposes of this Chapter is also a connected transaction for the purposes of Chapter 14A, the listed issuer will, in addition to complying with the provisions of this Chapter, have to comply with the provisions of Chapter 14A.
-
-14.03 Listed issuers should note that even if a transaction is not required to be disclosed pursuant to the provisions of this Chapter, they will still be required to disclose details of the transaction under rule 13.09 if it falls within the ambit of that rule.
-`;
-
-  const sampleChapter14A = `
-Chapter 14A - Connected Transactions
-
-14A.01 This Chapter applies to connected transactions entered into by a listed issuer or its subsidiaries.
-
-14A.02 The connected transaction rules ensure that the interests of shareholders as a whole are taken into account by a listed issuer when the listed issuer's group enters into a connected transaction.
-
-14A.03 The rules set out in this Chapter also provide certain safeguards against the directors, chief executives and substantial shareholders (or their associates) taking advantage of their positions.
-
-Definitions
-14A.04 In this Chapter:
-
-(1) "30%-controlled company" means a company held by a person who can:
-(a) exercise or control the exercise of 30% (or an amount for triggering a mandatory general offer under the Takeovers Code, or for PRC issuers only, an amount for triggering a mandatory general offer or establishing legal or management control over a business enterprise under the PRC law) or more of the voting power at general meetings; or
-(b) control the composition of a majority of the board of directors;
-`;
-
   return (
     <Card>
       <CardHeader>
@@ -192,62 +151,16 @@ Definitions
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="bg-muted p-4 rounded-lg mb-6">
-          <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-            <BookOpen size={16} /> 
-            Currently Imported Chapters
-          </h3>
-          <div className="flex flex-wrap gap-2">
-            {importedChapters.length > 0 ? (
-              importedChapters.map((chapter) => (
-                <Badge key={chapter} variant="outline" className="bg-finance-light-blue/10">
-                  Chapter {chapter}
-                </Badge>
-              ))
-            ) : (
-              <span className="text-sm text-muted-foreground">No chapters imported yet</span>
-            )}
-          </div>
-        </div>
+        <ImportedChaptersDisplay importedChapters={importedChapters} />
         
-        <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-6">
-          <h3 className="text-sm font-medium flex items-center gap-2 mb-2">
-            <List size={16} /> 
-            Quick Import
-          </h3>
-          <p className="text-sm text-muted-foreground mb-3">
-            Quickly import sample content for key chapters:
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={isImporting || importedChapters.includes('13')}
-              onClick={() => handleQuickImport('chapter_13', sampleChapter13)}
-              className={importedChapters.includes('13') ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              {importedChapters.includes('13') ? "Chapter 13 ✓" : "Import Chapter 13"}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={isImporting || importedChapters.includes('14')}
-              onClick={() => handleQuickImport('chapter_14', sampleChapter14)}
-              className={importedChapters.includes('14') ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              {importedChapters.includes('14') ? "Chapter 14 ✓" : "Import Chapter 14"}
-            </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled={isImporting || importedChapters.includes('14A')}
-              onClick={() => handleQuickImport('chapter_14a', sampleChapter14A)}
-              className={importedChapters.includes('14A') ? "opacity-50 cursor-not-allowed" : ""}
-            >
-              {importedChapters.includes('14A') ? "Chapter 14A ✓" : "Import Chapter 14A"}
-            </Button>
-          </div>
-        </div>
+        <QuickImportSection 
+          importedChapters={importedChapters}
+          isImporting={isImporting}
+          onQuickImport={handleQuickImport}
+          sampleChapter13={sampleChapter13}
+          sampleChapter14={sampleChapter14}
+          sampleChapter14A={sampleChapter14A}
+        />
 
         <Tabs defaultValue="file" className="w-full">
           <TabsList className="mb-4 grid w-full grid-cols-2">
@@ -271,51 +184,21 @@ Definitions
           </TabsContent>
 
           <TabsContent value="manual" className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="custom-content">Regulatory Content</Label>
-              <Textarea
-                id="custom-content"
-                value={customInput}
-                onChange={(e) => setCustomInput(e.target.value)}
-                placeholder="Enter regulatory content here (e.g., rules, provisions, definitions)..."
-                className="min-h-[200px]"
-                disabled={isImporting}
-              />
-            </div>
+            <ManualContentInput
+              customInput={customInput}
+              setCustomInput={setCustomInput}
+              isImporting={isImporting}
+            />
           </TabsContent>
         </Tabs>
 
-        <div className="space-y-2">
-          <Label htmlFor="category">
-            Regulatory Category <span className="text-red-500">*</span>
-          </Label>
-          <Select 
-            value={category} 
-            onValueChange={setCategory} 
-            disabled={isImporting}
-          >
-            <SelectTrigger id="category" className={!category ? 'text-muted-foreground' : ''}>
-              <SelectValue placeholder="Select a regulatory category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="listing_rules">Listing Rules</SelectItem>
-              <SelectItem value="listing_guidance">Listing Rules Guidance</SelectItem>
-              <SelectItem value="guidance_new_listing">Guide for New Listing Applicants</SelectItem>
-              <SelectItem value="guidance_listed_issuers">Guidance for Listed Issuers</SelectItem>
-              <SelectItem value="takeovers">Takeovers Code</SelectItem>
-              <SelectItem value="decisions">Listing Review Committee Decisions</SelectItem>
-              <SelectItem value="checklists">Checklists, Forms and Templates</SelectItem>
-              <SelectItem value="other">Other Regulations</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+        <CategorySelector
+          category={category}
+          setCategory={setCategory}
+          isImporting={isImporting}
+        />
 
-        {importError && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{importError}</AlertDescription>
-          </Alert>
-        )}
+        <ImportErrorDisplay error={importError} />
       </CardContent>
       <CardFooter className="flex justify-end">
         <Button 

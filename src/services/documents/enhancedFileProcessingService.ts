@@ -51,14 +51,20 @@ export const enhancedFileProcessingService = {
 
           console.log(`Successfully extracted content from ${file.name}. Processing for import...`);
           
-          // Check for chapter indicators in filename
+          // Check content to determine if it's a specific chapter
           let detectedCategory = category;
-          if (file.name.toLowerCase().includes('chapter 13') || file.name.toLowerCase().includes('ch13') || file.name.includes('13.')) {
-            detectedCategory = 'chapter_13';
-          } else if (file.name.toLowerCase().includes('chapter 14a') || file.name.toLowerCase().includes('ch14a')) {
-            detectedCategory = 'chapter_14a';
-          } else if (file.name.toLowerCase().includes('chapter 14') || file.name.toLowerCase().includes('ch14')) {
-            detectedCategory = 'chapter_14';
+          if (file.name.toLowerCase().includes('chapter 13') || 
+              processingResult.content.includes('Chapter 13') || 
+              processingResult.content.includes('13.01')) {
+            console.log(`Detected Chapter 13 content in ${file.name}`);
+          } else if (file.name.toLowerCase().includes('chapter 14a') || 
+                    processingResult.content.includes('Chapter 14A') || 
+                    processingResult.content.includes('14A.01')) {
+            console.log(`Detected Chapter 14A content in ${file.name}`);
+          } else if (file.name.toLowerCase().includes('chapter 14') || 
+                    processingResult.content.includes('Chapter 14') || 
+                    processingResult.content.includes('14.01')) {
+            console.log(`Detected Chapter 14 content in ${file.name}`);
           }
           
           // Import the extracted content into the structured database
