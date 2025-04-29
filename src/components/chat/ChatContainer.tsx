@@ -20,6 +20,7 @@ interface ChatContainerProps {
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
   onFileSelect?: (files: FileList) => void;
+  isProcessingFiles?: boolean;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -33,7 +34,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onOpenApiKeyDialog,
   retryLastQuery,
   translatingMessageIds = [],
-  onFileSelect
+  onFileSelect,
+  isProcessingFiles = false
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -79,6 +81,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         handleKeyDown={handleKeyDown}
         placeholder={getPlaceholder()}
         onFileSelect={handleFileSelect}
+        isProcessingFiles={isProcessingFiles}
       />
     </Card>
   );

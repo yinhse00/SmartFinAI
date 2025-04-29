@@ -4,6 +4,7 @@ import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
+import { useFileProcessing } from '@/hooks/useFileProcessing';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -33,8 +34,9 @@ const ChatInterface: React.FC = () => {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const { toast } = useToast();
+  const { processFiles, isProcessing } = useFileProcessing();
 
-  const handleFileSelect = (files: FileList) => {
+  const handleFileSelect = async (files: FileList) => {
     const newFiles = Array.from(files);
     setSelectedFiles(prev => [...prev, ...newFiles]);
     
@@ -43,10 +45,19 @@ const ChatInterface: React.FC = () => {
       description: `${newFiles.length} file(s) have been selected.`,
     });
     
-    // Optionally, you could append file info to the message
-    if (files.length > 0) {
-      const fileNames = Array.from(files).map(file => file.name).join(', ');
-      setInput(prev => prev + (prev ? '\n' : '') + `I've uploaded: ${fileNames}`);
+    // Process the files to extract content
+    const processedResults = await processFiles(newFiles);
+    
+    // Format the extracted content to add to the input
+    if (processedResults.length > 0) {
+      const extractedContent = processedResults.map(result => 
+        `[From ${result.source}]:\n${result.content}`
+      ).join('\n\n');
+      
+      setInput(prev => {
+        const separator = prev ? '\n\n' : '';
+        return prev + separator + extractedContent;
+      });
     }
   };
 
@@ -55,7 +66,7 @@ const ChatInterface: React.FC = () => {
       <div className="container mx-auto py-6">
         <ChatContainer
           messages={messages}
-          isLoading={isLoading}
+          isLoading={isLoading || isProcessing}
           isGrokApiKeySet={isGrokApiKeySet}
           input={input}
           setInput={setInput}

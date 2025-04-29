@@ -1,7 +1,7 @@
 
 import React, { useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { FileText, Image } from 'lucide-react';
+import { FileText, Image, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
@@ -9,12 +9,14 @@ interface DocumentUploadButtonProps {
   onFileSelect: (files: FileList) => void;
   type: 'document' | 'image';
   accept: string;
+  isProcessing?: boolean;
 }
 
 const DocumentUploadButton: React.FC<DocumentUploadButtonProps> = ({
   onFileSelect,
   type,
-  accept
+  accept,
+  isProcessing = false
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -33,10 +35,16 @@ const DocumentUploadButton: React.FC<DocumentUploadButtonProps> = ({
   };
 
   const getIcon = () => {
+    if (isProcessing) {
+      return <Loader2 size={18} className="animate-spin" />;
+    }
     return type === 'document' ? <FileText size={18} /> : <Image size={18} />;
   };
 
   const getTooltipText = () => {
+    if (isProcessing) {
+      return 'Processing files...';
+    }
     return type === 'document' ? 'Upload documents (PDF, Word, Excel)' : 'Upload images';
   };
 
@@ -52,12 +60,14 @@ const DocumentUploadButton: React.FC<DocumentUploadButtonProps> = ({
               accept={accept}
               className="hidden"
               multiple={true}
+              disabled={isProcessing}
             />
             <Button
               variant="outline"
               size="icon"
               onClick={handleClick}
               className="h-9 w-9"
+              disabled={isProcessing}
             >
               {getIcon()}
             </Button>
