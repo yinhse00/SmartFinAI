@@ -73,7 +73,7 @@ export const grokResponseGenerator = {
           // Make API call with simpler configuration for conversational queries
           const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
           
-          // Get the raw response text
+          // Get the raw response text - FIX: Add null check for response and choices
           const responseText = response?.choices?.[0]?.message?.content || '';
           
           console.groupEnd();
@@ -163,7 +163,7 @@ export const grokResponseGenerator = {
         const responseTime = Date.now() - startTime;
         console.log(`API response received in ${responseTime}ms for request ${requestId}`);
         
-        // Get the raw response text
+        // Get the raw response text - FIX: Add null check for response and choices
         const responseText = response?.choices?.[0]?.message?.content || '';
         
         // Calculate relevance score and enhance with metadata

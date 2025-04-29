@@ -6,10 +6,12 @@ export interface GrokRequestParams {
   reasoning?: string;
   maxTokens?: number;
   temperature?: number;
-  // Add environment consistency properties
+  // Environment consistency properties
   envSignature?: string;
   requestId?: string;
   consistencyMode?: boolean;
+  seed?: number;
+  useStableParameters?: boolean;
 }
 
 export interface GrokResponse {
@@ -38,7 +40,7 @@ export interface GrokResponse {
     };
     responseWasTruncated?: boolean;
     isOfflineMode?: boolean;
-    // Add environment info property
+    // Environment information property
     environmentInfo?: {
       requestId?: string;
       isProduction?: boolean;
