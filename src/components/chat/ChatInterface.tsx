@@ -124,8 +124,6 @@ const ChatInterface: React.FC = () => {
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
-          currentStep={currentStep}
-          stepProgress={stepProgress}
         />
       </div>
       

@@ -1,5 +1,5 @@
 
-import { Link, useLocation } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useTheme } from "@/components/theme-provider";
 import { Moon, Sun } from 'lucide-react';
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { useEffect, useState } from 'react';
 const Navbar = () => {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const location = useLocation();
 
   useEffect(() => {
     setMounted(true);
@@ -28,23 +27,11 @@ const Navbar = () => {
           SmartFinAI
         </Link>
         <div className="flex items-center space-x-4">
-          <Link 
-            to="/chat" 
-            className={`${location.pathname === '/chat' ? 'text-finance-light-blue dark:text-finance-accent-blue' : 'text-gray-600 dark:text-gray-400'} hover:text-finance-light-blue dark:hover:text-finance-accent-blue`}
-          >
+          <Link to="/chat" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             Chat
           </Link>
-          <Link 
-            to="/references" 
-            className={`${location.pathname === '/references' ? 'text-finance-light-blue dark:text-finance-accent-blue' : 'text-gray-600 dark:text-gray-400'} hover:text-finance-light-blue dark:hover:text-finance-accent-blue`}
-          >
+          <Link to="/references" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             References
-          </Link>
-          <Link 
-            to="/database" 
-            className={`${location.pathname === '/database' ? 'text-finance-light-blue dark:text-finance-accent-blue' : 'text-gray-600 dark:text-gray-400'} hover:text-finance-light-blue dark:hover:text-finance-accent-blue`}
-          >
-            Database
           </Link>
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
