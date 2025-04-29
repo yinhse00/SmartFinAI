@@ -1,6 +1,5 @@
-
 import { regulatoryDatabaseService } from '@/services/database/regulatoryDatabaseService';
-import { searchService } from '@/services/database/searchService';
+import { searchService } from '@/services/database/search';
 
 /**
  * Enhanced context service that uses the structured database
