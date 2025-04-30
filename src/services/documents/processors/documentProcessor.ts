@@ -38,3 +38,26 @@ export async function processDocument(file: File): Promise<{ content: string; so
     };
   }
 }
+
+// Export a document processor object for compatibility with other processors
+export const documentProcessor = {
+  extractPdfText: async (file: File): Promise<{ content: string; source: string }> => {
+    if (file.name.toLowerCase().endsWith('.pdf')) {
+      return pdfProcessor.extractText(file);
+    }
+    return {
+      content: `Error: ${file.name} is not a PDF file`,
+      source: file.name
+    };
+  },
+  
+  extractWordText: async (file: File): Promise<{ content: string; source: string }> => {
+    if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) {
+      return wordProcessor.extractText(file);
+    }
+    return {
+      content: `Error: ${file.name} is not a Word document`,
+      source: file.name
+    };
+  }
+};
