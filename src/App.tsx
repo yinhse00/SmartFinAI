@@ -9,6 +9,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 // Import pages
 import Chat from "./pages/Chat";
 import References from "./pages/References";
+import Database from "./pages/Database";
 import NotFound from "./pages/NotFound";
 
 // Create a client
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/chat" replace />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/references" element={<References />} />
+            <Route path="/database" element={<Database />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

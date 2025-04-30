@@ -1,43 +1,73 @@
 
-import { DocumentProcessorInterface } from './interfaces/DocumentProcessorInterface';
-import { clientSideTextExtractor } from './utils/clientSideTextExtractor';
-import mammoth from 'mammoth';
+/**
+ * Word document processor
+ */
+
+import { BaseDocumentProcessor } from './baseProcessor';
+import * as mammoth from 'mammoth';
 
 /**
- * Handles Word document (.docx) processing
+ * Specialized processor for Word documents
  */
-export class WordProcessor implements DocumentProcessorInterface {
-  async extractText(file: File): Promise<{ content: string; source: string }> {
+export class WordProcessor extends BaseDocumentProcessor {
+  /**
+   * Extract text from Word documents using Mammoth
+   */
+  public async extractText(file: File): Promise<{ content: string; source: string }> {
     try {
-      console.log('Processing Word document:', file.name);
+      console.log(`Processing Word document: ${file.name}`);
       
-      // Read the file as an ArrayBuffer
-      const arrayBuffer = await file.arrayBuffer();
+      // Check if API is available (same as in PDF processor)
+      const isApiAvailable = await this.isApiAvailable();
       
-      try {
-        // First attempt: Use mammoth.js to extract text including tables
-        const result = await mammoth.extractRawText({ arrayBuffer });
-        console.log('Word document processed with mammoth.js:', result.value.substring(0, 100) + '...');
+      if (isApiAvailable) {
+        // Use Grok Vision API for processing if available
+        return await this.processWithGrokVision(file, 'DOCX');
+      } else {
+        // Use Mammoth.js for local processing when API is unavailable
+        const result = await this.extractWithMammoth(file);
         return {
-          content: result.value,
-          source: file.name
-        };
-      } catch (mammothError) {
-        console.warn('Mammoth processing failed, falling back to basic text extraction:', mammothError);
-        
-        // Fallback: Use basic text extraction mechanism
-        const extractedText = await clientSideTextExtractor.extractText(file);
-        return {
-          content: extractedText,
+          content: result,
           source: file.name
         };
       }
     } catch (error) {
-      console.error('Error processing Word document:', error);
-      throw new Error(`Failed to process Word document: ${error instanceof Error ? error.message : String(error)}`);
+      console.error(`Error extracting Word document text from ${file.name}:`, error);
+      return {
+        content: `Error extracting text from Word document ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        source: file.name
+      };
     }
+  }
+  
+  /**
+   * Use Mammoth.js to extract text from DOCX files
+   */
+  private async extractWithMammoth(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = async (e) => {
+        if (e.target?.result) {
+          try {
+            const arrayBuffer = e.target.result as ArrayBuffer;
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            resolve(result.value);
+          } catch (err) {
+            reject(new Error(`Mammoth processing error: ${err instanceof Error ? err.message : String(err)}`));
+          }
+        } else {
+          reject(new Error("Failed to read file content"));
+        }
+      };
+      
+      reader.onerror = () => {
+        reject(new Error("FileReader error"));
+      };
+      
+      reader.readAsArrayBuffer(file);
+    });
   }
 }
 
-// Create and export an instance of the processor to maintain compatibility with existing code
 export const wordProcessor = new WordProcessor();

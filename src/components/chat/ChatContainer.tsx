@@ -23,6 +23,9 @@ interface ChatContainerProps {
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
+  isOfflineMode?: boolean;
+  currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  stepProgress?: string;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -39,7 +42,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onFileSelect,
   isProcessingFiles = false,
   attachedFiles = [],
-  onFileRemove
+  onFileRemove,
+  isOfflineMode = false,
+  currentStep,
+  stepProgress
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -66,6 +72,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
+        isOfflineMode={isOfflineMode}
       />
       
       <ChatContent
@@ -73,6 +80,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isLoading={isLoading}
         onRetry={retryLastQuery}
         translatingMessageIds={translatingMessageIds}
+        isOfflineMode={isOfflineMode}
+        currentStep={currentStep}
+        stepProgress={stepProgress}
       />
       
       <ChatInput 
@@ -88,6 +98,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isProcessingFiles={isProcessingFiles}
         attachedFiles={attachedFiles}
         onFileRemove={onFileRemove}
+        isOfflineMode={isOfflineMode}
       />
     </Card>
   );

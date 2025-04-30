@@ -1,3 +1,4 @@
+
 /**
  * This service handles the regulatory database operations
  * In a production environment, this would connect to a proper database
@@ -5,6 +6,8 @@
 
 import { RegulatoryEntry } from "./types";
 import { determineCategory } from "./categoryUtils";
+import { supabase } from '@/integrations/supabase/client';
+import { statsService } from './services/statsService';
 
 // Sample in-memory database - in a real app, this would be stored in a proper database
 let regulatoryDatabase: RegulatoryEntry[] = [];
@@ -76,5 +79,10 @@ export const databaseService = {
     
     regulatoryDatabase.push(newEntry);
     return newEntry;
-  }
+  },
+
+  /**
+   * Get database statistics
+   */
+  getDatabaseStats: statsService.getDatabaseStats
 };

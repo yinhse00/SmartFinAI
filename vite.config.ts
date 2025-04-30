@@ -14,13 +14,19 @@ export default defineConfig(({ mode }) => ({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/grok/, '/v1'),
         secure: true,
-        timeout: 300000,
+        timeout: 600000, // Increased timeout to 10 minutes for large file processing
         configure: (proxy, _options) => {
           proxy.on('proxyReq', function(proxyReq) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
+            proxyReq.setHeader('X-Long-Response', 'true');
+            proxyReq.setHeader('Origin', 'https://api.x.ai'); // Add origin to help with CORS
           });
           proxy.on('error', function(err, _req, _res) {
-            console.log('API proxy error:', err);
+            console.log('Financial expert proxy error:', err);
+          });
+          proxy.on('proxyRes', function(proxyRes, req, res) {
+            // Log successful proxy responses for debugging
+            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
           });
         }
       }

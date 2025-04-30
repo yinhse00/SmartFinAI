@@ -1,113 +1,77 @@
 
-import React from 'react';
-import { Plus, Camera, Image, FileText, Loader2 } from 'lucide-react';
+import React, { useRef } from 'react';
+import { PaperclipIcon, Loader2, AlertTriangle, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { 
-  Popover, 
-  PopoverContent, 
-  PopoverTrigger 
-} from '@/components/ui/popover';
-import { useToast } from '@/hooks/use-toast';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface UnifiedUploadButtonProps {
   onFileSelect: (files: FileList) => void;
   isProcessing?: boolean;
+  isOfflineMode?: boolean; // New prop to indicate offline mode
 }
 
-const UnifiedUploadButton: React.FC<UnifiedUploadButtonProps> = ({
-  onFileSelect,
-  isProcessing = false
+const UnifiedUploadButton: React.FC<UnifiedUploadButtonProps> = ({ 
+  onFileSelect, 
+  isProcessing = false,
+  isOfflineMode = false 
 }) => {
-  const { toast } = useToast();
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
-  const cameraInputRef = React.useRef<HTMLInputElement>(null);
-  const documentInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      onFileSelect(files);
-      // Reset the input value so the same file can be selected again
-      event.target.value = '';
-    }
+  const handleButtonClick = () => {
+    fileInputRef.current?.click();
   };
 
-  const handleOptionClick = (inputRef: React.RefObject<HTMLInputElement>) => {
-    if (!isProcessing && inputRef.current) {
-      inputRef.current.click();
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      onFileSelect(e.target.files);
+      // Reset the input so the same file can be selected again
+      e.target.value = '';
     }
   };
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-9 w-9"
-          disabled={isProcessing}
-        >
-          {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-48 p-2" align="start" side="top">
-        <div className="flex flex-col gap-1">
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
           <Button
-            variant="ghost" 
-            className="justify-start" 
-            onClick={() => handleOptionClick(cameraInputRef)}
+            variant="outline"
+            size="icon"
+            onClick={handleButtonClick}
             disabled={isProcessing}
+            className={isOfflineMode ? "border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20" : ""}
           >
-            <Camera className="mr-2" size={16} />
-            Images from Camera
+            {isProcessing ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : isOfflineMode ? (
+              <div className="relative">
+                <PaperclipIcon className="h-4 w-4" />
+                <WifiOff className="h-3 w-3 absolute -top-1 -right-1 text-amber-500" />
+              </div>
+            ) : (
+              <PaperclipIcon className="h-4 w-4" />
+            )}
           </Button>
-          <Button
-            variant="ghost" 
-            className="justify-start" 
-            onClick={() => handleOptionClick(fileInputRef)}
-            disabled={isProcessing}
-          >
-            <Image className="mr-2" size={16} />
-            Images from Device
-          </Button>
-          <Button
-            variant="ghost" 
-            className="justify-start" 
-            onClick={() => handleOptionClick(documentInputRef)}
-            disabled={isProcessing}
-          >
-            <FileText className="mr-2" size={16} />
-            Documents
-          </Button>
-        </div>
-      </PopoverContent>
-
-      {/* Hidden file inputs */}
-      <input
-        type="file"
-        ref={cameraInputRef}
-        onChange={handleFileInputChange}
-        className="hidden"
-        accept="image/*"
-        capture="environment"
-      />
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          {isOfflineMode ? (
+            <div className="flex items-center gap-1">
+              <AlertTriangle className="h-3 w-3 text-amber-500" />
+              <span>Attach files (Limited processing in offline mode)</span>
+            </div>
+          ) : (
+            <span>Attach files</span>
+          )}
+        </TooltipContent>
+      </Tooltip>
       <input
         type="file"
         ref={fileInputRef}
-        onChange={handleFileInputChange}
-        className="hidden"
-        accept="image/*"
+        onChange={handleFileChange}
+        style={{ display: 'none' }}
         multiple
+        accept=".pdf,.doc,.docx,.txt,.csv,.xls,.xlsx,.png,.jpg,.jpeg"
       />
-      <input
-        type="file"
-        ref={documentInputRef}
-        onChange={handleFileInputChange}
-        className="hidden"
-        accept=".pdf,.doc,.docx,.xls,.xlsx"
-        multiple
-      />
-    </Popover>
+    </TooltipProvider>
   );
 };
 
