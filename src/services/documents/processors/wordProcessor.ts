@@ -26,6 +26,7 @@ export class WordProcessor extends BaseDocumentProcessor {
       } else {
         // Use Mammoth.js for local processing when API is unavailable
         const result = await this.extractWithMammoth(file);
+        console.log(`Successfully extracted text from Word document: ${file.name} (${result.length} chars)`);
         return {
           content: result,
           source: file.name
@@ -52,7 +53,21 @@ export class WordProcessor extends BaseDocumentProcessor {
           try {
             const arrayBuffer = e.target.result as ArrayBuffer;
             const result = await mammoth.extractRawText({ arrayBuffer });
-            resolve(result.value);
+            
+            // Enhanced processing for listings rule documents
+            let extractedText = result.value;
+            
+            // Special handling for Chapter 14 documents
+            if (file.name.includes('Chapter 14') && file.name.includes('Notifiable Transactions')) {
+              console.log("Applying special processing for Chapter 14 Notifiable Transactions");
+              
+              // Improve formatting for rule numbers
+              extractedText = extractedText
+                .replace(/(\d+\.\d+)(\s+)([A-Z])/g, '$1 $3') // Fix spacing after rule numbers
+                .replace(/(\d+)\.(\d+)\s+/g, '$1.$2 '); // Ensure consistent formatting
+            }
+            
+            resolve(extractedText);
           } catch (err) {
             reject(new Error(`Mammoth processing error: ${err instanceof Error ? err.message : String(err)}`));
           }
