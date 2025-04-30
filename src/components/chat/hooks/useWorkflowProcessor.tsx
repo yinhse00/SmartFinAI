@@ -1,4 +1,3 @@
-
 import { useState, useCallback } from 'react';
 import { executeStep1 } from './workflow/step1Initial';
 import { executeStep2 } from './workflow/step2ListingRules';
@@ -172,8 +171,12 @@ export const useWorkflowProcessor = ({
         content: step5Result.requiresTranslation ? step5Result.translatedResponse || '' : step5Result.response || '',
         sender: 'bot',
         timestamp: new Date(),
-        metadata: step5Result.metadata || {}
       };
+      
+      // Only add metadata if it exists in step5Result
+      if (step5Result.metadata) {
+        botMessage.metadata = step5Result.metadata;
+      }
       
       setMessages(prevMessages => [...prevMessages, botMessage]);
 
