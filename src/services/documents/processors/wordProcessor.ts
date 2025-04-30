@@ -1,56 +1,33 @@
 
-import { apiClient } from '../../api/grok/apiClient';
-import { getGrokApiKey } from '../../apiKeyService';
-import { fileConverter } from '../utils/fileConverter';
-import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
 import { DocumentProcessorInterface } from './interfaces/DocumentProcessorInterface';
-import { useGrokVisionProcessor } from './utils/grokVisionProcessor';
-// Add missing import for clientSideTextExtractor
 import { clientSideTextExtractor } from './utils/clientSideTextExtractor';
+import mammoth from 'mammoth';
 
 /**
- * Processor specifically for Word documents
+ * Handles Word document (.docx) processing
  */
-export const wordProcessor: DocumentProcessorInterface = {
-  /**
-   * Extract text content from Word documents
-   */
-  extractText: async (file: File): Promise<{ content: string; source: string }> => {
+export class WordProcessor implements DocumentProcessorInterface {
+  async extractText(file: File): Promise<string> {
     try {
-      console.log(`Processing Word document: ${file.name}`);
+      console.log('Processing Word document:', file.name);
       
-      // Check if API is available
-      const apiKey = getGrokApiKey();
-      const isApiAvailable = apiKey ? await checkApiAvailability(apiKey) : false;
-
-      if (isApiAvailable) {
-        // Use Grok Vision for Word documents
-        return await useGrokVisionProcessor(file, 'Word');
-      } else {
-        // Fallback - client-side basic extraction for Word
-        console.warn("Grok API unavailable, using client-side fallback for Word document");
+      // Read the file as an ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer();
+      
+      try {
+        // First attempt: Use mammoth.js to extract text including tables
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        console.log('Word document processed with mammoth.js:', result.value.substring(0, 100) + '...');
+        return result.value;
+      } catch (mammothError) {
+        console.warn('Mammoth processing failed, falling back to basic text extraction:', mammothError);
         
-        try {
-          // Try to use browser-side extraction if available
-          const text = await clientSideTextExtractor.extractText(file);
-          return {
-            content: `[Limited Processing Mode: API Unreachable]\n\n${text}`,
-            source: file.name
-          };
-        } catch (fallbackError) {
-          console.error("Client-side fallback failed:", fallbackError);
-          return {
-            content: `[Document Text Extraction Limited: The Word document '${file.name}' could not be processed because the Grok API is currently unreachable. Please try again later or provide the text in another format.]`,
-            source: file.name
-          };
-        }
+        // Fallback: Use basic text extraction mechanism
+        return await clientSideTextExtractor.extractTextFromArrayBuffer(arrayBuffer, file.name);
       }
     } catch (error) {
-      console.error(`Error extracting Word text from ${file.name}:`, error);
-      return {
-        content: `Error extracting text from Word document ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        source: file.name
-      };
+      console.error('Error processing Word document:', error);
+      throw new Error(`Failed to process Word document: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
-};
+}
