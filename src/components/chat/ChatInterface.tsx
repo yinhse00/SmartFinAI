@@ -92,6 +92,14 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  // Custom key handler for textarea with file attachments
+  const handleAttachmentsKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendWithFiles();
+    }
+  };
+
   return (
     <>
       <div className="container mx-auto py-6">
@@ -108,15 +116,7 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? 
-            (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSendWithFiles();
-              }
-            } : 
-            handleKeyDown
-          }
+          handleKeyDown={hasAttachedFiles ? handleAttachmentsKeyDown : handleKeyDown}
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
