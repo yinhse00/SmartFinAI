@@ -7,7 +7,7 @@ import mammoth from 'mammoth';
  * Handles Word document (.docx) processing
  */
 export class WordProcessor implements DocumentProcessorInterface {
-  async extractText(file: File): Promise<string> {
+  async extractText(file: File): Promise<{ content: string; source: string }> {
     try {
       console.log('Processing Word document:', file.name);
       
@@ -18,12 +18,19 @@ export class WordProcessor implements DocumentProcessorInterface {
         // First attempt: Use mammoth.js to extract text including tables
         const result = await mammoth.extractRawText({ arrayBuffer });
         console.log('Word document processed with mammoth.js:', result.value.substring(0, 100) + '...');
-        return result.value;
+        return {
+          content: result.value,
+          source: file.name
+        };
       } catch (mammothError) {
         console.warn('Mammoth processing failed, falling back to basic text extraction:', mammothError);
         
         // Fallback: Use basic text extraction mechanism
-        return await clientSideTextExtractor.extractTextFromArrayBuffer(arrayBuffer, file.name);
+        const extractedText = await clientSideTextExtractor.extractText(file);
+        return {
+          content: extractedText,
+          source: file.name
+        };
       }
     } catch (error) {
       console.error('Error processing Word document:', error);
@@ -31,3 +38,6 @@ export class WordProcessor implements DocumentProcessorInterface {
     }
   }
 }
+
+// Create and export an instance of the processor to maintain compatibility with existing code
+export const wordProcessor = new WordProcessor();
