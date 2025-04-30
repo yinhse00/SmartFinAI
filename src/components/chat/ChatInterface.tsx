@@ -130,6 +130,19 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  // Create a type-compatible keyboard handler function
+  const handleTextAreaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (hasAttachedFiles) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSendWithFiles();
+      }
+    } else {
+      // Use the existing handleKeyDown function which is properly typed for textarea
+      handleKeyDown(e);
+    }
+  };
+
   return (
     <>
       <div className="w-full mx-auto py-6">
@@ -146,15 +159,7 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? 
-            (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSendWithFiles();
-              }
-            } : 
-            handleKeyDown
-          }
+          handleKeyDown={handleTextAreaKeyDown}
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}

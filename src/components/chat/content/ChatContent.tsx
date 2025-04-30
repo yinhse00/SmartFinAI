@@ -26,7 +26,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
 }) => {
   return (
     <CardContent 
-      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-18rem)] md:max-h-[calc(100vh-16rem)] min-h-[450px] flex flex-col"
+      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-20rem)] md:max-h-[calc(100vh-18rem)] min-h-[400px] flex flex-col"
     >
       <div className="sticky top-0 z-10 bg-background">
         {currentStep && stepProgress && (
@@ -39,6 +39,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
         onRetry={onRetry}
         translatingMessageIds={translatingMessageIds}
       />
+      <div className="h-4"></div> {/* Extra padding at the bottom to avoid overlap */}
     </CardContent>
   );
 };

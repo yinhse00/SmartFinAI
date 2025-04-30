@@ -8,13 +8,17 @@ export const useQueryInputHandler = (
 ) => {
   const handleSend = async () => {
     // No pre-translation here - just process the raw input
-    await processQuery(input);
+    if (input.trim()) {
+      await processQuery(input);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (input.trim()) {
+        handleSend();
+      }
     }
   };
 

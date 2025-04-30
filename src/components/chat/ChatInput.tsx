@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2, AlertTriangle, WifiOff } from 'lucide-react';
 import UnifiedUploadButton from './upload/UnifiedUploadButton';
@@ -37,14 +37,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isOfflineMode = false
 }) => {
   const hasAttachedFiles = attachedFiles.length > 0;
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  const handleTextareaKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (input.trim() || hasAttachedFiles) {
-        handleSend();
-      }
+  // Auto-resize textarea based on content
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollHeight = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(scrollHeight, 150)}px`;
     }
+  }, [input]);
+
+  // Handle textarea changes
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
   };
   
   return (
@@ -68,6 +74,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           isOfflineMode={isOfflineMode}
         />
       )}
+      
       <div className="flex gap-2 items-start">
         {onFileSelect && (
           <UnifiedUploadButton 
@@ -76,13 +83,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
             isOfflineMode={isOfflineMode}
           />
         )}
+        
         <div className="flex-1 relative">
           <Textarea
-            className="min-h-[60px] max-h-[200px] resize-y bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 pr-12"
+            ref={textareaRef}
+            className="min-h-[60px] max-h-[150px] bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 pr-12 py-3"
             placeholder={hasAttachedFiles ? "Type your question about the attached files..." : placeholder}
             value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleTextareaKeyDown}
+            onChange={handleTextareaChange}
+            onKeyDown={handleKeyDown}
             disabled={isLoading || isProcessingFiles}
             rows={2}
           />
@@ -95,8 +104,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
           </Button>
         </div>
       </div>
-      <div className="text-xs text-muted-foreground mt-1 ml-1">
-        Press Shift+Enter for new line, Enter to send
+      
+      <div className="text-xs text-muted-foreground mt-2 ml-1 flex justify-between">
+        <span>Press Shift+Enter for new line, Enter to send</span>
+        <span className="text-gray-400">{input.length} characters</span>
       </div>
     </div>
   );
