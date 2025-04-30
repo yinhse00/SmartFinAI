@@ -19,11 +19,11 @@ interface ChatContainerProps {
   onFileSelect?: (files: FileList) => void;
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
-  onFileRemove?: (file: File) => void;
+  onFileRemove?: (index: number) => void;
   isOfflineMode?: boolean;
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
-  onTryReconnect?: () => void;
+  onTryReconnect?: () => Promise<boolean>;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({

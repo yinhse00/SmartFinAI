@@ -32,7 +32,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
         {currentStep && stepProgress && <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />}
         
         {isOfflineMode && messages.length === 0 && (
-          <Alert variant="warning" className="mx-4 mt-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
+          <Alert variant="destructive" className="mx-4 mt-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
             <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
             <AlertDescription className="text-amber-700 dark:text-amber-300 text-sm">
               Currently operating in offline mode with limited functionality. 

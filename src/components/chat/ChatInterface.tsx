@@ -10,7 +10,7 @@ import ApiConnectionStatus from './ApiConnectionStatus';
 
 interface ChatInterfaceProps {
   isOfflineMode?: boolean;
-  onTryReconnect?: () => void;
+  onTryReconnect?: () => Promise<boolean>;
 }
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({
@@ -112,13 +112,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
+  // Wrap the tryReconnect function to ensure it returns a Promise<boolean>
+  const handleTryReconnect = async (): Promise<boolean> => {
+    if (tryReconnect) {
+      return await tryReconnect();
+    }
+    return false;
+  };
+
   return (
     <>
       <div className="container mx-auto py-6">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
-          onTryReconnect={tryReconnect}
+          onTryReconnect={handleTryReconnect}
         />
         
         <ChatContainer
@@ -134,11 +142,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           onFileSelect={handleFileSelect}
           isProcessingFiles={isProcessing}
           attachedFiles={attachedFiles}
-          onFileRemove={removeAttachedFile}
+          onFileRemove={(index: number) => removeAttachedFile(index)}
           isOfflineMode={isOfflineMode}
           currentStep={currentStep}
           stepProgress={stepProgress}
-          onTryReconnect={tryReconnect}
+          onTryReconnect={handleTryReconnect}
         />
       </div>
       
