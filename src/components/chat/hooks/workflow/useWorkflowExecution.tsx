@@ -1,48 +1,19 @@
 
-import { useCallback } from 'react';
+import { useState } from 'react';
+import { WorkflowStep } from './types';
 import { Message } from '../../ChatMessage';
-import { executeStep1 } from './step1Initial';
-import { executeStep2 } from './step2ListingRules';
-import { executeStep3 } from './step3TakeoversCode';
-import { executeStep4 } from './step4Execution';
-import { executeStep5 } from './step5Response';
 import { useWorkflowError } from './useWorkflowError';
-import { useTranslationHandler } from './useTranslationHandler';
-import { grokService } from '@/services/grokService';
-
-// Define local interfaces for type safety
-interface LocalStep2Result {
-  completed: boolean;
-  context: string;
-  shouldContinue: boolean;
-  nextStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
-  listingRulesSearchNegative: boolean;
-  executionRequired?: boolean;
-  error?: Error;
-}
-
-interface LocalStep3Result {
-  completed: boolean;
-  context: string;
-  shouldContinue: boolean;
-  nextStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
-  takeoversCodeSearchNegative: boolean;
-  executionRequired?: boolean;
-  error?: Error;
-}
-
-interface LocalStep4Result {
-  completed: boolean;
-  context: string;
-  executionContext: string;
-  error?: Error;
-}
+import { executeStep1 } from './step1Classification';
+import { executeStep2 } from './step2ListingRules';
+import { executeStep3 } from './step3TakeoverRules';
+import { executeStep4 } from './step4Execution';
+import { executeResponse } from './executeResponse';
 
 export const useWorkflowExecution = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   createUserMessage: (queryText: string) => Message,
   setIsLoading: React.Dispatch<React.SetStateAction<boolean>>,
-  setCurrentStep: React.Dispatch<React.SetStateAction<'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete'>>,
+  setCurrentStep: React.Dispatch<React.SetStateAction<WorkflowStep>>,
   setStepProgress: React.Dispatch<React.SetStateAction<string>>,
   trackStepPerformance: (step: string, startTime: number) => void,
   setErrorCount: React.Dispatch<React.SetStateAction<number>>,
@@ -54,267 +25,178 @@ export const useWorkflowExecution = (
   lastInputWasChinese: boolean
 ) => {
   const { handleWorkflowError } = useWorkflowError();
-  const { translateContent } = useTranslationHandler();
-
-  // Main workflow execution function
-  const executeWorkflow = useCallback(async (query: string) => {
+  
+  const executeWorkflow = async (queryText: string) => {
+    console.log('Starting workflow execution for query:', queryText);
+    
+    // Set loading state
+    setIsLoading(true);
+    
+    // Check if API key is set
     if (!isGrokApiKeySet) {
-      console.log('No API key set, opening API key dialog');
       setApiKeyDialogOpen(true);
+      setIsLoading(false);
       return;
     }
-
-    setIsLoading(true);
-    setCurrentStep('initial');
-    setLastQuery(query);
-    setStepProgress('Starting workflow');
     
-    const workflowStartTime = performance.now();
-    let stepStartTime = performance.now();
-
+    // Add the user message to the chat
+    const userMessage = createUserMessage(queryText);
+    setMessages(prev => [...prev, userMessage]);
+    
+    // Save query for potential retry
+    setLastQuery(queryText);
+    
     try {
-      // Pre-processing: add user message immediately for better UX
-      const userMessage = createUserMessage(query);
-      setMessages(prevMessages => [...prevMessages, userMessage]);
+      // Initialize workflow params
+      let params: any = { query: queryText };
+      console.log('Initial params:', params);
       
-      // Step 1.2.1: Check if input is Chinese and translate if needed
-      let processedQuery = query;
-      const isChinese = checkIsChineseInput(query);
-      
-      if (isChinese) {
-        setStepProgress('Translating Chinese input to English');
-        try {
-          const translatedQuery = await translateContent(query, true);
-          if (translatedQuery) {
-            processedQuery = translatedQuery;
-            console.log('Translated query:', processedQuery);
-          }
-        } catch (translationError) {
-          console.error('Translation error:', translationError);
-          // Continue with original query if translation fails
-        }
-      }
-      
-      // Step 1.3 & 1.4: Initial query analysis 
+      // Step 1: Classification
       setCurrentStep('initial');
-      setStepProgress('Analyzing your query');
+      setStepProgress('Classifying query...');
+      const step1StartTime = performance.now();
       
-      const step1Result = await executeStep1(
-        { query: processedQuery },
-        setStepProgress
-      );
-      
-      trackStepPerformance('initial', stepStartTime);
-      stepStartTime = performance.now();
-
-      if (!step1Result.completed) {
-        throw new Error('Failed at step 1: ' + (step1Result.error?.message || 'Unknown error'));
+      try {
+        const step1Result = await executeStep1({ query: queryText });
+        trackStepPerformance('classification', step1StartTime);
+        
+        if (!step1Result.completed) {
+          throw new Error('Classification step failed');
+        }
+        
+        params = { ...params, ...step1Result };
+        console.log('After step 1:', params);
+        
+        if (!step1Result.shouldContinue) {
+          // Skip to response generation
+          params.skipToResponse = true;
+        }
+      } catch (error) {
+        console.error('Error in step 1:', error);
+        params.skipToResponse = true;
       }
-
-      // Step 2: If Grok's analysis is related to Listing Rules
-      // Conditionally run Step 2 based on query analysis
-      let step2Result: LocalStep2Result = {
-        completed: false,
-        context: '',
-        shouldContinue: true,
-        nextStep: 'takeoversCode',
-        listingRulesSearchNegative: true
-      };
       
-      if (step1Result.isRegulatoryRelated) {
+      // Step 2: Listing Rules Context (if needed)
+      if (!params.skipToResponse && params.nextStep === 'listingRules') {
         setCurrentStep('listingRules');
-        setStepProgress('Checking listing rules for relevant information');
+        setStepProgress('Retrieving Listing Rules...');
+        const step2StartTime = performance.now();
         
-        const rawStep2Result = await executeStep2(
-          { 
-            query: processedQuery,
-            initialContext: step1Result.context || '',
-            queryType: step1Result.queryType || 'general'
-          },
-          setStepProgress
-        );
-        
-        // Ensure required properties exist
-        step2Result = {
-          ...rawStep2Result,
-          context: rawStep2Result.context || '',
-          shouldContinue: rawStep2Result.shouldContinue !== undefined ? rawStep2Result.shouldContinue : true,
-          error: rawStep2Result.error
-        } as LocalStep2Result;
-        
-        trackStepPerformance('listingRules', stepStartTime);
-        stepStartTime = performance.now();
-
-        if (!step2Result.completed) {
-          throw new Error('Failed at step 2: ' + (step2Result.error?.message || 'Unknown error'));
+        try {
+          const step2Result = await executeStep2(params);
+          trackStepPerformance('listingRules', step2StartTime);
+          
+          params = { 
+            ...params, 
+            ...step2Result, 
+            listingRulesSearchNegative: !step2Result.completed || step2Result.context === ''
+          };
+          console.log('After step 2:', params);
+        } catch (error) {
+          console.error('Error in step 2:', error);
+          params.listingRulesSearchNegative = true;
+          if (error instanceof Error) {
+            params.error = error.message;
+          }
         }
       }
-
-      // Step 3: If Grok's analysis is related to Takeovers Code or Step 2 was negative
-      let step3Result: LocalStep3Result = {
-        completed: false,
-        context: '',
-        shouldContinue: true,
-        nextStep: 'execution',
-        takeoversCodeSearchNegative: true
-      };
       
-      if (!step1Result.isRegulatoryRelated || step2Result.listingRulesSearchNegative) {
+      // Step 3: Takeovers Code Context (if needed)
+      if (!params.skipToResponse && params.nextStep === 'takeoversCode') {
         setCurrentStep('takeoversCode');
-        setStepProgress('Analyzing takeovers code regulations');
+        setStepProgress('Retrieving Takeovers Code...');
+        const step3StartTime = performance.now();
         
-        const rawStep3Result = await executeStep3(
-          {
-            query: processedQuery,
-            initialContext: step1Result.context || '',
-            listingRulesContext: step2Result.context || '',
-            queryType: step1Result.queryType || 'general'
-          },
-          setStepProgress
-        );
-        
-        // Ensure required properties exist
-        step3Result = {
-          ...rawStep3Result,
-          context: rawStep3Result.context || '',
-          shouldContinue: rawStep3Result.shouldContinue !== undefined ? rawStep3Result.shouldContinue : true,
-          error: rawStep3Result.error
-        } as LocalStep3Result;
-        
-        trackStepPerformance('takeoversCode', stepStartTime);
-        stepStartTime = performance.now();
-
-        if (!step3Result.completed) {
-          throw new Error('Failed at step 3: ' + (step3Result.error?.message || 'Unknown error'));
+        try {
+          const step3Result = await executeStep3(params);
+          trackStepPerformance('takeoversCode', step3StartTime);
+          
+          params = { 
+            ...params, 
+            ...step3Result,
+            takeoversCodeSearchNegative: !step3Result.completed || !step3Result.context
+          };
+          console.log('After step 3:', params);
+        } catch (error) {
+          console.error('Error in step 3:', error);
+          params.takeoversCodeSearchNegative = true;
+          if (error instanceof Error) {
+            params.error = error.message;
+          }
         }
       }
-
-      // Step 4: Execution planning - only if needed based on previous steps
-      let step4Result: LocalStep4Result = {
-        completed: true,
-        context: step3Result.context || step2Result.context || step1Result.context || '',
-        executionContext: ''
-      };
       
-      const needsExecution = step3Result.executionRequired || step2Result.executionRequired;
-      
-      if (needsExecution) {
+      // Step 4: Execution Guidance (if needed)
+      const executionRequired = 
+        params.query.toLowerCase().includes('timetable') || 
+        params.query.toLowerCase().includes('timeline') ||
+        params.query.toLowerCase().includes('schedule') ||
+        params.query.toLowerCase().includes('process') ||
+        params.query.toLowerCase().includes('execution') ||
+        params.query.toLowerCase().includes('steps') ||
+        params.query.toLowerCase().includes('implement');
+        
+      if (!params.skipToResponse && (params.nextStep === 'execution' || executionRequired)) {
         setCurrentStep('execution');
-        setStepProgress('Creating execution plan for your query');
+        setStepProgress('Retrieving execution guidance...');
+        const step4StartTime = performance.now();
         
-        const rawStep4Result = await executeStep4(
-          {
-            query: processedQuery,
-            initialContext: step1Result.context || '',
-            listingRulesContext: step2Result.context || '',
-            takeoversCodeContext: step3Result.context || '',
-            queryType: step1Result.queryType || 'general'
-          },
-          setStepProgress
-        );
-        
-        // Ensure required properties exist
-        step4Result = {
-          ...rawStep4Result,
-          context: rawStep4Result.context || '',
-          executionContext: rawStep4Result.executionContext || '',
-          error: rawStep4Result.error
-        } as LocalStep4Result;
-        
-        trackStepPerformance('execution', stepStartTime);
-        stepStartTime = performance.now();
-
-        if (!step4Result.completed) {
-          throw new Error('Failed at step 4: ' + (step4Result.error?.message || 'Unknown error'));
+        try {
+          const step4Result = await executeStep4(params, setStepProgress);
+          trackStepPerformance('executionGuidance', step4StartTime);
+          
+          params = { 
+            ...params, 
+            ...step4Result
+          };
+          console.log('After step 4:', params);
+        } catch (error) {
+          console.error('Error in step 4:', error);
+          if (error instanceof Error) {
+            params.error = error.message;
+          }
         }
       }
-
-      // Step 5: Response generation
+      
+      // Final Step: Generate Response
       setCurrentStep('response');
-      setStepProgress('Generating final response');
+      setStepProgress('Generating response...');
+      const responseStartTime = performance.now();
       
-      const step5Result = await executeStep5(
-        {
-          query: processedQuery,
-          regulatoryContext: step4Result.context || '',
-          executionContext: step4Result.executionContext || '',
-          listingRulesContext: step2Result.context || '', 
-          takeoversCodeContext: step3Result.context || '',
-          queryType: step1Result.queryType || 'general',
-          originalLanguageWasChinese: isChinese
-        },
-        setStepProgress,
-        lastInputWasChinese || isChinese
-      );
-      
-      trackStepPerformance('response', stepStartTime);
-
-      if (!step5Result.completed) {
-        throw new Error('Failed at step 5: ' + (step5Result.error?.message || 'Unknown error'));
+      try {
+        const responseResult = await executeResponse(
+          params, 
+          setMessages, 
+          setStepProgress, 
+          lastInputWasChinese
+        );
+        trackStepPerformance('response', responseStartTime);
+        console.log('Response generated successfully');
+      } catch (error) {
+        console.error('Error generating response:', error);
+        
+        // Create error message
+        const errorMessage = handleWorkflowError(error, errorCount, []);
+        
+        setMessages(prev => [...prev, errorMessage]);
+        setErrorCount(prev => prev + 1);
       }
-
-      // Process the response
+      
+      // Complete the workflow
       setCurrentStep('complete');
       
-      // Create bot message with the correct type from the beginning
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: step5Result.requiresTranslation ? step5Result.translatedResponse || '' : step5Result.response || '',
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      
-      // Only add metadata if it exists in step5Result
-      if (step5Result.metadata) {
-        botMessage.metadata = step5Result.metadata;
-      }
-      
-      setMessages(prevMessages => [...prevMessages, botMessage]);
-
-      // Reset error count on successful completion
-      if (errorCount > 0) {
-        setErrorCount(0);
-      }
-
-      // Log overall performance
-      const totalDuration = performance.now() - workflowStartTime;
-      console.log(`Total workflow completed in ${totalDuration}ms`);
-
     } catch (error) {
       console.error('Workflow execution error:', error);
       
-      // Track error count for potential fallback handling
-      setErrorCount(prev => prev + 1);
-      
-      // Add error message to chat
+      // Create error message
       const errorMessage = handleWorkflowError(error, errorCount, []);
-      
-      setMessages(prevMessages => [...prevMessages, errorMessage]);
-      
+      setMessages(prev => [...prev, errorMessage]);
+      setErrorCount(prev => prev + 1);
     } finally {
       setIsLoading(false);
-      setCurrentStep('complete');
       setStepProgress('');
     }
-  }, [
-    isGrokApiKeySet,
-    setApiKeyDialogOpen,
-    setLastQuery,
-    setMessages,
-    errorCount,
-    trackStepPerformance,
-    lastInputWasChinese,
-    checkIsChineseInput,
-    createUserMessage,
-    setIsLoading,
-    setCurrentStep,
-    setStepProgress,
-    setErrorCount,
-    handleWorkflowError,
-    translateContent
-  ]);
-
-  return {
-    executeWorkflow
   };
+  
+  return { executeWorkflow };
 };

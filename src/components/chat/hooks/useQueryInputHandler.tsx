@@ -11,7 +11,14 @@ export const useQueryInputHandler = (
   const handleSend = async () => {
     // No pre-translation here - just process the raw input
     if (input.trim()) {
-      await processQuery(input);
+      try {
+        console.log('Processing query:', input.trim());
+        await processQuery(input);
+      } catch (error) {
+        console.error('Error processing query:', error);
+      }
+    } else {
+      console.log('Empty input, not processing');
     }
   };
 
@@ -19,6 +26,7 @@ export const useQueryInputHandler = (
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (input.trim()) {
+        console.log('Enter key pressed, sending query');
         handleSend();
       }
     }
