@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 /**
  * Hook for handling query input interactions
  */
