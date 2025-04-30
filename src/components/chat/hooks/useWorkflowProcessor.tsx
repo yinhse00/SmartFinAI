@@ -73,7 +73,8 @@ export const useWorkflowProcessor = ({
             id: Date.now().toString(),
             content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
             sender: 'bot',
-            timestamp: new Date()
+            timestamp: Date.now(),
+            role: 'assistant'
           };
           
           setMessages([...updatedMessages, botMessage]);
@@ -114,7 +115,8 @@ export const useWorkflowProcessor = ({
               id: Date.now().toString(),
               content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
               sender: 'bot',
-              timestamp: new Date()
+              timestamp: Date.now(),
+              role: 'assistant'
             };
             
             setMessages([...updatedMessages, botMessage]);

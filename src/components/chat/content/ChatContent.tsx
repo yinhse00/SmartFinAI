@@ -62,7 +62,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
         {isLoading && (
           <>
             {isOfflineMode ? (
-              <ProcessingIndicator stage="processing" progress={stepProgress} />
+              <ProcessingIndicator stage="processing" isVisible={true} />
             ) : (
               <ChatLoadingIndicator />
             )}

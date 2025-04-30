@@ -8,11 +8,11 @@ import StatusDetails from './ProcessingStages/StatusDetails';
 import { getStageMessages } from './ProcessingStages/stageMessages';
 
 interface ProcessingIndicatorProps {
-  isVisible: boolean;
   stage: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+  isVisible?: boolean;
 }
 
-const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => {
+const ProcessingIndicator = ({ isVisible = true, stage }: ProcessingIndicatorProps) => {
   const [progress, setProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);

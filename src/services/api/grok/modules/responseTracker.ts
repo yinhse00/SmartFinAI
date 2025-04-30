@@ -23,5 +23,5 @@ export const trackApiResponseMetrics = (
                  responseText.includes('I will continue');
   
   // Track response quality for this key
-  trackResponseQuality(apiKey, isTruncated);
+  trackResponseQuality(apiKey, isTruncated ? 3 : 8);
 };
