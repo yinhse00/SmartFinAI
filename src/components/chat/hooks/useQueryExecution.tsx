@@ -73,27 +73,36 @@ export const useQueryExecution = (
       let contextPromise = retrieveRegulatoryContext(queryText, Boolean(isFaqQuery));
       
       // Set a timeout for context retrieval to prevent hanging
-      const contextTimeoutPromise = new Promise((_, reject) => 
+      const contextTimeoutPromise = new Promise<{
+        regulatoryContext: string;
+        reasoning: string;
+        contextTime: number;
+        usedSummaryIndex: boolean;
+        searchStrategy: string;
+      }>((_, reject) => 
         setTimeout(() => reject(new Error('Context retrieval timeout')), 15000)
       );
       
       // Use Promise.race to implement timeout
-      const {
-        regulatoryContext,
-        reasoning,
-        contextTime,
-        usedSummaryIndex,
-        searchStrategy
-      } = await Promise.race([contextPromise, contextTimeoutPromise]).catch(error => {
+      const result = await Promise.race([contextPromise, contextTimeoutPromise]).catch(error => {
         console.warn('Context retrieval issue:', error);
         return { 
-          regulatoryContext: undefined, 
+          regulatoryContext: '', 
           reasoning: 'Fallback reasoning due to context retrieval timeout',
           contextTime: 0,
           usedSummaryIndex: false,
           searchStrategy: 'fallback'
         };
       });
+
+      // Extract the results with proper typing
+      const {
+        regulatoryContext,
+        reasoning,
+        contextTime,
+        usedSummaryIndex,
+        searchStrategy
+      } = result;
 
       logContextInfo(
         regulatoryContext,
@@ -107,7 +116,7 @@ export const useQueryExecution = (
       setProcessingStage('processing');
       const processingStart = performance.now();
 
-      const result = await handleApiResponse(
+      const apiResult = await handleApiResponse(
         queryText,
         responseParams,
         regulatoryContext,
@@ -129,7 +138,7 @@ export const useQueryExecution = (
       finishLogging();
 
       // Handle batch truncation
-      if (batchInfo && result && result.isTruncated) {
+      if (batchInfo && apiResult && apiResult.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {
         onBatchTruncated(false);

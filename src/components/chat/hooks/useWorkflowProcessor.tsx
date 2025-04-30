@@ -7,6 +7,7 @@ import { executeStep4 } from './workflow/step4Execution';
 import { executeStep5 } from './workflow/step5Response';
 import { useLanguageState } from './useLanguageState';
 import { StepResult, WorkflowProcessorProps } from './workflow/types';
+import { Message } from '../ChatMessage';
 
 export const useWorkflowProcessor = ({
   messages,
@@ -51,7 +52,7 @@ export const useWorkflowProcessor = ({
 
     try {
       // Pre-processing: add user message immediately for better UX
-      const userMessage = {
+      const userMessage: Message = {
         id: Date.now().toString(),
         content: query,
         sender: 'user',
@@ -166,9 +167,9 @@ export const useWorkflowProcessor = ({
       setCurrentStep('complete');
       
       // Create bot message
-      const botMessage = {
+      const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: step5Result.requiresTranslation ? step5Result.translatedResponse : step5Result.response,
+        content: step5Result.requiresTranslation ? step5Result.translatedResponse || '' : step5Result.response || '',
         sender: 'bot',
         timestamp: new Date(),
         metadata: step5Result.metadata || {}
@@ -193,7 +194,7 @@ export const useWorkflowProcessor = ({
       setErrorCount(prev => prev + 1);
       
       // Add error message to chat
-      const errorMessage = {
+      const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: errorCount >= 2 
           ? "I encountered multiple errors processing your request. I'll use a simplified approach to answer your question."
