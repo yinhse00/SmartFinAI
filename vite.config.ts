@@ -81,9 +81,10 @@ export default defineConfig(({ mode }) => ({
             proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
             proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response, X-Correlation-ID';
             
+            // Type-safe handling of statusCode to address TypeScript error TS18048
+            const statusCode = typeof proxyRes.statusCode === 'number' ? proxyRes.statusCode : 0;
+            
             // Log successful proxy responses for debugging
-            // Fix: Add a check for undefined statusCode
-            const statusCode = proxyRes.statusCode !== undefined ? proxyRes.statusCode : 0;
             console.log(`Proxy response from ${req.url}: ${statusCode} (${correlationId})`);
             
             // Check for continuation requests and log them
