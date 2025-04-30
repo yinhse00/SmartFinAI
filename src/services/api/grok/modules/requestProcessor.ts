@@ -1,25 +1,35 @@
 
 /**
- * Core API request processing logic
+ * Enhanced API request processing logic with automatic endpoint selection
  */
 import { getGrokApiKey, selectLeastUsedKey, selectBestPerformingKey } from '../../../apiKeyService';
-import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability } from './endpointManager';
+import { attemptProxyRequest, attemptDirectRequest, getOptimalEndpoint } from './endpointManager';
 import { executeWithRetry } from './retryHandler';
 import { isRetryAttempt } from './requestHelper';
 import { prepareRequestParameters } from './queryParameterBuilder';
 
+// Store the last known good endpoint configuration to avoid repeated checks
+let lastKnownGoodEndpoint: {
+  type: 'proxy' | 'direct' | 'none';
+  endpoint?: string;
+  timestamp: number;
+} = {
+  type: 'none',
+  timestamp: 0
+};
+
 /**
- * Process API request with optimized parameters
+ * Process API request with smart endpoint selection and fallback mechanisms
  */
 export const processApiRequest = async (
   requestBody: any, 
   providedApiKey?: string
 ): Promise<any> => {
   // Find user message to check for retry attempts
-  const userMessage = requestBody.messages.find((msg: any) => msg.role === 'user');
+  const userMessage = requestBody.messages?.find((msg: any) => msg.role === 'user');
   
   // Check if this is a retry attempt
-  const isRetryRequest = isRetryAttempt(userMessage);
+  const isRetryRequest = isRetryAttempt(userMessage?.content);
   
   // Use provided key, or select the best key based on context and load balancing
   const apiKey = providedApiKey || 
@@ -34,13 +44,6 @@ export const processApiRequest = async (
   if (!apiKey.startsWith('xai-')) {
     console.error("Invalid financial expert API key format");
     throw new Error("Invalid financial expert API key format");
-  }
-  
-  // First check API availability to fail fast
-  const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
-  if (!isApiAvailable) {
-    console.error("Grok API is unreachable - all endpoints appear to be down");
-    throw new Error("Grok API is unreachable");
   }
   
   // Ensure token limits are properly applied
@@ -58,15 +61,47 @@ export const processApiRequest = async (
   console.log("Using API Key:", apiKey.substring(0, 8) + "***");
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
   
+  // Only check for a new endpoint if we don't have a recent one or this is a retry
+  const ONE_MINUTE = 60000;
+  if (!lastKnownGoodEndpoint.endpoint || 
+      Date.now() - lastKnownGoodEndpoint.timestamp > ONE_MINUTE ||
+      isRetryRequest) {
+    
+    console.log("Checking for optimal endpoint...");
+    const endpointInfo = await getOptimalEndpoint(apiKey);
+    
+    if (endpointInfo.isAvailable) {
+      lastKnownGoodEndpoint = {
+        type: endpointInfo.endpointType,
+        endpoint: endpointInfo.endpoint,
+        timestamp: Date.now()
+      };
+      console.log(`Using ${endpointInfo.endpointType} endpoint: ${endpointInfo.endpoint}`);
+    } else {
+      console.warn("No working endpoints found, will attempt default endpoints anyway");
+      // Reset last known endpoint to force a future check
+      lastKnownGoodEndpoint = {
+        type: 'none',
+        timestamp: 0
+      };
+    }
+  }
+  
   try {
-    // First try using the local proxy if available
-    try {
-      const data = await attemptProxyRequest(requestBody, apiKey);
-      console.log("Financial expert API response received successfully via proxy");
-      return data;
-    } catch (proxyError) {
-      console.warn("Proxy request failed:", proxyError);
-      // Continue with direct requests
+    // If we have a known working proxy endpoint, try it first
+    if (lastKnownGoodEndpoint.type === 'proxy') {
+      try {
+        const data = await attemptProxyRequest(requestBody, apiKey);
+        console.log("Financial expert API response received successfully via proxy");
+        return data;
+      } catch (proxyError) {
+        console.warn("Proxy request failed despite endpoint check:", proxyError);
+        // Reset the last known endpoint and continue with direct requests
+        lastKnownGoodEndpoint = {
+          type: 'none',
+          timestamp: 0
+        };
+      }
     }
     
     // Attempt direct API calls with retries
@@ -77,7 +112,7 @@ export const processApiRequest = async (
     console.log("Financial expert API response received successfully via direct call");
     return data;
   } catch (error) {
-    console.error("Financial expert API call failed:", error);
+    console.error("Financial expert API call failed completely:", error);
     throw error;
   }
 };
