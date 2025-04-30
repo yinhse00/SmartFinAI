@@ -34,5 +34,6 @@ export interface GrokResponse {
     };
     responseWasTruncated?: boolean;
     isOfflineMode?: boolean;
+    references?: string[]; // Added this property for proper typing
   };
 }

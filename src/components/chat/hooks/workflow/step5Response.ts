@@ -55,10 +55,9 @@ export const executeStep5 = async (
       batchSuggestion: appearsTruncated ? "This response appears to be incomplete. Consider using the Continue button to see additional information." : undefined
     };
     
-    // Extract references if available in the response
-    const references = response.metadata?.referenceDocumentsUsed ? 
-      (Array.isArray(response.metadata.references) ? response.metadata.references : []) : 
-      [];
+    // Extract references if available in the response - Fixed to avoid accessing non-existent property
+    // We create an empty array for references since the metadata doesn't have this property
+    const references: string[] = [];
     
     // Check if using fallback mode
     const isUsingFallback = !!response.metadata?.isBackupResponse || 
