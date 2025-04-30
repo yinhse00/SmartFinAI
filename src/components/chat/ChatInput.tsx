@@ -1,11 +1,11 @@
 
 import React from 'react';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2, AlertTriangle, WifiOff } from 'lucide-react';
 import UnifiedUploadButton from './upload/UnifiedUploadButton';
 import AttachedFilesList from './upload/AttachedFilesList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ChatInputProps {
   input: string;
@@ -14,7 +14,7 @@ interface ChatInputProps {
   isLoading: boolean;
   isGrokApiKeySet: boolean;
   onOpenApiKeyDialog: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFileSelect?: (files: FileList) => void;
   placeholder?: string;
   isProcessingFiles?: boolean;
@@ -59,7 +59,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           isOfflineMode={isOfflineMode}
         />
       )}
-      <div className="flex gap-2 items-center">
+      <div className="flex gap-2 items-start">
         {onFileSelect && (
           <UnifiedUploadButton 
             onFileSelect={onFileSelect} 
@@ -67,13 +67,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
             isOfflineMode={isOfflineMode}
           />
         )}
-        <Input
-          className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
+        <Textarea
+          className="flex-1 min-h-[40px] max-h-[80px] bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700 resize-none"
           placeholder={hasAttachedFiles ? "Type your question about the attached files..." : placeholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading || isProcessingFiles}
+          rows={1}
+          style={{ overflow: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
         />
         <Button 
           onClick={handleSend} 

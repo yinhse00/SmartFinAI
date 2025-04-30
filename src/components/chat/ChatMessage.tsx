@@ -62,13 +62,13 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`flex items-start gap-3 max-w-[80%] ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+      <div className={`${sender === 'user' ? 'flex items-start gap-3 max-w-[80%] flex-row-reverse' : 'w-full'}`}>
         <Card className={`p-3 rounded-lg ${
           sender === 'user' 
-            ? 'bg-finance-medium-blue text-white' 
+            ? 'bg-finance-medium-blue text-white max-w-[80%] ml-auto' 
             : isError 
-              ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
-              : 'bg-gray-50 dark:bg-gray-800'
+              ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 w-full' 
+              : 'bg-gray-50 dark:bg-gray-800 w-full'
         }`}>
           {sender === 'user' || isTranslating ? (
             <div className="whitespace-pre-line">{displayContent}</div>
