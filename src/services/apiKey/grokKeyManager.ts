@@ -24,7 +24,7 @@ import {
 
 let currentKeyIndex = 0;
 let lastKeySelectionTime = Date.now();
-const KEY_ROTATION_INTERVAL = 30000; // 30 seconds minimum between forced rotations
+const KEY_ROTATION_INTERVAL = 10000; // 10 seconds minimum between forced rotations for faster recovery from error conditions
 
 /**
  * Enhanced round-robin key rotation with smart load balancing and cooldown periods

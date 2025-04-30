@@ -2,7 +2,7 @@
 /**
  * Core API request processing logic
  */
-import { getGrokApiKey, selectLeastUsedKey, selectBestPerformingKey } from '../../../apiKeyService';
+import { getGrokApiKey, selectLeastUsedKey, selectBestPerformingKey, getFreshGrokApiKey } from '../../../apiKeyService';
 import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability } from './endpointManager';
 import { executeWithRetry } from './retryHandler';
 import { isRetryAttempt } from './requestHelper';
@@ -21,10 +21,35 @@ export const processApiRequest = async (
   // Check if this is a retry attempt
   const isRetryRequest = isRetryAttempt(userMessage);
   
-  // Use provided key, or select the best key based on context and load balancing
-  const apiKey = providedApiKey || 
-               (isRetryRequest ? selectLeastUsedKey() : selectBestPerformingKey()) || 
-               getGrokApiKey();
+  // Check if this is a continuation request for batched responses
+  const isContinuationRequest = userMessage && typeof userMessage.content === 'string' && 
+                              userMessage.content.includes('[CONTINUATION_PART_');
+  
+  // Use provided key or select the best key based on context and request type
+  // For continuations, always use getFreshGrokApiKey to select a less-used API key
+  let apiKey;
+  
+  if (providedApiKey) {
+    apiKey = providedApiKey;
+  } else if (isContinuationRequest) {
+    // For continuations, use a fresh key for better throughput
+    apiKey = getFreshGrokApiKey();
+    console.log("Using fresh API key for continuation request");
+  } else if (isRetryRequest) {
+    // For retries, use least used key to avoid rate limits
+    apiKey = selectLeastUsedKey();
+    console.log("Using least used API key for retry request");
+  } else {
+    // For normal requests, use best performing key based on quality metrics
+    apiKey = selectBestPerformingKey();
+    console.log("Using best performing API key for standard request");
+  }
+  
+  // Fallback to default key if selection failed
+  if (!apiKey) {
+    console.warn("Key selection failed, using default API key");
+    apiKey = getGrokApiKey();
+  }
   
   if (!apiKey) {
     console.error("No API key provided for financial expert access");
@@ -63,6 +88,7 @@ export const processApiRequest = async (
   console.log("Max tokens:", requestBody.max_tokens);
   console.log("Using API Key:", apiKey.substring(0, 8) + "***");
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
+  console.log("Is continuation request:", isContinuationRequest ? "Yes" : "No");
   
   try {
     // Always try local proxy first (most likely to work)

@@ -43,7 +43,12 @@ export const useFallbackDetection = () => {
       "CORS", 
       "cross-origin",
       "browser is preventing",
-      "proxy configuration"
+      "proxy configuration",
+      "proxy error",
+      "rate limit exceeded",
+      "API rate limit",
+      "Too many requests",
+      "429 status code"
     ];
     
     // Check for any fallback indicators - case insensitive

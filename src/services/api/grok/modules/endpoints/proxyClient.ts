@@ -27,13 +27,24 @@ export const attemptProxyRequest = async (
       requestBody._clientTimestamp = clientTimestamp;
     }
     
+    // Check if this is a continuation request and tag it for routing
+    const userMessage = requestBody.messages?.find((msg: any) => msg.role === 'user');
+    const isContinuation = userMessage?.content?.includes('[CONTINUATION_PART_');
+    
+    if (isContinuation) {
+      console.log("Detected continuation request, adding continuation header");
+      requestBody._isContinuation = true;
+      requestBody._continuationKey = apiKey; // Use the same key for continuation requests
+    }
+    
     // Enhanced headers with more browser-like values
     const headers = {
       ...getProxyHeaders(apiKey),
       'Accept-Language': 'en-US,en;q=0.9',
       'Cache-Control': 'no-cache',
       'Pragma': 'no-cache',
-      'X-Client-Timestamp': clientTimestamp.toString()
+      'X-Client-Timestamp': clientTimestamp.toString(),
+      'X-Continuation': isContinuation ? 'true' : 'false'
     };
     
     const proxyResponse = await fetch(LOCAL_PROXY, {

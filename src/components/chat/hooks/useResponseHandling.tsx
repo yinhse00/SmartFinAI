@@ -9,7 +9,6 @@ import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
 
-// Add batchInfo param
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,

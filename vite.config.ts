@@ -16,11 +16,18 @@ export default defineConfig(({ mode }) => ({
         secure: true,
         timeout: 600000, // 10 minutes timeout for large file processing
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', function(proxyReq, req) {
+          proxy.on('proxyReq', function(proxyReq, req, res) {
             // Copy authorization header from client request
             const authHeader = req.headers['authorization'];
             if (authHeader) {
               proxyReq.setHeader('Authorization', authHeader);
+            }
+            
+            // Check if this is a continuation request
+            const isContinuation = req.headers['x-continuation'] === 'true';
+            if (isContinuation) {
+              proxyReq.setHeader('X-Continuation', 'true');
+              console.log("Forwarding continuation request to API");
             }
             
             // Add required headers for API request
@@ -33,6 +40,12 @@ export default defineConfig(({ mode }) => ({
             
             // Log proxy request for debugging
             console.log(`Proxying request to: ${req.url}`);
+            
+            // For continuation requests, set a higher priority (lower counter)
+            // to ensure they're processed more quickly
+            if (isContinuation) {
+              proxyReq.setHeader('X-Request-Priority', 'high');
+            }
           });
           
           proxy.on('error', function(err, req, res) {
@@ -44,7 +57,7 @@ export default defineConfig(({ mode }) => ({
                 'Content-Type': 'application/json',
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response'
               });
               
               res.end(JSON.stringify({
@@ -59,10 +72,16 @@ export default defineConfig(({ mode }) => ({
             // Add CORS headers to the response
             proxyRes.headers['access-control-allow-origin'] = '*';
             proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-            proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Financial-Expert, X-Long-Response';
+            proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response';
             
             // Log successful proxy responses for debugging
             console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
+            
+            // Check for continuation requests and log them
+            const isContinuation = req.headers['x-continuation'] === 'true';
+            if (isContinuation) {
+              console.log("Continuation response received from API");
+            }
           });
         }
       }
