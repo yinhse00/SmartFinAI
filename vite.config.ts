@@ -82,7 +82,9 @@ export default defineConfig(({ mode }) => ({
             proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response, X-Correlation-ID';
             
             // Log successful proxy responses for debugging
-            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode} (${correlationId})`);
+            // Fix: Add a check for undefined statusCode
+            const statusCode = proxyRes.statusCode !== undefined ? proxyRes.statusCode : 0;
+            console.log(`Proxy response from ${req.url}: ${statusCode} (${correlationId})`);
             
             // Check for continuation requests and log them
             const isContinuation = req.headers['x-continuation'] === 'true';
@@ -91,8 +93,8 @@ export default defineConfig(({ mode }) => ({
             }
             
             // Handle error responses more gracefully
-            if (proxyRes.statusCode >= 400) {
-              console.error(`API error response: ${proxyRes.statusCode} (${correlationId})`);
+            if (statusCode >= 400) {
+              console.error(`API error response: ${statusCode} (${correlationId})`);
               
               // Capture response body for better error reporting
               let body = '';
