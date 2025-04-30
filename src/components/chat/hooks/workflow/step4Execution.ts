@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep, Step4Result } from './types';
+import { WorkflowStep } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -8,17 +8,11 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Check Documents Checklist, Working Plan, and Timetable
  * - Compile relevant execution information
  */
-export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step4Result> => {
+export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void) => {
   setStepProgress('Retrieving execution guidance documents');
   
   try {
-    // Track which execution documents were found and their contents
-    const executionResults = {
-      documentsChecklist: '',
-      workingPlan: '',
-      timetable: ''
-    };
-    
+    const executionContexts: string[] = [];
     let transactionType = '';
     
     // Try to identify transaction type from query or context
@@ -34,7 +28,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
       transactionType = 'share consolidation';
     }
     
-    // Step 4.1: Check Documents Checklist
+    // Step 4(a): Check Documents Checklist
     setStepProgress('Checking document requirements');
     const checklistResponse = await grokService.getRegulatoryContext(
       `Find information in "Documents Checklist.doc" about ${transactionType || params.query} transaction documents`
@@ -44,10 +38,10 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     const checklistContext = safelyExtractText(checklistResponse);
     
     if (checklistContext && checklistContext.trim() !== '') {
-      executionResults.documentsChecklist = checklistContext;
+      executionContexts.push("--- Document Requirements ---\n\n" + checklistContext);
     }
     
-    // Step 4.2: Check Working Plan
+    // Step 4(b): Check Working Plan
     setStepProgress('Retrieving working plan information');
     const workingPlanResponse = await grokService.getRegulatoryContext(
       `Find information in "Working Plan.doc" about ${transactionType || params.query} transaction steps`
@@ -57,10 +51,10 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     const workingPlanContext = safelyExtractText(workingPlanResponse);
     
     if (workingPlanContext && workingPlanContext.trim() !== '') {
-      executionResults.workingPlan = workingPlanContext;
+      executionContexts.push("--- Working Plan ---\n\n" + workingPlanContext);
     }
     
-    // Step 4.3: Check Timetable
+    // Step 4(c): Check Timetable
     setStepProgress('Getting timetable information');
     const timetableResponse = await grokService.getRegulatoryContext(
       `Find information in "Timetable.doc" about ${transactionType || params.query} transaction timeline`
@@ -70,53 +64,32 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     const timetableContext = safelyExtractText(timetableResponse);
     
     if (timetableContext && timetableContext.trim() !== '') {
-      executionResults.timetable = timetableContext;
+      executionContexts.push("--- Transaction Timeline ---\n\n" + timetableContext);
     }
-    
-    // Combine execution guidance sections
-    const executionSections = [];
-    
-    if (executionResults.documentsChecklist) {
-      executionSections.push("--- Documents to be Prepared ---\n\n" + executionResults.documentsChecklist);
-    }
-    
-    if (executionResults.workingPlan) {
-      executionSections.push("--- Working Plan ---\n\n" + executionResults.workingPlan);
-    }
-    
-    if (executionResults.timetable) {
-      executionSections.push("--- Execution Timetable ---\n\n" + executionResults.timetable);
-    }
-    
-    const executionContext = executionSections.join('\n\n');
     
     // Combine execution guidance with any regulatory context
-    let combinedContext = '';
+    let combinedContext = executionContexts.join('\n\n');
     
     if (params.regulatoryContext) {
-      combinedContext = params.regulatoryContext + "\n\n--- Execution Guidance ---\n\n" + executionContext;
+      combinedContext = params.regulatoryContext + "\n\n--- Execution Guidance ---\n\n" + combinedContext;
     } else if (params.listingRulesContext) {
-      combinedContext = params.listingRulesContext + "\n\n--- Execution Guidance ---\n\n" + executionContext;
+      combinedContext = params.listingRulesContext + "\n\n--- Execution Guidance ---\n\n" + combinedContext;
     } else if (params.takeoversCodeContext) {
-      combinedContext = params.takeoversCodeContext + "\n\n--- Execution Guidance ---\n\n" + executionContext;
-    } else {
-      combinedContext = "--- Execution Guidance ---\n\n" + executionContext;
+      combinedContext = params.takeoversCodeContext + "\n\n--- Execution Guidance ---\n\n" + combinedContext;
     }
     
-    // Go to Step 5 with all context
     return {
       shouldContinue: true,
-      nextStep: 'response',
+      nextStep: 'response' as WorkflowStep,
       query: params.query,
       executionContext: combinedContext,
-      regulatoryContext: combinedContext,
-      executionResults: executionResults
+      regulatoryContext: combinedContext
     };
   } catch (error) {
     console.error('Error in step 4:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response',
+      nextStep: 'response' as WorkflowStep, 
       query: params.query,
       error
     };

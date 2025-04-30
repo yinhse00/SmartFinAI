@@ -3,13 +3,12 @@ import { useState, useEffect } from 'react';
 import { grokApiService } from '@/services/api/grokApiService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff, Server } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
-  isOfflineMode?: boolean; // Prop to indicate offline mode
-  onTryReconnect?: () => Promise<boolean>; // Callback for reconnection attempts
+  isOfflineMode?: boolean; // New prop to indicate offline mode
+  onTryReconnect?: () => Promise<boolean>; // New callback for reconnection attempts
 }
 
 const ApiConnectionStatus = ({ 
@@ -17,13 +16,11 @@ const ApiConnectionStatus = ({
   isOfflineMode: externalOfflineMode, // Provided from parent
   onTryReconnect 
 }: ApiConnectionStatusProps) => {
-  const { toast } = useToast();
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean | null;
     message: string;
     loading: boolean;
     isOfflineMode: boolean;
-    endpoint?: string;
   }>({
     success: null,
     message: 'Checking AI connection...',
@@ -55,46 +52,16 @@ const ApiConnectionStatus = ({
         message: 'Checking AI connection...'
       }));
       
-      try {
-        const success = await onTryReconnect();
-        
-        setConnectionStatus({
-          success,
-          message: success 
-            ? 'AI connection restored successfully.' 
-            : 'AI is still unreachable. Please check your internet connection and API key.',
-          loading: false,
-          isOfflineMode: !success
-        });
-        
-        if (success) {
-          toast({
-            title: "Connection Restored",
-            description: "Successfully reconnected to the AI service.",
-            variant: "default"
-          });
-        } else {
-          toast({
-            title: "Reconnection Failed",
-            description: "Could not restore connection to AI service. Still operating in offline mode.",
-            variant: "destructive"
-          });
-        }
-      } catch (error) {
-        console.error("Error during reconnection:", error);
-        setConnectionStatus({
-          success: false,
-          message: `Reconnection error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-          loading: false,
-          isOfflineMode: true
-        });
-        
-        toast({
-          title: "Reconnection Error",
-          description: "An error occurred while trying to reconnect.",
-          variant: "destructive"
-        });
-      }
+      const success = await onTryReconnect();
+      
+      setConnectionStatus({
+        success,
+        message: success 
+          ? 'AI connection restored successfully.' 
+          : 'AI is still unreachable. Please check your internet connection and API key.',
+        loading: false,
+        isOfflineMode: !success
+      });
       
       return;
     }
@@ -113,17 +80,8 @@ const ApiConnectionStatus = ({
         success: result.success,
         message: result.message,
         loading: false,
-        isOfflineMode: false,
-        endpoint: result.diagnostics?.endpoint
+        isOfflineMode: false
       });
-      
-      if (result.success) {
-        toast({
-          title: "Connection Check",
-          description: "AI service is available.",
-          variant: "default"
-        });
-      }
     } catch (error) {
       // Check if this is a network error (likely CORS or connectivity issue)
       const isNetworkError = error instanceof Error && 
@@ -139,12 +97,6 @@ const ApiConnectionStatus = ({
         loading: false,
         isOfflineMode: isNetworkError
       });
-      
-      toast({
-        title: "Connection Error",
-        description: "Failed to check AI connection status.",
-        variant: "destructive"
-      });
     }
   };
 
@@ -154,12 +106,6 @@ const ApiConnectionStatus = ({
       message: 'Using offline mode with local fallback responses.',
       loading: false,
       isOfflineMode: true
-    });
-    
-    toast({
-      title: "Offline Mode Enabled",
-      description: "Using local fallback responses for queries.",
-      variant: "default"
     });
   };
 
@@ -183,14 +129,7 @@ const ApiConnectionStatus = ({
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
           <AlertTitle>AI Connected</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
-            <div className="flex flex-col">
-              <span>SmartFinAI is ready to answer your queries.</span>
-              {connectionStatus.endpoint && (
-                <span className="text-xs text-gray-500 mt-1">
-                  Using endpoint: {connectionStatus.endpoint.split('/').slice(0, 3).join('/')}...
-                </span>
-              )}
-            </div>
+            <span>SmartFinAI is ready to answer your queries.</span>
             <Button 
               variant="outline" 
               size="sm" 
@@ -224,7 +163,6 @@ const ApiConnectionStatus = ({
                 onClick={onOpenApiKeyDialog}
                 className="h-7 text-xs bg-finance-dark-blue hover:bg-finance-dark-blue/90"
               >
-                <Server className="h-3 w-3 mr-1" />
                 Update API Key
               </Button>
             </div>

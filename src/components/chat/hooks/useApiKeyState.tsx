@@ -165,10 +165,9 @@ export const useApiKeyState = () => {
       try {
         // First validate the new API key before saving
         setKeyStatus(prev => ({ ...prev, isValidating: true }));
-        // Use testApiConnection instead of the non-existent testApiKeyValidity
-        const keyValidation = await connectionTester.testApiConnection(grokApiKeyInput.trim());
+        const keyValidation = await connectionTester.testApiKeyValidity(grokApiKeyInput.trim());
         
-        if (keyValidation.success) {
+        if (keyValidation.isValid) {
           setGrokApiKey(grokApiKeyInput.trim());
           
           // Verify key was actually stored
@@ -184,7 +183,7 @@ export const useApiKeyState = () => {
               });
               toast({
                 title: "API Key Saved",
-                description: `Your Grok API key has been saved and validated.`,
+                description: `Your Grok API key has been saved and validated. ${keyValidation.quotaRemaining !== undefined ? `Quota remaining: ${keyValidation.quotaRemaining}` : ''}`,
               });
               setApiKeyDialogOpen(false);
             } else {

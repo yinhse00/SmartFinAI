@@ -9,13 +9,6 @@ import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
 import { fileConverter } from '../utils/fileConverter';
 
 /**
- * Interface for document processors
- */
-export interface DocumentProcessorInterface {
-  extractText: (file: File) => Promise<{ content: string; source: string }>;
-}
-
-/**
  * Base processor with shared functionality for document processing
  */
 export abstract class BaseDocumentProcessor {

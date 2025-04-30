@@ -10,107 +10,23 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       '/api/grok': {
-        target: 'https://api.grok.ai',
+        target: 'https://api.x.ai',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/grok/, ''),
+        rewrite: (path) => path.replace(/^\/api\/grok/, '/v1'),
         secure: true,
-        timeout: 600000, // 10 minutes timeout for large file processing
+        timeout: 600000, // Increased timeout to 10 minutes for large file processing
         configure: (proxy, _options) => {
-          proxy.on('proxyReq', function(proxyReq, req, res) {
-            // Add correlation ID for request tracing
-            const correlationId = `req-${Date.now()}-${Math.random().toString(36).substring(2, 10)}`;
-            proxyReq.setHeader('X-Correlation-ID', correlationId);
-            
-            // Copy authorization header from client request
-            const authHeader = req.headers['authorization'];
-            if (authHeader) {
-              proxyReq.setHeader('Authorization', authHeader);
-            }
-            
-            // Check if this is a continuation request
-            const isContinuation = req.headers['x-continuation'] === 'true';
-            if (isContinuation) {
-              proxyReq.setHeader('X-Continuation', 'true');
-              console.log(`Forwarding continuation request to API (${correlationId})`);
-            }
-            
-            // Add required headers for API request
+          proxy.on('proxyReq', function(proxyReq) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
             proxyReq.setHeader('X-Long-Response', 'true');
-            proxyReq.setHeader('Origin', 'https://api.grok.ai');
-            proxyReq.setHeader('Referer', 'https://api.grok.ai/');
-            proxyReq.setHeader('Accept', 'application/json');
-            proxyReq.setHeader('User-Agent', 'Mozilla/5.0 SmartFinAI/1.0');
-            
-            // Log proxy request for debugging
-            console.log(`Proxying request to: ${req.url} (${correlationId})`);
-            
-            // For continuation requests, set a higher priority
-            if (isContinuation) {
-              proxyReq.setHeader('X-Request-Priority', 'high');
-            }
+            proxyReq.setHeader('Origin', 'https://api.x.ai'); // Add origin to help with CORS
           });
-          
-          proxy.on('error', function(err, req, res) {
-            const correlationId = req.headers['x-correlation-id'] || `err-${Date.now()}`;
-            console.error(`Proxy error (${correlationId}):`, err);
-            
-            // Send a more useful error response to the client
-            if (!res.headersSent) {
-              res.writeHead(500, {
-                'Content-Type': 'application/json',
-                'Access-Control-Allow-Origin': '*',
-                'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response, X-Correlation-ID'
-              });
-              
-              res.end(JSON.stringify({
-                error: 'Proxy Error',
-                message: err.message || 'Unknown proxy error',
-                code: 'PROXY_ERROR',
-                correlationId
-              }));
-            }
+          proxy.on('error', function(err, _req, _res) {
+            console.log('Financial expert proxy error:', err);
           });
-          
           proxy.on('proxyRes', function(proxyRes, req, res) {
-            const correlationId = req.headers['x-correlation-id'] || `res-${Date.now()}`;
-            
-            // Add CORS headers to the response
-            proxyRes.headers['access-control-allow-origin'] = '*';
-            proxyRes.headers['access-control-allow-methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
-            proxyRes.headers['access-control-allow-headers'] = 'Content-Type, Authorization, X-Continuation, X-Financial-Expert, X-Long-Response, X-Correlation-ID';
-            
-            // Type-safe handling of statusCode to address TypeScript error TS18048
-            const statusCode = typeof proxyRes.statusCode === 'number' ? proxyRes.statusCode : 0;
-            
             // Log successful proxy responses for debugging
-            console.log(`Proxy response from ${req.url}: ${statusCode} (${correlationId})`);
-            
-            // Check for continuation requests and log them
-            const isContinuation = req.headers['x-continuation'] === 'true';
-            if (isContinuation) {
-              console.log(`Continuation response received from API (${correlationId})`);
-            }
-            
-            // Handle error responses more gracefully
-            if (statusCode >= 400) {
-              console.error(`API error response: ${statusCode} (${correlationId})`);
-              
-              // Capture response body for better error reporting
-              let body = '';
-              proxyRes.on('data', function(chunk) {
-                body += chunk;
-              });
-              
-              proxyRes.on('end', function() {
-                try {
-                  console.error(`API error details (${correlationId}):`, body);
-                } catch (e) {
-                  console.error(`Failed to parse API error response (${correlationId})`, e);
-                }
-              });
-            }
+            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
           });
         }
       }

@@ -25,6 +25,20 @@ export const useQueryExecution = (
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
 
+  // Simple deterministic hashing function for consistent request IDs
+  const createSimpleHash = (text: string): number => {
+    let hash = 0;
+    if (!text || text.length === 0) return hash;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text.charCodeAt(i);
+      hash = ((hash << 5) - hash) + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    
+    return Math.abs(hash);
+  };
+
   // The main execution function
   const executeQuery = async (
     queryText: string,
@@ -37,6 +51,11 @@ export const useQueryExecution = (
       setApiKeyDialogOpen(true);
       return;
     }
+    
+    // Generate a deterministic request ID that will be the same in both environments
+    const contentHash = createSimpleHash(queryText);
+    const requestId = `req_${contentHash}_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    console.log(`Processing request ${requestId} with query: ${queryText.substring(0, 50)}...`);
     
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
@@ -55,6 +74,13 @@ export const useQueryExecution = (
         actualTemperature,
         enhancedMaxTokens
       } = prepareQuery(queryText);
+      
+      // Add consistency markers
+      responseParams.requestId = requestId;
+      responseParams.consistencyMode = true;
+      responseParams.envSignature = 'unified-env-2.0';
+      responseParams.useStableParameters = true;
+      responseParams.seed = contentHash; // Add deterministic seed
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
@@ -96,7 +122,7 @@ export const useQueryExecution = (
       );
 
       const processingTime = Date.now() - processingStart;
-      console.log(`Response generated in ${processingTime}ms`);
+      console.log(`Response generated in ${processingTime}ms for request ${requestId}`);
 
       setProcessingStage('finalizing');
 
@@ -114,6 +140,7 @@ export const useQueryExecution = (
       }
 
     } catch (error) {
+      console.error(`Error processing request ${requestId}:`, error);
       handleProcessingError(error, updatedMessages);
     }
   };

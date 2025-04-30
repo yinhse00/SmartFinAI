@@ -5,7 +5,6 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 /**
  * Step 5: Response Generation
  * - Compile final response from all context
- * - Structure response according to guidelines
  * - Translate to Chinese if original query was Chinese
  * - Support automatic batching for long responses
  */
@@ -17,14 +16,6 @@ export const executeStep5 = async (
   setStepProgress('Generating final response');
   
   try {
-    // Step 5.1: Rearrange output components
-    const responseComponents = {
-      finalAnalysis: '',
-      documentsToBePrep: params.executionResults?.documentsChecklist || '',
-      workingPlan: params.executionResults?.workingPlan || '',
-      executionTimetable: params.executionResults?.timetable || ''
-    };
-    
     // Prepare the response parameters with all available context
     const responseContext = params.regulatoryContext || 
                            params.executionContext || 
@@ -37,26 +28,12 @@ export const executeStep5 = async (
                                      params.query.toLowerCase().includes('rights issue') ||
                                      params.query.toLowerCase().includes('connected transaction');
     
-    // Build a structured prompt that ensures the response format follows Step 5.1
-    const structuredPrompt = `
-Based on the following query: "${params.query}"
-
-${params.executionResults ? `
-Please provide a comprehensive response that includes the following sections:
-1. Final analysis of the query
-${params.executionResults.documentsChecklist ? '2. Documents to be prepared for this transaction' : ''}
-${params.executionResults.workingPlan ? '3. Working plan for execution' : ''}
-${params.executionResults.timetable ? '4. Execution timetable with key dates' : ''}
-
-Ensure each section is clearly labeled and provide comprehensive details for each applicable section.
-` : 'Please provide a comprehensive analysis of this query.'}
-
-${isPotentiallyLongResponse ? 'This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.' : ''}
-`;
-    
     const responseParams = {
-      prompt: structuredPrompt,
+      prompt: isPotentiallyLongResponse 
+        ? `${params.query} [NOTE: This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.]` 
+        : params.query,
       regulatoryContext: responseContext,
+      // Set a modest token limit to encourage batching rather than one huge response
       maxTokens: isPotentiallyLongResponse ? 4000 : undefined
     };
     
@@ -78,7 +55,7 @@ ${isPotentiallyLongResponse ? 'This query may require multiple parts. Please foc
       batchSuggestion: appearsTruncated ? "This response appears to be incomplete. Consider using the Continue button to see additional information." : undefined
     };
     
-    // Step 5.2: If original input was Chinese, translate response
+    // Step 5(b): If original input was Chinese, translate response
     if (lastInputWasChinese) {
       setStepProgress('Translating response to Chinese');
       

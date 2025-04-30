@@ -1,152 +1,105 @@
 
+import { checkIsChineseInput } from '../useLanguageState';
 import { grokService } from '@/services/grokService';
-import { Step1Result, WorkflowStep } from './types';
-import { safelyExtractText } from '@/services/utils/responseUtils';
+import { WorkflowStep } from './types';
 
 /**
- * Step 1: Initial analysis
- * - Determine whether input needs translation
- * - Process uploaded files
- * - Analyze whether related to regulatory context
- * - Determine next step in workflow
+ * Step 1: Initial Processing
+ * - Receives user question
+ * - Detects language and translates if Chinese
+ * - Initial analysis by Grok
+ * - Determines if regulatory-related
  */
 export const executeStep1 = async (
   queryText: string,
-  files?: File[],
-  storeTranslation?: (originalText: string, translatedText: string) => void,
-  setStepProgress?: (progress: string) => void,
-  retrieveRegulatoryContext?: (query: string, isFaq: boolean) => Promise<any>
-): Promise<Step1Result> => {
-  if (setStepProgress) setStepProgress('Initial query analysis');
+  storeTranslation: (original: string, translated: string) => void,
+  setStepProgress: (progress: string) => void,
+  retrieveRegulatoryContext: (queryText: string) => Promise<any>
+) => {
+  setStepProgress('Receiving query and performing initial analysis');
   
-  try {
-    // Step 1.1: Check if this is a Chinese query that needs translation
-    let originalQuery = queryText;
-    let fileContents = '';
-    
-    // Check for Chinese characters
-    const containsChinese = /[\u4e00-\u9fa5]/.test(queryText);
-    
-    if (containsChinese) {
-      if (setStepProgress) setStepProgress('Translating query to English');
-      
-      const { text } = await grokService.generateResponse({
-        prompt: `Translate the following Chinese text to English: ${queryText}`,
-        maxTokens: 2000
+  // Step 1(c): Check if input is Chinese and needs translation
+  const isChinese = checkIsChineseInput(queryText);
+  let processedQuery = queryText;
+  
+  if (isChinese) {
+    setStepProgress('Translating Chinese query to English');
+    try {
+      // Translate Chinese to English for processing
+      const translation = await grokService.translateContent({
+        content: queryText,
+        sourceLanguage: 'zh',
+        targetLanguage: 'en'
       });
       
-      // Store translation for later use
-      if (storeTranslation) {
-        storeTranslation(originalQuery, text);
+      if (typeof translation === 'object' && translation !== null && 'text' in translation) {
+        processedQuery = translation.text || '';
+        storeTranslation(queryText, processedQuery);
+        console.log('Translated query:', processedQuery);
       }
-      
-      queryText = text;
+    } catch (error) {
+      console.error('Translation error:', error);
+      // Continue with original text if translation fails
+    }
+  }
+
+  // Step 1(d-e): Process query with Grok and check if regulatory-related
+  setStepProgress('Analyzing query relevance to financial regulations');
+  
+  try {
+    // Check if query is related to Listing Rules or Takeovers Code
+    const result = await retrieveRegulatoryContext(processedQuery);
+    const regulatoryContext = result.regulatoryContext || '';
+    const reasoning = result.reasoning || '';
+    
+    // Step 1(f): If not related to regulations, skip to response
+    if (!regulatoryContext || regulatoryContext.trim() === '') {
+      console.log('Query not related to financial regulations, skipping to response');
+      return { 
+        shouldContinue: false, 
+        nextStep: 'response' as WorkflowStep, 
+        query: processedQuery,
+        isRegulatoryRelated: false
+      };
     }
     
-    // Step 1.2: Process any uploaded files
-    if (files && files.length > 0) {
-      if (setStepProgress) setStepProgress('Processing uploaded files');
-      
-      for (const file of files) {
-        try {
-          const extractedContent = await grokService.processDocument(file);
-          fileContents += `\nContent from file "${file.name}":\n${extractedContent}\n`;
-        } catch (error) {
-          console.error(`Error processing file ${file.name}:`, error);
-          fileContents += `\nError extracting content from file "${file.name}".`;
-        }
-      }
-      
-      if (fileContents.trim()) {
-        queryText = `${queryText}\n\nREFERENCE MATERIALS:\n${fileContents}`;
-      }
-    }
-    
-    // Step 1.3: Initial analysis to determine relevance to regulatory content
-    if (setStepProgress) setStepProgress('Analyzing query context');
-    
-    // Use the regulatory context service to get high-level regulatory relevance
-    let regulatoryContext = '';
-    let reasoning = '';
-    let isRegulatoryRelated = false;
-    
-    if (retrieveRegulatoryContext) {
-      const contextResult = await retrieveRegulatoryContext(queryText, false);
-      regulatoryContext = contextResult.regulatoryContext || '';
-      reasoning = contextResult.reasoning || '';
-      isRegulatoryRelated = !!regulatoryContext && regulatoryContext.trim() !== '';
-    }
-    
-    // Step 1.4: Determine whether related to Listing Rules or Takeovers Code
-    // Check if query text matches listing rules patterns
+    // Determine if Listing Rules or Takeovers Code related
     const isListingRulesRelated = 
-      isRegulatoryRelated && (
-        queryText.toLowerCase().includes('listing rule') || 
-        queryText.toLowerCase().includes('chapter') || 
-        queryText.toLowerCase().includes('main board') ||
-        (regulatoryContext && 
-          regulatoryContext.toLowerCase().includes('listing rule'))
-      );
+      regulatoryContext.toLowerCase().includes('listing rules') ||
+      regulatoryContext.toLowerCase().includes('chapter');
+      
+    const isTakeoversCodeRelated =
+      regulatoryContext.toLowerCase().includes('takeovers code') ||
+      regulatoryContext.toLowerCase().includes('takeover') ||
+      regulatoryContext.toLowerCase().includes('general offer');
     
-    // Check if query text matches takeover code patterns  
-    const isTakeoversCodeRelated = 
-      isRegulatoryRelated && (
-        queryText.toLowerCase().includes('takeover') || 
-        queryText.toLowerCase().includes('code') ||
-        queryText.toLowerCase().includes('offer') ||
-        (regulatoryContext && 
-          regulatoryContext.toLowerCase().includes('takeovers code'))
-      );
+    // Decide on next step based on content relevance
+    let nextStep: WorkflowStep = 'response';
     
-    // Step 1.5: Determine which workflow branch to follow
     if (isListingRulesRelated) {
-      return {
-        shouldContinue: true,
-        nextStep: 'listingRules',
-        query: queryText,
-        isRegulatoryRelated,
-        regulatoryContext,
-        reasoning,
-        isListingRulesRelated,
-        isTakeoversCodeRelated,
-        originalQuery,
-        fileContents: fileContents || undefined
-      };
+      nextStep = 'listingRules';
     } else if (isTakeoversCodeRelated) {
-      return {
-        shouldContinue: true,
-        nextStep: 'takeoversCode',
-        query: queryText,
-        isRegulatoryRelated,
-        regulatoryContext,
-        reasoning,
-        isListingRulesRelated,
-        isTakeoversCodeRelated,
-        originalQuery,
-        fileContents: fileContents || undefined
-      };
-    } else {
-      // Not related to listing rules or takeovers code, go directly to response
-      return {
-        shouldContinue: isRegulatoryRelated,
-        nextStep: 'response',
-        query: queryText,
-        isRegulatoryRelated,
-        regulatoryContext,
-        reasoning,
-        originalQuery,
-        fileContents: fileContents || undefined
-      };
+      nextStep = 'takeoversCode';
     }
     
+    return {
+      shouldContinue: true,
+      nextStep,
+      query: processedQuery,
+      regulatoryContext,
+      reasoning,
+      isRegulatoryRelated: true,
+      isListingRulesRelated,
+      isTakeoversCodeRelated
+    };
   } catch (error) {
     console.error('Error in step 1:', error);
     return { 
       shouldContinue: false, 
-      nextStep: 'response',
-      query: queryText,
-      isRegulatoryRelated: false,
-      error
+      nextStep: 'response' as WorkflowStep, 
+      query: processedQuery,
+      error,
+      isRegulatoryRelated: false
     };
   }
 };

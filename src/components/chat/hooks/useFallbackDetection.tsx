@@ -39,26 +39,7 @@ export const useFallbackDetection = () => {
       "offline mode",
       "operating in offline mode",
       "network error",
-      "API is unreachable",
-      "CORS", 
-      "cross-origin",
-      "browser is preventing",
-      "proxy configuration",
-      "proxy error",
-      "rate limit exceeded",
-      "API rate limit",
-      "Too many requests",
-      "429 status code",
-      // Additional error indicators for proxy and API issues
-      "server may be overloaded",
-      "cannot access API",
-      "browser security restrictions",
-      "proxy server error",
-      "All API endpoints failed", 
-      "500 - Proxy Error",
-      "503 Service Unavailable",
-      "Failed to fetch",
-      "request timed out"
+      "API is unreachable"
     ];
     
     // Check for any fallback indicators - case insensitive
@@ -88,8 +69,6 @@ export const useFallbackDetection = () => {
       responseText.includes('I\'m currently using a fallback response mode') ||
       responseText.includes('offline mode') ||
       responseText.includes('I\'m currently in offline mode') ||
-      responseText.includes('currently operating in offline mode') ||
-      responseText.includes('specialized regulatory database') ||
       // Check for suspiciously short responses to complex financial queries
       (responseText.length < 150 && responseText.includes('Hong Kong'));
     

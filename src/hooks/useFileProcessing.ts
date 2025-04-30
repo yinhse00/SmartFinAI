@@ -10,7 +10,6 @@ export const useFileProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [lastApiCheck, setLastApiCheck] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   // Periodically check API availability in the background
@@ -23,11 +22,8 @@ export const useFileProcessing = () => {
       }
       
       try {
-        // Add a small random delay to prevent multiple simultaneous checks
-        const randomDelay = Math.floor(Math.random() * 500);
-        await new Promise(resolve => setTimeout(resolve, randomDelay));
-        
         const isAvailable = await checkApiAvailability(apiKey);
+        setIsOfflineMode(!isAvailable);
         
         if (isAvailable && isOfflineMode) {
           // Only show toast when transitioning from offline to online
@@ -35,16 +31,7 @@ export const useFileProcessing = () => {
             title: "API connection restored",
             description: "SmartFinAI is now operating in online mode with full functionality.",
           });
-          setRetryCount(0); // Reset retry count on success
-        } else if (!isAvailable && !isOfflineMode) {
-          toast({
-            title: "Connection lost",
-            description: "SmartFinAI is now operating in offline mode with limited functionality.",
-            variant: "destructive"
-          });
         }
-        
-        setIsOfflineMode(!isAvailable);
       } catch (error) {
         console.error("Error checking API status:", error);
         setIsOfflineMode(true);
@@ -86,7 +73,7 @@ export const useFileProcessing = () => {
           toast({
             title: "Operating in Offline Mode",
             description: "The Grok API is currently unreachable. Files will be processed with limited functionality.",
-            variant: "destructive",
+            variant: "destructive", // This is already correct
             duration: 6000,
           });
         }
@@ -151,7 +138,7 @@ export const useFileProcessing = () => {
     }
   };
 
-  // Try to reconnect to the API with improved retry logic
+  // Try to reconnect to the API
   const tryReconnect = async (): Promise<boolean> => {
     setIsProcessing(true);
     
@@ -161,10 +148,6 @@ export const useFileProcessing = () => {
     });
     
     try {
-      // Implement exponential backoff for retries
-      const backoffDelay = Math.min(1000 * Math.pow(1.5, retryCount), 8000); // Max 8 seconds
-      await new Promise(resolve => setTimeout(resolve, backoffDelay));
-      
       const apiKey = getGrokApiKey();
       if (!apiKey) {
         toast({
@@ -175,12 +158,7 @@ export const useFileProcessing = () => {
         return false;
       }
       
-      // Try multiple times with different endpoints
-      let isAvailable = false;
-      
-      // First try proxy endpoint
-      isAvailable = await checkApiAvailability(apiKey);
-      
+      const isAvailable = await checkApiAvailability(apiKey);
       setIsOfflineMode(!isAvailable);
       
       if (isAvailable) {
@@ -188,12 +166,8 @@ export const useFileProcessing = () => {
           title: "Connection restored",
           description: "API connection is now available. Full functionality restored.",
         });
-        setRetryCount(0); // Reset retry count on success
         return true;
       } else {
-        // Increment retry count for backoff on future attempts
-        setRetryCount(prev => prev + 1);
-        
         toast({
           title: "Connection failed",
           description: "The API is still unreachable. Please check your internet connection and try again.",
@@ -203,8 +177,6 @@ export const useFileProcessing = () => {
       }
     } catch (error) {
       console.error("Error reconnecting:", error);
-      setRetryCount(prev => prev + 1);
-      
       toast({
         title: "Reconnection error",
         description: error instanceof Error ? error.message : "An unknown error occurred",

@@ -6,10 +6,9 @@ import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { useBatchHandling } from './hooks/useBatchHandling';
 import { useLanguageState } from './hooks/useLanguageState';
 import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
-import { useFileAttachments } from '@/hooks/useFileAttachments';
 
 /**
- * Main hook that orchestrates chat functionality with the structured workflow
+ * Main hook that orchestrates chat functionality with the new structured workflow
  */
 export const useChatLogic = () => {
   // Message state management
@@ -48,16 +47,7 @@ export const useChatLogic = () => {
     startBatching
   } = useBatchHandling();
 
-  // File attachment handling
-  const {
-    attachedFiles,
-    handleFileSelect,
-    clearAttachedFiles,
-    removeAttachedFile,
-    hasAttachedFiles
-  } = useFileAttachments();
-
-  // Workflow processor implementing the structured steps
+  // New workflow processor implementing the structured steps
   const {
     isLoading,
     currentStep,
@@ -68,8 +58,7 @@ export const useChatLogic = () => {
     setMessages,
     setLastQuery,
     isGrokApiKeySet,
-    setApiKeyDialogOpen,
-    attachedFiles
+    setApiKeyDialogOpen
   });
 
   // Handle sending messages
@@ -77,7 +66,6 @@ export const useChatLogic = () => {
     checkIsChineseInput(input);
     executeWorkflow(input);
     setInput('');
-    // Do not clear attachedFiles here - they'll be processed in the workflow
   };
   
   // Handle keyboard input
@@ -121,13 +109,6 @@ export const useChatLogic = () => {
     input,
     setInput,
     lastQuery,
-
-    // File attachment state
-    attachedFiles,
-    handleFileSelect,
-    clearAttachedFiles,
-    removeAttachedFile,
-    hasAttachedFiles,
 
     // Query processing
     isLoading,

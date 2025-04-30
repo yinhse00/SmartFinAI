@@ -4,7 +4,7 @@ import { Message } from '../ChatMessage';
 import { useQueryCore } from './useQueryCore';
 import { useLanguageState } from './useLanguageState';
 import { useContextRetrieval } from './useContextRetrieval';
-import { StepResult, WorkflowProcessorProps, WorkflowStep, Step1Result } from './workflow/types';
+import { StepResult, WorkflowProcessorProps, WorkflowStep } from './workflow/types';
 import { executeStep1 } from './workflow/step1Initial';
 import { executeStep2 } from './workflow/step2ListingRules';
 import { executeStep3 } from './workflow/step3TakeoversCode';
@@ -12,15 +12,14 @@ import { executeStep4 } from './workflow/step4Execution';
 import { executeStep5 } from './workflow/step5Response';
 
 /**
- * Hook that implements the structured workflow process
+ * Hook that implements the new structured workflow process
  */
 export const useWorkflowProcessor = ({
   messages,
   setMessages,
   setLastQuery,
   isGrokApiKeySet,
-  setApiKeyDialogOpen,
-  attachedFiles = []
+  setApiKeyDialogOpen
 }: WorkflowProcessorProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
@@ -31,7 +30,7 @@ export const useWorkflowProcessor = ({
   const { retrieveRegulatoryContext } = useContextRetrieval();
 
   /**
-   * Main workflow execution that orchestrates all steps according to redesigned flow
+   * Main workflow execution that orchestrates all steps
    */
   const executeWorkflow = async (queryText: string) => {
     if (!queryText.trim()) return;
@@ -52,7 +51,6 @@ export const useWorkflowProcessor = ({
       setCurrentStep('initial');
       const step1Result = await executeStep1(
         queryText, 
-        attachedFiles.length > 0 ? attachedFiles : undefined,
         storeTranslation, 
         setStepProgress,
         retrieveRegulatoryContext
@@ -75,10 +73,7 @@ export const useWorkflowProcessor = ({
             id: Date.now().toString(),
             content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
             sender: 'bot',
-            timestamp: new Date(),
-            metadata: responseResult.metadata,
-            isTranslated: !!responseResult.translatedResponse,
-            originalContent: responseResult.originalResponse
+            timestamp: new Date()
           };
           
           setMessages([...updatedMessages, botMessage]);
@@ -119,10 +114,7 @@ export const useWorkflowProcessor = ({
               id: Date.now().toString(),
               content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
               sender: 'bot',
-              timestamp: new Date(),
-              metadata: stepResult.metadata,
-              isTranslated: !!stepResult.translatedResponse,
-              originalContent: stepResult.originalResponse
+              timestamp: new Date()
             };
             
             setMessages([...updatedMessages, botMessage]);

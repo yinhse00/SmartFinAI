@@ -5,7 +5,22 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
-import { Message } from './ChatMessage';
+
+export interface Message {
+  id: string;
+  sender: 'user' | 'bot';
+  content: string;
+  timestamp: Date;
+  references?: string[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  isError?: boolean;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  isTranslated?: boolean;
+  originalContent?: string;
+}
 
 interface ChatMessageProps {
   message: Message;
