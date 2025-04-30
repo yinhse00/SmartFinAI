@@ -1,4 +1,3 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { useEffect, useState } from 'react';
@@ -91,7 +90,7 @@ const Chat = () => {
     };
   }, [toast]);
 
-  const tryReconnect = async () => {
+  const tryReconnect = async (): Promise<boolean> => {
     const apiKey = getGrokApiKey();
     if (!apiKey) {
       toast({
@@ -99,7 +98,7 @@ const Chat = () => {
         description: "Please set your Grok API key to connect.",
         variant: "destructive"
       });
-      return;
+      return false; // Return false if no API key
     }
     
     toast({
@@ -115,12 +114,14 @@ const Chat = () => {
           title: "Connection Restored",
           description: "Successfully reconnected to the Grok API.",
         });
+        return true; // Return true if connection is successful
       } else {
         toast({
           title: "Connection Failed",
           description: connectionStatus.message || "Could not connect to the Grok API.",
           variant: "destructive"
         });
+        return false; // Return false if connection fails
       }
     } catch (error) {
       console.error("Reconnection attempt failed:", error);
@@ -129,6 +130,7 @@ const Chat = () => {
         description: error instanceof Error ? error.message : "Could not connect to the Grok API.",
         variant: "destructive"
       });
+      return false; // Return false if there's an error
     }
   };
 

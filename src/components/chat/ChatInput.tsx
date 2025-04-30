@@ -11,22 +11,24 @@ interface ChatInputProps {
   input: string;
   setInput: (input: string) => void;
   handleSend: () => void;
+  disabled?: boolean; // Added missing disabled prop
   isLoading: boolean;
-  isGrokApiKeySet: boolean;
-  onOpenApiKeyDialog: () => void;
+  isGrokApiKeySet?: boolean;
+  onOpenApiKeyDialog?: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onFileSelect?: (files: FileList) => void;
   placeholder?: string;
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
-  isOfflineMode?: boolean; // New prop to indicate offline mode
+  isOfflineMode?: boolean;
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
   input,
   setInput,
   handleSend,
+  disabled = false, // Added with default value
   isLoading,
   handleKeyDown,
   onFileSelect,
@@ -34,7 +36,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isProcessingFiles = false,
   attachedFiles = [],
   onFileRemove,
-  isOfflineMode = false // Default to false
+  isOfflineMode = false
 }) => {
   const hasAttachedFiles = attachedFiles.length > 0;
   
@@ -73,14 +75,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={isLoading || isProcessingFiles}
+          disabled={disabled || isLoading || isProcessingFiles}
           rows={1}
           style={{ overflow: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
         />
         <Button 
           onClick={handleSend} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={(hasAttachedFiles ? false : !input.trim()) || isLoading || isProcessingFiles}
+          disabled={(hasAttachedFiles ? false : !input.trim()) || disabled || isLoading || isProcessingFiles}
         >
           {isLoading || isProcessingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
         </Button>
