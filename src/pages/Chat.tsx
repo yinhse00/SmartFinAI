@@ -69,7 +69,7 @@ const Chat = () => {
 
   return (
     <MainLayout>
-      <div className="w-full">
+      <div className="w-full h-full flex">
         <ChatInterface />
       </div>
     </MainLayout>

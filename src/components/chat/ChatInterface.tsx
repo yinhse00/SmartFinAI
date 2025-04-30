@@ -94,7 +94,7 @@ const ChatInterface: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto py-6 w-full max-w-full">
+      <div className="w-full mx-auto py-6">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
