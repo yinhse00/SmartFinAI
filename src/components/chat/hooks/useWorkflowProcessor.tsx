@@ -165,7 +165,7 @@ export const useWorkflowProcessor = ({
       // Process the response
       setCurrentStep('complete');
       
-      // Create bot message
+      // Create bot message with the correct type from the beginning
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: step5Result.requiresTranslation ? step5Result.translatedResponse || '' : step5Result.response || '',
@@ -175,6 +175,8 @@ export const useWorkflowProcessor = ({
       
       // Only add metadata if it exists in step5Result
       if (step5Result.metadata) {
+        // This will now work because we've properly typed botMessage as Message
+        // which includes an optional metadata property
         botMessage.metadata = step5Result.metadata;
       }
       
