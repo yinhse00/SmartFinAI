@@ -2,6 +2,8 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
+import ChatContent from './content/ChatContent';
+import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useToast } from '@/hooks/use-toast';
@@ -70,6 +72,32 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
+        isOfflineMode={isOfflineMode}
+      />
+      
+      <ChatContent
+        messages={messages}
+        isLoading={isLoading}
+        onRetry={retryLastQuery}
+        translatingMessageIds={translatingMessageIds}
+        isOfflineMode={isOfflineMode}
+        currentStep={currentStep}
+        stepProgress={stepProgress}
+      />
+      
+      <ChatInput 
+        input={input}
+        setInput={setInput}
+        handleSend={handleSend}
+        isLoading={isLoading}
+        isGrokApiKeySet={isGrokApiKeySet}
+        onOpenApiKeyDialog={onOpenApiKeyDialog}
+        handleKeyDown={handleKeyDown}
+        placeholder={getPlaceholder()}
+        onFileSelect={handleFileSelect}
+        isProcessingFiles={isProcessingFiles}
+        attachedFiles={attachedFiles}
+        onFileRemove={onFileRemove}
         isOfflineMode={isOfflineMode}
       />
     </Card>
