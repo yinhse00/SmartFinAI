@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -20,6 +19,7 @@ export interface Message {
   isBatchPart?: boolean;
   isTranslated?: boolean;
   originalContent?: string;
+  metadata?: any; // Add the metadata property
 }
 
 interface ChatMessageProps {
