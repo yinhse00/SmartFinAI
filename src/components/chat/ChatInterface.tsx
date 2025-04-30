@@ -116,7 +116,7 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? handleAttachmentsKeyDown : handleKeyDown}
+          handleKeyDown={hasAttachedFiles ? handleAttachmentsKeyDown : handleKeyDown as (e: React.KeyboardEvent<HTMLTextAreaElement>) => void}
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
