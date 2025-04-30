@@ -12,6 +12,14 @@ export interface Message {
   timestamp: Date | number;
   isTranslating?: boolean;
   originalContent?: string;
+  isTranslated?: boolean;
+  isTruncated?: boolean;
+  isError?: boolean;
+  isBatchPart?: boolean;
+  queryType?: string;
+  references?: string[];
+  reasoning?: string;
+  isUsingFallback?: boolean;
   metadata?: {
     structuredResponseData?: {
       rulesAnalysis?: string;
@@ -26,9 +34,11 @@ export interface Message {
 interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
+  onTypingProgress?: () => void;
+  isTranslating?: boolean;
 }
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTypingProgress, isTranslating }) => {
   const isBot = message.sender === 'bot';
   const hasStructuredData = message.metadata?.structuredResponseData;
   
