@@ -2,6 +2,7 @@
 import { handleChatCompletions } from './modules/apiRequestHandler';
 import { GrokChatRequestBody } from './types';
 import { offlineResponseGenerator } from './offlineResponseGenerator';
+import { extractPromptText } from './modules/requestHelper';
 
 /**
  * Enhanced API client for Grok AI chat completions with improved error handling
@@ -29,8 +30,8 @@ export const apiClient = {
         throw new Error("Invalid request body: no user message found");
       }
       
-      // Extract prompt text for potential fallback responses
-      const promptText = userMessage.content || "unknown query";
+      // Extract prompt text for potential fallback responses - using the helper function
+      const promptText = extractPromptText(userMessage);
       
       try {
         return await handleChatCompletions(requestBody, providedApiKey);
@@ -58,7 +59,7 @@ export const apiClient = {
       
       // Find user message to extract prompt text
       const userMessage = requestBody.messages?.find((msg: any) => msg.role === 'user');
-      const promptText = userMessage?.content || "unknown query";
+      const promptText = extractPromptText(userMessage);
       
       // Generate offline response with detailed error information
       return offlineResponseGenerator.generateOfflineResponseFormat(promptText, error);

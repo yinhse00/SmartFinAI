@@ -51,7 +51,7 @@ export const handleChatCompletions = async (requestBody: any, providedApiKey?: s
     // Find user message to extract prompt text
     const userMessage = requestBody.messages?.find((msg: any) => msg.role === 'user');
     
-    // Create prompt text for offline response
+    // Create prompt text for offline response using helper function
     let promptText = userMessage ? extractPromptText(userMessage) : "unknown query";
     
     // Generate offline response with detailed error information
