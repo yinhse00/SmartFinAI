@@ -1,4 +1,6 @@
 
+import { Message } from '../ChatMessage';
+
 /**
  * Hook for handling query input interactions
  */
