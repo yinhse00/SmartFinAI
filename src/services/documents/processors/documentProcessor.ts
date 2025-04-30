@@ -1,50 +1,40 @@
 
-/**
- * Main document processor
- */
-
 import { pdfProcessor } from './pdfProcessor';
-import { textProcessor } from './textProcessor';
-import { BaseDocumentProcessor } from './baseProcessor';
 import { wordProcessor } from './wordProcessor';
+import { DocumentProcessorInterface } from './baseProcessor';
 
 /**
- * Processor for document files (PDF, Word)
+ * Factory function to get the appropriate document processor based on file type
  */
-export class DocumentProcessor extends BaseDocumentProcessor {
-  /**
-   * Extract text from PDF documents
-   */
-  public async extractPdfText(file: File): Promise<{ content: string; source: string }> {
-    console.log(`DocumentProcessor: Delegating PDF processing for ${file.name}`);
-    return await pdfProcessor.extractText(file);
+export function getDocumentProcessor(file: File): DocumentProcessorInterface {
+  const fileName = file.name.toLowerCase();
+  
+  if (fileName.endsWith('.pdf')) {
+    return pdfProcessor;
   }
-
-  /**
-   * Extract text from Word documents
-   * Uses a specialized processor that works well with DOCX files
-   */
-  public async extractWordText(file: File): Promise<{ content: string; source: string }> {
-    console.log(`DocumentProcessor: Delegating Word processing for ${file.name}`);
-    try {
-      // First attempt with dedicated Word processor
-      return await wordProcessor.extractText(file);
-    } catch (error) {
-      console.warn(`Word processor failed for ${file.name}, trying text fallback:`, error);
-      
-      // If Word processor fails, try falling back to text processor
-      // This helps with simpler DOCX files that might be interpreted as text
-      try {
-        return await textProcessor.extractText(file);
-      } catch (innerError) {
-        console.error(`Both processors failed for ${file.name}:`, innerError);
-        return {
-          content: `Failed to extract content from ${file.name}. The document may be corrupted or in an unsupported format.`,
-          source: file.name
-        };
-      }
-    }
+  
+  if (fileName.endsWith('.doc') || fileName.endsWith('.docx')) {
+    return wordProcessor;
   }
+  
+  throw new Error(`Unsupported document type: ${fileName}`);
 }
 
-export const documentProcessor = new DocumentProcessor();
+/**
+ * Process a document file and extract its text content
+ */
+export async function processDocument(file: File): Promise<{ content: string; source: string }> {
+  try {
+    console.log(`Processing document: ${file.name}`);
+    
+    const processor = getDocumentProcessor(file);
+    return await processor.extractText(file);
+  } catch (error) {
+    console.error('Document processing error:', error);
+    
+    return {
+      content: `Error processing document: ${error instanceof Error ? error.message : String(error)}`,
+      source: file.name
+    };
+  }
+}

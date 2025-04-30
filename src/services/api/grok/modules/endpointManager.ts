@@ -37,10 +37,13 @@ export const attemptProxyRequest = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'X-Request-Source': 'browser-client', // Add custom header for tracking
-        'X-Request-ID': `req-${Date.now()}` // Add request ID for tracing
+        'X-Request-ID': `req-${Date.now()}`, // Add request ID for tracing
+        'Accept': 'application/json'
       },
       body: JSON.stringify(requestBody),
-      signal: controller.signal
+      signal: controller.signal,
+      // Explicitly set credentials for CORS
+      credentials: 'same-origin'
     });
     
     clearTimeout(timeoutId);
@@ -51,7 +54,14 @@ export const attemptProxyRequest = async (
     }
     
     console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
-    throw new Error(`Proxy request failed with status: ${proxyResponse.status}`);
+    
+    // Try to get detailed error message
+    let errorText = "";
+    try {
+      errorText = await proxyResponse.text();
+    } catch (e) {}
+    
+    throw new Error(`Proxy request failed with status: ${proxyResponse.status}${errorText ? ` - ${errorText}` : ''}`);
   } catch (error) {
     // Better error handling with specific messages for different error types
     if (error instanceof DOMException && error.name === 'AbortError') {
@@ -156,9 +166,11 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,
-          'X-Request-Source': 'browser-client', // Add custom header for tracking
+          'X-Request-Source': 'browser-client',
+          'Accept': 'application/json'
         },
-        signal: controller.signal
+        signal: controller.signal,
+        credentials: 'same-origin' // Added explicit credentials handling
       });
       
       clearTimeout(timeoutId);
@@ -194,6 +206,7 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json'
           },
           mode: 'cors',
           signal: controller.signal
@@ -241,3 +254,4 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
     return false;
   }
 };
+
