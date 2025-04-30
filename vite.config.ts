@@ -25,11 +25,11 @@ export default defineConfig(({ mode }) => ({
           });
           proxy.on('error', function(err, req, _res) {
             console.log('Financial expert proxy error:', err);
-            console.log('Failed request path:', req.path);
+            console.log('Failed request path:', req.url); // Changed from req.path to req.url
           });
           proxy.on('proxyRes', function(proxyRes, req, _res) {
             // Log successful proxy responses for debugging
-            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
+            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`); // Changed from req.path to req.url
           });
         }
       }
