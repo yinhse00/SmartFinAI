@@ -63,5 +63,53 @@ export const connectionTester = {
         message: `API connection error: ${errorMessage}`
       };
     }
+  },
+  
+  /**
+   * Test API key validity
+   */
+  testApiKeyValidity: async (apiKey: string): Promise<{ success: boolean; message: string }> => {
+    try {
+      console.log("Testing API key validity...");
+      
+      if (!apiKey) {
+        return { 
+          success: false, 
+          message: "No API key provided for testing." 
+        };
+      }
+
+      // Use the proxy endpoint for connection test
+      const response = await fetch('/api/grok/models', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        signal: AbortSignal.timeout(10000) // 10 second timeout
+      });
+      
+      if (response.ok) {
+        console.log("API key is valid");
+        return { 
+          success: true, 
+          message: "API key is valid." 
+        };
+      } else {
+        console.error("API key validation failed with status:", response.status);
+        
+        return { 
+          success: false, 
+          message: `API key appears to be invalid: Status ${response.status}` 
+        };
+      }
+    } catch (error) {
+      console.error("API key validation error:", error);
+      
+      return {
+        success: false,
+        message: `Could not validate API key: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
   }
 };
