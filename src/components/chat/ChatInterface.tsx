@@ -92,7 +92,7 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  // Custom key handler for textarea with file attachments
+  // Custom key handler for textarea with file attachments - explicitly typed for HTMLTextAreaElement
   const handleAttachmentsKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
