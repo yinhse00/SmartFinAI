@@ -1,7 +1,7 @@
 
 import { checkIsChineseInput } from '../useLanguageState';
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { Step1Result, WorkflowStep } from './types';
 
 /**
  * Step 1: Initial Processing
@@ -17,7 +17,7 @@ export const executeStep1 = async (
   storeTranslation: (original: string, translated: string) => void,
   setStepProgress: (progress: string) => void,
   retrieveRegulatoryContext: (queryText: string) => Promise<any>
-) => {
+): Promise<Step1Result> => {
   setStepProgress('Receiving query and performing initial analysis');
   
   // Step 1.2.1: Check if input is Chinese and needs translation
@@ -103,7 +103,7 @@ export const executeStep1 = async (
       console.log('Query not related to financial regulations, skipping to response');
       return { 
         shouldContinue: false, 
-        nextStep: 'response' as WorkflowStep, 
+        nextStep: 'response', 
         query: combinedQuery,
         isRegulatoryRelated: false
       };
@@ -120,7 +120,7 @@ export const executeStep1 = async (
       regulatoryContext.toLowerCase().includes('general offer');
     
     // Decide on next step based on content relevance
-    let nextStep: WorkflowStep = 'response';
+    let nextStep: 'listingRules' | 'takeoversCode' | 'response' = 'response';
     
     // Step 1.4.1: If related to Listing Rules, go to Step 2
     if (isListingRulesRelated) {
@@ -147,7 +147,7 @@ export const executeStep1 = async (
     console.error('Error in step 1:', error);
     return { 
       shouldContinue: false, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response', 
       query: combinedQuery,
       error,
       isRegulatoryRelated: false

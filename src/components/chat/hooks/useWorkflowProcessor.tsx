@@ -4,7 +4,7 @@ import { Message } from '../ChatMessage';
 import { useQueryCore } from './useQueryCore';
 import { useLanguageState } from './useLanguageState';
 import { useContextRetrieval } from './useContextRetrieval';
-import { StepResult, WorkflowProcessorProps, WorkflowStep } from './workflow/types';
+import { StepResult, WorkflowProcessorProps, WorkflowStep, Step1Result } from './workflow/types';
 import { executeStep1 } from './workflow/step1Initial';
 import { executeStep2 } from './workflow/step2ListingRules';
 import { executeStep3 } from './workflow/step3TakeoversCode';
@@ -75,7 +75,8 @@ export const useWorkflowProcessor = ({
             id: Date.now().toString(),
             content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
             sender: 'bot',
-            timestamp: new Date()
+            timestamp: new Date(),
+            metadata: responseResult.metadata
           };
           
           setMessages([...updatedMessages, botMessage]);

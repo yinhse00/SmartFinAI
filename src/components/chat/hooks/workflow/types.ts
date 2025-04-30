@@ -22,7 +22,8 @@ export interface WorkflowProcessorProps {
 }
 
 export interface Step1Result extends StepResult {
-  nextStep: WorkflowStep;
+  shouldContinue: boolean;
+  nextStep: 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete';
   query: string;
   isRegulatoryRelated: boolean;
   regulatoryContext?: string;
