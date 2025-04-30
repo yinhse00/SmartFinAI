@@ -40,7 +40,9 @@ export const attemptProxyRequest = async (
         'X-Request-ID': `req-${Date.now()}` // Add request ID for tracing
       },
       body: JSON.stringify(requestBody),
-      signal: controller.signal
+      signal: controller.signal,
+      cache: 'no-store', // Prevent caching
+      mode: 'cors' // Ensure CORS mode is explicitly set
     });
     
     clearTimeout(timeoutId);
@@ -92,13 +94,13 @@ export const attemptDirectRequest = async (
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
-          'Origin': window.location.origin,
-          'X-Request-Source': 'browser-client', // Add custom header for tracking
-          'X-Request-ID': `req-${Date.now()}` // Add request ID for tracing
+          'X-Request-Source': 'browser-client',
+          'X-Request-ID': `req-${Date.now()}`
         },
         body: JSON.stringify(requestBody),
         mode: 'cors',
-        signal: controller.signal
+        signal: controller.signal,
+        cache: 'no-store' // Prevent caching
       });
       
       clearTimeout(timeoutId);
@@ -157,8 +159,11 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
         headers: {
           'Authorization': `Bearer ${apiKey}`,
           'X-Request-Source': 'browser-client', // Add custom header for tracking
+          'Cache-Control': 'no-cache, no-store' // Prevent browser caching
         },
-        signal: controller.signal
+        signal: controller.signal,
+        cache: 'no-store', // Prevent caching
+        mode: 'cors' // Ensure CORS mode is explicitly set
       });
       
       clearTimeout(timeoutId);
@@ -194,9 +199,11 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
+            'Cache-Control': 'no-cache, no-store' // Prevent browser caching
           },
           mode: 'cors',
-          signal: controller.signal
+          signal: controller.signal,
+          cache: 'no-store' // Prevent fetch API caching
         });
         
         clearTimeout(timeoutId);
@@ -212,7 +219,8 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
         try {
           const responseHead = await fetch(`${baseEndpoint}`, {
             method: 'HEAD',
-            mode: 'no-cors'
+            mode: 'no-cors',
+            cache: 'no-store' // Prevent caching
           });
           
           // If we get here, the server is reachable, but we may have CORS issues
