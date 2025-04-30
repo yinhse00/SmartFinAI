@@ -25,7 +25,7 @@ export const requestBodyBuilder = {
         { role: 'system', content: systemMessage },
         { role: 'user', content: enhancedPrompt }
       ],
-      model: "grok-3-beta",
+      model: "grok-3-mini-beta",
       temperature: finalTemperature,
       max_tokens: finalTokens,
     };

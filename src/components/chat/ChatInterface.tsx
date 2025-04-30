@@ -8,15 +8,7 @@ import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 
-interface ChatInterfaceProps {
-  isOfflineMode?: boolean;
-  onTryReconnect?: () => Promise<boolean>;
-}
-
-const ChatInterface: React.FC<ChatInterfaceProps> = ({
-  isOfflineMode: externalOfflineMode,
-  onTryReconnect: externalTryReconnect
-}) => {
+const ChatInterface: React.FC = () => {
   const {
     messages,
     setMessages,
@@ -46,13 +38,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const { 
     processFiles, 
     isProcessing, 
-    isOfflineMode: processorOfflineMode, 
-    tryReconnect: processorTryReconnect 
+    isOfflineMode, 
+    tryReconnect 
   } = useFileProcessing();
-  
-  // Use external offline mode status if provided, otherwise use the processor's status
-  const isOfflineMode = externalOfflineMode !== undefined ? externalOfflineMode : processorOfflineMode;
-  const tryReconnect = externalTryReconnect || processorTryReconnect;
   
   const { 
     attachedFiles, 
@@ -68,7 +56,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", 
+        variant: "destructive", // Changed from "warning" to "destructive"
         duration: 5000,
       });
     }
@@ -112,21 +100,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     }
   };
 
-  // Wrap the tryReconnect function to ensure it returns a Promise<boolean>
-  const handleTryReconnect = async (): Promise<boolean> => {
-    if (tryReconnect) {
-      return await tryReconnect();
-    }
-    return false;
-  };
-
   return (
     <>
       <div className="container mx-auto py-6">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
-          onTryReconnect={handleTryReconnect}
+          onTryReconnect={tryReconnect}
         />
         
         <ChatContainer
@@ -142,11 +122,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           onFileSelect={handleFileSelect}
           isProcessingFiles={isProcessing}
           attachedFiles={attachedFiles}
-          onFileRemove={(index: number) => removeAttachedFile(index)}
+          onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
           currentStep={currentStep}
           stepProgress={stepProgress}
-          onTryReconnect={handleTryReconnect}
         />
       </div>
       
