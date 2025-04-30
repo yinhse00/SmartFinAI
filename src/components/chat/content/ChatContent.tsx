@@ -21,7 +21,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
   currentStep,
   stepProgress
 }) => {
-  return <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col bg-slate-50">
+  return <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col bg-zinc-50">
       <div className="sticky top-0 z-10 bg-background">
         {currentStep && stepProgress && <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />}
       </div>
