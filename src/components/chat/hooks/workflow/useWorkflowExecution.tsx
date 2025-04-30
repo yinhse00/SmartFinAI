@@ -3,11 +3,11 @@ import { useState } from 'react';
 import { WorkflowStep } from './types';
 import { Message } from '../../ChatMessage';
 import { useWorkflowError } from './useWorkflowError';
-import { executeStep1 } from './step1Classification';
+import { executeStep1 } from './step1Initial';
 import { executeStep2 } from './step2ListingRules';
-import { executeStep3 } from './step3TakeoverRules';
+import { executeStep3 } from './step3TakeoversCode';
 import { executeStep4 } from './step4Execution';
-import { executeResponse } from './executeResponse';
+import { executeStep5 } from './step5Response';
 
 export const useWorkflowExecution = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -57,7 +57,7 @@ export const useWorkflowExecution = (
       const step1StartTime = performance.now();
       
       try {
-        const step1Result = await executeStep1({ query: queryText });
+        const step1Result = await executeStep1({ query: queryText }, setStepProgress);
         trackStepPerformance('classification', step1StartTime);
         
         if (!step1Result.completed) {
@@ -83,7 +83,7 @@ export const useWorkflowExecution = (
         const step2StartTime = performance.now();
         
         try {
-          const step2Result = await executeStep2(params);
+          const step2Result = await executeStep2(params, setStepProgress);
           trackStepPerformance('listingRules', step2StartTime);
           
           params = { 
@@ -108,7 +108,7 @@ export const useWorkflowExecution = (
         const step3StartTime = performance.now();
         
         try {
-          const step3Result = await executeStep3(params);
+          const step3Result = await executeStep3(params, setStepProgress);
           trackStepPerformance('takeoversCode', step3StartTime);
           
           params = { 
@@ -164,12 +164,36 @@ export const useWorkflowExecution = (
       const responseStartTime = performance.now();
       
       try {
-        const responseResult = await executeResponse(
-          params, 
-          setMessages, 
-          setStepProgress, 
-          lastInputWasChinese
-        );
+        const responseResult = await executeStep5(params, setStepProgress, lastInputWasChinese);
+        
+        // Handle the response appropriately
+        if (responseResult.completed) {
+          if (responseResult.requiresTranslation && responseResult.translatedResponse) {
+            // Add translated response to the messages
+            const botMessage: Message = {
+              id: Date.now().toString(),
+              content: responseResult.translatedResponse,
+              sender: 'bot',
+              timestamp: new Date(),
+              metadata: responseResult.metadata,
+              originalLanguage: 'zh'
+            };
+            
+            setMessages(prev => [...prev, botMessage]);
+          } else {
+            // Add regular response to the messages
+            const botMessage: Message = {
+              id: Date.now().toString(),
+              content: responseResult.response || '',
+              sender: 'bot',
+              timestamp: new Date(),
+              metadata: responseResult.metadata
+            };
+            
+            setMessages(prev => [...prev, botMessage]);
+          }
+        }
+        
         trackStepPerformance('response', responseStartTime);
         console.log('Response generated successfully');
       } catch (error) {
