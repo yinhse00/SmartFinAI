@@ -6,9 +6,11 @@ export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execu
 export interface StepResult {
   shouldContinue?: boolean;
   nextStep?: WorkflowStep;
-  completed?: boolean;
+  completed: boolean;
   query?: string;
+  context?: string;
   error?: any;
+  queryType?: string;
   [key: string]: any;
 }
 
@@ -24,15 +26,18 @@ export interface Step1Result extends StepResult {
   nextStep: WorkflowStep;
   query: string;
   isRegulatoryRelated: boolean;
+  context?: string;
   regulatoryContext?: string;
   reasoning?: string;
   isListingRulesRelated?: boolean;
   isTakeoversCodeRelated?: boolean;
+  queryType?: string;
 }
 
 export interface Step2Result extends StepResult {
   nextStep: WorkflowStep;
   query: string;
+  context?: string;
   listingRulesContext?: string;
   regulatoryContext?: string;
   executionRequired?: boolean;
@@ -43,6 +48,7 @@ export interface Step2Result extends StepResult {
 export interface Step3Result extends StepResult {
   nextStep: WorkflowStep;
   query: string;
+  context?: string;
   takeoversCodeContext?: string;
   regulatoryContext?: string;
   executionRequired?: boolean;
@@ -52,6 +58,7 @@ export interface Step3Result extends StepResult {
 export interface Step4Result extends StepResult {
   nextStep: WorkflowStep;
   query: string;
+  context?: string;
   executionContext?: string;
   regulatoryContext?: string;
 }
@@ -63,4 +70,5 @@ export interface Step5Result extends StepResult {
   translatedResponse?: string;
   requiresTranslation?: boolean;
   translationError?: any;
+  metadata?: any;
 }

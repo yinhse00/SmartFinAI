@@ -6,6 +6,7 @@ import { executeStep3 } from './workflow/step3TakeoversCode';
 import { executeStep4 } from './workflow/step4Execution';
 import { executeStep5 } from './workflow/step5Response';
 import { useLanguageState } from './useLanguageState';
+import { StepResult } from './workflow/types';
 
 interface WorkflowProcessorProps {
   messages: any[];
@@ -90,8 +91,8 @@ export const useWorkflowProcessor = ({
       const step2Result = await executeStep2(
         { 
           query,
-          initialContext: step1Result.context,
-          queryType: step1Result.queryType 
+          initialContext: step1Result.context || '',
+          queryType: step1Result.queryType || 'general'
         },
         setStepProgress
       );
@@ -110,9 +111,9 @@ export const useWorkflowProcessor = ({
       const step3Result = await executeStep3(
         {
           query,
-          initialContext: step1Result.context,
-          listingRulesContext: step2Result.context,
-          queryType: step1Result.queryType
+          initialContext: step1Result.context || '',
+          listingRulesContext: step2Result.context || '',
+          queryType: step1Result.queryType || 'general'
         },
         setStepProgress
       );
@@ -131,10 +132,10 @@ export const useWorkflowProcessor = ({
       const step4Result = await executeStep4(
         {
           query,
-          initialContext: step1Result.context,
-          listingRulesContext: step2Result.context,
-          takeoversCodeContext: step3Result.context,
-          queryType: step1Result.queryType
+          initialContext: step1Result.context || '',
+          listingRulesContext: step2Result.context || '',
+          takeoversCodeContext: step3Result.context || '',
+          queryType: step1Result.queryType || 'general'
         },
         setStepProgress
       );
@@ -153,11 +154,11 @@ export const useWorkflowProcessor = ({
       const step5Result = await executeStep5(
         {
           query,
-          regulatoryContext: step4Result.context,
-          executionContext: step4Result.executionPlan,
-          listingRulesContext: step2Result.context, 
-          takeoversCodeContext: step3Result.context,
-          queryType: step1Result.queryType
+          regulatoryContext: step4Result.context || '',
+          executionContext: step4Result.executionContext || '',
+          listingRulesContext: step2Result.context || '', 
+          takeoversCodeContext: step3Result.context || '',
+          queryType: step1Result.queryType || 'general'
         },
         setStepProgress,
         lastInputWasChinese

@@ -11,7 +11,13 @@ export const useContextRetrieval = () => {
   const retrieveRegulatoryContext = async (
     queryText: string,
     isFaqQuery: boolean = false
-  ) => {
+  ): Promise<{
+    regulatoryContext: string;
+    reasoning: string;
+    contextTime: number;
+    usedSummaryIndex: boolean;
+    searchStrategy: string;
+  }> => {
     let regulatoryContext = '';
     let reasoning = '';
     let contextTime = 0;
