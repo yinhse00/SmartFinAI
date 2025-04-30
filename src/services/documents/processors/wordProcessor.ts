@@ -5,6 +5,8 @@ import { fileConverter } from '../utils/fileConverter';
 import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
 import { DocumentProcessorInterface } from './interfaces/DocumentProcessorInterface';
 import { useGrokVisionProcessor } from './utils/grokVisionProcessor';
+// Add missing import for clientSideTextExtractor
+import { clientSideTextExtractor } from './utils/clientSideTextExtractor';
 
 /**
  * Processor specifically for Word documents
