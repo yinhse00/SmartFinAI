@@ -13,8 +13,9 @@ export const useMessageState = () => {
     {
       id: '1',
       content: 'Hello! I\'m your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?',
-      sender: 'bot',
-      timestamp: new Date(),
+      role: 'assistant',
+      sender: 'bot', 
+      timestamp: Date.now(),
     }
   ]);
 
@@ -24,8 +25,9 @@ export const useMessageState = () => {
       {
         id: '1',
         content: 'Hello! I\'m your Hong Kong financial regulatory expert. How can I assist with your corporate finance, listing rules, or regulatory compliance questions today?',
+        role: 'assistant',
         sender: 'bot',
-        timestamp: new Date(),
+        timestamp: Date.now(),
       }
     ]);
     

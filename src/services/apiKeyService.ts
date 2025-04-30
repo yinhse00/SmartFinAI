@@ -1,29 +1,27 @@
 
-// Facade for Grok/Perplexity API key, storage, selection logic (backwards compatibility).
-// All actual logic is in submodules: apiKey/keyStorage.ts, apiKey/keyUsageTracker.ts, apiKey/grokKeyManager.ts
+import { getGrokApiKey, setGrokApiKey } from './apiKey/grokKeyManager';
+import { hasGrokApiKey } from './apiKey/keyStorage';
+import { resetUsageCounters } from './apiKey/keyUsageTracker';
 
-// Re-export all required functions from grokKeyManager with enhanced rotation
+const rotateApiKey = () => {
+  try {
+    const currentKey = getGrokApiKey();
+    
+    // Reset usage counters for the current key
+    resetUsageCounters();
+    
+    // For simplicity, we're just returning the same key
+    // In a production environment, you might implement key rotation from a pool
+    return currentKey;
+  } catch (error) {
+    console.error('Error rotating API key:', error);
+    return getGrokApiKey();
+  }
+};
+
 export {
   getGrokApiKey,
-  getFreshGrokApiKey,
-  setGrokApiKeys,
   setGrokApiKey,
   hasGrokApiKey,
-  selectLeastUsedKey,
-  selectBestPerformingKey,
   rotateApiKey
-} from './apiKey/grokKeyManager';
-
-// Re-export tracking functions from keyUsageTracker with improved usage distribution
-export {
-  trackTokenUsage,
-  trackResponseQuality,
-  resetUsageCounters
-} from './apiKey/keyUsageTracker';
-
-// Re-export Perplexity-related functions
-export {
-  getPerplexityApiKey,
-  setPerplexityApiKey,
-  hasPerplexityApiKey
-} from './apiKey/keyStorage';
+};

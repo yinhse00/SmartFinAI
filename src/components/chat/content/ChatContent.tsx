@@ -18,15 +18,6 @@ interface ChatContentProps {
   isApiKeyRotating?: boolean;
 }
 
-// Updated props interface for ChatHistory
-interface ChatHistoryProps {
-  messages: Message[];
-  isLoading: boolean;
-  onRetry?: () => void;
-  translatingMessageIds?: string[];
-  isApiKeyRotating?: boolean;  // Added this prop
-}
-
 const ChatContent: React.FC<ChatContentProps> = ({
   messages,
   isLoading,
@@ -71,7 +62,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
         {isLoading && (
           <>
             {isOfflineMode ? (
-              <ProcessingIndicator stage={currentStep} progress={stepProgress} />
+              <ProcessingIndicator stage="processing" progress={stepProgress} />
             ) : (
               <ChatLoadingIndicator />
             )}

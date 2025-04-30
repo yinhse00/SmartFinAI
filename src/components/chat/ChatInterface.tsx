@@ -126,7 +126,7 @@ const ChatInterface: React.FC = () => {
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
-          currentStep={currentStep}
+          currentStep={currentStep as 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete'}
           stepProgress={stepProgress}
           isApiKeyRotating={isApiKeyRotating} // Pass API key rotation status
           isBatching={isBatching}

@@ -35,8 +35,9 @@ export const useErrorHandling = () => {
     const errorMessage: Message = {
       id: (Date.now() + 1).toString(),
       content: "I encountered an issue while analyzing your query. Please try again or rephrase your question.",
+      role: 'assistant',
       sender: 'bot',
-      timestamp: new Date(),
+      timestamp: Date.now(),
       isError: true
     };
     

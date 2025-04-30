@@ -41,7 +41,7 @@ export const useMessageTranslator = ({
         // 4. The message is not already translated
         // 5. The message is not currently being translated
         if (
-          lastMessage.sender === 'bot' &&
+          (lastMessage.role === 'assistant' || lastMessage.sender === 'bot') &&
           lastMessage.content &&
           lastInputWasChinese &&
           !lastMessage.isTranslated && 
