@@ -39,7 +39,11 @@ export const useFallbackDetection = () => {
       "offline mode",
       "operating in offline mode",
       "network error",
-      "API is unreachable"
+      "API is unreachable",
+      "CORS", 
+      "cross-origin",
+      "browser is preventing",
+      "proxy configuration"
     ];
     
     // Check for any fallback indicators - case insensitive

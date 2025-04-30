@@ -36,11 +36,17 @@ export const processApiRequest = async (
     throw new Error("Invalid financial expert API key format");
   }
   
-  // First check API availability to fail fast
-  const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
+  // First check API availability without throwing errors
+  let isApiAvailable = false;
+  try {
+    isApiAvailable = await checkApiAvailability(apiKey);
+  } catch (availabilityError) {
+    console.warn("API availability check failed:", availabilityError);
+    // Continue anyway - we'll try the actual request
+  }
+  
   if (!isApiAvailable) {
-    console.error("Grok API is unreachable - all endpoints appear to be down");
-    throw new Error("Grok API is unreachable");
+    console.warn("API availability check indicates API may be unreachable, but we'll still try the request");
   }
   
   // Ensure token limits are properly applied
@@ -59,16 +65,27 @@ export const processApiRequest = async (
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
   
   try {
-    // First try using the local proxy if available
+    // Always try local proxy first (most likely to work)
     try {
+      console.log("Attempting API call via local proxy");
       const data = await attemptProxyRequest(requestBody, apiKey);
       console.log("Financial expert API response received successfully via proxy");
       return data;
     } catch (proxyError) {
       console.warn("Proxy request failed:", proxyError);
-      // Continue with direct requests
+      // Only try direct requests if proxy specifically failed (not just unreachable)
+      if (proxyError instanceof Error && 
+          (proxyError.message.includes("404") || 
+           proxyError.message.includes("not found") ||
+           proxyError.message.includes("invalid endpoint"))) {
+        console.log("Proxy endpoint not configured properly, attempting direct calls");
+      } else {
+        console.error("Proxy error indicates API may be unreachable:", proxyError);
+        throw proxyError; // Don't try direct calls if proxy failed for other reasons
+      }
     }
     
+    // Only reach here if proxy is not configured
     // Attempt direct API calls with retries
     const data = await executeWithRetry(async () => {
       return await attemptDirectRequest(requestBody, apiKey);
