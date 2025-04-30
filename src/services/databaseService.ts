@@ -8,7 +8,7 @@ export type { RegulatoryEntry } from './database/types';
 
 // Re-export main services
 export { databaseService } from './database/databaseService';
-export { searchService } from './database/searchService';
+export { searchService } from './database/search';
 
 // Re-export utilities
 export { determineCategory } from './database/categoryUtils';

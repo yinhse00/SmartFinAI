@@ -1,5 +1,5 @@
 
-import { searchService } from '../../databaseService';
+import { searchService } from '../../database/search';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
 import { removeDuplicateResults, prioritizeByRelevance } from '../utils/resultProcessors';
 import { isWhitewashWaiverQuery, isGeneralOfferQuery } from '../utils/queryDetector';

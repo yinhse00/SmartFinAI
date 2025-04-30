@@ -2,6 +2,7 @@
 import { contextService } from '@/services/regulatory/contextService';
 import { summaryIndexService } from '@/services/database/summaryIndexService';
 import { extractKeyTerms } from '@/services/database/utils/textProcessing';
+import { structuredContextService } from '@/services/regulatory/structuredContextService';
 
 /**
  * Hook for retrieving regulatory context with enhanced accuracy
@@ -34,6 +35,38 @@ export const useContextRetrieval = () => {
         isDefinitionQuery,
         isFaqQuery
       });
+      
+      // STEP 0: Try the structured database first (NEW)
+      try {
+        console.log('Checking structured database for relevant provisions...');
+        
+        // For definition queries, use the specialized definition context service
+        if (isDefinitionQuery) {
+          const definitionContext = await structuredContextService.getDefinitionContext(queryText);
+          
+          if (definitionContext.context) {
+            regulatoryContext = definitionContext.context;
+            reasoning = definitionContext.reasoning;
+            searchStrategy = 'structured-definition';
+            contextTime = Date.now() - contextStart;
+            return { regulatoryContext, reasoning, contextTime, usedSummaryIndex, searchStrategy };
+          }
+        }
+        
+        // For regular queries, use the standard structured context service
+        const structuredResult = await structuredContextService.getRegulatoryContext(queryText);
+        
+        if (structuredResult.context) {
+          regulatoryContext = structuredResult.context;
+          reasoning = structuredResult.reasoning;
+          searchStrategy = 'structured-database';
+          contextTime = Date.now() - contextStart;
+          return { regulatoryContext, reasoning, contextTime, usedSummaryIndex, searchStrategy };
+        }
+      } catch (structuredError) {
+        console.error("Error using structured database:", structuredError);
+        // Continue to fallback methods below
+      }
       
       // Step 1: Check Summary and Keyword Index first for faster lookup
       console.log('Checking Summary and Keyword Index for quick matches...');

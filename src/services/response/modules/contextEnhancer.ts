@@ -1,5 +1,5 @@
 import { GrokRequestParams } from '@/types/grok';
-import { searchService } from '../../database/searchService';
+import { searchService } from '../../database/search';
 
 /**
  * Enhances query context with relevant regulatory information
