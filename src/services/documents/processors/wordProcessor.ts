@@ -67,6 +67,17 @@ export class WordProcessor extends BaseDocumentProcessor {
                 .replace(/(\d+)\.(\d+)\s+/g, '$1.$2 '); // Ensure consistent formatting
             }
             
+            // Special handling for Chapter 13 documents
+            if (file.name.includes('Chapter 13') && file.name.includes('Continuing Obligations')) {
+              console.log("Applying special processing for Chapter 13 Continuing Obligations");
+              
+              // Improve formatting for rule numbers and section headers
+              extractedText = extractedText
+                .replace(/(\d+\.\d+)(\s+)([A-Z])/g, '$1 $3') // Fix spacing after rule numbers
+                .replace(/(\d+)\.(\d+)\s+/g, '$1.$2 ') // Ensure consistent formatting
+                .replace(/Chapter\s+13\s+/gi, 'Chapter 13 '); // Standardize chapter reference
+            }
+            
             resolve(extractedText);
           } catch (err) {
             reject(new Error(`Mammoth processing error: ${err instanceof Error ? err.message : String(err)}`));

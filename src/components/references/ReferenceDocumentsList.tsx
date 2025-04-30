@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
@@ -73,23 +72,34 @@ const ReferenceDocumentsList: React.FC = () => {
     }
   };
   
-  // Immediately delete the PDF version on component mount
-  React.useEffect(() => {
-    const removePdfVersion = async () => {
+  // Immediately delete the PDF versions on component mount
+  useEffect(() => {
+    const removePdfVersions = async () => {
       if (documents && documents.length > 0) {
-        const pdfToRemove = documents.find(doc => 
+        // Check for Chapter 14 PDF
+        const chapter14PdfToRemove = documents.find(doc => 
           doc.title === "MB_Chapter 14 Notifiable Transactions.pdf"
         );
         
-        if (pdfToRemove) {
-          console.log("Found PDF document to remove:", pdfToRemove);
+        // Check for Chapter 13 PDF
+        const chapter13PdfToRemove = documents.find(doc => 
+          doc.title === "MB_Chapter 13 Continuing Obligations.pdf"
+        );
+        
+        if (chapter14PdfToRemove) {
+          console.log("Found Chapter 14 PDF document to remove:", chapter14PdfToRemove);
           await handleDeleteDocumentByTitle("MB_Chapter 14 Notifiable Transactions.pdf");
+        }
+        
+        if (chapter13PdfToRemove) {
+          console.log("Found Chapter 13 PDF document to remove:", chapter13PdfToRemove);
+          await handleDeleteDocumentByTitle("MB_Chapter 13 Continuing Obligations.pdf");
         }
       }
     };
     
     if (!isLoading && documents) {
-      removePdfVersion();
+      removePdfVersions();
     }
   }, [documents, isLoading]);
 

@@ -13,12 +13,7 @@ export const fileTypeDetector = {
     
     console.log(`Detecting file type for: ${fileName} (${fileType})`);
     
-    // Check for PDF files
-    if (fileName.endsWith('.pdf') || fileType.includes('pdf')) {
-      return 'pdf';
-    }
-    
-    // Check for Word documents (prioritize .docx files)
+    // Check for Word documents (prioritize DOCX files)
     if (
       fileName.endsWith('.docx') || 
       fileName.endsWith('.doc') || 
@@ -26,11 +21,17 @@ export const fileTypeDetector = {
       fileType.includes('officedocument.wordprocessingml') ||
       fileType.includes('msword')
     ) {
-      // Special case to prioritize Chapter 14 DOCX files
-      if (fileName.includes('chapter 14') || fileName.includes('mb_chapter 14')) {
+      // Special case to prioritize important DOCX files for regulatory content
+      if (fileName.includes('chapter 13') || fileName.includes('continuing obligations') || 
+          fileName.includes('chapter 14') || fileName.includes('notifiable transactions')) {
         console.log('Detected important Word document for regulatory content');
       }
       return 'word';
+    }
+    
+    // Check for PDF files - moved after Word check for intentional prioritization
+    if (fileName.endsWith('.pdf') || fileType.includes('pdf')) {
+      return 'pdf';
     }
     
     // Check for Excel files
