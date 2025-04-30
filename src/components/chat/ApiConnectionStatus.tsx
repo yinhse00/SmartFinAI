@@ -3,17 +3,18 @@ import { useState, useEffect } from 'react';
 import { grokApiService } from '@/services/api/grokApiService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff, Settings } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
-  isOfflineMode?: boolean; // New prop to indicate offline mode
-  onTryReconnect?: () => Promise<boolean>; // New callback for reconnection attempts
+  isOfflineMode?: boolean;
+  onTryReconnect?: () => Promise<boolean>;
 }
 
 const ApiConnectionStatus = ({ 
   onOpenApiKeyDialog, 
-  isOfflineMode: externalOfflineMode, // Provided from parent
+  isOfflineMode: externalOfflineMode,
   onTryReconnect 
 }: ApiConnectionStatusProps) => {
   const [connectionStatus, setConnectionStatus] = useState<{
@@ -119,17 +120,27 @@ const ApiConnectionStatus = ({
   return (
     <div className="mb-4">
       {connectionStatus.loading ? (
-        <Alert className="bg-finance-light-blue/10 border-finance-light-blue">
-          <RefreshCw className="h-4 w-4 animate-spin text-finance-medium-blue" />
-          <AlertTitle>Testing AI Connection</AlertTitle>
-          <AlertDescription>Please wait while we verify the connection...</AlertDescription>
+        <Alert className="bg-finance-light-blue/10 border-finance-light-blue shadow-sm">
+          <div className="flex items-center">
+            <RefreshCw className="h-4 w-4 animate-spin text-finance-medium-blue mr-2" />
+            <div>
+              <AlertTitle className="text-sm font-medium">Testing AI Connection</AlertTitle>
+              <AlertDescription className="text-xs">Please wait while we verify the connection...</AlertDescription>
+            </div>
+          </div>
         </Alert>
       ) : connectionStatus.success ? (
-        <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
-          <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertTitle>AI Connected</AlertTitle>
-          <AlertDescription className="flex items-center justify-between">
-            <span>SmartFinAI is ready to answer your queries.</span>
+        <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800 shadow-sm">
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center">
+              <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
+              <div>
+                <AlertTitle className="text-sm font-medium flex items-center">
+                  AI Connected <Badge variant="outline" className="ml-2 text-xs bg-green-50 text-green-600 border-green-300">v2.0</Badge>
+                </AlertTitle>
+                <AlertDescription className="text-xs">SmartFinAI is ready to answer your queries.</AlertDescription>
+              </div>
+            </div>
             <Button 
               variant="outline" 
               size="sm" 
@@ -139,14 +150,20 @@ const ApiConnectionStatus = ({
               <RefreshCw className="h-3 w-3" />
               Recheck
             </Button>
-          </AlertDescription>
+          </div>
         </Alert>
       ) : connectionStatus.isOfflineMode ? (
-        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800">
-          <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-          <AlertTitle>Offline Mode</AlertTitle>
-          <AlertDescription className="flex flex-col space-y-2">
-            <span>Operating in offline mode with limited functionality.</span>
+        <Alert className="bg-amber-50 border-amber-200 dark:bg-amber-950/20 dark:border-amber-800 shadow-sm">
+          <div className="flex flex-col space-y-2 w-full">
+            <div className="flex items-center">
+              <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400 mr-2" />
+              <div>
+                <AlertTitle className="text-sm font-medium flex items-center">
+                  Offline Mode <Badge variant="outline" className="ml-2 text-xs bg-amber-50 text-amber-600 border-amber-300">Limited</Badge>
+                </AlertTitle>
+                <AlertDescription className="text-xs">Operating with limited functionality.</AlertDescription>
+              </div>
+            </div>
             <div className="flex gap-2 mt-1">
               <Button 
                 variant="outline" 
@@ -161,20 +178,25 @@ const ApiConnectionStatus = ({
                 variant="default"
                 size="sm"
                 onClick={onOpenApiKeyDialog}
-                className="h-7 text-xs bg-finance-dark-blue hover:bg-finance-dark-blue/90"
+                className="h-7 text-xs bg-finance-dark-blue hover:bg-finance-dark-blue/90 gap-1"
               >
+                <Settings className="h-3 w-3" />
                 Update API Key
               </Button>
             </div>
-          </AlertDescription>
+          </div>
         </Alert>
       ) : (
-        <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
-          <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <AlertTitle>AI Connection Issue</AlertTitle>
-          <AlertDescription className="flex flex-col space-y-2">
-            <span>{connectionStatus.message}</span>
-            <div className="flex gap-2 mt-1">
+        <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800 shadow-sm">
+          <div className="flex flex-col space-y-2 w-full">
+            <div className="flex items-center">
+              <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400 mr-2" />
+              <div>
+                <AlertTitle className="text-sm font-medium">AI Connection Issue</AlertTitle>
+                <AlertDescription className="text-xs">{connectionStatus.message}</AlertDescription>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-1 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -191,18 +213,19 @@ const ApiConnectionStatus = ({
                 className="h-7 gap-1 text-xs"
               >
                 <WifiOff className="h-3 w-3" />
-                Use Offline Mode
+                Use Offline
               </Button>
               <Button 
                 variant="default"
                 size="sm"
                 onClick={onOpenApiKeyDialog}
-                className="h-7 text-xs bg-finance-dark-blue hover:bg-finance-dark-blue/90"
+                className="h-7 text-xs bg-finance-dark-blue hover:bg-finance-dark-blue/90 gap-1"
               >
+                <Settings className="h-3 w-3" />
                 Update API Key
               </Button>
             </div>
-          </AlertDescription>
+          </div>
         </Alert>
       )}
     </div>
