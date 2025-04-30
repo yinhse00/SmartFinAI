@@ -24,7 +24,7 @@ export const isRetryAttempt = (content?: string): boolean => {
 
 /**
  * Extract text from MessageContent which can be string or array of content objects
- * @param content - The message content object or string
+ * @param userMessage - The user message object containing content
  * @returns Extracted text as string
  */
 export const extractPromptText = (userMessage: any): string => {
@@ -32,7 +32,7 @@ export const extractPromptText = (userMessage: any): string => {
     return "unknown query";
   }
   
-  const content = userMessage.content;
+  const content = userMessage.content as MessageContent;
   
   // If content is a string, return it directly
   if (typeof content === 'string') {
@@ -53,4 +53,3 @@ export const extractPromptText = (userMessage: any): string => {
   // Fallback
   return "unknown query";
 };
-
