@@ -1,11 +1,12 @@
+
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { useApiKeyState } from './useApiKeyState';
-import { useQueryExecution } from './useQueryExecution';
-import { useRetryHandler } from './useRetryHandler';
-import { useLanguageDetection } from './useLanguageDetection';
-import { useBatchHandling } from './useBatchHandling';
-import { Message } from '../ChatMessage';
+import { useApiKeyState } from './hooks/useApiKeyState';
+import { useQueryExecution } from './hooks/useQueryExecution';
+import { useRetryHandler } from './hooks/useRetryHandler';
+import { useLanguageDetection } from './hooks/useLanguageDetection';
+import { useBatchHandling } from './hooks/useBatchHandling';
+import { Message } from './ChatMessage';
 
 export const useChatLogic = () => {
   const { toast } = useToast();
@@ -59,6 +60,21 @@ export const useChatLogic = () => {
     setProcessingStage
   );
   
+  // Main query processing function - define before using in useEffect
+  const processQuery = useCallback(async (
+    queryText: string,
+    batchInfo?: { batchNumber: number, isContinuing: boolean },
+    onBatchTruncated?: (isTruncated: boolean) => void
+  ) => {
+    setIsLoading(true);
+    
+    try {
+      await executeQuery(queryText, batchInfo, onBatchTruncated);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [executeQuery, setIsLoading]);
+  
   // Store the processQuery function in the retry handler
   useEffect(() => {
     setProcessQueryFn(processQuery);
@@ -86,21 +102,6 @@ export const useChatLogic = () => {
     }
   };
   
-  // Main query processing function
-  const processQuery = useCallback(async (
-    queryText: string,
-    batchInfo?: { batchNumber: number, isContinuing: boolean },
-    onBatchTruncated?: (isTruncated: boolean) => void
-  ) => {
-    setIsLoading(true);
-    
-    try {
-      await executeQuery(queryText, batchInfo, onBatchTruncated);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [executeQuery, setIsLoading]);
-  
   // Add isApiKeyRotating to the returned object
   return {
     messages,
@@ -126,6 +127,6 @@ export const useChatLogic = () => {
     currentBatchNumber,
     handleContinueBatch: () => handleBatchContinuation(processQuery),
     isApiKeyRotating,
-    lastInputWasChinese
+    lastInputWasChinese: lastUserMessageIsChinese
   };
 };

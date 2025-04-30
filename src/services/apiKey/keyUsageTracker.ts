@@ -1,6 +1,6 @@
 
 /**
- * Tracks usage metrics for Grok API keys (tokens, truncation, success, recency).
+ * Tracks API key usage metrics for Grok API keys (tokens, truncation, success, recency).
  * Enhanced with aggressive load balancing metrics to prevent overloading.
  */
 
@@ -180,4 +180,20 @@ export function getLastTruncatedKey(): string {
 export function clearUsage(): void {
   keyUsageMap.clear();
   lastTruncatedKey = '';
+}
+
+// Add the missing resetUsageCounters function
+export function resetUsageCounters(): void {
+  // Reset usage counters while preserving the key structure
+  for (const usage of keyUsageMap.values()) {
+    usage.tokensUsed = 0;
+    usage.truncationCount = 0;
+    usage.successCount = 0;
+    usage.requestCount = 0;
+    usage.lastHourRequests = 0;
+    usage.consecutiveUses = 0;
+    usage.lastUsed = Date.now();
+  }
+  lastTruncatedKey = '';
+  console.log('Reset all API key usage counters');
 }

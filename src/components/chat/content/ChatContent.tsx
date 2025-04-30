@@ -1,9 +1,11 @@
 
-import React from 'react';
-import { CardContent } from '@/components/ui/card';
-import ChatHistory from '../ChatHistory';
-import { Message } from '../ChatMessage';
+import React, { useRef, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
 import WorkflowIndicator from '../workflow/WorkflowIndicator';
+import ChatHistory from '../ChatHistory';
+import ChatLoadingIndicator from '../ChatLoadingIndicator';
+import ProcessingIndicator from '../ProcessingIndicator';
+import { Message } from '../ChatMessage';
 
 interface ChatContentProps {
   messages: Message[];
@@ -13,7 +15,16 @@ interface ChatContentProps {
   isOfflineMode?: boolean;
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
-  isApiKeyRotating?: boolean; // New prop for showing API key rotation status
+  isApiKeyRotating?: boolean;
+}
+
+// Updated props interface for ChatHistory
+interface ChatHistoryProps {
+  messages: Message[];
+  isLoading: boolean;
+  onRetry?: () => void;
+  translatingMessageIds?: string[];
+  isApiKeyRotating?: boolean;  // Added this prop
 }
 
 const ChatContent: React.FC<ChatContentProps> = ({
@@ -22,26 +33,53 @@ const ChatContent: React.FC<ChatContentProps> = ({
   onRetry,
   translatingMessageIds = [],
   isOfflineMode = false,
-  currentStep,
-  stepProgress,
+  currentStep = 'initial',
+  stepProgress = 'Preparing your request',
   isApiKeyRotating = false
 }) => {
-  return <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col bg-zinc-50">
-      <div className="sticky top-0 z-10 bg-background">
-        {currentStep && stepProgress && <WorkflowIndicator 
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Scroll to bottom on new messages or loading state change
+  useEffect(() => {
+    if (contentRef.current) {
+      contentRef.current.scrollTop = contentRef.current.scrollHeight;
+    }
+  }, [messages, isLoading]);
+
+  return (
+    <Card className="h-full flex-1 overflow-hidden border-0 bg-transparent flex flex-col">
+      {(isLoading || currentStep !== 'initial') && (
+        <WorkflowIndicator 
           currentStep={currentStep} 
-          stepProgress={stepProgress} 
+          stepProgress={stepProgress}
           isApiKeyRotating={isApiKeyRotating}
-        />}
+        />
+      )}
+      
+      <div 
+        ref={contentRef} 
+        className="messages-container flex-1 overflow-y-auto p-4 space-y-4"
+      >
+        <ChatHistory 
+          messages={messages} 
+          isLoading={isLoading} 
+          onRetry={onRetry} 
+          translatingMessageIds={translatingMessageIds}
+          isApiKeyRotating={isApiKeyRotating}
+        />
+        
+        {isLoading && (
+          <>
+            {isOfflineMode ? (
+              <ProcessingIndicator stage={currentStep} progress={stepProgress} />
+            ) : (
+              <ChatLoadingIndicator />
+            )}
+          </>
+        )}
       </div>
-      <ChatHistory 
-        messages={messages} 
-        isLoading={isLoading} 
-        onRetry={onRetry} 
-        translatingMessageIds={translatingMessageIds} 
-        isApiKeyRotating={isApiKeyRotating} 
-      />
-    </CardContent>;
+    </Card>
+  );
 };
 
 export default ChatContent;
