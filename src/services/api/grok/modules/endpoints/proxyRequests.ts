@@ -41,18 +41,36 @@ export const attemptProxyRequest = async (
       // Check if response is JSON
       const contentType = proxyResponse.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        console.log("Proxy request successful with status:", proxyResponse.status);
-        return await proxyResponse.json();
+        try {
+          console.log("Proxy request successful with status:", proxyResponse.status);
+          const data = await proxyResponse.json();
+          return data;
+        } catch (jsonError) {
+          console.error("Failed to parse JSON from proxy response:", jsonError);
+          throw new Error("Invalid JSON response from proxy");
+        }
       } else {
-        // Handle non-JSON response
+        // Handle HTML responses that sometimes come from proxies
         const text = await proxyResponse.text();
-        console.warn("Proxy endpoint returned non-JSON response:", text.substring(0, 100) + "...");
-        throw new Error("Invalid response format from proxy - received HTML instead of JSON");
+        const isHtmlResponse = text.includes('<!DOCTYPE html>') || text.includes('<html');
+        
+        console.warn(`Proxy endpoint returned ${isHtmlResponse ? 'HTML' : 'non-JSON'} response:`, text.substring(0, 100) + "...");
+        throw new Error(isHtmlResponse 
+          ? "Invalid response format from proxy - received HTML instead of JSON (possible CORS issue)" 
+          : "Invalid response format from proxy - expected JSON");
       }
     }
     
-    console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
-    throw new Error(`Proxy request failed with status: ${proxyResponse.status}`);
+    // Handle error responses by providing more context
+    try {
+      const errorText = await proxyResponse.text();
+      console.warn(`Proxy request failed with status: ${proxyResponse.status}`, errorText.substring(0, 200));
+      throw new Error(`Proxy request failed with status: ${proxyResponse.status} - ${errorText.substring(0, 100)}`);
+    } catch (textError) {
+      // If we can't read the error text, just use the status
+      console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
+      throw new Error(`Proxy request failed with status: ${proxyResponse.status}`);
+    }
   } catch (error) {
     // Better error handling with specific messages for different error types
     if (error instanceof DOMException && error.name === 'AbortError') {

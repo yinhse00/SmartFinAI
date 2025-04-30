@@ -15,6 +15,19 @@ export const apiClient = {
    */
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
     try {
+      // Validate request body to prevent invalid API calls
+      if (!requestBody || !requestBody.messages || !Array.isArray(requestBody.messages)) {
+        console.error("Invalid request body format:", requestBody);
+        throw new Error("Invalid request body: missing messages array");
+      }
+      
+      // Ensure there's at least one user message
+      const hasUserMessage = requestBody.messages.some((msg: any) => msg.role === 'user' && msg.content);
+      if (!hasUserMessage) {
+        console.error("Request body missing user message");
+        throw new Error("Invalid request body: no user message found");
+      }
+      
       return await handleChatCompletions(requestBody, providedApiKey);
     } catch (error) {
       console.error("Failed to process API request:", error);

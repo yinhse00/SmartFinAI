@@ -42,35 +42,68 @@ export const testLocalProxy = async (apiKey: string): Promise<{
       // Check if response is JSON
       const contentType = proxyResponse.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        const data = await proxyResponse.json();
-        const modelCount = data?.data?.length || 0;
-        
-        console.log(`Local proxy connection successful, found ${modelCount} models`);
-        return {
-          success: true,
-          message: `API connection successful via local proxy. Available models: ${modelCount}`,
-          modelCount
-        };
+        try {
+          const data = await proxyResponse.json();
+          const modelCount = data?.data?.length || 0;
+          
+          console.log(`Local proxy connection successful, found ${modelCount} models`);
+          return {
+            success: true,
+            message: `API connection successful via local proxy. Available models: ${modelCount}`,
+            modelCount
+          };
+        } catch (jsonError) {
+          console.warn("Proxy endpoint returned invalid JSON:", jsonError);
+          return {
+            success: false,
+            message: "Proxy endpoint returned invalid JSON data"
+          };
+        }
       } else {
-        // Non-JSON response
-        console.warn("Proxy endpoint returned non-JSON response");
+        // Handle HTML responses that sometimes come from proxies
+        const text = await proxyResponse.text();
+        const isHtmlResponse = text.includes('<!DOCTYPE html>') || text.includes('<html');
+        
+        console.warn(`Proxy endpoint returned ${isHtmlResponse ? 'HTML' : 'non-JSON'} response`);
         return {
           success: false,
-          message: "Proxy endpoint returned invalid response format"
+          message: isHtmlResponse 
+            ? "Proxy endpoint returned HTML instead of JSON (possible CORS issue)"
+            : "Proxy endpoint returned invalid response format"
         };
       }
     } else {
-      console.warn(`Proxy test failed with status: ${proxyResponse.status}`);
+      // Try to extract more error details
+      let errorDetails = `Status: ${proxyResponse.status}`;
+      try {
+        const errorText = await proxyResponse.text();
+        if (errorText && errorText.length < 100) {
+          errorDetails += ` - ${errorText}`;
+        }
+      } catch (e) {
+        // Ignore error reading response body
+      }
+      
+      console.warn(`Proxy test failed with ${errorDetails}`);
       return {
         success: false,
-        message: `Proxy test failed with status: ${proxyResponse.status}`
+        message: `Proxy test failed with ${errorDetails}`
       };
     }
   } catch (error) {
-    console.warn("Local proxy test failed:", error);
+    // Provide better error messages for common issues
+    let errorMessage = error instanceof Error ? error.message : String(error);
+    
+    if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
+      errorMessage = 'Network error: The proxy server may be unreachable or blocked by CORS policy';
+    } else if (errorMessage.includes('aborted')) {
+      errorMessage = 'Request timed out: The proxy server took too long to respond';
+    }
+    
+    console.warn("Local proxy test failed:", errorMessage);
     return {
       success: false,
-      message: error instanceof Error ? error.message : String(error)
+      message: errorMessage
     };
   }
 };

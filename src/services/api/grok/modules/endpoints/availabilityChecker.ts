@@ -1,3 +1,4 @@
+
 /**
  * API availability checking functionality
  */
@@ -32,20 +33,35 @@ const testLocalProxy = async (apiKey: string): Promise<boolean> => {
       // Check content type to verify it's JSON
       const contentType = proxyResponse.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
-        const data = await proxyResponse.json();
-        const modelCount = data?.data?.length || 0;
-        console.log(`Local proxy connection successful, found ${modelCount} models`);
-        return true;
+        try {
+          const data = await proxyResponse.json();
+          const modelCount = data?.data?.length || 0;
+          console.log(`Local proxy connection successful, found ${modelCount} models`);
+          return true;
+        } catch (jsonError) {
+          console.warn("Local proxy returned invalid JSON:", jsonError);
+          return false;
+        }
       } else {
-        console.warn("Local proxy returned non-JSON response");
-        return false;
+        // Additional check for HTML responses which indicate CORS issues
+        try {
+          const text = await proxyResponse.text();
+          const isHtmlResponse = text.includes('<!DOCTYPE html>') || text.includes('<html');
+          console.warn(`Local proxy returned ${isHtmlResponse ? 'HTML' : 'non-JSON'} response`);
+          return false;
+        } catch (e) {
+          console.warn("Local proxy returned unreadable response");
+          return false;
+        }
       }
     }
     
     console.warn("Local proxy availability check failed with status:", proxyResponse.status);
     return false;
   } catch (e) {
-    console.warn("Local proxy availability check failed:", e instanceof Error ? e.message : String(e));
+    const errorMessage = e instanceof Error ? e.message : String(e);
+    const isNetworkError = errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch');
+    console.warn("Local proxy availability check failed:", isNetworkError ? "Network connectivity issue" : errorMessage);
     return false;
   }
 };
@@ -88,6 +104,7 @@ const testEndpointConnectivity = async (baseEndpoint: string, apiKey: string): P
   } catch (e) {
     // For CORS errors, try a no-cors HEAD request just to check connectivity
     try {
+      console.log(`Endpoint ${baseEndpoint} CORS request failed, trying no-cors HEAD request`);
       const responseHead = await fetch(`${baseEndpoint}`, {
         method: 'HEAD',
         mode: 'no-cors',
@@ -96,9 +113,10 @@ const testEndpointConnectivity = async (baseEndpoint: string, apiKey: string): P
       
       // If we get here, the server is reachable, but we may have CORS issues
       console.log(`Endpoint ${baseEndpoint} is reachable but may have CORS restrictions`);
-      return false;
+      return true;  // Return true since the endpoint is accessible, even though we might have CORS issues
     } catch (headError) {
       // Both attempts failed, endpoint is likely down
+      console.warn(`Endpoint ${baseEndpoint} connectivity test failed completely`);
       return false;
     }
   }
@@ -123,18 +141,17 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
     // If proxy fails, try direct endpoints
     console.log("Trying direct API endpoints...");
     
-    // Use Promise.all to race all endpoint checks
-    const endpointChecks = BASE_ENDPOINTS.map(baseEndpoint => 
-      testEndpointConnectivity(baseEndpoint, apiKey)
-    );
-    
-    // Wait for all endpoint checks to complete
-    const results = await Promise.allSettled(endpointChecks);
-    const anySucceeded = results.some(result => result.status === 'fulfilled' && result.value === true);
-    
-    if (anySucceeded) {
-      console.log("At least one direct API endpoint is available");
-      return true;
+    // Try each endpoint individually for better error reporting
+    for (const baseEndpoint of BASE_ENDPOINTS) {
+      try {
+        const endpointAvailable = await testEndpointConnectivity(baseEndpoint, apiKey);
+        if (endpointAvailable) {
+          console.log(`Direct endpoint ${baseEndpoint} is available`);
+          return true;
+        }
+      } catch (endpointError) {
+        console.warn(`API call to ${baseEndpoint} failed:`, endpointError);
+      }
     }
     
     console.error("All API endpoints are unreachable");
