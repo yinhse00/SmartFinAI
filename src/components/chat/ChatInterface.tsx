@@ -1,7 +1,6 @@
 
 import React, { useEffect } from 'react';
 import APIKeyDialog from './APIKeyDialog';
-import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
@@ -99,33 +98,6 @@ const ChatInterface: React.FC = () => {
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
-        />
-        
-        <ChatContainer
-          messages={messages}
-          isLoading={isLoading || isProcessing}
-          isGrokApiKeySet={isGrokApiKeySet}
-          input={input}
-          setInput={setInput}
-          handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? 
-            (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSendWithFiles();
-              }
-            } : 
-            handleKeyDown
-          }
-          onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
-          retryLastQuery={retryLastQuery}
-          onFileSelect={handleFileSelect}
-          isProcessingFiles={isProcessing}
-          attachedFiles={attachedFiles}
-          onFileRemove={removeAttachedFile}
-          isOfflineMode={isOfflineMode}
-          currentStep={currentStep}
-          stepProgress={stepProgress}
         />
       </div>
       
