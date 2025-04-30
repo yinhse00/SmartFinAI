@@ -4,9 +4,9 @@ import { Message } from '../../ChatMessage';
 export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
 
 export interface StepResult {
+  completed: boolean;
   shouldContinue?: boolean;
   nextStep?: WorkflowStep;
-  completed: boolean;
   query?: string;
   context?: string;
   error?: any;
