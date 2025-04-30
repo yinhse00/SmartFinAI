@@ -4,7 +4,6 @@ import { CardContent } from '@/components/ui/card';
 import ChatHistory from '../ChatHistory';
 import { Message } from '../ChatMessage';
 import WorkflowIndicator from '../workflow/WorkflowIndicator';
-import WorkflowStepDisplay from '../workflow/WorkflowStepDisplay';
 
 interface ChatContentProps {
   messages: Message[];

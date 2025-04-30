@@ -94,7 +94,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, onTy
         )}
         
         {/* If this is a translated message, show the original */}
-        {message.originalContent && (
+        {message.originalContent && message.isTranslated && (
           <div className="mt-2 text-xs text-gray-500 italic border-t pt-2">
             Original: {message.originalContent}
           </div>
