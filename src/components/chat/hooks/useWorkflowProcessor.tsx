@@ -6,15 +6,7 @@ import { executeStep3 } from './workflow/step3TakeoversCode';
 import { executeStep4 } from './workflow/step4Execution';
 import { executeStep5 } from './workflow/step5Response';
 import { useLanguageState } from './useLanguageState';
-import { StepResult } from './workflow/types';
-
-interface WorkflowProcessorProps {
-  messages: any[];
-  setMessages: React.Dispatch<React.SetStateAction<any[]>>;
-  setLastQuery: React.Dispatch<React.SetStateAction<string>>;
-  isGrokApiKeySet: boolean;
-  setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
+import { StepResult, WorkflowProcessorProps } from './workflow/types';
 
 export const useWorkflowProcessor = ({
   messages,
