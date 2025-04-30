@@ -15,7 +15,8 @@ export const isRetryAttempt = (content?: string): boolean => {
   
   const retryPhrases = [
     'retry', 'try again', 'please try again',
-    'resend', 'regenerate', 'give it another try'
+    'resend', 'regenerate', 'give it another try',
+    'reconnect', 'restore connection', 'fix connection'
   ];
   
   const lowerContent = content.toLowerCase();
@@ -53,3 +54,22 @@ export const extractPromptText = (userMessage: any): string => {
   // Fallback
   return "unknown query";
 };
+
+/**
+ * Detect explicit connectivity restoration requests from user
+ * @param content - The message content to check
+ * @returns Boolean indicating if it's a reconnection request
+ */
+export const isConnectivityRequest = (content?: string): boolean => {
+  if (!content) return false;
+  
+  const connectivityPhrases = [
+    'fix connection', 'restore connection', 'reconnect', 
+    'connectivity issue', 'connection problem', 'back online',
+    'offline mode', 'cannot access', 'api connection'
+  ];
+  
+  const lowerContent = content.toLowerCase();
+  return connectivityPhrases.some(phrase => lowerContent.includes(phrase));
+};
+

@@ -34,11 +34,18 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
     
     // First try local proxy which is most reliable (avoids CORS)
     try {
-      const proxyAvailable = await fetch('/api/grok/ping', {
-        method: 'HEAD',
-        headers: { 'Cache-Control': 'no-cache' },
-        mode: 'no-cors' // Use no-cors to avoid preflight failures
-      }).then(() => true).catch(() => false);
+      // Using a more aggressive check for the proxy
+      const proxyResponse = await fetch('/api/grok/ping', {
+        method: 'GET',
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'X-Request-ID': `ping-${Date.now()}` // Add unique request ID to avoid caching
+        },
+        cache: 'no-store'
+      });
+      
+      // If we get a response (even an error), the proxy is at least reachable
+      const proxyAvailable = proxyResponse.status < 500; // Any status below 500 means server is responsive
       
       if (proxyAvailable) {
         console.log("Local proxy appears to be available");
@@ -53,23 +60,35 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
     }
     
     // If local proxy isn't available, find a working direct endpoint
-    const directEndpoints = ['https://grok.x.ai', 'https://api.x.ai'];
+    const directEndpoints = ['https://api.x.ai', 'https://grok.x.ai', 'https://api.grok.ai'];
     
     for (const endpoint of directEndpoints) {
       try {
-        // Use a more reliable detection method
-        const response = await fetch(`${endpoint}`, {
-          method: 'HEAD',
-          mode: 'no-cors', // Use no-cors to check basic connectivity
-          cache: 'no-store'
-        });
+        // Use more reliable detection with explicitly non-CORS request
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        console.log(`Endpoint ${endpoint} appears to be reachable`);
-        return {
-          isAvailable: true,
-          endpointType: 'direct',
-          endpoint
-        };
+        const response = await fetch(`${endpoint}/ping`, {
+          method: 'HEAD',
+          headers: {
+            'Authorization': `Bearer ${apiKey}`,
+            'X-Request-Source': 'browser-client',
+            'Cache-Control': 'no-cache, no-store'
+          },
+          signal: controller.signal,
+          cache: 'no-store'
+        }).catch(() => null);
+        
+        clearTimeout(timeoutId);
+        
+        if (response) {
+          console.log(`Endpoint ${endpoint} appears to be reachable`);
+          return {
+            isAvailable: true,
+            endpointType: 'direct',
+            endpoint
+          };
+        }
       } catch (e) {
         console.warn(`Failed to connect to ${endpoint}:`, e);
       }
@@ -89,3 +108,23 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
     };
   }
 };
+
+/**
+ * Force clears any cached API connections to ensure fresh connection checks
+ */
+export const clearConnectionCache = (): void => {
+  console.log("Clearing API connection cache");
+  // Clear any potential cached fetch responses
+  try {
+    if ('caches' in window) {
+      caches.delete('api-connection-cache').catch(e => console.warn("Cache clear failed:", e));
+    }
+    // Clear any localStorage cache entries
+    localStorage.removeItem('api_endpoint_cache');
+    localStorage.removeItem('last_connection_check');
+    sessionStorage.removeItem('api_connection_status');
+  } catch (e) {
+    console.error("Error clearing connection cache:", e);
+  }
+};
+
