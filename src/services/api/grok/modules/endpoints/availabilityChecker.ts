@@ -1,4 +1,3 @@
-
 /**
  * API availability checking functionality
  */
@@ -30,10 +29,17 @@ const testLocalProxy = async (apiKey: string): Promise<boolean> => {
     clearTimeout(timeoutId);
     
     if (proxyResponse.ok) {
-      const data = await proxyResponse.json();
-      const modelCount = data?.data?.length || 0;
-      console.log(`Local proxy connection successful, found ${modelCount} models`);
-      return true;
+      // Check content type to verify it's JSON
+      const contentType = proxyResponse.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await proxyResponse.json();
+        const modelCount = data?.data?.length || 0;
+        console.log(`Local proxy connection successful, found ${modelCount} models`);
+        return true;
+      } else {
+        console.warn("Local proxy returned non-JSON response");
+        return false;
+      }
     }
     
     console.warn("Local proxy availability check failed with status:", proxyResponse.status);
@@ -67,8 +73,15 @@ const testEndpointConnectivity = async (baseEndpoint: string, apiKey: string): P
     clearTimeout(timeoutId);
     
     if (response.ok) {
-      console.log(`Direct endpoint ${baseEndpoint} is available`);
-      return true;
+      // Check that response is JSON
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        console.log(`Direct endpoint ${baseEndpoint} is available`);
+        return true;
+      } else {
+        console.warn(`Direct endpoint ${baseEndpoint} returned non-JSON response`);
+        return false;
+      }
     }
     
     return false;

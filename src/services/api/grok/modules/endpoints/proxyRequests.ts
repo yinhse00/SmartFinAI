@@ -38,8 +38,17 @@ export const attemptProxyRequest = async (
     clearTimeout(timeoutId);
     
     if (proxyResponse.ok) {
-      console.log("Proxy request successful with status:", proxyResponse.status);
-      return await proxyResponse.json();
+      // Check if response is JSON
+      const contentType = proxyResponse.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        console.log("Proxy request successful with status:", proxyResponse.status);
+        return await proxyResponse.json();
+      } else {
+        // Handle non-JSON response
+        const text = await proxyResponse.text();
+        console.warn("Proxy endpoint returned non-JSON response:", text.substring(0, 100) + "...");
+        throw new Error("Invalid response format from proxy - received HTML instead of JSON");
+      }
     }
     
     console.warn(`Proxy request failed with status: ${proxyResponse.status}`);

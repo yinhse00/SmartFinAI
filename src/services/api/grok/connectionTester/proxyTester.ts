@@ -39,15 +39,26 @@ export const testLocalProxy = async (apiKey: string): Promise<{
     clearTimeout(timeoutId);
     
     if (proxyResponse.ok) {
-      const data = await proxyResponse.json();
-      const modelCount = data?.data?.length || 0;
-      
-      console.log(`Local proxy connection successful, found ${modelCount} models`);
-      return {
-        success: true,
-        message: `API connection successful via local proxy. Available models: ${modelCount}`,
-        modelCount
-      };
+      // Check if response is JSON
+      const contentType = proxyResponse.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const data = await proxyResponse.json();
+        const modelCount = data?.data?.length || 0;
+        
+        console.log(`Local proxy connection successful, found ${modelCount} models`);
+        return {
+          success: true,
+          message: `API connection successful via local proxy. Available models: ${modelCount}`,
+          modelCount
+        };
+      } else {
+        // Non-JSON response
+        console.warn("Proxy endpoint returned non-JSON response");
+        return {
+          success: false,
+          message: "Proxy endpoint returned invalid response format"
+        };
+      }
     } else {
       console.warn(`Proxy test failed with status: ${proxyResponse.status}`);
       return {

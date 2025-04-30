@@ -14,6 +14,12 @@ export const apiClient = {
    * @returns Promise resolving to the API response
    */
   callChatCompletions: async (requestBody: GrokChatRequestBody, providedApiKey?: string): Promise<any> => {
-    return await handleChatCompletions(requestBody, providedApiKey);
+    try {
+      return await handleChatCompletions(requestBody, providedApiKey);
+    } catch (error) {
+      console.error("Failed to process API request:", error);
+      // Re-throw the error to be handled by the caller
+      throw error;
+    }
   }
 };
