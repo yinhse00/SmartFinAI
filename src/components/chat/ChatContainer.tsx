@@ -7,6 +7,7 @@ import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useToast } from '@/hooks/use-toast';
+import BatchContinuation from './batch/BatchContinuation';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -26,6 +27,10 @@ interface ChatContainerProps {
   isOfflineMode?: boolean;
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
+  isApiKeyRotating?: boolean;
+  isBatching?: boolean;
+  currentBatchNumber?: number;
+  handleContinueBatch?: () => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -45,7 +50,11 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onFileRemove,
   isOfflineMode = false,
   currentStep,
-  stepProgress
+  stepProgress,
+  isApiKeyRotating = false,
+  isBatching = false,
+  currentBatchNumber = 1,
+  handleContinueBatch = () => {}
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -83,7 +92,19 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isOfflineMode={isOfflineMode}
         currentStep={currentStep}
         stepProgress={stepProgress}
+        isApiKeyRotating={isApiKeyRotating}
       />
+      
+      {isBatching && (
+        <BatchContinuation 
+          isBatching={isBatching}
+          autoBatch={false}
+          currentBatchNumber={currentBatchNumber}
+          handleContinueBatch={handleContinueBatch}
+          lastInputWasChinese={lastUserMessageIsChinese}
+          isApiKeyRotating={isApiKeyRotating}
+        />
+      )}
       
       <ChatInput 
         input={input}

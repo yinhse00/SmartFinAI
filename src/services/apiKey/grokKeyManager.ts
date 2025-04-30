@@ -19,7 +19,8 @@ import {
   getLeastUsedKey,
   getBestPerformingKey,
   getLastTruncatedKey,
-  clearUsage
+  clearUsage,
+  resetUsageCounters,
 } from './keyUsageTracker';
 
 let currentKeyIndex = 0;
@@ -141,6 +142,29 @@ export function hasGrokApiKey(): boolean {
   }
 }
 
+/**
+ * Force rotation of API key - returns new key
+ * This function is used by the batch continuation to avoid CORS issues
+ */
+export function rotateApiKey(): string {
+  try {
+    const keys = loadKeysFromStorage();
+    if (!keys.length) throw new Error('No available API keys in storage or defaults.');
+    
+    // Force rotation to next key
+    currentKeyIndex = (currentKeyIndex + 1) % keys.length;
+    lastKeySelectionTime = Date.now();
+    
+    const rotatedKey = keys[currentKeyIndex];
+    console.log(`API key manually rotated: now using key ${currentKeyIndex + 1} of ${keys.length}`);
+    
+    return rotatedKey;
+  } catch (error) {
+    console.error('Error rotating API key:', error);
+    return DEFAULT_DEPLOYMENT_KEYS[0];
+  }
+}
+
 // Enhanced key pool strategies with improved diagnostics
 export function selectLeastUsedKey(): string {
   const keys = loadKeysFromStorage();
@@ -159,7 +183,8 @@ export function selectBestPerformingKey(): string {
 // Token usage and quality tracking
 export { 
   trackTokenUsage,
-  trackResponseQuality
+  trackResponseQuality,
+  resetUsageCounters
 };
 
 // Perplexity API key features
