@@ -69,10 +69,12 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         handleSend={handleSend}
         handleKeyDown={handleKeyDown}
         disabled={isLoading}
+        isLoading={isLoading}  // Added the required isLoading prop
         onFileSelect={onFileSelect}
         isProcessingFiles={isProcessingFiles}
         attachedFiles={attachedFiles}
         onFileRemove={onFileRemove}
+        isOfflineMode={isOfflineMode}
       />
     </Card>
   );
