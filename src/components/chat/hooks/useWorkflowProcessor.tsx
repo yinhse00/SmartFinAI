@@ -10,6 +10,34 @@ import { StepResult, WorkflowProcessorProps } from './workflow/types';
 import { Message } from '../ChatMessage';
 import { grokService } from '@/services/grokService';
 
+// Define local interfaces with required properties
+interface LocalStep2Result {
+  completed: boolean;
+  context: string;
+  shouldContinue: boolean;
+  nextStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  listingRulesSearchNegative: boolean;
+  executionRequired?: boolean;
+  error?: Error;
+}
+
+interface LocalStep3Result {
+  completed: boolean;
+  context: string;
+  shouldContinue: boolean;
+  nextStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  takeoversCodeSearchNegative: boolean;
+  executionRequired?: boolean;
+  error?: Error;
+}
+
+interface LocalStep4Result {
+  completed: boolean;
+  context: string;
+  executionContext: string;
+  error?: Error;
+}
+
 export const useWorkflowProcessor = ({
   messages,
   setMessages,
@@ -106,7 +134,7 @@ export const useWorkflowProcessor = ({
 
       // Step 2: If Grok's analysis is related to Listing Rules
       // Conditionally run Step 2 based on query analysis
-      let step2Result = {
+      let step2Result: LocalStep2Result = {
         completed: false,
         context: '',
         shouldContinue: true,
@@ -118,7 +146,7 @@ export const useWorkflowProcessor = ({
         setCurrentStep('listingRules');
         setStepProgress('Checking listing rules for relevant information');
         
-        step2Result = await executeStep2(
+        const rawStep2Result = await executeStep2(
           { 
             query: processedQuery,
             initialContext: step1Result.context || '',
@@ -126,6 +154,13 @@ export const useWorkflowProcessor = ({
           },
           setStepProgress
         );
+        
+        // Ensure required properties exist
+        step2Result = {
+          ...rawStep2Result,
+          context: rawStep2Result.context || '',
+          error: rawStep2Result.error
+        };
         
         trackStepPerformance('listingRules', stepStartTime);
         stepStartTime = performance.now();
@@ -136,7 +171,7 @@ export const useWorkflowProcessor = ({
       }
 
       // Step 3: If Grok's analysis is related to Takeovers Code or Step 2 was negative
-      let step3Result = {
+      let step3Result: LocalStep3Result = {
         completed: false,
         context: '',
         shouldContinue: true,
@@ -148,7 +183,7 @@ export const useWorkflowProcessor = ({
         setCurrentStep('takeoversCode');
         setStepProgress('Analyzing takeovers code regulations');
         
-        step3Result = await executeStep3(
+        const rawStep3Result = await executeStep3(
           {
             query: processedQuery,
             initialContext: step1Result.context || '',
@@ -157,6 +192,13 @@ export const useWorkflowProcessor = ({
           },
           setStepProgress
         );
+        
+        // Ensure required properties exist
+        step3Result = {
+          ...rawStep3Result,
+          context: rawStep3Result.context || '',
+          error: rawStep3Result.error
+        };
         
         trackStepPerformance('takeoversCode', stepStartTime);
         stepStartTime = performance.now();
@@ -167,7 +209,7 @@ export const useWorkflowProcessor = ({
       }
 
       // Step 4: Execution planning - only if needed based on previous steps
-      let step4Result = {
+      let step4Result: LocalStep4Result = {
         completed: true,
         context: step3Result.context || step2Result.context || step1Result.context || '',
         executionContext: ''
@@ -179,7 +221,7 @@ export const useWorkflowProcessor = ({
         setCurrentStep('execution');
         setStepProgress('Creating execution plan for your query');
         
-        step4Result = await executeStep4(
+        const rawStep4Result = await executeStep4(
           {
             query: processedQuery,
             initialContext: step1Result.context || '',
@@ -189,6 +231,14 @@ export const useWorkflowProcessor = ({
           },
           setStepProgress
         );
+        
+        // Ensure required properties exist
+        step4Result = {
+          ...rawStep4Result,
+          context: rawStep4Result.context || '',
+          executionContext: rawStep4Result.executionContext || '',
+          error: rawStep4Result.error
+        };
         
         trackStepPerformance('execution', stepStartTime);
         stepStartTime = performance.now();

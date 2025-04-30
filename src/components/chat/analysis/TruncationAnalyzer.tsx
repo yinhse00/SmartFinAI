@@ -39,7 +39,10 @@ export const useTruncationAnalyzer = ({
             financialAnalysis: financialAnalysis.missingElements
           });
           const updatedMessages = [...messages];
-          updatedMessages[updatedMessages.length - 1].isTruncated = true;
+          updatedMessages[updatedMessages.length - 1] = {
+            ...updatedMessages[updatedMessages.length - 1],
+            isTruncated: true
+          };
           setMessages(updatedMessages);
 
           toast({

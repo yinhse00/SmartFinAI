@@ -138,8 +138,13 @@ const ChatInterface: React.FC = () => {
         handleSendWithFiles();
       }
     } else {
-      // Use the existing handleKeyDown function which is properly typed for textarea
-      handleKeyDown(e);
+      // Modified to handle textarea events
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (input.trim()) {
+          handleSend();
+        }
+      }
     }
   };
 

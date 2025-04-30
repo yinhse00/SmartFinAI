@@ -6,7 +6,15 @@ export interface Message {
   timestamp: Date;
   isLoading?: boolean;
   isError?: boolean;
-  metadata?: any; // Add support for metadata
+  metadata?: any;
   translatedContent?: string;
   isTranslating?: boolean;
+  references?: string[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  isTranslated?: boolean;
+  originalContent?: string;
 }
