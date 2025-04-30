@@ -69,7 +69,9 @@ const Chat = () => {
 
   return (
     <MainLayout>
-      <ChatInterface />
+      <div className="w-full">
+        <ChatInterface />
+      </div>
     </MainLayout>
   );
 };

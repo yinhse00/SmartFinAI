@@ -56,7 +56,7 @@ const ChatInterface: React.FC = () => {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", // Changed from "warning" to "destructive"
+        variant: "destructive",
         duration: 5000,
       });
     }
@@ -94,7 +94,7 @@ const ChatInterface: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 w-full max-w-full">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
