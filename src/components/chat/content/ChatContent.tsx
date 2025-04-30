@@ -26,7 +26,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
 }) => {
   return (
     <CardContent 
-      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
+      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-20rem)] md:max-h-[calc(100vh-15rem)] min-h-[450px] flex flex-col w-full"
     >
       <div className="sticky top-0 z-10 bg-background">
         {currentStep && stepProgress && (

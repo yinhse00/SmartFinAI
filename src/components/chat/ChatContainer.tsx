@@ -15,7 +15,7 @@ interface ChatContainerProps {
   input: string;
   setInput: (input: string) => void;
   handleSend: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void; // Updated type to match textarea
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
@@ -68,7 +68,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   };
   
   return (
-    <Card className="finance-card h-full flex flex-col">
+    <Card className="finance-card h-full flex flex-col w-full">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
