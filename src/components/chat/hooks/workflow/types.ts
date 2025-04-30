@@ -35,7 +35,7 @@ export interface Step1Result extends StepResult {
 }
 
 export interface Step2Result extends StepResult {
-  nextStep: WorkflowStep;
+  nextStep: 'takeoversCode' | 'response' | 'execution' | 'complete';
   query: string;
   listingRulesContext?: string;
   regulatoryContext?: string;
@@ -45,7 +45,7 @@ export interface Step2Result extends StepResult {
 }
 
 export interface Step3Result extends StepResult {
-  nextStep: WorkflowStep;
+  nextStep: 'execution' | 'response' | 'complete';
   query: string;
   takeoversCodeContext?: string;
   regulatoryContext?: string;
@@ -54,7 +54,7 @@ export interface Step3Result extends StepResult {
 }
 
 export interface Step4Result extends StepResult {
-  nextStep: WorkflowStep;
+  nextStep: 'response' | 'complete';
   query: string;
   executionContext?: string;
   regulatoryContext?: string;
