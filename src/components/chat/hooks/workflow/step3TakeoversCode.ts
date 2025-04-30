@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { WorkflowStep, Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -9,7 +9,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Check if match found and analyze
  * - Determine if execution guidance needed
  */
-export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void) => {
+export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
   setStepProgress('Searching Takeovers Code summary and index');
   
   try {
@@ -59,7 +59,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         // Step 3.2.1: If execution required, go to Step 4
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           takeoversCodeContext: enhancedContext,
           regulatoryContext: enhancedContext,
@@ -70,7 +70,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       // Step 3.2.2: Execution not required, go to Step 5
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         takeoversCodeContext: enhancedContext,
         regulatoryContext: enhancedContext,
@@ -93,7 +93,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         // Step 3.2.1: Execution required, go to Step 4
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           executionRequired: true
         };
@@ -102,7 +102,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       // Step 3.2.2: Execution not required, go to Step 5
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         takeoversCodeSearchNegative: true
       };
@@ -111,7 +111,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 3:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response',
       query: params.query,
       error
     };

@@ -102,7 +102,7 @@ export const executeStep1 = async (
     if (isListingRulesRelated) {
       return {
         shouldContinue: true,
-        nextStep: 'listingRules' as 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete',
+        nextStep: 'listingRules',
         query: queryText,
         isRegulatoryRelated,
         regulatoryContext,
@@ -115,7 +115,7 @@ export const executeStep1 = async (
     } else if (isTakeoversCodeRelated) {
       return {
         shouldContinue: true,
-        nextStep: 'takeoversCode' as 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete',
+        nextStep: 'takeoversCode',
         query: queryText,
         isRegulatoryRelated,
         regulatoryContext,
@@ -129,7 +129,7 @@ export const executeStep1 = async (
       // Not related to listing rules or takeovers code, go directly to response
       return {
         shouldContinue: isRegulatoryRelated,
-        nextStep: 'response' as 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete',
+        nextStep: 'response',
         query: queryText,
         isRegulatoryRelated,
         regulatoryContext,
@@ -143,7 +143,7 @@ export const executeStep1 = async (
     console.error('Error in step 1:', error);
     return { 
       shouldContinue: false, 
-      nextStep: 'response' as 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete', 
+      nextStep: 'response',
       query: queryText,
       isRegulatoryRelated: false,
       error

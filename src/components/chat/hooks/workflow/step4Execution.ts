@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { WorkflowStep, Step4Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -8,7 +8,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Check Documents Checklist, Working Plan, and Timetable
  * - Compile relevant execution information
  */
-export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void) => {
+export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step4Result> => {
   setStepProgress('Retrieving execution guidance documents');
   
   try {
@@ -106,7 +106,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     // Go to Step 5 with all context
     return {
       shouldContinue: true,
-      nextStep: 'response' as WorkflowStep,
+      nextStep: 'response',
       query: params.query,
       executionContext: combinedContext,
       regulatoryContext: combinedContext,
@@ -116,7 +116,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 4:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response',
       query: params.query,
       error
     };

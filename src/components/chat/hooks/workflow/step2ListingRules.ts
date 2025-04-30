@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { WorkflowStep, Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -9,7 +9,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Query related chapters if match found
  * - Check if also Takeovers Code related
  */
-export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void) => {
+export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
   setStepProgress('Searching Listing Rules summary and keyword index');
   
   try {
@@ -56,7 +56,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (takeoverRelated) {
         return {
           shouldContinue: true,
-          nextStep: 'takeoversCode' as WorkflowStep,
+          nextStep: 'takeoversCode',
           query: params.query,
           listingRulesContext: enhancedContext,
           takeoversCodeRelated: true
@@ -75,7 +75,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           listingRulesContext: enhancedContext,
           executionRequired: true
@@ -85,7 +85,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       // If execution not required, go directly to response
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         listingRulesContext: enhancedContext,
         regulatoryContext: enhancedContext,
@@ -106,7 +106,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           executionRequired: true
         };
@@ -114,7 +114,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         listingRulesSearchNegative: true
       };
@@ -123,7 +123,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     console.error('Error in step 2:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response',
       query: params.query,
       error
     };

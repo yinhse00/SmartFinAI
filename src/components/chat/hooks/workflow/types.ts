@@ -5,7 +5,7 @@ export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execu
 
 export interface StepResult {
   shouldContinue?: boolean;
-  nextStep?: 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  nextStep?: WorkflowStep;
   completed?: boolean;
   query?: string;
   error?: any;
@@ -23,7 +23,7 @@ export interface WorkflowProcessorProps {
 
 export interface Step1Result extends StepResult {
   shouldContinue: boolean;
-  nextStep: 'listingRules' | 'takeoversCode' | 'response' | 'execution' | 'complete';
+  nextStep: WorkflowStep;
   query: string;
   isRegulatoryRelated: boolean;
   regulatoryContext?: string;
@@ -35,7 +35,7 @@ export interface Step1Result extends StepResult {
 }
 
 export interface Step2Result extends StepResult {
-  nextStep: 'takeoversCode' | 'response' | 'execution' | 'complete';
+  nextStep: WorkflowStep;
   query: string;
   listingRulesContext?: string;
   regulatoryContext?: string;
@@ -45,7 +45,7 @@ export interface Step2Result extends StepResult {
 }
 
 export interface Step3Result extends StepResult {
-  nextStep: 'execution' | 'response' | 'complete';
+  nextStep: WorkflowStep;
   query: string;
   takeoversCodeContext?: string;
   regulatoryContext?: string;
@@ -54,7 +54,7 @@ export interface Step3Result extends StepResult {
 }
 
 export interface Step4Result extends StepResult {
-  nextStep: 'response' | 'complete';
+  nextStep: WorkflowStep;
   query: string;
   executionContext?: string;
   regulatoryContext?: string;

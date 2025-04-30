@@ -88,8 +88,7 @@ export const useWorkflowProcessor = ({
       }
       
       // Determine next step based on Step 1 result
-      let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete' = 
-        step1Result.nextStep as 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+      let nextStep: WorkflowStep = step1Result.nextStep;
       let currentParams = { ...step1Result };
       let stepResult: StepResult | undefined;
       
@@ -136,7 +135,7 @@ export const useWorkflowProcessor = ({
         }
         
         if (stepResult && stepResult.nextStep && nextStep !== 'complete') {
-          nextStep = stepResult.nextStep as 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+          nextStep = stepResult.nextStep;
           currentParams = { ...currentParams, ...stepResult };
         } else if (nextStep !== 'complete') {
           nextStep = 'response';
