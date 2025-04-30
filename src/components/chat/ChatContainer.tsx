@@ -15,7 +15,7 @@ interface ChatContainerProps {
   input: string;
   setInput: (input: string) => void;
   handleSend: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
