@@ -30,7 +30,7 @@ export const executeStep1 = async (
     if (containsChinese) {
       if (setStepProgress) setStepProgress('Translating query to English');
       
-      const { text } = await grokService.query({
+      const { text } = await grokService.generateResponse({
         prompt: `Translate the following Chinese text to English: ${queryText}`,
         maxTokens: 2000
       });
@@ -49,7 +49,7 @@ export const executeStep1 = async (
       
       for (const file of files) {
         try {
-          const extractedContent = await grokService.processFile(file);
+          const extractedContent = await grokService.processDocument(file);
           fileContents += `\nContent from file "${file.name}":\n${extractedContent}\n`;
         } catch (error) {
           console.error(`Error processing file ${file.name}:`, error);

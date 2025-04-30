@@ -76,7 +76,9 @@ export const useWorkflowProcessor = ({
             content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
             sender: 'bot',
             timestamp: new Date(),
-            metadata: responseResult.metadata
+            metadata: responseResult.metadata,
+            isTranslated: !!responseResult.translatedResponse,
+            originalContent: responseResult.originalResponse
           };
           
           setMessages([...updatedMessages, botMessage]);
@@ -119,7 +121,9 @@ export const useWorkflowProcessor = ({
               content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
               sender: 'bot',
               timestamp: new Date(),
-              metadata: stepResult.metadata
+              metadata: stepResult.metadata,
+              isTranslated: !!stepResult.translatedResponse,
+              originalContent: stepResult.originalResponse
             };
             
             setMessages([...updatedMessages, botMessage]);
