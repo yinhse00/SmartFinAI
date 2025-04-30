@@ -13,19 +13,19 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
   setStepProgress('Searching Takeovers Code summary and index');
   
   try {
-    // Step 3(a): Search Summary and Index for Takeovers Code
+    // Step 3.1: Search Summary and Index for Takeovers Code
     const response = await grokService.getRegulatoryContext(
       `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
     // Use utility function to safely extract text
     const takeoversCodeContext = safelyExtractText(response);
-    const reasoning = '';
     
-    // Step 3(b-c): Check if search was positive
+    // Step 3.1.1 & 3.1.2: Check if search was positive
     const searchPositive = takeoversCodeContext && takeoversCodeContext.trim() !== '';
     
     if (searchPositive) {
+      // Step 3.1.1: Found relevant information, retrieve detailed context
       setStepProgress('Found relevant Takeovers Code information');
       
       // Search in the codes on takeovers and mergers document
@@ -46,7 +46,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         enhancedContext = params.listingRulesContext + "\n\n--- Takeovers Code Context ---\n\n" + enhancedContext;
       }
       
-      // Step 3(e-f): Check if execution guidance is needed
+      // Step 3.2.1: Check if execution guidance is needed
       const executionRequired = 
         params.query.toLowerCase().includes('process') ||
         params.query.toLowerCase().includes('how to') ||
@@ -56,6 +56,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         params.query.toLowerCase().includes('timetable');
         
       if (executionRequired) {
+        // Step 3.2.1: If execution required, go to Step 4
         return {
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
@@ -66,6 +67,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         };
       }
       
+      // Step 3.2.2: Execution not required, go to Step 5
       return {
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
@@ -75,9 +77,10 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         executionRequired: false
       };
     } else {
-      // Step 3(g-h): Negative search - check if execution guidance is needed
+      // Step 3.1.2: Negative search - check if execution guidance is needed
       setStepProgress('No specific Takeovers Code found, checking if execution guidance is needed');
       
+      // Step 3.2: Check execution requirements
       const executionRequired = 
         params.query.toLowerCase().includes('process') ||
         params.query.toLowerCase().includes('how to') ||
@@ -87,6 +90,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         params.query.toLowerCase().includes('timetable');
         
       if (executionRequired) {
+        // Step 3.2.1: Execution required, go to Step 4
         return {
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
@@ -95,6 +99,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         };
       }
       
+      // Step 3.2.2: Execution not required, go to Step 5
       return {
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,

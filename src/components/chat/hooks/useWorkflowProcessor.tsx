@@ -12,14 +12,15 @@ import { executeStep4 } from './workflow/step4Execution';
 import { executeStep5 } from './workflow/step5Response';
 
 /**
- * Hook that implements the new structured workflow process
+ * Hook that implements the structured workflow process
  */
 export const useWorkflowProcessor = ({
   messages,
   setMessages,
   setLastQuery,
   isGrokApiKeySet,
-  setApiKeyDialogOpen
+  setApiKeyDialogOpen,
+  attachedFiles = []
 }: WorkflowProcessorProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
@@ -30,7 +31,7 @@ export const useWorkflowProcessor = ({
   const { retrieveRegulatoryContext } = useContextRetrieval();
 
   /**
-   * Main workflow execution that orchestrates all steps
+   * Main workflow execution that orchestrates all steps according to redesigned flow
    */
   const executeWorkflow = async (queryText: string) => {
     if (!queryText.trim()) return;
@@ -51,6 +52,7 @@ export const useWorkflowProcessor = ({
       setCurrentStep('initial');
       const step1Result = await executeStep1(
         queryText, 
+        attachedFiles.length > 0 ? attachedFiles : undefined,
         storeTranslation, 
         setStepProgress,
         retrieveRegulatoryContext
@@ -114,7 +116,8 @@ export const useWorkflowProcessor = ({
               id: Date.now().toString(),
               content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
               sender: 'bot',
-              timestamp: new Date()
+              timestamp: new Date(),
+              metadata: stepResult.metadata
             };
             
             setMessages([...updatedMessages, botMessage]);

@@ -12,6 +12,9 @@ import { responseOptimizer } from './modules/responseOptimizer';
  * Main service for generating expert responses
  */
 export const grokResponseGenerator = {
+  /**
+   * Generate a response based on the provided parameters
+   */
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
     try {
       console.group('Hong Kong Financial Expert Response Generation');
@@ -46,7 +49,7 @@ export const grokResponseGenerator = {
             ],
             model: "grok-3-mini-beta",
             temperature: 0.7,
-            max_tokens: 4000, // FIXED: Increase token limit for conversational queries
+            max_tokens: 4000, 
           };
           
           // Make API call with simpler configuration for conversational queries
@@ -175,4 +178,11 @@ export const grokResponseGenerator = {
       return errorHandler.createFallbackResponse(params.prompt, error);
     }
   },
+
+  /**
+   * Direct access to API call functionality for special use cases like vision
+   */
+  makeApiCall: (requestBody: any, apiKey?: string) => {
+    return responseGeneratorCore.makeApiCall(requestBody, apiKey || getGrokApiKey());
+  }
 };

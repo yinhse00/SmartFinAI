@@ -13,19 +13,19 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
   setStepProgress('Searching Listing Rules summary and keyword index');
   
   try {
-    // Step 2(a): Search Summary and Keyword Index for Listing Rules
+    // Step 2.1: Search Summary and Keyword Index for Listing Rules
     const response = await grokService.getRegulatoryContext(
       `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
     // Use utility function to safely extract text
     const listingRulesContext = safelyExtractText(response);
-    const reasoning = '';
     
-    // Step 2(b-c): Check if search was positive or negative
+    // Step 2.1.1 & 2.1.2: Check if search was positive or negative
     const searchPositive = listingRulesContext && listingRulesContext.trim() !== '';
     
     if (searchPositive) {
+      // Step 2.1.1: Search was positive, get chapter details
       setStepProgress('Found relevant Listing Rules, retrieving chapter details');
       
       // Search in related Chapter of Listing Rules
@@ -46,12 +46,13 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         }
       }
       
-      // Step 2(d): Check if also related to Takeovers Code
+      // Step 2.2.1: Check if also related to Takeovers Code
       const takeoverRelated = 
         enhancedContext.toLowerCase().includes('takeover') ||
         enhancedContext.toLowerCase().includes('general offer') ||
         enhancedContext.toLowerCase().includes('mandatory offer');
       
+      // Step 2.2.1: If related to Takeovers Code, go to Step 3
       if (takeoverRelated) {
         return {
           shouldContinue: true,
@@ -62,7 +63,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         };
       }
       
-      // Check if execution guidance is needed
+      // Step 2.2.2: Not related to Takeovers Code, check if execution guidance is needed
       const executionRequired = 
         params.query.toLowerCase().includes('process') ||
         params.query.toLowerCase().includes('how to') ||
@@ -81,6 +82,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         };
       }
       
+      // If execution not required, go directly to response
       return {
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
@@ -90,8 +92,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         executionRequired: false
       };
     } else {
-      // Negative search result - move to Step 4 or 5 depending on execution needs
-      setStepProgress('No specific Listing Rules found, checking if execution guidance is needed');
+      // Step 2.1.2: Negative search result - check execution needs or proceed to Step 5
+      setStepProgress('No specific Listing Rules found, checking next steps');
       
       const executionRequired = 
         params.query.toLowerCase().includes('process') ||

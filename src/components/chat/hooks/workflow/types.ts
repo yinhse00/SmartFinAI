@@ -18,6 +18,7 @@ export interface WorkflowProcessorProps {
   setLastQuery: React.Dispatch<React.SetStateAction<string>>;
   isGrokApiKeySet: boolean;
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  attachedFiles?: File[];
 }
 
 export interface Step1Result extends StepResult {
@@ -28,6 +29,8 @@ export interface Step1Result extends StepResult {
   reasoning?: string;
   isListingRulesRelated?: boolean;
   isTakeoversCodeRelated?: boolean;
+  originalQuery?: string;
+  fileContents?: string;
 }
 
 export interface Step2Result extends StepResult {
@@ -54,6 +57,11 @@ export interface Step4Result extends StepResult {
   query: string;
   executionContext?: string;
   regulatoryContext?: string;
+  executionResults?: {
+    documentsChecklist: string;
+    workingPlan: string;
+    timetable: string;
+  };
 }
 
 export interface Step5Result extends StepResult {
@@ -63,4 +71,5 @@ export interface Step5Result extends StepResult {
   translatedResponse?: string;
   requiresTranslation?: boolean;
   translationError?: any;
+  metadata?: any;
 }

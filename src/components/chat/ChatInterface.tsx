@@ -5,7 +5,6 @@ import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useToast } from '@/hooks/use-toast';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
-import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 
 const ChatInterface: React.FC = () => {
@@ -31,24 +30,21 @@ const ChatInterface: React.FC = () => {
     stepProgress,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch
+    handleContinueBatch,
+    // File attachment state
+    attachedFiles,
+    handleFileSelect,
+    clearAttachedFiles,
+    removeAttachedFile,
+    hasAttachedFiles
   } = useChatLogic();
 
   const { toast } = useToast();
   const { 
-    processFiles, 
     isProcessing, 
     isOfflineMode, 
     tryReconnect 
   } = useFileProcessing();
-  
-  const { 
-    attachedFiles, 
-    handleFileSelect, 
-    clearAttachedFiles, 
-    removeAttachedFile, 
-    hasAttachedFiles 
-  } = useFileAttachments();
 
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
@@ -56,41 +52,11 @@ const ChatInterface: React.FC = () => {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", // Changed from "warning" to "destructive"
+        variant: "destructive", 
         duration: 5000,
       });
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
-
-  // Modified send handler that processes files before sending the message
-  const handleSendWithFiles = async () => {
-    if (hasAttachedFiles) {
-      toast({
-        title: "Processing files",
-        description: `Processing ${attachedFiles.length} file(s) before sending your message...`,
-      });
-      
-      const processedResults = await processFiles(attachedFiles);
-      
-      // Format the extracted content to add to the input
-      if (processedResults.length > 0) {
-        const extractedContent = processedResults.map(result => result.content).join('\n\n');
-        
-        const separator = input ? '\n\n' : '';
-        const enrichedInput = input + separator + extractedContent;
-        
-        // Process the combined query
-        processQuery(enrichedInput);
-        
-        // Clear the files and input after sending
-        clearAttachedFiles();
-        setInput('');
-      }
-    } else {
-      // Normal send without files
-      handleSend();
-    }
-  };
 
   return (
     <>
@@ -107,16 +73,8 @@ const ChatInterface: React.FC = () => {
           isGrokApiKeySet={isGrokApiKeySet}
           input={input}
           setInput={setInput}
-          handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? 
-            (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSendWithFiles();
-              }
-            } : 
-            handleKeyDown
-          }
+          handleSend={handleSend}
+          handleKeyDown={handleKeyDown}
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
