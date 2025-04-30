@@ -99,28 +99,69 @@ export const processApiRequest = async (
       return data;
     } catch (proxyError) {
       console.warn("Proxy request failed:", proxyError);
-      // Only try direct requests if proxy specifically failed (not just unreachable)
-      if (proxyError instanceof Error && 
+      
+      // Check if this is a network error (connectivity or CORS issue)
+      const isNetworkError = proxyError instanceof Error && 
+          (proxyError.message.includes('Failed to fetch') || 
+           proxyError.message.includes('NetworkError') ||
+           proxyError.message.includes('CORS') ||
+           proxyError.message.includes('cross-origin') ||
+           proxyError.message.includes('fetch'));
+      
+      if (isNetworkError) {
+        console.error("Network error (possibly CORS-related) when contacting proxy:", proxyError);
+        // Try direct calls as a last resort, but warn that they're likely to fail too
+        console.warn("Attempting direct calls as fallback, but these may also fail due to CORS restrictions");
+      } else if (proxyError instanceof Error && 
           (proxyError.message.includes("404") || 
            proxyError.message.includes("not found") ||
            proxyError.message.includes("invalid endpoint"))) {
         console.log("Proxy endpoint not configured properly, attempting direct calls");
       } else {
-        console.error("Proxy error indicates API may be unreachable:", proxyError);
-        throw proxyError; // Don't try direct calls if proxy failed for other reasons
+        // For other proxy errors, we might still try direct calls
+        console.error("Proxy error:", proxyError);
+        console.log("Attempting direct calls as fallback");
+      }
+      
+      // Track proxy failure for diagnostics
+      try {
+        localStorage.setItem('lastProxyError', JSON.stringify({
+          timestamp: Date.now(),
+          message: proxyError instanceof Error ? proxyError.message : String(proxyError),
+          type: proxyError instanceof Error ? proxyError.name : typeof proxyError
+        }));
+      } catch (e) {
+        // Ignore storage errors
       }
     }
     
-    // Only reach here if proxy is not configured
-    // Attempt direct API calls with retries
-    const data = await executeWithRetry(async () => {
-      return await attemptDirectRequest(requestBody, apiKey);
-    });
-    
-    console.log("Financial expert API response received successfully via direct call");
-    return data;
+    // Only reach here if proxy failed - attempt direct API calls with retries
+    try {
+      const data = await executeWithRetry(async () => {
+        return await attemptDirectRequest(requestBody, apiKey);
+      }, 3);
+      
+      console.log("Financial expert API response received successfully via direct call");
+      return data;
+    } catch (directError) {
+      console.error("Direct API call failed:", directError);
+      
+      // Enhance error message for CORS-related issues
+      if (directError instanceof Error && 
+          (directError.message.includes('Failed to fetch') || 
+           directError.message.includes('CORS') ||
+           directError.message.includes('cross-origin'))) {
+        throw new Error(
+          "Cannot access API due to browser security restrictions (CORS). " +
+          "This is a common issue when calling APIs directly from a browser. " +
+          "Please ensure you have a properly configured server-side proxy."
+        );
+      }
+      
+      throw directError;
+    }
   } catch (error) {
-    console.error("Financial expert API call failed:", error);
+    console.error("All API call attempts failed:", error);
     throw error;
   }
 };
