@@ -22,6 +22,14 @@ export const handleChatCompletions = async (requestBody: any, providedApiKey?: s
   } catch (error) {
     console.error("Financial expert API call failed:", error);
     
+    // If the error is related to CORS, provide a more specific message
+    if (error instanceof TypeError && 
+        (error.message.includes('NetworkError') || 
+         error.message.includes('Failed to fetch') || 
+         error.message.includes('Network request failed'))) {
+      console.error("This appears to be a CORS issue - all requests must go through the proxy");
+    }
+    
     // Find user message to extract prompt text
     const userMessage = requestBody.messages.find((msg: any) => msg.role === 'user');
     

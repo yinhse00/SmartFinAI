@@ -10,13 +10,15 @@ export {
   setGrokApiKey,
   hasGrokApiKey,
   selectLeastUsedKey,
-  selectBestPerformingKey
+  selectBestPerformingKey,
+  rotateApiKey
 } from './apiKey/grokKeyManager';
 
 // Re-export tracking functions from keyUsageTracker with improved usage distribution
 export {
   trackTokenUsage,
-  trackResponseQuality
+  trackResponseQuality,
+  resetUsageCounters
 } from './apiKey/keyUsageTracker';
 
 // Re-export Perplexity-related functions

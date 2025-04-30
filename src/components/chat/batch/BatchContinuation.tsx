@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, ChevronDown } from 'lucide-react';
+import { RefreshCw, ChevronDown, KeyRound } from 'lucide-react';
 
 interface BatchContinuationProps {
   isBatching: boolean;
@@ -9,6 +9,7 @@ interface BatchContinuationProps {
   currentBatchNumber: number;
   handleContinueBatch: () => void;
   lastInputWasChinese: boolean;
+  isApiKeyRotating?: boolean; // New prop to show if API key rotation is active
 }
 
 const BatchContinuation: React.FC<BatchContinuationProps> = ({
@@ -16,7 +17,8 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
   autoBatch,
   currentBatchNumber,
   handleContinueBatch,
-  lastInputWasChinese
+  lastInputWasChinese,
+  isApiKeyRotating = true // Default to true for API key rotation status
 }) => {
   if (!isBatching || autoBatch) {
     return null;
@@ -44,10 +46,11 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
         }
         <ChevronDown size={14} className="ml-1" />
       </Button>
-      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+      <div className="text-xs text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+        {isApiKeyRotating && <KeyRound size={10} className="animate-pulse" />}
         {lastInputWasChinese 
-          ? `优化中: 使用API密钥轮换以提高响应速度` 
-          : `Optimized: Using API key rotation for faster response`
+          ? `优化中: 使用API密钥轮换以避免CORS问题和提高响应速度` 
+          : `Optimized: Using API key rotation to avoid CORS issues and improve response speed`
         }
       </div>
     </div>

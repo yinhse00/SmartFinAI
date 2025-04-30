@@ -3,7 +3,7 @@
  * Core API request processing logic
  */
 import { getGrokApiKey, selectLeastUsedKey, selectBestPerformingKey } from '../../../apiKeyService';
-import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability } from './endpointManager';
+import { attemptProxyRequest, attemptFallbackProxyRequest, checkApiAvailability } from './endpointManager';
 import { executeWithRetry } from './retryHandler';
 import { isRetryAttempt } from './requestHelper';
 import { prepareRequestParameters } from './queryParameterBuilder';
@@ -39,7 +39,7 @@ export const processApiRequest = async (
   // First check API availability to fail fast
   const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
   if (!isApiAvailable) {
-    console.error("Grok API is unreachable - all endpoints appear to be down");
+    console.error("Grok API is unreachable - proxy appears to be down");
     throw new Error("Grok API is unreachable");
   }
   
@@ -59,25 +59,25 @@ export const processApiRequest = async (
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
   
   try {
-    // First try using the local proxy if available
+    // Make the primary API call through the proxy
     try {
-      const data = await attemptProxyRequest(requestBody, apiKey);
-      console.log("Financial expert API response received successfully via proxy");
+      const data = await executeWithRetry(async () => {
+        return await attemptProxyRequest(requestBody, apiKey);
+      });
+      
+      console.log("Financial expert API response received successfully");
       return data;
-    } catch (proxyError) {
-      console.warn("Proxy request failed:", proxyError);
-      // Continue with direct requests
+    } catch (primaryError) {
+      console.warn("Primary proxy request failed:", primaryError);
+      // Try fallback proxy with simplified parameters
+      console.log("Attempting fallback proxy request...");
+      
+      const data = await attemptFallbackProxyRequest(requestBody, apiKey);
+      console.log("Fallback proxy request successful");
+      return data;
     }
-    
-    // Attempt direct API calls with retries
-    const data = await executeWithRetry(async () => {
-      return await attemptDirectRequest(requestBody, apiKey);
-    });
-    
-    console.log("Financial expert API response received successfully via direct call");
-    return data;
   } catch (error) {
-    console.error("Financial expert API call failed:", error);
+    console.error("All API call attempts failed:", error);
     throw error;
   }
 };

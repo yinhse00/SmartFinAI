@@ -2,9 +2,10 @@
 import { useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { tokenManagementService } from '@/services/response/modules/tokenManagementService';
+import { rotateApiKey } from '@/services/apiKeyService';
 
 /**
- * Enhanced hook to manage batch/multi-part response functionality
+ * Enhanced hook to manage batch/multi-part response functionality with API key rotation
  */
 export const useBatchHandling = () => {
   const { toast } = useToast();
@@ -12,6 +13,7 @@ export const useBatchHandling = () => {
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
   const [autoBatch, setAutoBatch] = useState(true);
+  const [isApiKeyRotating, setIsApiKeyRotating] = useState(false);
   const MAX_AUTO_BATCHES = 8; // Increased from 5 for more comprehensive responses
   
   const startBatching = (prompt: string, autoBatchMode = true) => {
@@ -24,21 +26,32 @@ export const useBatchHandling = () => {
   const handleBatchContinuation = async (callback: (query: string, options: any) => Promise<void>) => {
     if (batchingPrompt) {
       batchNumber.current += 1;
+      
+      // Start API key rotation for batch continuation to avoid CORS issues
+      setIsApiKeyRotating(true);
+      const rotatedKey = rotateApiKey(); // This will trigger the rotation
+      
       // Add continuation marker to help the API understand this is continuing a previous response
       const continuationPrompt = `${batchingPrompt} [CONTINUATION_PART_${batchNumber.current}]`;
       
       // Let the user know we're fetching the next batch
       toast({
         title: `Fetching part ${batchNumber.current}`,
-        description: "Using API key rotation for optimal performance...",
+        description: "Using API key rotation to avoid CORS issues and improve performance...",
         duration: 3000
       });
       
-      await callback(continuationPrompt, { 
-        isBatchContinuation: true, 
-        batchNumber: batchNumber.current, 
-        autoBatch 
-      });
+      try {
+        await callback(continuationPrompt, { 
+          isBatchContinuation: true, 
+          batchNumber: batchNumber.current, 
+          autoBatch,
+          rotatedApiKey: rotatedKey // Pass the rotated key to use for this continuation
+        });
+      } finally {
+        // Always stop rotation animation when done
+        setIsApiKeyRotating(false);
+      }
     }
   };
   
@@ -78,6 +91,7 @@ export const useBatchHandling = () => {
     isBatching,
     currentBatchNumber: batchNumber.current,
     autoBatch,
+    isApiKeyRotating,
     startBatching,
     handleBatchContinuation,
     handleBatchResult,
