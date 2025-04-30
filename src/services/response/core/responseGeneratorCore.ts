@@ -65,7 +65,7 @@ export const responseGeneratorCore = {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-mini-beta",
+        model: "grok-3-beta",
         temperature: 0.2,
         max_tokens: isDefinitionQuery ? 3000 : 1500
       };
@@ -81,7 +81,7 @@ export const responseGeneratorCore = {
           messages: [
             { role: 'user', content: `Briefly summarize: ${prompt.substring(0, 50)}` }
           ],
-          model: "grok-3-mini-beta",
+          model: "grok-3-beta",
           temperature: 0.1,
           max_tokens: 300
         };
