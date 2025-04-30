@@ -1,10 +1,8 @@
-
 import React from 'react';
 import { CardContent } from '@/components/ui/card';
 import ChatHistory from '../ChatHistory';
 import { Message } from '../ChatMessage';
 import WorkflowIndicator from '../workflow/WorkflowIndicator';
-
 interface ChatContentProps {
   messages: Message[];
   isLoading: boolean;
@@ -14,7 +12,6 @@ interface ChatContentProps {
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
 }
-
 const ChatContent: React.FC<ChatContentProps> = ({
   messages,
   isLoading,
@@ -24,23 +21,11 @@ const ChatContent: React.FC<ChatContentProps> = ({
   currentStep,
   stepProgress
 }) => {
-  return (
-    <CardContent 
-      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
-    >
+  return <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col bg-slate-50">
       <div className="sticky top-0 z-10 bg-background">
-        {currentStep && stepProgress && (
-          <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />
-        )}
+        {currentStep && stepProgress && <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />}
       </div>
-      <ChatHistory 
-        messages={messages} 
-        isLoading={isLoading} 
-        onRetry={onRetry}
-        translatingMessageIds={translatingMessageIds}
-      />
-    </CardContent>
-  );
+      <ChatHistory messages={messages} isLoading={isLoading} onRetry={onRetry} translatingMessageIds={translatingMessageIds} />
+    </CardContent>;
 };
-
 export default ChatContent;
