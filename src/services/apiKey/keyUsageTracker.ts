@@ -1,156 +1,141 @@
-
 /**
- * Tracks API key usage statistics and performance
+ * Tracks usage metrics for Grok API keys (tokens, truncation, success, recency).
+ * Enhanced with advanced load balancing metrics to prevent overloading.
  */
 
-type KeyUsageData = {
-  [key: string]: {
-    useCount: number;       // Number of times the key was used
-    tokenCount: number;     // Total tokens used
-    successCount: number;   // Number of successful responses
-    failureCount: number;   // Number of failures or truncations
-    qualityScore: number;   // Average quality score (1-10)
-    lastUsed: number;       // Timestamp of last use
-    truncationCount: number; // Number of truncated responses
+export interface ApiKeyUsage {
+  key: string;
+  tokensUsed: number;
+  lastUsed: number;
+  truncationCount: number;
+  successCount: number;
+  requestCount: number;
+  lastHourRequests: number;
+}
+
+const keyUsageMap = new Map<string, ApiKeyUsage>();
+let lastTruncatedKey = '';
+
+// Track hourly request rates to prevent any single key from being overloaded
+const HOUR_IN_MS = 60 * 60 * 1000;
+setInterval(() => {
+  // Reset hourly counters
+  for (const usage of keyUsageMap.values()) {
+    usage.lastHourRequests = 0;
+  }
+  console.log('Reset hourly API key usage counters');
+}, HOUR_IN_MS);
+
+export function trackTokenUsage(key: string, tokens: number): void {
+  if (!key || typeof tokens !== 'number') return;
+  const usage = keyUsageMap.get(key) || {
+    key,
+    tokensUsed: 0,
+    lastUsed: Date.now(),
+    truncationCount: 0,
+    successCount: 0,
+    requestCount: 0,
+    lastHourRequests: 0
   };
-};
+  usage.tokensUsed += tokens;
+  usage.lastUsed = Date.now();
+  usage.requestCount++;
+  usage.lastHourRequests++;
+  keyUsageMap.set(key, usage);
+}
 
-// In-memory store for key usage metrics
-let keyUsageData: KeyUsageData = {};
-let lastTruncatedKey: string | null = null;
+export function trackResponseQuality(key: string, wasTruncated: boolean): void {
+  if (!key) return;
+  const usage = keyUsageMap.get(key) || {
+    key,
+    tokensUsed: 0,
+    lastUsed: Date.now(),
+    truncationCount: 0,
+    successCount: 0,
+    requestCount: 0,
+    lastHourRequests: 0
+  };
 
-// Track token usage for an API key
-export function trackTokenUsage(apiKey: string, tokens: number, wasSuccessful: boolean = true, wasTruncated: boolean = false): void {
-  if (!apiKey || !apiKey.startsWith('xai-')) return; // Don't track invalid keys
-  
-  // Initialize data for this key if not exists
-  if (!keyUsageData[apiKey]) {
-    keyUsageData[apiKey] = {
-      useCount: 0,
-      tokenCount: 0,
-      successCount: 0,
-      failureCount: 0,
-      qualityScore: 5, // Default middle score
-      lastUsed: Date.now(),
-      truncationCount: 0
-    };
-  }
-  
-  // Update metrics
-  keyUsageData[apiKey].useCount++;
-  keyUsageData[apiKey].tokenCount += tokens;
-  keyUsageData[apiKey].lastUsed = Date.now();
-  
-  if (wasSuccessful) {
-    keyUsageData[apiKey].successCount++;
-  } else {
-    keyUsageData[apiKey].failureCount++;
-  }
-  
   if (wasTruncated) {
-    keyUsageData[apiKey].truncationCount++;
-    lastTruncatedKey = apiKey; // Remember this key had truncation
+    usage.truncationCount++;
+    lastTruncatedKey = key;
+  } else {
+    usage.successCount++;
   }
+
+  usage.lastUsed = Date.now();
+  keyUsageMap.set(key, usage);
 }
 
-// Track response quality (1-10 scale)
-export function trackResponseQuality(apiKey: string, qualityScore: number): void {
-  if (!apiKey || !apiKey.startsWith('xai-') || qualityScore < 1 || qualityScore > 10) return;
+/**
+ * Returns the key with the lowest token usage to balance load
+ */
+export function getLeastUsedKey(keys: string[]): string | undefined {
+  if (!keys.length) return undefined;
   
-  // Initialize if needed
-  if (!keyUsageData[apiKey]) {
-    keyUsageData[apiKey] = {
-      useCount: 0,
-      tokenCount: 0,
-      successCount: 0,
-      failureCount: 0,
-      qualityScore: qualityScore,
-      lastUsed: Date.now(),
-      truncationCount: 0
-    };
-    return;
+  // First prioritize keys with low hourly usage to prevent overloading
+  const hourlyUsageOrder = [...keyUsageMap.values()]
+    .filter(usage => keys.includes(usage.key))
+    .sort((a, b) => a.lastHourRequests - b.lastHourRequests);
+  
+  // If we have hourly usage data, prioritize keys with fewer recent requests
+  if (hourlyUsageOrder.length > 0 && hourlyUsageOrder[0].lastHourRequests < 10) {
+    return hourlyUsageOrder[0].key;
   }
   
-  // Weighted average (30% new score, 70% existing)
-  const currentScore = keyUsageData[apiKey].qualityScore;
-  keyUsageData[apiKey].qualityScore = (currentScore * 0.7) + (qualityScore * 0.3);
+  // Otherwise fall back to total token usage as the balancing metric
+  let least: ApiKeyUsage | null = null;
+  for (const key of keys) {
+    const usage = keyUsageMap.get(key);
+    if (!usage) return key; // If no usage data, this key is fresh
+    if (!least || usage.tokensUsed < least.tokensUsed) {
+      least = usage;
+    }
+  }
+  return least?.key || keys[0];
 }
 
-// Get least used key (considering recent usage and load)
-export function getLeastUsedKey(keys: string[]): string | null {
-  if (!keys || keys.length === 0) return null;
-  if (keys.length === 1) return keys[0];
+/**
+ * Returns the key with the best performance metrics (success rate, token efficiency)
+ */
+export function getBestPerformingKey(keys: string[]): string | undefined {
+  if (!keys.length) return undefined;
   
-  // Simple algorithm: find key with lowest useCount
-  return keys.reduce((leastUsedKey, currentKey) => {
-    // If we have no data for this key, it's probably unused
-    if (!keyUsageData[currentKey]) return currentKey;
+  // Factor in both success rate and recent load for optimal selection
+  let bestKey = null;
+  let bestScore = -1;
+
+  for (const key of keys) {
+    const usage = keyUsageMap.get(key);
+    if (!usage) return key; // If no usage data, this key is fresh
     
-    // If we have no data for least used key, current key becomes least used
-    if (!keyUsageData[leastUsedKey]) return leastUsedKey;
+    const totalResponses = usage.successCount + usage.truncationCount;
+    if (totalResponses === 0) continue;
     
-    // Compare use counts
-    return keyUsageData[currentKey].useCount < keyUsageData[leastUsedKey].useCount
-      ? currentKey
-      : leastUsedKey;
-  }, keys[0]);
+    // Calculate success rate
+    const successRate = usage.successCount / totalResponses;
+    
+    // Calculate token efficiency (lower is better)
+    const tokenFactor = usage.tokensUsed > 0 ? 1 - Math.min(1, Math.log10(usage.tokensUsed) / 6) : 1;
+    
+    // Factor in recent load (lower is better)
+    const loadFactor = 1 - Math.min(1, usage.lastHourRequests / 20);
+    
+    // Combined score with weights
+    const score = (successRate * 0.5) + (tokenFactor * 0.3) + (loadFactor * 0.2);
+
+    if (bestScore < 0 || score > bestScore) {
+      bestScore = score;
+      bestKey = key;
+    }
+  }
+  return bestKey || keys[0];
 }
 
-// Get highest performing key based on quality
-export function getBestPerformingKey(keys: string[]): string | null {
-  if (!keys || keys.length === 0) return null;
-  if (keys.length === 1) return keys[0];
-  
-  // Find highest quality score
-  return keys.reduce((bestKey, currentKey) => {
-    // If we have no data, assume average quality (5)
-    const currentQuality = keyUsageData[currentKey]?.qualityScore || 5;
-    const bestQuality = keyUsageData[bestKey]?.qualityScore || 5;
-    
-    // Prefer key with higher quality score
-    return currentQuality > bestQuality ? currentKey : bestKey;
-  }, keys[0]);
-}
-
-// Get the key that had truncation most recently
-export function getLastTruncatedKey(): string | null {
+export function getLastTruncatedKey(): string {
   return lastTruncatedKey;
 }
 
-// Clear usage data
 export function clearUsage(): void {
-  keyUsageData = {};
-  lastTruncatedKey = null;
+  keyUsageMap.clear();
 }
-
-// Reset usage counters
-export const resetUsageCounters = () => {
-  requestCount = 0;
-  tokenCount = 0;
-  lastResetTime = Date.now();
-  console.log('API key usage counters reset');
-};
-
-// Track a new request
-export const trackRequest = (tokens = 0) => {
-  requestCount++;
-  tokenCount += tokens;
-  
-  // Auto-reset counters after an hour
-  if (Date.now() - lastResetTime > 3600000) {
-    resetUsageCounters();
-  }
-  
-  return { requestCount, tokenCount };
-};
-
-// Check if we're approaching rate limits
-export const shouldRotateKey = () => {
-  // Rotate if we've made more than 50 requests or used more than 100k tokens in the last hour
-  return requestCount > 50 || tokenCount > 100000;
-};
-
-// Track API key usage to avoid rate limits
-let requestCount = 0;
-let tokenCount = 0;
-let lastResetTime = Date.now();

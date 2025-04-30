@@ -1,4 +1,3 @@
-
 /**
  * Handles all localStorage interactions for Grok/perplexity API keys.
  * Enhanced security with proper validation and error handling
@@ -68,22 +67,6 @@ export function setLegacySingleKey(key: string): void {
     localStorage.setItem(LEGACY_SINGLE_KEY_BACKUP, key);
   } catch (error) {
     console.error('Failed to set API key in localStorage:', error);
-  }
-}
-
-// Check if valid API key is available
-export function hasGrokApiKey(): boolean {
-  try {
-    const keys = loadKeysFromStorage();
-    const isValid = keys.some(key => typeof key === 'string' && key.startsWith('xai-') && key.length >= 20);
-    
-    // Log verification for debugging
-    console.log(`API key validation: ${isValid ? 'Valid key found' : 'No valid keys found'}`);
-    
-    return isValid;
-  } catch (error) {
-    console.error('Error checking for API key:', error);
-    return false;
   }
 }
 

@@ -18,9 +18,8 @@ export const useQueryCore = (
     const userMessage: Message = {
       id: Date.now().toString(),
       content: queryText,
-      role: 'user',
       sender: 'user',
-      timestamp: Date.now(),
+      timestamp: new Date(),
     };
     
     return [...messages, userMessage];
@@ -34,9 +33,8 @@ export const useQueryCore = (
     const fallbackMessage: Message = {
       id: Date.now().toString(),
       content: "I'm sorry, something went wrong. Please try again in a moment.",
-      role: 'assistant',
       sender: 'bot',
-      timestamp: Date.now(),
+      timestamp: new Date(),
       isError: true
     };
     

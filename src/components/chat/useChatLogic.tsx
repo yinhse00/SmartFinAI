@@ -1,132 +1,131 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
-import { useToast } from '@/hooks/use-toast';
+import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
-import { useQueryExecution } from './hooks/useQueryExecution';
-import { useRetryHandler } from './hooks/useRetryHandler';
-import { useLanguageDetection } from './hooks/useLanguageDetection';
+import { useInputState } from './hooks/useInputState';
+import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { useBatchHandling } from './hooks/useBatchHandling';
-import { Message } from './ChatMessage';
+import { useLanguageState } from './hooks/useLanguageState';
+import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
 
+/**
+ * Main hook that orchestrates chat functionality with the new structured workflow
+ */
 export const useChatLogic = () => {
-  const { toast } = useToast();
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState('');
-  const [lastQuery, setLastQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [processingStage, setProcessingStage] = useState<'preparing' | 'processing' | 'finalizing' | 'reviewing'>('preparing');
+  // Message state management
+  const {
+    messages,
+    setMessages,
+    clearConversationMemory
+  } = useMessageState();
   
-  const { 
-    grokApiKeyInput, 
-    setGrokApiKeyInput, 
-    isGrokApiKeySet, 
-    apiKeyDialogOpen, 
-    setApiKeyDialogOpen, 
-    handleSaveApiKeys 
+  // API key management
+  const {
+    grokApiKeyInput,
+    setGrokApiKeyInput,
+    isGrokApiKeySet,
+    apiKeyDialogOpen,
+    setApiKeyDialogOpen,
+    handleSaveApiKeys
   } = useApiKeyState();
   
-  const { 
-    retryLastQuery, 
-    setProcessQueryFn, 
-    setLastContext,
-    lastContext
-  } = useRetryHandler(lastQuery, setInput);
+  // Input state management
+  const { input, setInput, lastQuery, setLastQuery } = useInputState();
   
-  const { 
-    lastUserMessageIsChinese 
-  } = useLanguageDetection(messages, input);
+  // Reference documents
+  const { data: referenceDocuments = [] } = useReferenceDocuments();
   
+  // Language state management
+  const { lastInputWasChinese, checkIsChineseInput } = useLanguageState();
+  
+  // Batch handling
   const {
     isBatching,
     currentBatchNumber,
     autoBatch,
-    isApiKeyRotating,
-    startBatching,
-    handleBatchContinuation,
+    handleBatchContinuation: continueBatch,
     handleBatchResult,
-    setBatchingPrompt,
-    batchingPrompt
+    startBatching
   } = useBatchHandling();
-  
-  const { executeQuery } = useQueryExecution(
+
+  // New workflow processor implementing the structured steps
+  const {
+    isLoading,
+    currentStep,
+    stepProgress,
+    executeWorkflow
+  } = useWorkflowProcessor({
     messages,
     setMessages,
     setLastQuery,
-    setInput,
-    retryLastQuery,
     isGrokApiKeySet,
-    setApiKeyDialogOpen,
-    setIsLoading,
-    setProcessingStage
-  );
+    setApiKeyDialogOpen
+  });
+
+  // Handle sending messages
+  const handleSend = () => {
+    checkIsChineseInput(input);
+    executeWorkflow(input);
+    setInput('');
+  };
   
-  // Main query processing function - define before using in useEffect
-  const processQuery = useCallback(async (
-    queryText: string,
-    batchInfo?: { batchNumber: number, isContinuing: boolean },
-    onBatchTruncated?: (isTruncated: boolean) => void
-  ) => {
-    setIsLoading(true);
-    
-    try {
-      await executeQuery(queryText, batchInfo, onBatchTruncated);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [executeQuery, setIsLoading]);
-  
-  // Store the processQuery function in the retry handler
-  useEffect(() => {
-    setProcessQueryFn(processQuery);
-  }, [processQuery, setProcessQueryFn]);
-  
-  // Clear conversation history
-  const clearConversationMemory = useCallback(() => {
-    setMessages([]);
-    toast({
-      title: "Conversation cleared",
-      description: "The chat history has been cleared.",
-    });
-  }, [toast]);
-  
-  // Generic event handler for sending messages
-  const handleSend = useCallback(() => {
-    processQuery(input);
-  }, [input, processQuery]);
-  
-  // Handle keydown events for sending messages
-  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
+  // Update the type to use HTMLTextAreaElement instead of HTMLInputElement
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
       handleSend();
     }
   };
   
-  // Add isApiKeyRotating to the returned object
+  // Handle batch continuation
+  const handleContinueBatch = async () => {
+    // Create a Promise-returning function that wraps executeWorkflow
+    await continueBatch(async (query) => {
+      checkIsChineseInput(query);
+      await executeWorkflow(query);
+    });
+  };
+  
+  // Handle retrying queries
+  const retryLastQuery = () => {
+    if (lastQuery) {
+      executeWorkflow(`${lastQuery} [RETRY_ATTEMPT]`);
+    }
+  };
+
   return {
+    // Message state
     messages,
     setMessages,
     clearConversationMemory,
+
+    // API key state
     grokApiKeyInput,
     setGrokApiKeyInput,
     isGrokApiKeySet,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
+
+    // Input state
     input,
     setInput,
     lastQuery,
+
+    // Query processing
     isLoading,
     handleSend,
     handleKeyDown,
-    processQuery,
+    processQuery: executeWorkflow,  // Renamed for backward compatibility
     retryLastQuery,
-    currentStep: 'initial',
-    stepProgress: 'Preparing your request',
+    currentStep,
+    stepProgress,
+
+    // Batch handling
     isBatching,
     currentBatchNumber,
-    handleContinueBatch: () => handleBatchContinuation(processQuery),
-    isApiKeyRotating,
-    lastInputWasChinese: lastUserMessageIsChinese
+    handleContinueBatch,
+    autoBatch,
+    
+    // Language detection
+    lastInputWasChinese
   };
 };

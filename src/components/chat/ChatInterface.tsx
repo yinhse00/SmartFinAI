@@ -31,8 +31,7 @@ const ChatInterface: React.FC = () => {
     stepProgress,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch,
-    isApiKeyRotating // Get the API key rotation status
+    handleContinueBatch
   } = useChatLogic();
 
   const { toast } = useToast();
@@ -108,7 +107,6 @@ const ChatInterface: React.FC = () => {
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
-          isApiKeyRotating={isApiKeyRotating} // Pass API key rotation status
         />
         
         <ChatContainer
@@ -126,12 +124,8 @@ const ChatInterface: React.FC = () => {
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
-          currentStep={currentStep as 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete'}
+          currentStep={currentStep}
           stepProgress={stepProgress}
-          isApiKeyRotating={isApiKeyRotating} // Pass API key rotation status
-          isBatching={isBatching}
-          currentBatchNumber={currentBatchNumber}
-          handleContinueBatch={handleContinueBatch}
         />
       </div>
       

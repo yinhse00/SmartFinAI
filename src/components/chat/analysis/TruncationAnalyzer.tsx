@@ -26,7 +26,7 @@ export const useTruncationAnalyzer = ({
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (
-        (lastMessage.role === 'assistant' || lastMessage.sender === 'bot') &&
+        lastMessage.sender === 'bot' &&
         lastMessage.content &&
         !lastMessage.isTruncated
       ) {

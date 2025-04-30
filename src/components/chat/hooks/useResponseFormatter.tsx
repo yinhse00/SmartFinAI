@@ -65,9 +65,8 @@ export const useResponseFormatter = () => {
     const botMessage: Message = {
       id: (Date.now() + 1).toString(),
       content: content,
-      role: 'assistant',
       sender: 'bot',
-      timestamp: Date.now(),
+      timestamp: new Date(),
       references: references,
       isUsingFallback: isUsingFallback,
       reasoning: reasoning,

@@ -2,46 +2,43 @@
 import { useMemo } from 'react';
 import { Message } from '../ChatMessage';
 
+interface LanguageDetectionResult {
+  containsChinese: boolean;
+  lastUserMessageIsChinese: boolean;
+  getPlaceholder: () => string;
+}
+
 /**
- * Hook to detect language context in messages
+ * Hook to detect language usage in the chat interface
  */
 export const useLanguageDetection = (
   messages: Message[],
-  currentInput: string
-) => {
-  // Check if the last user message was in Chinese
-  const lastUserMessageIsChinese = useMemo(() => {
-    // First check current input
-    if (currentInput && hasChineseCharacters(currentInput)) {
-      return true;
-    }
+  input: string
+): LanguageDetectionResult => {
+  return useMemo(() => {
+    // Check if any Chinese text exists in input or messages
+    const containsChinese = Boolean(
+      input.match(/[\u4e00-\u9fa5]/g) || 
+      messages.some(m => m.content && m.content.match(/[\u4e00-\u9fa5]/g))
+    );
     
-    // Then check last user message
-    const userMessages = messages.filter(m => m.role === 'user');
-    if (userMessages.length > 0) {
-      const lastUserMessage = userMessages[userMessages.length - 1];
-      return hasChineseCharacters(lastUserMessage.content);
-    }
+    // Get most recent user message language for UI labels
+    const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
+    const lastUserMessageIsChinese = Boolean(
+      lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content)
+    );
     
-    return false;
-  }, [messages, currentInput]);
-  
-  // Get appropriate placeholder text based on language
-  const getPlaceholder = () => {
-    if (lastUserMessageIsChinese) {
-      return '请输入您的问题，我们将为您提供专业的金融监管咨询...';
-    }
-    return 'Enter your question about financial regulations...';
-  };
-  
-  // Helper function to detect Chinese characters
-  function hasChineseCharacters(text: string): boolean {
-    // Unicode ranges for Chinese characters
-    return /[\u4e00-\u9fff]/.test(text);
-  }
+    // Helper to get the appropriate placeholder text based on language
+    const getPlaceholder = () => {
+      return lastUserMessageIsChinese 
+        ? "输入您的查询..." 
+        : "Type your query...";
+    };
 
-  return {
-    lastUserMessageIsChinese,
-    getPlaceholder
-  };
+    return {
+      containsChinese,
+      lastUserMessageIsChinese,
+      getPlaceholder
+    };
+  }, [messages, input]);
 };

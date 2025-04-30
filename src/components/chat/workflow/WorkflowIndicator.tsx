@@ -1,5 +1,5 @@
 
-import { AlertCircle, BookOpen, FileText, CheckCircle2, BarChart2, Loader2, KeyRound } from 'lucide-react';
+import { AlertCircle, BookOpen, FileText, CheckCircle2, BarChart2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
@@ -13,14 +13,9 @@ interface WorkflowStep {
 interface WorkflowIndicatorProps {
   currentStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress: string;
-  isApiKeyRotating?: boolean;
 }
 
-export const WorkflowIndicator = ({ 
-  currentStep, 
-  stepProgress, 
-  isApiKeyRotating = false 
-}: WorkflowIndicatorProps) => {
+export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicatorProps) => {
   // Define all workflow steps
   const steps: WorkflowStep[] = [
     {
@@ -93,15 +88,7 @@ export const WorkflowIndicator = ({
   return (
     <div className="mb-4 pt-2 bg-background">
       <div className="flex items-center justify-between mb-1">
-        <span className="text-xs text-gray-500 dark:text-gray-400">
-          {stepProgress}
-          {isApiKeyRotating && (
-            <span className="ml-2 flex items-center gap-1 text-blue-500">
-              <KeyRound size={10} className="animate-pulse" />
-              <span>Rotating API keys</span>
-            </span>
-          )}
-        </span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">{stepProgress}</span>
         <div className="flex items-center gap-2 text-xs">
           <span className="font-medium text-finance-dark-blue">{completionPercentage}% complete</span>
           <span className="text-gray-500">•</span>

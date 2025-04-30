@@ -54,30 +54,6 @@ const Chat = () => {
     checkAndSetApiKey();
     setTimeout(checkAndSetApiKey, 500);
     
-    // Add window event listener for CORS errors
-    const originalOnError = window.onerror;
-    window.onerror = function(message, source, line, column, error) {
-      // Check for common CORS error patterns
-      if (typeof message === 'string' && 
-         (message.includes('CORS') || 
-          message.includes('cross-origin') || 
-          message.includes('Cross-Origin') || 
-          message.includes('NetworkError'))) {
-        console.error('CORS error detected:', message);
-        toast({
-          title: "Network Request Issue",
-          description: "A CORS-related error was detected. The system will use proxy settings to avoid this issue.",
-          duration: 5000,
-        });
-      }
-      
-      // Call original handler if it exists
-      if (originalOnError) {
-        return originalOnError(message, source, line, column, error);
-      }
-      return false;
-    };
-    
     const intervalCheck = setInterval(() => {
       const key = getGrokApiKey();
       if (!key || !key.startsWith('xai-') || key.length < 20) {
@@ -88,7 +64,6 @@ const Chat = () => {
     
     return () => {
       clearInterval(intervalCheck);
-      window.onerror = originalOnError; // Restore original handler
     };
   }, [toast]);
 

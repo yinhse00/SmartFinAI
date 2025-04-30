@@ -1,11 +1,9 @@
 
-import React, { useRef, useEffect } from 'react';
-import { Card } from '@/components/ui/card';
-import WorkflowIndicator from '../workflow/WorkflowIndicator';
+import React from 'react';
+import { CardContent } from '@/components/ui/card';
 import ChatHistory from '../ChatHistory';
-import ChatLoadingIndicator from '../ChatLoadingIndicator';
-import ProcessingIndicator from '../ProcessingIndicator';
 import { Message } from '../ChatMessage';
+import WorkflowIndicator from '../workflow/WorkflowIndicator';
 
 interface ChatContentProps {
   messages: Message[];
@@ -15,7 +13,6 @@ interface ChatContentProps {
   isOfflineMode?: boolean;
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
-  isApiKeyRotating?: boolean;
 }
 
 const ChatContent: React.FC<ChatContentProps> = ({
@@ -24,52 +21,25 @@ const ChatContent: React.FC<ChatContentProps> = ({
   onRetry,
   translatingMessageIds = [],
   isOfflineMode = false,
-  currentStep = 'initial',
-  stepProgress = 'Preparing your request',
-  isApiKeyRotating = false
+  currentStep,
+  stepProgress
 }) => {
-  const contentRef = useRef<HTMLDivElement>(null);
-  
-  // Scroll to bottom on new messages or loading state change
-  useEffect(() => {
-    if (contentRef.current) {
-      contentRef.current.scrollTop = contentRef.current.scrollHeight;
-    }
-  }, [messages, isLoading]);
-
   return (
-    <Card className="h-full flex-1 overflow-hidden border-0 bg-transparent flex flex-col">
-      {(isLoading || currentStep !== 'initial') && (
-        <WorkflowIndicator 
-          currentStep={currentStep} 
-          stepProgress={stepProgress}
-          isApiKeyRotating={isApiKeyRotating}
-        />
-      )}
-      
-      <div 
-        ref={contentRef} 
-        className="messages-container flex-1 overflow-y-auto p-4 space-y-4"
-      >
-        <ChatHistory 
-          messages={messages} 
-          isLoading={isLoading} 
-          onRetry={onRetry} 
-          translatingMessageIds={translatingMessageIds}
-          isApiKeyRotating={isApiKeyRotating}
-        />
-        
-        {isLoading && (
-          <>
-            {isOfflineMode ? (
-              <ProcessingIndicator stage="processing" isVisible={true} />
-            ) : (
-              <ChatLoadingIndicator />
-            )}
-          </>
+    <CardContent 
+      className="flex-1 p-0 overflow-auto max-h-[calc(100vh-25rem)] md:max-h-[calc(100vh-20rem)] min-h-[400px] flex flex-col"
+    >
+      <div className="sticky top-0 z-10 bg-background">
+        {currentStep && stepProgress && (
+          <WorkflowIndicator currentStep={currentStep} stepProgress={stepProgress} />
         )}
       </div>
-    </Card>
+      <ChatHistory 
+        messages={messages} 
+        isLoading={isLoading} 
+        onRetry={onRetry}
+        translatingMessageIds={translatingMessageIds}
+      />
+    </CardContent>
   );
 };
 

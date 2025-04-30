@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { ChatMessage, Message } from './ChatMessage';
+import ChatMessage, { Message } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
 
 interface ChatHistoryProps {
@@ -8,10 +8,9 @@ interface ChatHistoryProps {
   isLoading: boolean;
   onRetry?: () => void;
   translatingMessageIds?: string[];
-  isApiKeyRotating?: boolean;
 }
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [], isApiKeyRotating = false }) => {
+const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Scroll to bottom on new messages
@@ -25,7 +24,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
   
   // Check if we're displaying Chinese content
-  const lastUserMessage = [...messages].reverse().find(m => m.role === 'user' || m.sender === 'user');
+  const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
 
   return (
@@ -52,7 +51,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
         <ChatMessage 
           key={message.id} 
           message={message} 
-          onRetry={onRetry && (message.role === 'assistant' || message.sender === 'bot') ? onRetry : undefined}
+          onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
           onTypingProgress={() => {
             if (messagesEndRef.current) {
               messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
