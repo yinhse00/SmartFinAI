@@ -5,27 +5,25 @@ import ChatHeader from './ChatHeader';
 import ChatContent from './content/ChatContent';
 import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
-import { useLanguageDetection } from './hooks/useLanguageDetection';
-import { useToast } from '@/hooks/use-toast';
 
 interface ChatContainerProps {
   messages: Message[];
   isLoading: boolean;
   isGrokApiKeySet: boolean;
   input: string;
-  setInput: (input: string) => void;
+  setInput: React.Dispatch<React.SetStateAction<string>>;
   handleSend: () => void;
   handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
-  translatingMessageIds?: string[];
   onFileSelect?: (files: FileList) => void;
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
-  onFileRemove?: (index: number) => void;
+  onFileRemove?: (file: File) => void;
   isOfflineMode?: boolean;
   currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   stepProgress?: string;
+  onTryReconnect?: () => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -38,67 +36,43 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   handleKeyDown,
   onOpenApiKeyDialog,
   retryLastQuery,
-  translatingMessageIds = [],
   onFileSelect,
-  isProcessingFiles = false,
+  isProcessingFiles,
   attachedFiles = [],
   onFileRemove,
   isOfflineMode = false,
   currentStep,
-  stepProgress
+  stepProgress,
+  onTryReconnect
 }) => {
-  // Debug log to track message status
-  if (translatingMessageIds.length > 0) {
-    console.log(`Currently translating ${translatingMessageIds.length} messages: ${translatingMessageIds.join(', ')}`);
-  }
-  
-  const { lastUserMessageIsChinese, getPlaceholder } = useLanguageDetection(messages, input);
-  const { toast } = useToast();
-  
-  // Handle file uploads if no explicit handler is provided
-  const handleFileSelect = (files: FileList) => {
-    if (onFileSelect) {
-      onFileSelect(files);
-    } else {
-      toast({
-        title: "Files selected",
-        description: `${files.length} file(s) selected. File handling will be implemented soon.`,
-      });
-    }
-  };
-  
   return (
-    <Card className="finance-card h-full flex flex-col w-full">
+    <Card className="border shadow-sm flex flex-col h-[calc(100vh-14rem)]">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
-        onOpenApiKeyDialog={onOpenApiKeyDialog} 
+        onOpenApiKeyDialog={onOpenApiKeyDialog}
         isOfflineMode={isOfflineMode}
+        onTryReconnect={onTryReconnect}
       />
       
-      <ChatContent
-        messages={messages}
-        isLoading={isLoading}
+      <ChatContent 
+        messages={messages} 
+        isLoading={isLoading} 
         onRetry={retryLastQuery}
-        translatingMessageIds={translatingMessageIds}
         isOfflineMode={isOfflineMode}
         currentStep={currentStep}
         stepProgress={stepProgress}
       />
       
-      <ChatInput 
+      <ChatInput
         input={input}
         setInput={setInput}
         handleSend={handleSend}
-        isLoading={isLoading}
-        isGrokApiKeySet={isGrokApiKeySet}
-        onOpenApiKeyDialog={onOpenApiKeyDialog}
         handleKeyDown={handleKeyDown}
-        placeholder={getPlaceholder()}
-        onFileSelect={handleFileSelect}
+        disabled={isLoading}
+        onFileSelect={onFileSelect}
         isProcessingFiles={isProcessingFiles}
         attachedFiles={attachedFiles}
         onFileRemove={onFileRemove}
-        isOfflineMode={isOfflineMode}
       />
     </Card>
   );

@@ -8,7 +8,15 @@ import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 
-const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  isOfflineMode?: boolean;
+  onTryReconnect?: () => void;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({
+  isOfflineMode: externalOfflineMode,
+  onTryReconnect: externalTryReconnect
+}) => {
   const {
     messages,
     setMessages,
@@ -38,9 +46,13 @@ const ChatInterface: React.FC = () => {
   const { 
     processFiles, 
     isProcessing, 
-    isOfflineMode, 
-    tryReconnect 
+    isOfflineMode: processorOfflineMode, 
+    tryReconnect: processorTryReconnect 
   } = useFileProcessing();
+  
+  // Use external offline mode status if provided, otherwise use the processor's status
+  const isOfflineMode = externalOfflineMode !== undefined ? externalOfflineMode : processorOfflineMode;
+  const tryReconnect = externalTryReconnect || processorTryReconnect;
   
   const { 
     attachedFiles, 
@@ -56,7 +68,7 @@ const ChatInterface: React.FC = () => {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", // Changed from "warning" to "destructive"
+        variant: "destructive", 
         duration: 5000,
       });
     }
@@ -92,7 +104,7 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  // Custom key handler for textarea with file attachments - explicitly typed for HTMLTextAreaElement
+  // Custom key handler for textarea with file attachments
   const handleAttachmentsKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -126,6 +138,7 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           currentStep={currentStep}
           stepProgress={stepProgress}
+          onTryReconnect={tryReconnect}
         />
       </div>
       
