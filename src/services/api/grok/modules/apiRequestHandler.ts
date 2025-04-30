@@ -1,33 +1,40 @@
 
-/**
- * Core API request handler
- */
-import { offlineResponseGenerator } from '../offlineResponseGenerator';
-import { processApiRequest } from './requestProcessor';
-import { trackApiResponseMetrics } from './responseTracker';
-import { extractPromptText } from './requestHelper';
+import { getGrokApiKey } from '../../../apiKeyService';
 
 /**
- * Core function to handle Grok API requests with comprehensive error handling
+ * Core handler for Grok API chat completions requests
  */
 export const handleChatCompletions = async (requestBody: any, providedApiKey?: string): Promise<any> => {
   try {
-    // Process the request through our optimized request processor
-    const data = await processApiRequest(requestBody, providedApiKey);
+    // Use provided key or get from storage
+    const apiKey = providedApiKey || getGrokApiKey();
     
-    // Track token usage and response quality
-    trackApiResponseMetrics(providedApiKey || '', data);
+    if (!apiKey) {
+      throw new Error('No API key provided for request');
+    }
     
-    return data;
+    console.log('Making Grok chat completions API request');
+    
+    // Use the proxy endpoint
+    const response = await fetch('/api/grok/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('API request failed with status:', response.status);
+      console.error('API error details:', errorText);
+      throw new Error(`API request failed: ${response.status} - ${errorText}`);
+    }
+    
+    return await response.json();
   } catch (error) {
-    console.error("Financial expert API call failed:", error);
-    
-    // Find user message to extract prompt text
-    const userMessage = requestBody.messages.find((msg: any) => msg.role === 'user');
-    
-    // Create prompt text for offline response
-    let promptText = extractPromptText(userMessage);
-    
-    return offlineResponseGenerator.generateOfflineResponseFormat(promptText, error);
+    console.error('API request error:', error);
+    throw error;
   }
 };

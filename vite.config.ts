@@ -1,3 +1,4 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
@@ -17,10 +18,9 @@ export default defineConfig(({ mode }) => ({
         configure: (proxy, _options) => {
           proxy.on('proxyReq', function(proxyReq) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
-            proxyReq.setHeader('X-Long-Response', 'true');
           });
           proxy.on('error', function(err, _req, _res) {
-            console.log('Financial expert proxy error:', err);
+            console.log('API proxy error:', err);
           });
         }
       }

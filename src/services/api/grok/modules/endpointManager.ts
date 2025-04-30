@@ -6,11 +6,8 @@
 // Local proxy endpoint if available
 export const LOCAL_PROXY = '/api/grok/chat/completions';
 
-// Available API endpoints for direct calls
+// Available API endpoints for direct calls (we will prefer to use our proxy)
 export const API_ENDPOINTS = [
-  'https://api.grok.ai/v1/chat/completions',
-  'https://grok-api.com/v1/chat/completions',
-  'https://grok.x.ai/v1/chat/completions',
   'https://api.x.ai/v1/chat/completions'
 ];
 
@@ -32,7 +29,7 @@ export const attemptProxyRequest = async (
       },
       body: JSON.stringify(requestBody),
       // Add timeout to avoid hanging requests
-      signal: AbortSignal.timeout(15000) // 15 second timeout
+      signal: AbortSignal.timeout(30000) // 30 second timeout
     });
     
     if (proxyResponse.ok) {
@@ -91,7 +88,7 @@ export const attemptDirectRequest = async (
   throw new Error(`All API endpoints failed: ${errorMessage}`);
 };
 
-// New function to check API availability without making a full request
+// Check API availability without making a full request
 export const checkApiAvailability = async (apiKey: string): Promise<boolean> => {
   try {
     // Try the proxy first (most likely to work)
@@ -112,24 +109,20 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
     }
     
     // Try direct endpoints
-    for (const baseEndpoint of [
-      'https://api.grok.ai',
-      'https://grok-api.com',
-      'https://grok.x.ai',
-      'https://api.x.ai'
-    ]) {
+    for (const baseEndpoint of API_ENDPOINTS.map(url => url.split('/chat')[0])) {
       try {
         const response = await fetch(`${baseEndpoint}/models`, {
           method: 'HEAD', // Use HEAD for faster checking
           headers: {
             'Authorization': `Bearer ${apiKey}`,
           },
-          mode: 'no-cors', // This will help bypass CORS for availability check
+          mode: 'cors',
           signal: AbortSignal.timeout(3000) // 3 second timeout
         });
         
-        // With no-cors, we can't check status, but if it doesn't throw, connection likely works
-        return true;
+        if (response.ok) {
+          return true;
+        }
       } catch (e) {
         // Continue trying other endpoints
       }
