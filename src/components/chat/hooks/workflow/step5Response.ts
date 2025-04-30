@@ -55,6 +55,21 @@ export const executeStep5 = async (
       batchSuggestion: appearsTruncated ? "This response appears to be incomplete. Consider using the Continue button to see additional information." : undefined
     };
     
+    // Extract references if available in the response
+    const references = response.metadata?.referenceDocumentsUsed ? 
+      (Array.isArray(response.metadata.references) ? response.metadata.references : []) : 
+      [];
+    
+    // Check if using fallback mode
+    const isUsingFallback = !!response.metadata?.isBackupResponse || 
+                           !!response.metadata?.isOfflineMode;
+    
+    // Get reasoning if available
+    const reasoning = params.reasoning || '';
+    
+    // Determine if this is part of a batch response
+    const isBatchPart = !!params.isBatchContinuation || false;
+    
     // Step 5.2: If original input was Chinese or translation is requested, translate response
     if (shouldTranslateToChineseResponse) {
       setStepProgress('Translating response to Chinese');
@@ -79,7 +94,12 @@ export const executeStep5 = async (
           originalResponse: responseText,
           translatedResponse: translatedText,
           requiresTranslation: true,
-          metadata
+          metadata,
+          isTruncated: appearsTruncated,
+          references,
+          isUsingFallback,
+          reasoning,
+          isBatchPart
         };
       } catch (translationError) {
         console.error('Translation error:', translationError);
@@ -90,7 +110,12 @@ export const executeStep5 = async (
           response: responseText,
           translationError,
           requiresTranslation: true,
-          metadata
+          metadata,
+          isTruncated: appearsTruncated,
+          references,
+          isUsingFallback,
+          reasoning,
+          isBatchPart
         };
       }
     }
@@ -99,7 +124,12 @@ export const executeStep5 = async (
     return {
       completed: true,
       response: responseText,
-      metadata
+      metadata,
+      isTruncated: appearsTruncated,
+      references,
+      isUsingFallback,
+      reasoning,
+      isBatchPart
     };
   } catch (error) {
     console.error('Error in step 5:', error);

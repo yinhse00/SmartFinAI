@@ -53,11 +53,11 @@ export const executeResponse = async (
   }
   
   // Handle messages if response is available
-  if (result.completed && result.response) {
+  if (result.completed && (result.response || (result.requiresTranslation && result.translatedResponse))) {
     const botMessage: Message = {
       id: Date.now().toString(),
       content: result.requiresTranslation && result.translatedResponse ? 
-        result.translatedResponse : result.response,
+        result.translatedResponse : result.response || '',
       sender: 'bot',
       timestamp: new Date(),
       metadata: result.metadata,
@@ -65,7 +65,7 @@ export const executeResponse = async (
       isTruncated: result.isTruncated || false,
       queryType: params.queryType || 'general',
       references: result.references || [],
-      isUsingFallback: !!result.isUsingFallback,
+      isUsingFallback: result.isUsingFallback || false,
       reasoning: result.reasoning || params.reasoning || '',
       isBatchPart: result.isBatchPart || false,
       isTranslated: result.requiresTranslation || false,

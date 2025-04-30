@@ -71,4 +71,9 @@ export interface Step5Result extends StepResult {
   requiresTranslation?: boolean;
   translationError?: any;
   metadata?: any;
+  isTruncated?: boolean;
+  references?: string[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  isBatchPart?: boolean;
 }
