@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
@@ -9,6 +9,10 @@ import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 
 const ChatInterface: React.FC = () => {
+  // Performance tracking state
+  const [isFirstResponse, setIsFirstResponse] = useState(true);
+  const [responseStartTime, setResponseStartTime] = useState<number | null>(null);
+
   const {
     messages,
     setMessages,
@@ -50,6 +54,25 @@ const ChatInterface: React.FC = () => {
     hasAttachedFiles 
   } = useFileAttachments();
 
+  // Track response performance metrics
+  useEffect(() => {
+    if (isLoading && responseStartTime === null) {
+      // Start timing when loading begins
+      setResponseStartTime(Date.now());
+      console.log('Response generation started');
+    } else if (!isLoading && responseStartTime !== null) {
+      // Calculate response time when loading finishes
+      const responseTime = Date.now() - responseStartTime;
+      console.log(`Response completed in ${responseTime}ms. First response: ${isFirstResponse}`);
+      
+      // Reset timing and update first response flag
+      setResponseStartTime(null);
+      if (isFirstResponse) {
+        setIsFirstResponse(false);
+      }
+    }
+  }, [isLoading, responseStartTime, isFirstResponse]);
+
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
     if (isOfflineMode && hasAttachedFiles) {
@@ -62,33 +85,48 @@ const ChatInterface: React.FC = () => {
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
 
-  // Modified send handler that processes files before sending the message
+  // Optimized send handler with improved error handling
   const handleSendWithFiles = async () => {
-    if (hasAttachedFiles) {
-      toast({
-        title: "Processing files",
-        description: `Processing ${attachedFiles.length} file(s) before sending your message...`,
-      });
-      
-      const processedResults = await processFiles(attachedFiles);
-      
-      // Format the extracted content to add to the input
-      if (processedResults.length > 0) {
-        const extractedContent = processedResults.map(result => result.content).join('\n\n');
+    try {
+      if (hasAttachedFiles) {
+        toast({
+          title: "Processing files",
+          description: `Processing ${attachedFiles.length} file(s) before sending your message...`,
+        });
         
-        const separator = input ? '\n\n' : '';
-        const enrichedInput = input + separator + extractedContent;
+        const processedResults = await processFiles(attachedFiles);
         
-        // Process the combined query
-        processQuery(enrichedInput);
-        
-        // Clear the files and input after sending
-        clearAttachedFiles();
-        setInput('');
+        if (processedResults.length > 0) {
+          const extractedContent = processedResults.map(result => result.content).join('\n\n');
+          
+          const separator = input ? '\n\n' : '';
+          const enrichedInput = input + separator + extractedContent;
+          
+          // Process the combined query with performance tracking
+          processQuery(enrichedInput);
+          
+          // Clear the files and input after sending
+          clearAttachedFiles();
+          setInput('');
+        } else {
+          // Handle case when files couldn't be processed
+          toast({
+            title: "File processing issue",
+            description: "Could not extract content from the files. Please try again.",
+            variant: "destructive"
+          });
+        }
+      } else {
+        // Normal send without files
+        handleSend();
       }
-    } else {
-      // Normal send without files
-      handleSend();
+    } catch (error) {
+      console.error("Error in message sending:", error);
+      toast({
+        title: "Error sending message",
+        description: "There was an issue sending your message. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

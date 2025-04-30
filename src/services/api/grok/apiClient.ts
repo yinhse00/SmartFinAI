@@ -1,6 +1,6 @@
 
 /**
- * Core API client functionality
+ * Core API client functionality with improved error handling and timeouts
  */
 import { getGrokApiKey } from '../../apiKeyService';
 import { LOCAL_PROXY } from './modules/endpointManager';
@@ -9,19 +9,21 @@ import { toast } from '@/components/ui/use-toast';
 interface ApiClientConfig {
   maxRetries: number;
   retryDelay: number;
+  timeout: number;
 }
 
 const defaultConfig: ApiClientConfig = {
   maxRetries: 2,
-  retryDelay: 1000
+  retryDelay: 1000,
+  timeout: 30000 // 30 second default timeout
 };
 
 export const apiClient = {
   /**
-   * Call the chat completions API with retry logic
+   * Call the chat completions API with enhanced retry logic and timeout handling
    */
   callChatCompletions: async (requestBody: any, apiKey?: string, config?: Partial<ApiClientConfig>): Promise<any> => {
-    const { maxRetries, retryDelay } = { ...defaultConfig, ...config };
+    const { maxRetries, retryDelay, timeout } = { ...defaultConfig, ...config };
     const key = apiKey || getGrokApiKey();
     
     if (!key) {
@@ -30,12 +32,21 @@ export const apiClient = {
     }
 
     let lastError = null;
+    const callStart = performance.now();
+    
+    // Handle request timeout from requestBody if specified
+    const effectiveTimeout = requestBody.timeout || timeout;
+    
+    // Track attempts for telemetry
+    const attemptTimings: number[] = [];
     
     // Try with exponential backoff
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const attemptStart = performance.now();
+      
       try {
         if (attempt > 0) {
-          console.log(`Retry attempt ${attempt} for API call`);
+          console.log(`Retry attempt ${attempt} for API call (after ${Math.round(performance.now() - callStart)}ms)`);
           // Wait with exponential backoff
           await new Promise(resolve => setTimeout(resolve, retryDelay * Math.pow(2, attempt - 1)));
         }
@@ -43,7 +54,8 @@ export const apiClient = {
         // Add special handling for document processing
         if (requestBody.model?.includes('vision')) {
           console.log('Processing document with vision model');
-          requestBody.timeout = 120000; // 2 minutes timeout for document processing
+          // Longer timeout for document processing
+          requestBody.timeout = 120000; 
         }
 
         // Check if we're processing a file to better handle binary data
@@ -67,8 +79,10 @@ export const apiClient = {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
           controller.abort();
-        }, isFileProcessingRequest ? 120000 : 60000); // Longer timeout for file processing
+        }, isFileProcessingRequest ? 120000 : effectiveTimeout); // Longer timeout for file processing
 
+        console.log(`Making API request with ${effectiveTimeout}ms timeout`);
+        
         const response = await fetch(LOCAL_PROXY, {
           method: 'POST',
           headers,
@@ -92,10 +106,20 @@ export const apiClient = {
           throw new Error(`API request failed with status ${response.status}: ${errorText}`);
         }
 
-        return await response.json();
+        const data = await response.json();
+        
+        // Track performance
+        attemptTimings.push(performance.now() - attemptStart);
+        console.log(`API call succeeded on attempt ${attempt + 1}/${maxRetries + 1} in ${Math.round(attemptTimings[attempt])}ms`);
+        console.log(`Total API call time: ${Math.round(performance.now() - callStart)}ms`);
+        
+        return data;
       } catch (error) {
+        // Track timing even for failed attempts
+        attemptTimings.push(performance.now() - attemptStart);
+        
         lastError = error;
-        console.error(`API call attempt ${attempt + 1}/${maxRetries + 1} failed:`, error);
+        console.error(`API call attempt ${attempt + 1}/${maxRetries + 1} failed in ${Math.round(attemptTimings[attempt])}ms:`, error);
         
         // Don't retry certain errors
         if (error instanceof Error) {
@@ -110,14 +134,19 @@ export const apiClient = {
       }
     }
 
-    // All attempts failed
+    // All attempts failed - log detailed timing info for debugging
+    console.error(`All API attempts failed. Total duration: ${Math.round(performance.now() - callStart)}ms`);
+    console.error('Attempt timings:', attemptTimings.map(t => Math.round(t)));
+    
     throw lastError || new Error('API call failed after multiple attempts');
   },
 
   /**
-   * Process a document and extract text
+   * Process a document and extract text with optimized performance
    */
   processDocument: async (file: File, apiKey?: string): Promise<string> => {
+    const processingStart = performance.now();
+    
     try {
       // Convert file to base64
       const base64Data = await new Promise<string>((resolve, reject) => {
@@ -153,18 +182,23 @@ export const apiClient = {
           }
         ],
         temperature: 0.1,
-        max_tokens: 4000
+        max_tokens: 4000,
+        timeout: 120000 // 2 minute timeout for document processing
       };
 
       console.log(`Sending document processing request for ${file.name}`);
       const response = await apiClient.callChatCompletions(requestBody, apiKey, {
         maxRetries: 1,
-        retryDelay: 2000
+        retryDelay: 2000,
+        timeout: 120000
       });
+      
+      const processingTime = performance.now() - processingStart;
+      console.log(`Document processed in ${processingTime}ms`);
 
       return response.choices[0].message.content || '';
     } catch (error) {
-      console.error('Document processing error:', error);
+      console.error(`Document processing error after ${performance.now() - processingStart}ms:`, error);
       throw error;
     }
   }
