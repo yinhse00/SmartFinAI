@@ -6,5 +6,8 @@ import { offlineResponseGenerator } from './grok/offlineResponseGenerator';
 export const grokApiService = {
   testApiConnection: connectionTester.testApiConnection,
   callChatCompletions: apiClient.callChatCompletions,
-  generateOfflineResponseFormat: offlineResponseGenerator.generateOfflineResponseFormat
+  generateOfflineResponseFormat: offlineResponseGenerator.generateOfflineResponseFormat,
+  
+  // Add document processing capability
+  processDocument: apiClient.processDocument
 };

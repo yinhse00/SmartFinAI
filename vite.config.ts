@@ -20,11 +20,14 @@ export default defineConfig(({ mode }) => ({
             proxyReq.setHeader('X-Financial-Expert', 'true');
             proxyReq.setHeader('X-Long-Response', 'true');
             proxyReq.setHeader('Origin', 'https://api.x.ai'); // Add origin to help with CORS
+            // Remove content-length header to prevent issues with modified requests
+            proxyReq.removeHeader('content-length');
           });
-          proxy.on('error', function(err, _req, _res) {
+          proxy.on('error', function(err, req, _res) {
             console.log('Financial expert proxy error:', err);
+            console.log('Failed request path:', req.path);
           });
-          proxy.on('proxyRes', function(proxyRes, req, res) {
+          proxy.on('proxyRes', function(proxyRes, req, _res) {
             // Log successful proxy responses for debugging
             console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
           });
