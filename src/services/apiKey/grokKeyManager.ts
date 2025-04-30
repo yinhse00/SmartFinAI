@@ -24,7 +24,7 @@ import {
 
 let currentKeyIndex = 0;
 let lastKeySelectionTime = Date.now();
-const KEY_ROTATION_INTERVAL = 30000; // 30 seconds minimum between forced rotations
+const KEY_ROTATION_INTERVAL = 15000; // 15 seconds minimum between forced rotations - reduced from 30 seconds
 
 /**
  * Enhanced round-robin key rotation with smart load balancing and cooldown periods
@@ -39,10 +39,12 @@ export function getGrokApiKey(): string {
     const now = Date.now();
     const shouldForceRotate = (now - lastKeySelectionTime) > KEY_ROTATION_INTERVAL;
     
+    // More aggressive rotation - always rotate if we have multiple keys
     if (shouldForceRotate || keys.length > 1) {
       // Improved round-robin rotation with forced periodic changes
       currentKeyIndex = (currentKeyIndex + 1) % keys.length;
       lastKeySelectionTime = now;
+      console.log(`API key rotated: now using key ${currentKeyIndex + 1} of ${keys.length}`);
     }
     
     const selectedKey = keys[currentKeyIndex];
@@ -78,7 +80,7 @@ export function getFreshGrokApiKey(): string {
     // If we have multiple keys, use a weighted random selection to distribute load
     const keyPool = freshKeys.length > 0 ? freshKeys : keys;
     
-    // Use a weighted random selection strategy to better distribute the load
+    // New - use a weighted random selection strategy to better distribute the load
     // Keys not used recently get higher weight
     const randomIndex = Math.floor(Math.random() * keyPool.length);
     const selectedKey = keyPool[randomIndex];

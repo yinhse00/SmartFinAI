@@ -1,9 +1,10 @@
 
 import { useRef, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { tokenManagementService } from '@/services/response/modules/tokenManagementService';
 
 /**
- * Hook to manage batch/multi-part response functionality
+ * Enhanced hook to manage batch/multi-part response functionality
  */
 export const useBatchHandling = () => {
   const { toast } = useToast();
@@ -11,7 +12,7 @@ export const useBatchHandling = () => {
   const [isBatching, setIsBatching] = useState(false);
   const [batchingPrompt, setBatchingPrompt] = useState<string | null>(null);
   const [autoBatch, setAutoBatch] = useState(true);
-  const MAX_AUTO_BATCHES = 5; // Increased from 4 to 5 for better coverage
+  const MAX_AUTO_BATCHES = 8; // Increased from 5 for more comprehensive responses
   
   const startBatching = (prompt: string, autoBatchMode = true) => {
     setBatchingPrompt(prompt);
@@ -20,22 +21,30 @@ export const useBatchHandling = () => {
     setAutoBatch(autoBatchMode);
   };
   
-  const handleBatchContinuation = (callback: (query: string, options: any) => Promise<void>) => {
+  const handleBatchContinuation = async (callback: (query: string, options: any) => Promise<void>) => {
     if (batchingPrompt) {
       batchNumber.current += 1;
       // Add continuation marker to help the API understand this is continuing a previous response
       const continuationPrompt = `${batchingPrompt} [CONTINUATION_PART_${batchNumber.current}]`;
-      callback(continuationPrompt, { isBatchContinuation: true, batchNumber: batchNumber.current, autoBatch });
+      
+      // Let the user know we're fetching the next batch
+      toast({
+        title: `Fetching part ${batchNumber.current}`,
+        description: "Using API key rotation for optimal performance...",
+        duration: 3000
+      });
+      
+      await callback(continuationPrompt, { 
+        isBatchContinuation: true, 
+        batchNumber: batchNumber.current, 
+        autoBatch 
+      });
     }
   };
   
-  const handleBatchResult = (truncated: boolean, queryText: string, autoBatchMode: boolean) => {
-    // More aggressive truncation detection for batch triggering
-    const needsContinuation = truncated || 
-                              queryText.toLowerCase().includes('timetable') || 
-                              queryText.toLowerCase().includes('chapter 14a') ||
-                              queryText.toLowerCase().includes('connected transaction') ||
-                              queryText.length > 300; // Long queries likely need batching
+  const handleBatchResult = (truncated: boolean, queryText: string, autoBatchMode: boolean, queryType = 'general') => {
+    // Use token management service to help determine if batching is needed
+    const needsContinuation = truncated || tokenManagementService.shouldUseBatching(queryText, queryType);
     
     if (needsContinuation && autoBatchMode && batchNumber.current < MAX_AUTO_BATCHES) {
       setIsBatching(true);
