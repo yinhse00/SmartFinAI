@@ -47,7 +47,7 @@ export const useWorkflowProcessor = ({
     setIsLoading(true);
     
     try {
-      // Step 1: Initial Processing
+      // Step 1: Initial Processing - Input analysis, language detection, file processing
       setCurrentStep('initial');
       const step1Result = await executeStep1(
         queryText, 
@@ -56,9 +56,10 @@ export const useWorkflowProcessor = ({
         retrieveRegulatoryContext
       );
       
+      // Based on the regulatory relevance, determine next step
       if (!step1Result.shouldContinue) {
         if (step1Result.nextStep === 'response') {
-          // Generate response with minimal context
+          // Skip to response for non-regulatory questions
           setCurrentStep('response');
           const responseResult = await executeStep5(
             {
@@ -69,6 +70,7 @@ export const useWorkflowProcessor = ({
             lastInputWasChinese
           );
           
+          // Create bot response message
           const botMessage: Message = {
             id: Date.now().toString(),
             content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
@@ -82,39 +84,58 @@ export const useWorkflowProcessor = ({
         }
       }
       
-      // Determine next step based on Step 1 result
+      // Execute workflow steps based on analysis
       let nextStep: WorkflowStep = step1Result.nextStep;
       let currentParams = { ...step1Result };
       let stepResult: StepResult | undefined;
       
-      // Execute subsequent steps based on the workflow
+      // Process through the workflow steps
       while (nextStep !== 'complete') {
         switch (nextStep) {
+          // Step 2: Listing Rules Analysis
           case 'listingRules':
             setCurrentStep('listingRules');
             stepResult = await executeStep2(currentParams, setStepProgress);
             break;
             
+          // Step 3: Takeovers Code Analysis
           case 'takeoversCode':
             setCurrentStep('takeoversCode');
             stepResult = await executeStep3(currentParams, setStepProgress);
             break;
             
+          // Step 4: Execution Guidance (documents, plans, timetables)
           case 'execution':
             setCurrentStep('execution');
             stepResult = await executeStep4(currentParams, setStepProgress);
             break;
             
+          // Step 5: Response Generation and Translation if needed
           case 'response':
             setCurrentStep('response');
             stepResult = await executeStep5(currentParams, setStepProgress, lastInputWasChinese);
             
-            // Create bot response message
+            // Create structured response data
+            const structuredResponseData = {
+              rulesAnalysis: stepResult.response || '',
+              documentsChecklist: stepResult.documentsChecklist || undefined,
+              executionPlan: stepResult.executionPlan || undefined,
+              executionTimetable: stepResult.executionTimetable || undefined,
+            };
+            
+            // Create formatted content
+            let finalContent = stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.';
+            
+            // Add structured data as metadata
             const botMessage: Message = {
               id: Date.now().toString(),
-              content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
+              content: finalContent,
               sender: 'bot',
-              timestamp: new Date()
+              timestamp: new Date(),
+              metadata: {
+                structuredResponseData,
+                mayRequireBatching: stepResult.metadata?.mayRequireBatching
+              }
             };
             
             setMessages([...updatedMessages, botMessage]);
