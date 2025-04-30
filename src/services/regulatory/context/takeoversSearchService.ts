@@ -1,8 +1,9 @@
+
 /**
  * Service for searching takeovers-related documents
  */
 import { RegulatoryEntry } from '../../database/types';
-import { searchService } from '../../database/search';
+import { searchService } from '../../database/searchService';
 
 export const takeoversSearchService = {
   /**

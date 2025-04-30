@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep, Step3Result } from './types';
+import { WorkflowStep } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -9,7 +9,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Check if match found and analyze
  * - Determine if execution guidance needed
  */
-export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
+export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void) => {
   setStepProgress('Searching Takeovers Code summary and index');
   
   try {
@@ -57,24 +57,20 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         
       if (executionRequired) {
         return {
-          completed: true,
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
           takeoversCodeContext: enhancedContext,
-          context: enhancedContext,
           regulatoryContext: enhancedContext,
           executionRequired: true
         };
       }
       
       return {
-        completed: true,
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
         takeoversCodeContext: enhancedContext,
-        context: enhancedContext,
         regulatoryContext: enhancedContext,
         executionRequired: false
       };
@@ -92,32 +88,26 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         
       if (executionRequired) {
         return {
-          completed: true,
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
-          context: params.listingRulesContext || params.initialContext || '',
           executionRequired: true
         };
       }
       
       return {
-        completed: true,
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
-        context: params.listingRulesContext || params.initialContext || '',
         takeoversCodeSearchNegative: true
       };
     }
   } catch (error) {
     console.error('Error in step 3:', error);
     return { 
-      completed: false,
       shouldContinue: true, 
       nextStep: 'response' as WorkflowStep, 
       query: params.query,
-      context: params.listingRulesContext || params.initialContext || '',
       error
     };
   }

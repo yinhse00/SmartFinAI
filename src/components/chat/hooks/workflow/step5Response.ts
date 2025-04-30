@@ -11,7 +11,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 export const executeStep5 = async (
   params: any, 
   setStepProgress: (progress: string) => void,
-  shouldTranslateToChineseResponse: boolean
+  lastInputWasChinese: boolean
 ) => {
   setStepProgress('Generating final response');
   
@@ -55,30 +55,11 @@ export const executeStep5 = async (
       batchSuggestion: appearsTruncated ? "This response appears to be incomplete. Consider using the Continue button to see additional information." : undefined
     };
     
-    // Extract references if available in the response - Fixed to avoid accessing non-existent property
-    // We create an empty array for references since the metadata doesn't have this property
-    const references: string[] = [];
-    
-    // Check if using fallback mode
-    const isUsingFallback = !!response.metadata?.isBackupResponse || 
-                           !!response.metadata?.isOfflineMode;
-    
-    // Get reasoning if available
-    const reasoning = params.reasoning || '';
-    
-    // Determine if this is part of a batch response
-    const isBatchPart = !!params.isBatchContinuation || false;
-    
-    // Step 5.2: If original input was Chinese or translation is requested, translate response
-    if (shouldTranslateToChineseResponse) {
+    // Step 5(b): If original input was Chinese, translate response
+    if (lastInputWasChinese) {
       setStepProgress('Translating response to Chinese');
       
       try {
-        // Check if we should translate to simplified or traditional Chinese
-        const targetLanguage = params.originalLanguageWasChinese ? 
-          (isSimplifiedChinese(params.query) ? 'zh-CN' : 'zh-TW') : 
-          'zh-CN'; // Default to simplified if we can't determine
-        
         const translation = await grokService.translateContent({
           content: responseText,
           sourceLanguage: 'en',
@@ -93,12 +74,7 @@ export const executeStep5 = async (
           originalResponse: responseText,
           translatedResponse: translatedText,
           requiresTranslation: true,
-          metadata,
-          isTruncated: appearsTruncated,
-          references,
-          isUsingFallback,
-          reasoning,
-          isBatchPart
+          metadata
         };
       } catch (translationError) {
         console.error('Translation error:', translationError);
@@ -109,12 +85,7 @@ export const executeStep5 = async (
           response: responseText,
           translationError,
           requiresTranslation: true,
-          metadata,
-          isTruncated: appearsTruncated,
-          references,
-          isUsingFallback,
-          reasoning,
-          isBatchPart
+          metadata
         };
       }
     }
@@ -123,12 +94,7 @@ export const executeStep5 = async (
     return {
       completed: true,
       response: responseText,
-      metadata,
-      isTruncated: appearsTruncated,
-      references,
-      isUsingFallback,
-      reasoning,
-      isBatchPart
+      metadata
     };
   } catch (error) {
     console.error('Error in step 5:', error);
@@ -138,21 +104,3 @@ export const executeStep5 = async (
     };
   }
 };
-
-// Helper function to detect simplified Chinese
-function isSimplifiedChinese(text: string): boolean {
-  // This is a simplified check - a more accurate implementation would check for 
-  // specific simplified Chinese characters that differ from traditional
-  const simplifiedChars = '简体中文销售专业谁见';
-  const traditionalChars = '繁體中文銷售專業誰見';
-  
-  let simplifiedCount = 0;
-  let traditionalCount = 0;
-  
-  for (const char of text) {
-    if (simplifiedChars.includes(char)) simplifiedCount++;
-    if (traditionalChars.includes(char)) traditionalCount++;
-  }
-  
-  return simplifiedCount > traditionalCount;
-}

@@ -2,7 +2,7 @@
 /**
  * Utility for detecting file types based on extensions and MIME types
  */
-export type FileType = 'pdf' | 'word' | 'excel' | 'image' | 'text' | 'unknown';
+export type FileType = 'pdf' | 'word' | 'excel' | 'image' | 'unknown';
 
 export const fileTypeDetector = {
   /**
@@ -36,11 +36,6 @@ export const fileTypeDetector = {
       mimeType.startsWith('image/')
     ) {
       return 'image';
-    } else if (
-      fileName.endsWith('.txt') || 
-      mimeType === 'text/plain'
-    ) {
-      return 'text';
     }
     
     return 'unknown';

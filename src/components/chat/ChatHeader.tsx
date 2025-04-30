@@ -1,42 +1,42 @@
 
 import React from 'react';
-import { CardHeader } from '@/components/ui/card';
-import { BookOpen, Settings, WifiOff } from 'lucide-react';
+import { CardHeader, CardTitle } from '@/components/ui/card';
+import { Bot, Key, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface ChatHeaderProps {
   isGrokApiKeySet: boolean;
   onOpenApiKeyDialog: () => void;
-  isOfflineMode?: boolean; // New prop for offline mode
 }
 
-const ChatHeader: React.FC<ChatHeaderProps> = ({ 
-  isGrokApiKeySet, 
-  onOpenApiKeyDialog,
-  isOfflineMode = false 
-}) => {
+const ChatHeader: React.FC<ChatHeaderProps> = ({ isGrokApiKeySet, onOpenApiKeyDialog }) => {
   return (
-    <CardHeader className="border-b px-4 py-3 flex flex-row justify-between items-center space-y-0">
-      <div className="flex items-center gap-2">
-        <BookOpen className="h-5 w-5 text-finance-medium-blue" />
-        <h3 className="font-semibold text-lg">
-          SmartFinAI {isOfflineMode && (
-            <span className="inline-flex items-center gap-1 text-amber-500 text-sm font-normal ml-2">
-              <WifiOff size={14} />
-              Offline Mode
-            </span>
+    <CardHeader className="pb-3 border-b">
+      <CardTitle className="text-lg font-medium flex items-center gap-2">
+        <Bot size={18} /> 
+        SmartFinAI
+        <div className="ml-auto flex items-center gap-2">
+          {!isGrokApiKeySet && (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs flex items-center gap-1">
+                <AlertTriangle size={12} className="text-amber-500" />
+                Demo Mode
+              </span>
+            </div>
           )}
-        </h3>
-      </div>
-      <Button
-        variant="outline"
-        size="sm"
-        className="h-8 gap-1"
-        onClick={onOpenApiKeyDialog}
-      >
-        <Settings className="h-3.5 w-3.5" />
-        <span>{isGrokApiKeySet ? 'API Settings' : 'Set API Key'}</span>
-      </Button>
+          
+          {!isGrokApiKeySet && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={onOpenApiKeyDialog}
+              className="text-xs flex items-center gap-1 border-amber-500 text-amber-600 hover:text-amber-700"
+            >
+              <Key size={14} /> Set API Key
+            </Button>
+          )}
+        </div>
+      </CardTitle>
     </CardHeader>
   );
 };

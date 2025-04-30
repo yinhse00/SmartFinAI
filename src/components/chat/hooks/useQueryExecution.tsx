@@ -25,39 +25,29 @@ export const useQueryExecution = (
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
 
-  // The main execution function - optimized for performance
+  // The main execution function
   const executeQuery = async (
     queryText: string,
     batchInfo?: { batchNumber: number, isContinuing: boolean },
     onBatchTruncated?: (isTruncated: boolean) => void
   ) => {
-    // Quick validation check
-    if (!queryText?.trim()) {
-      console.log('Empty query, skipping execution');
-      return;
-    }
+    if (!queryText.trim()) return;
     
-    // Check for API key
     if (!isGrokApiKeySet) {
       setApiKeyDialogOpen(true);
       return;
     }
     
-    // Performance optimization: immediately update UI state
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
+
     setMessages(updatedMessages);
     setInput('');
-    setIsLoading(true);
-
-    // Track execution performance
-    const executionStart = performance.now();
 
     try {
       logQueryStart(queryText);
 
-      // Step 1: Prepare query parameters - optimize with memoization for subsequent queries
-      setProcessingStage('preparing');
+      // Step 1: Prepare query parameters and determine query type
       const {
         responseParams,
         financialQueryType,
@@ -68,41 +58,19 @@ export const useQueryExecution = (
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
-      // Step 2: Retrieve regulatory context with timeout protection
       setProcessingStage('reviewing');
-      let contextPromise = retrieveRegulatoryContext(queryText, Boolean(isFaqQuery));
-      
-      // Set a timeout for context retrieval to prevent hanging
-      const contextTimeoutPromise = new Promise<{
-        regulatoryContext: string;
-        reasoning: string;
-        contextTime: number;
-        usedSummaryIndex: boolean;
-        searchStrategy: string;
-      }>((_, reject) => 
-        setTimeout(() => reject(new Error('Context retrieval timeout')), 15000)
-      );
-      
-      // Use Promise.race to implement timeout
-      const result = await Promise.race([contextPromise, contextTimeoutPromise]).catch(error => {
-        console.warn('Context retrieval issue:', error);
-        return { 
-          regulatoryContext: '', 
-          reasoning: 'Fallback reasoning due to context retrieval timeout',
-          contextTime: 0,
-          usedSummaryIndex: false,
-          searchStrategy: 'fallback'
-        };
-      });
 
-      // Extract the results with proper typing
+      // Step 2: Retrieve regulatory context
       const {
         regulatoryContext,
         reasoning,
         contextTime,
         usedSummaryIndex,
         searchStrategy
-      } = result;
+      } = await retrieveRegulatoryContext(
+        queryText,
+        Boolean(isFaqQuery)
+      );
 
       logContextInfo(
         regulatoryContext,
@@ -112,11 +80,12 @@ export const useQueryExecution = (
         searchStrategy
       );
 
-      // Step 3: Process response with performance tracking
       setProcessingStage('processing');
-      const processingStart = performance.now();
 
-      const apiResult = await handleApiResponse(
+      // Step 3: Process response
+      const processingStart = Date.now();
+
+      const result = await handleApiResponse(
         queryText,
         responseParams,
         regulatoryContext,
@@ -126,11 +95,11 @@ export const useQueryExecution = (
         batchInfo
       );
 
-      const processingTime = performance.now() - processingStart;
+      const processingTime = Date.now() - processingStart;
       console.log(`Response generated in ${processingTime}ms`);
 
-      // Step 4: Finalize with controlled timing to prevent UI jank
       setProcessingStage('finalizing');
+
       const isSimpleQuery = financialQueryType === 'conversational';
       const finalizingTime = isSimpleQuery ? 150 : 250;
       await new Promise(resolve => setTimeout(resolve, finalizingTime));
@@ -138,21 +107,14 @@ export const useQueryExecution = (
       finishLogging();
 
       // Handle batch truncation
-      if (batchInfo && apiResult && apiResult.isTruncated) {
+      if (batchInfo && result && result.isTruncated) {
         if (onBatchTruncated) onBatchTruncated(true);
       } else if (onBatchTruncated) {
         onBatchTruncated(false);
       }
 
-      // Log total execution time
-      const totalTime = performance.now() - executionStart;
-      console.log(`Total query execution completed in ${totalTime}ms`);
-
     } catch (error) {
-      console.error('Error during query execution:', error);
       handleProcessingError(error, updatedMessages);
-    } finally {
-      setIsLoading(false);
     }
   };
 

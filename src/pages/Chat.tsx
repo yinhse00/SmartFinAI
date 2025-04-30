@@ -69,9 +69,7 @@ const Chat = () => {
 
   return (
     <MainLayout>
-      <div className="w-full h-full flex">
-        <ChatInterface />
-      </div>
+      <ChatInterface />
     </MainLayout>
   );
 };

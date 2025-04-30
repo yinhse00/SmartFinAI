@@ -7,15 +7,9 @@ import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
-  isOfflineMode?: boolean; // New prop to indicate offline mode
-  onTryReconnect?: () => Promise<boolean>; // New callback for reconnection attempts
 }
 
-const ApiConnectionStatus = ({ 
-  onOpenApiKeyDialog, 
-  isOfflineMode: externalOfflineMode, // Provided from parent
-  onTryReconnect 
-}: ApiConnectionStatusProps) => {
+const ApiConnectionStatus = ({ onOpenApiKeyDialog }: ApiConnectionStatusProps) => {
   const [connectionStatus, setConnectionStatus] = useState<{
     success: boolean | null;
     message: string;
@@ -23,53 +17,15 @@ const ApiConnectionStatus = ({
     isOfflineMode: boolean;
   }>({
     success: null,
-    message: 'Checking AI connection...',
+    message: 'Checking API connection...',
     loading: true,
     isOfflineMode: false
   });
 
-  // Update internal state when external offline mode changes
-  useEffect(() => {
-    if (externalOfflineMode !== undefined) {
-      setConnectionStatus(prev => ({
-        ...prev,
-        success: !externalOfflineMode,
-        isOfflineMode: externalOfflineMode,
-        loading: false,
-        message: externalOfflineMode 
-          ? 'AI is unreachable. Operating in offline mode with limited functionality.' 
-          : 'AI connection is active.'
-      }));
-    }
-  }, [externalOfflineMode]);
-
   const checkConnection = async () => {
-    // If external reconnect handler is provided, use it
-    if (onTryReconnect) {
-      setConnectionStatus(prev => ({
-        ...prev,
-        loading: true,
-        message: 'Checking AI connection...'
-      }));
-      
-      const success = await onTryReconnect();
-      
-      setConnectionStatus({
-        success,
-        message: success 
-          ? 'AI connection restored successfully.' 
-          : 'AI is still unreachable. Please check your internet connection and API key.',
-        loading: false,
-        isOfflineMode: !success
-      });
-      
-      return;
-    }
-    
-    // Fallback to original implementation
     setConnectionStatus({
       success: null,
-      message: 'Checking AI connection...',
+      message: 'Checking API connection...',
       loading: true,
       isOfflineMode: false
     });
@@ -92,7 +48,7 @@ const ApiConnectionStatus = ({
       setConnectionStatus({
         success: false,
         message: isNetworkError 
-          ? 'Network connectivity issue. The AI may be unreachable due to CORS restrictions or network configuration.'
+          ? 'Network connectivity issue. The API may be unreachable due to CORS restrictions or network configuration.'
           : error instanceof Error ? error.message : 'Unknown connection error',
         loading: false,
         isOfflineMode: isNetworkError
@@ -110,24 +66,21 @@ const ApiConnectionStatus = ({
   };
 
   useEffect(() => {
-    // Only check connection if external offline mode is not provided
-    if (externalOfflineMode === undefined) {
-      checkConnection();
-    }
-  }, [externalOfflineMode]);
+    checkConnection();
+  }, []);
 
   return (
     <div className="mb-4">
       {connectionStatus.loading ? (
         <Alert className="bg-finance-light-blue/10 border-finance-light-blue">
           <RefreshCw className="h-4 w-4 animate-spin text-finance-medium-blue" />
-          <AlertTitle>Testing AI Connection</AlertTitle>
+          <AlertTitle>Testing API Connection</AlertTitle>
           <AlertDescription>Please wait while we verify the connection...</AlertDescription>
         </Alert>
       ) : connectionStatus.success ? (
         <Alert className="bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-800">
           <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400" />
-          <AlertTitle>AI Connected</AlertTitle>
+          <AlertTitle>API Connected</AlertTitle>
           <AlertDescription className="flex items-center justify-between">
             <span>SmartFinAI is ready to answer your queries.</span>
             <Button 
@@ -171,7 +124,7 @@ const ApiConnectionStatus = ({
       ) : (
         <Alert className="bg-red-50 border-red-200 dark:bg-red-950/20 dark:border-red-800">
           <AlertCircle className="h-4 w-4 text-red-600 dark:text-red-400" />
-          <AlertTitle>AI Connection Issue</AlertTitle>
+          <AlertTitle>API Connection Issue</AlertTitle>
           <AlertDescription className="flex flex-col space-y-2">
             <span>{connectionStatus.message}</span>
             <div className="flex gap-2 mt-1">

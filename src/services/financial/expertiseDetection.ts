@@ -1,3 +1,4 @@
+
 export function isSimpleConversationalQuery(prompt: string): boolean {
   const lowerPrompt = prompt.toLowerCase().trim();
   
@@ -115,15 +116,4 @@ export function detectFinancialExpertiseArea(query: string): string {
   
   // Default to general if no specific area is detected
   return 'general';
-}
-
-// Add the missing detectQueryType function that's being imported in step1Initial.ts
-export function detectQueryType(query: string): string {
-  // First check if it's a conversational query
-  if (isSimpleConversationalQuery(query)) {
-    return 'conversational';
-  }
-  
-  // Otherwise determine the financial expertise area
-  return detectFinancialExpertiseArea(query);
 }

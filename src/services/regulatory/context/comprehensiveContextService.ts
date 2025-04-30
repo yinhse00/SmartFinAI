@@ -1,5 +1,5 @@
 
-import { searchService } from '../../database/search';
+import { searchService } from '../../databaseService';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
 import { contextFormatter } from './contextFormatter';
 

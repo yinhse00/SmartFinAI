@@ -15,7 +15,7 @@ interface ChatContainerProps {
   input: string;
   setInput: (input: string) => void;
   handleSend: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
@@ -23,9 +23,6 @@ interface ChatContainerProps {
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
-  isOfflineMode?: boolean;
-  currentStep?: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
-  stepProgress?: string;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -42,10 +39,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onFileSelect,
   isProcessingFiles = false,
   attachedFiles = [],
-  onFileRemove,
-  isOfflineMode = false,
-  currentStep,
-  stepProgress
+  onFileRemove
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -68,11 +62,10 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   };
   
   return (
-    <Card className="finance-card h-full flex flex-col w-full">
+    <Card className="finance-card h-full flex flex-col">
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
-        isOfflineMode={isOfflineMode}
       />
       
       <ChatContent
@@ -80,9 +73,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isLoading={isLoading}
         onRetry={retryLastQuery}
         translatingMessageIds={translatingMessageIds}
-        isOfflineMode={isOfflineMode}
-        currentStep={currentStep}
-        stepProgress={stepProgress}
       />
       
       <ChatInput 
@@ -98,7 +88,6 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isProcessingFiles={isProcessingFiles}
         attachedFiles={attachedFiles}
         onFileRemove={onFileRemove}
-        isOfflineMode={isOfflineMode}
       />
     </Card>
   );

@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep, Step2Result } from './types';
+import { WorkflowStep } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -9,7 +9,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Query related chapters if match found
  * - Check if also Takeovers Code related
  */
-export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
+export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void) => {
   setStepProgress('Searching Listing Rules summary and keyword index');
   
   try {
@@ -54,12 +54,10 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       
       if (takeoverRelated) {
         return {
-          completed: true,
           shouldContinue: true,
           nextStep: 'takeoversCode' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
-          context: enhancedContext,
           takeoversCodeRelated: true
         };
       }
@@ -75,23 +73,19 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         
       if (executionRequired) {
         return {
-          completed: true,
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
-          context: enhancedContext,
           executionRequired: true
         };
       }
       
       return {
-        completed: true,
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
         listingRulesContext: enhancedContext,
-        context: enhancedContext,
         regulatoryContext: enhancedContext,
         executionRequired: false
       };
@@ -109,32 +103,26 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         
       if (executionRequired) {
         return {
-          completed: true,
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
-          context: params.initialContext || '',
           executionRequired: true
         };
       }
       
       return {
-        completed: true,
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
-        context: params.initialContext || '',
         listingRulesSearchNegative: true
       };
     }
   } catch (error) {
     console.error('Error in step 2:', error);
     return { 
-      completed: false,
       shouldContinue: true, 
       nextStep: 'response' as WorkflowStep, 
       query: params.query,
-      context: params.initialContext || '',
       error
     };
   }
