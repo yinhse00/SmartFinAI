@@ -1,6 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
-import ChatMessage, { Message } from './ChatMessage';
+import { Message } from './ChatMessage';
+import ChatMessageComponent from './ChatMessage.tsx'; // Import the component, not the type
 import ChatLoadingIndicator from './ChatLoadingIndicator';
 
 interface ChatHistoryProps {
@@ -48,7 +49,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
       )}
       
       {messages.map((message) => (
-        <ChatMessage 
+        <ChatMessageComponent 
           key={message.id} 
           message={message} 
           onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}

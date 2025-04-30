@@ -15,6 +15,3 @@ export interface Message {
   isTranslated?: boolean;
   originalContent?: string;
 }
-
-// Export a default empty component to fix import issues
-export default function ChatMessage() {}

@@ -5,7 +5,7 @@ export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execu
 
 export interface StepResult {
   shouldContinue?: boolean;
-  nextStep?: WorkflowStep;
+  nextStep?: 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
   completed?: boolean;
   query?: string;
   error?: any;

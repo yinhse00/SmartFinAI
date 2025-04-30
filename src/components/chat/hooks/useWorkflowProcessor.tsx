@@ -1,6 +1,6 @@
 
 import { useState } from 'react';
-import { Message } from '../../ChatMessage';
+import { Message } from '../ChatMessage';
 import { useQueryCore } from './useQueryCore';
 import { useLanguageState } from './useLanguageState';
 import { useContextRetrieval } from './useContextRetrieval';
@@ -86,7 +86,8 @@ export const useWorkflowProcessor = ({
       }
       
       // Determine next step based on Step 1 result
-      let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete' = step1Result.nextStep;
+      let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete' = 
+        step1Result.nextStep as 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
       let currentParams = { ...step1Result };
       let stepResult: StepResult | undefined;
       
