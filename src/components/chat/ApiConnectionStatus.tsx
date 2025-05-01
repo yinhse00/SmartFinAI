@@ -67,7 +67,7 @@ const ApiConnectionStatus = ({
         if (success) {
           toast({
             title: "Connection Restored",
-            description: "Successfully reconnected to the AI service.",
+            description: "Successfully reconnected to the AI service."
           });
         }
         
@@ -88,7 +88,7 @@ const ApiConnectionStatus = ({
       if (result.success) {
         toast({
           title: "Connection Restored",
-          description: "Successfully reconnected to the AI service.",
+          description: "Successfully reconnected to the AI service."
         });
       }
     } catch (error) {
@@ -131,7 +131,7 @@ const ApiConnectionStatus = ({
     if (now - connectionStatus.lastCheckTime < 5000 && !connectionStatus.loading) {
       toast({
         title: "Please wait",
-        description: "Connection check was performed recently. Try again in a few seconds.",
+        description: "Connection check was performed recently. Try again in a few seconds."
       });
       return;
     }
