@@ -59,20 +59,21 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
       console.warn("Failed to check local proxy:", e);
     }
     
-    // If local proxy isn't available, find a working direct endpoint
+    // Based on logs analysis, prioritize api.x.ai which appears to be working
     const directEndpoints = ['https://api.x.ai', 'https://grok.x.ai', 'https://api.grok.ai'];
     
+    // Try each endpoint with the focus on the one that works
     for (const endpoint of directEndpoints) {
       try {
         // Use more reliable detection with explicitly non-CORS request
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 5000);
         
-        const response = await fetch(`${endpoint}/ping`, {
-          method: 'HEAD',
+        const response = await fetch(`${endpoint}/v1/models`, {
+          method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
-            'X-Request-Source': 'browser-client',
+            'Content-Type': 'application/json',
             'Cache-Control': 'no-cache, no-store'
           },
           signal: controller.signal,
@@ -81,16 +82,16 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
         
         clearTimeout(timeoutId);
         
-        if (response) {
-          console.log(`Endpoint ${endpoint} appears to be reachable`);
+        if (response && response.ok) {
+          console.log(`Direct endpoint ${endpoint} is confirmed to be working!`);
           return {
             isAvailable: true,
             endpointType: 'direct',
             endpoint
           };
         }
-      } catch (e) {
-        console.warn(`Failed to connect to ${endpoint}:`, e);
+      } catch (endpointError) {
+        console.warn(`API call to ${endpoint} failed:`, endpointError);
       }
     }
     
@@ -127,4 +128,3 @@ export const clearConnectionCache = (): void => {
     console.error("Error clearing connection cache:", e);
   }
 };
-

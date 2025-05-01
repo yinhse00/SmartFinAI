@@ -46,19 +46,22 @@ export const connectionTester = {
               message: proxyResult.message || `API connection successful via local proxy`,
               endpoint: '/api/grok'
             };
+          } else {
+            console.warn("Proxy endpoint returned HTML response");
           }
         } catch (proxyError) {
           console.warn("Local proxy test failed:", proxyError);
           // Continue with other tests
         }
         
-        // If proxy fails, try direct endpoints
+        // If proxy fails, try direct endpoints - prioritize api.x.ai which works
         return await testAllDirectEndpoints(key);
       }
       
       // Non-browser environment - try direct connection to first endpoint
       try {
-        const testEndpoint = 'https://api.grok.ai' + '/v1/models';
+        // Prioritize api.x.ai which appears to be working
+        const testEndpoint = 'https://api.x.ai' + '/v1/models';
         console.log(`Testing direct API call to: ${testEndpoint}`);
         
         const response = await fetch(testEndpoint, {
