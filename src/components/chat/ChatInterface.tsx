@@ -56,7 +56,7 @@ const ChatInterface: React.FC = () => {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", // Changed from "warning" to "destructive"
+        variant: "warning",
         duration: 5000,
       });
     }
@@ -92,14 +92,6 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  // Custom key handler for textarea with file attachments - explicitly typed for HTMLTextAreaElement
-  const handleAttachmentsKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendWithFiles();
-    }
-  };
-
   return (
     <>
       <div className="container mx-auto py-6">
@@ -116,7 +108,15 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? handleAttachmentsKeyDown : handleKeyDown}
+          handleKeyDown={hasAttachedFiles ? 
+            (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSendWithFiles();
+              }
+            } : 
+            handleKeyDown
+          }
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
@@ -124,8 +124,6 @@ const ChatInterface: React.FC = () => {
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
-          currentStep={currentStep}
-          stepProgress={stepProgress}
         />
       </div>
       

@@ -12,12 +12,10 @@ const DocumentCategoryIcon: React.FC<DocumentCategoryIconProps> = ({ category, c
   switch (category) {
     case 'listing_rules':
       return <FileText className={className} />;
-    case 'listing_guidance':
-    case 'guidance_new_listing':
-    case 'guidance_listed_issuers':
-      return <BookOpen className={className} />;
     case 'takeovers':
       return <Target className={className} />;
+    case 'guidance':
+      return <BookOpen className={className} />;
     case 'decisions':
       return <FileCog className={className} />;
     case 'checklists':

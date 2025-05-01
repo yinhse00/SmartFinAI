@@ -1,74 +1,43 @@
 
 /**
- * Helper service to detect file types
+ * Utility for detecting file types based on extensions and MIME types
  */
+export type FileType = 'pdf' | 'word' | 'excel' | 'image' | 'unknown';
 
 export const fileTypeDetector = {
   /**
-   * Detect file type based on extension and mime type
+   * Determine the file type based on file extension or MIME type
    */
-  detectFileType: (file: File): 'pdf' | 'word' | 'excel' | 'image' | 'text' | 'unknown' => {
+  detectFileType: (file: File): FileType => {
     const fileName = file.name.toLowerCase();
-    const fileType = file.type.toLowerCase();
+    const mimeType = file.type.toLowerCase();
     
-    console.log(`Detecting file type for: ${fileName} (${fileType})`);
-    
-    // Check for Word documents (prioritize DOCX files)
-    if (
-      fileName.endsWith('.docx') || 
-      fileName.endsWith('.doc') || 
-      fileType.includes('word') ||
-      fileType.includes('officedocument.wordprocessingml') ||
-      fileType.includes('msword')
-    ) {
-      // Special case to prioritize important DOCX files for regulatory content
-      if (fileName.includes('chapter 13') || fileName.includes('continuing obligations') || 
-          fileName.includes('chapter 14') || fileName.includes('notifiable transactions')) {
-        console.log('Detected important Word document for regulatory content');
-      }
-      return 'word';
-    }
-    
-    // Check for PDF files - moved after Word check for intentional prioritization
-    if (fileName.endsWith('.pdf') || fileType.includes('pdf')) {
+    if (fileName.endsWith('.pdf') || mimeType === 'application/pdf') {
       return 'pdf';
-    }
-    
-    // Check for Excel files
-    if (
-      fileName.endsWith('.xlsx') || 
+    } else if (
+      fileName.endsWith('.doc') || 
+      fileName.endsWith('.docx') || 
+      mimeType === 'application/msword' || 
+      mimeType === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    ) {
+      return 'word';
+    } else if (
       fileName.endsWith('.xls') || 
-      fileType.includes('excel') ||
-      fileType.includes('spreadsheetml')
+      fileName.endsWith('.xlsx') || 
+      mimeType === 'application/vnd.ms-excel' || 
+      mimeType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     ) {
       return 'excel';
-    }
-    
-    // Check for image files
-    if (
+    } else if (
       fileName.endsWith('.jpg') || 
       fileName.endsWith('.jpeg') || 
       fileName.endsWith('.png') || 
-      fileName.endsWith('.gif') ||
-      fileType.includes('image/')
+      fileName.endsWith('.gif') || 
+      mimeType.startsWith('image/')
     ) {
       return 'image';
     }
     
-    // Check for text files
-    if (
-      fileName.endsWith('.txt') || 
-      fileName.endsWith('.csv') || 
-      fileName.endsWith('.json') || 
-      fileName.endsWith('.md') ||
-      fileType.includes('text/') ||
-      fileType === 'application/json'
-    ) {
-      return 'text';
-    }
-    
-    // Default to unknown
-    console.warn(`Unknown file type for ${fileName} (${fileType})`);
     return 'unknown';
   }
 };

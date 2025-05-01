@@ -68,8 +68,8 @@ export const useChatLogic = () => {
     setInput('');
   };
   
-  // Update the type to use HTMLTextAreaElement instead of HTMLInputElement
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  // Handle keyboard input
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       handleSend();
     }

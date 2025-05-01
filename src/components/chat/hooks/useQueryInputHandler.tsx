@@ -11,10 +11,8 @@ export const useQueryInputHandler = (
     await processQuery(input);
   };
 
-  // Updated to use HTMLTextAreaElement instead of HTMLInputElement
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
       handleSend();
     }
   };
