@@ -68,7 +68,6 @@ const ApiConnectionStatus = ({
           toast({
             title: "Connection Restored",
             description: "Successfully reconnected to the AI service.",
-            variant: "success"
           });
         }
         
@@ -90,7 +89,6 @@ const ApiConnectionStatus = ({
         toast({
           title: "Connection Restored",
           description: "Successfully reconnected to the AI service.",
-          variant: "success"
         });
       }
     } catch (error) {
@@ -134,7 +132,6 @@ const ApiConnectionStatus = ({
       toast({
         title: "Please wait",
         description: "Connection check was performed recently. Try again in a few seconds.",
-        variant: "default"
       });
       return;
     }
