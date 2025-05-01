@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { useToast } from '@/hooks/use-toast';
 

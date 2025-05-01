@@ -1,6 +1,4 @@
 
-import React from 'react';
-
 /**
  * Hook for handling query input interactions
  */
@@ -13,7 +11,7 @@ export const useQueryInputHandler = (
     await processQuery(input);
   };
 
-  // Changed to accept HTMLTextAreaElement instead of HTMLInputElement
+  // Updated to use HTMLTextAreaElement instead of HTMLInputElement
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();

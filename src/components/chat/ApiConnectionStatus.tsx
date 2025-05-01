@@ -1,10 +1,9 @@
+
 import { useState, useEffect } from 'react';
 import { grokApiService } from '@/services/api/grokApiService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
-import { clearConnectionCache } from '@/services/api/grok/modules/endpointManager';
-import { useToast } from '@/hooks/use-toast';
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
@@ -22,91 +21,12 @@ const ApiConnectionStatus = ({
     message: string;
     loading: boolean;
     isOfflineMode: boolean;
-    lastCheckTime: number;
   }>({
     success: null,
     message: 'Checking AI connection...',
     loading: true,
-    isOfflineMode: false,
-    lastCheckTime: 0
+    isOfflineMode: false
   });
-  
-  const { toast } = useToast();
-
-  // Force a fresh connection check when specifically requested
-  const forceConnectionCheck = async () => {
-    // First clear any cached connection information
-    clearConnectionCache();
-    
-    setConnectionStatus(prev => ({
-      ...prev,
-      loading: true,
-      message: 'Performing forceful connection check...',
-      lastCheckTime: Date.now()
-    }));
-    
-    try {
-      // Wait a moment to ensure any previous connections are fully closed
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // If external reconnect handler is provided, use it
-      if (onTryReconnect) {
-        const success = await onTryReconnect();
-        
-        setConnectionStatus({
-          success,
-          message: success 
-            ? 'AI connection restored successfully!' 
-            : 'AI is still unreachable. Please check your internet connection and API key.',
-          loading: false,
-          isOfflineMode: !success,
-          lastCheckTime: Date.now()
-        });
-        
-        if (success) {
-          toast({
-            title: "Connection Restored",
-            description: "Successfully reconnected to the AI service."
-          });
-        }
-        
-        return;
-      }
-      
-      // Fallback to regular connection check
-      const result = await grokApiService.testApiConnection();
-      
-      setConnectionStatus({
-        success: result.success,
-        message: result.message,
-        loading: false,
-        isOfflineMode: !result.success,
-        lastCheckTime: Date.now()
-      });
-      
-      if (result.success) {
-        toast({
-          title: "Connection Restored",
-          description: "Successfully reconnected to the AI service."
-        });
-      }
-    } catch (error) {
-      const isNetworkError = error instanceof Error && 
-        (error.message.includes('Failed to fetch') || 
-         error.message.includes('NetworkError') ||
-         error.message.includes('Network request failed'));
-      
-      setConnectionStatus({
-        success: false,
-        message: isNetworkError 
-          ? 'Network connectivity issue. The AI may be unreachable due to CORS restrictions or network configuration.'
-          : error instanceof Error ? error.message : 'Unknown connection error',
-        loading: false,
-        isOfflineMode: isNetworkError,
-        lastCheckTime: Date.now()
-      });
-    }
-  };
 
   // Update internal state when external offline mode changes
   useEffect(() => {
@@ -118,30 +38,18 @@ const ApiConnectionStatus = ({
         loading: false,
         message: externalOfflineMode 
           ? 'AI is unreachable. Operating in offline mode with limited functionality.' 
-          : 'AI connection is active.',
-        lastCheckTime: Date.now()
+          : 'AI connection is active.'
       }));
     }
   }, [externalOfflineMode]);
 
   const checkConnection = async () => {
-    // If less than 5 seconds since last check, don't check again
-    const now = Date.now();
-    if (now - connectionStatus.lastCheckTime < 5000 && !connectionStatus.loading) {
-      toast({
-        title: "Please wait",
-        description: "Connection check was performed recently. Try again in a few seconds."
-      });
-      return;
-    }
-    
     // If external reconnect handler is provided, use it
     if (onTryReconnect) {
       setConnectionStatus(prev => ({
         ...prev,
         loading: true,
-        message: 'Checking AI connection...',
-        lastCheckTime: now
+        message: 'Checking AI connection...'
       }));
       
       const success = await onTryReconnect();
@@ -152,8 +60,7 @@ const ApiConnectionStatus = ({
           ? 'AI connection restored successfully.' 
           : 'AI is still unreachable. Please check your internet connection and API key.',
         loading: false,
-        isOfflineMode: !success,
-        lastCheckTime: now
+        isOfflineMode: !success
       });
       
       return;
@@ -164,8 +71,7 @@ const ApiConnectionStatus = ({
       success: null,
       message: 'Checking AI connection...',
       loading: true,
-      isOfflineMode: false,
-      lastCheckTime: now
+      isOfflineMode: false
     });
     
     try {
@@ -174,8 +80,7 @@ const ApiConnectionStatus = ({
         success: result.success,
         message: result.message,
         loading: false,
-        isOfflineMode: !result.success,
-        lastCheckTime: now
+        isOfflineMode: false
       });
     } catch (error) {
       // Check if this is a network error (likely CORS or connectivity issue)
@@ -190,8 +95,7 @@ const ApiConnectionStatus = ({
           ? 'Network connectivity issue. The AI may be unreachable due to CORS restrictions or network configuration.'
           : error instanceof Error ? error.message : 'Unknown connection error',
         loading: false,
-        isOfflineMode: isNetworkError,
-        lastCheckTime: now
+        isOfflineMode: isNetworkError
       });
     }
   };
@@ -201,8 +105,7 @@ const ApiConnectionStatus = ({
       success: null,
       message: 'Using offline mode with local fallback responses.',
       loading: false,
-      isOfflineMode: true,
-      lastCheckTime: Date.now()
+      isOfflineMode: true
     });
   };
 
@@ -212,19 +115,6 @@ const ApiConnectionStatus = ({
       checkConnection();
     }
   }, [externalOfflineMode]);
-
-  // Add additional periodic connection check
-  useEffect(() => {
-    // If in offline mode, try to reconnect periodically
-    if (connectionStatus.isOfflineMode) {
-      const reconnectInterval = setInterval(() => {
-        console.log("Attempting automatic reconnection from offline mode");
-        forceConnectionCheck();
-      }, 60000); // Try reconnecting every minute when offline
-      
-      return () => clearInterval(reconnectInterval);
-    }
-  }, [connectionStatus.isOfflineMode]);
 
   return (
     <div className="mb-4">
@@ -261,11 +151,11 @@ const ApiConnectionStatus = ({
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={forceConnectionCheck}
+                onClick={checkConnection}
                 className="h-7 gap-1 text-xs"
               >
                 <Wifi className="h-3 w-3" />
-                Force Reconnect
+                Try Reconnect
               </Button>
               <Button 
                 variant="default"
@@ -293,15 +183,6 @@ const ApiConnectionStatus = ({
               >
                 <RefreshCw className="h-3 w-3" />
                 Retry
-              </Button>
-              <Button 
-                variant="outline"
-                size="sm"
-                onClick={forceConnectionCheck}
-                className="h-7 gap-1 text-xs bg-blue-50"
-              >
-                <Wifi className="h-3 w-3" />
-                Force Reconnect
               </Button>
               <Button 
                 variant="outline"

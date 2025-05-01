@@ -1,5 +1,4 @@
 
-import React from 'react';
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
@@ -69,10 +68,9 @@ export const useChatLogic = () => {
     setInput('');
   };
   
-  // Handle keyboard input - updated to use HTMLTextAreaElement
+  // Update the type to use HTMLTextAreaElement instead of HTMLInputElement
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
+    if (e.key === 'Enter') {
       handleSend();
     }
   };

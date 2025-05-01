@@ -20,8 +20,7 @@ interface ChatInputProps {
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
-  isOfflineMode?: boolean;
-  disabled?: boolean;
+  isOfflineMode?: boolean; // New prop to indicate offline mode
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({
@@ -35,8 +34,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isProcessingFiles = false,
   attachedFiles = [],
   onFileRemove,
-  isOfflineMode = false,
-  disabled = false
+  isOfflineMode = false // Default to false
 }) => {
   const hasAttachedFiles = attachedFiles.length > 0;
   
@@ -75,14 +73,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          disabled={isLoading || isProcessingFiles || disabled}
+          disabled={isLoading || isProcessingFiles}
           rows={1}
           style={{ overflow: input.split('\n').length > 3 ? 'auto' : 'hidden' }}
         />
         <Button 
           onClick={handleSend} 
           className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-          disabled={(hasAttachedFiles ? false : !input.trim()) || isLoading || isProcessingFiles || disabled}
+          disabled={(hasAttachedFiles ? false : !input.trim()) || isLoading || isProcessingFiles}
         >
           {isLoading || isProcessingFiles ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send size={18} />}
         </Button>
