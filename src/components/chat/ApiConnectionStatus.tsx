@@ -74,8 +74,8 @@ const ApiConnectionStatus = ({
         return;
       }
       
-      // Fallback to regular connection check
-      const result = await grokApiService.testApiConnection(undefined, true);
+      // Fallback to regular connection check - Fixed here: removed the second argument
+      const result = await grokApiService.testApiConnection(undefined);
       
       setConnectionStatus({
         success: result.success,
