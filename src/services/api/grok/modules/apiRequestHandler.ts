@@ -13,7 +13,12 @@ import { extractPromptText } from './requestHelper';
 export const handleChatCompletions = async (requestBody: any, providedApiKey?: string): Promise<any> => {
   try {
     // Process the request through our optimized request processor
-    const data = await processApiRequest(requestBody, providedApiKey);
+    const data = await processApiRequest(
+      '/v1/chat/completions',
+      'POST',
+      requestBody,
+      providedApiKey || ''
+    );
     
     // Enhanced validation with more specific error messages
     if (!data) {

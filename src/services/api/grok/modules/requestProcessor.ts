@@ -9,12 +9,12 @@ import { attemptDirectRequest } from './endpoints/directRequests';
 /**
  * Process an API request with intelligent endpoint selection and fallback
  */
-export const processApiRequest = async <T>(
+export const processApiRequest = async (
   endpoint: string,
   method: string,
   body: any,
   apiKey: string
-): Promise<T> => {
+): Promise<any> => {
   // First determine the optimal endpoint strategy
   console.log("Determining optimal endpoint for API request");
   const optimalEndpoint = await getOptimalEndpoint(apiKey);
@@ -28,11 +28,11 @@ export const processApiRequest = async <T>(
     // Use the proxy
     console.log("Using local proxy endpoint for request");
     const proxyEndpoint = `/api/grok${endpoint}`;
-    return await attemptProxyRequest<T>(proxyEndpoint, method, body, apiKey);
+    return await attemptProxyRequest(proxyEndpoint, method, body, apiKey);
   } else {
     // Use direct endpoint, prioritizing api.x.ai which works in logs
     console.log(`Using direct endpoint ${optimalEndpoint.endpoint} for request`);
-    return await attemptDirectRequest<T>(
+    return await attemptDirectRequest(
       `${optimalEndpoint.endpoint}${endpoint}`, 
       method, 
       body, 

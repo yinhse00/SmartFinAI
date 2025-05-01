@@ -12,6 +12,17 @@ export { checkApiAvailability } from './endpoints/availabilityChecker';
 // Add a new robust endpoint detection system that automatically adapts
 import { checkApiAvailability } from './endpoints/availabilityChecker';
 
+// Cache for endpoint connections
+let cachedEndpointConfig: {
+  endpoint?: string;
+  endpointType: 'proxy' | 'direct' | 'none';
+  timestamp: number;
+  isAvailable: boolean;
+} | null = null;
+
+// Cache timeout (5 minutes)
+const CACHE_TIMEOUT = 5 * 60 * 1000;
+
 /**
  * Smart endpoint selection system that adapts to availability
  */
@@ -21,44 +32,34 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
   endpoint?: string;
 }> => {
   try {
+    // Check if we have a cached endpoint that's still valid
+    const now = Date.now();
+    if (cachedEndpointConfig && (now - cachedEndpointConfig.timestamp < CACHE_TIMEOUT) && cachedEndpointConfig.isAvailable) {
+      console.log("Using cached endpoint configuration:", cachedEndpointConfig.endpointType);
+      return {
+        isAvailable: cachedEndpointConfig.isAvailable,
+        endpointType: cachedEndpointConfig.endpointType,
+        endpoint: cachedEndpointConfig.endpoint
+      };
+    }
+    
     // Try checking API availability with more resilient approach
     const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
     
     if (!isApiAvailable) {
       console.warn("All API endpoints appear to be unreachable");
+      cachedEndpointConfig = {
+        isAvailable: false,
+        endpointType: 'none',
+        timestamp: now
+      };
       return { 
         isAvailable: false, 
         endpointType: 'none'
       };
     }
     
-    // First try local proxy which is most reliable (avoids CORS)
-    try {
-      // Using a more aggressive check for the proxy
-      const proxyResponse = await fetch('/api/grok/ping', {
-        method: 'GET',
-        headers: { 
-          'Cache-Control': 'no-cache',
-          'X-Request-ID': `ping-${Date.now()}` // Add unique request ID to avoid caching
-        },
-        cache: 'no-store'
-      });
-      
-      // If we get a response (even an error), the proxy is at least reachable
-      const proxyAvailable = proxyResponse.status < 500; // Any status below 500 means server is responsive
-      
-      if (proxyAvailable) {
-        console.log("Local proxy appears to be available");
-        return {
-          isAvailable: true,
-          endpointType: 'proxy',
-          endpoint: '/api/grok'
-        };
-      }
-    } catch (e) {
-      console.warn("Failed to check local proxy:", e);
-    }
-    
+    // First try direct endpoints which appear to be working better
     // Based on logs analysis, prioritize api.x.ai which appears to be working
     const directEndpoints = ['https://api.x.ai', 'https://grok.x.ai', 'https://api.grok.ai'];
     
@@ -84,6 +85,12 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
         
         if (response && response.ok) {
           console.log(`Direct endpoint ${endpoint} is confirmed to be working!`);
+          cachedEndpointConfig = {
+            isAvailable: true,
+            endpointType: 'direct',
+            endpoint,
+            timestamp: now
+          };
           return {
             isAvailable: true,
             endpointType: 'direct',
@@ -95,7 +102,45 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
       }
     }
     
+    // If direct endpoints fail, try local proxy which should work for CORS reasons
+    try {
+      // Using a more aggressive check for the proxy
+      const proxyResponse = await fetch('/api/grok/ping', {
+        method: 'GET',
+        headers: { 
+          'Cache-Control': 'no-cache',
+          'X-Request-ID': `ping-${now}` // Add unique request ID to avoid caching
+        },
+        cache: 'no-store'
+      });
+      
+      // If we get a response (even an error), the proxy is at least reachable
+      const proxyAvailable = proxyResponse.status < 500; // Any status below 500 means server is responsive
+      
+      if (proxyAvailable) {
+        console.log("Local proxy appears to be available");
+        cachedEndpointConfig = {
+          isAvailable: true,
+          endpointType: 'proxy',
+          endpoint: '/api/grok',
+          timestamp: now
+        };
+        return {
+          isAvailable: true,
+          endpointType: 'proxy',
+          endpoint: '/api/grok'
+        };
+      }
+    } catch (e) {
+      console.warn("Failed to check local proxy:", e);
+    }
+    
     // No endpoints worked
+    cachedEndpointConfig = {
+      isAvailable: false,
+      endpointType: 'none',
+      timestamp: now
+    };
     return { 
       isAvailable: false, 
       endpointType: 'none'
@@ -115,6 +160,9 @@ export const getOptimalEndpoint = async (apiKey: string): Promise<{
  */
 export const clearConnectionCache = (): void => {
   console.log("Clearing API connection cache");
+  // Clear our internal cache
+  cachedEndpointConfig = null;
+  
   // Clear any potential cached fetch responses
   try {
     if ('caches' in window) {

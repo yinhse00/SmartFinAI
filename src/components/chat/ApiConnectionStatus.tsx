@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { grokApiService } from '@/services/api/grokApiService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -74,7 +73,7 @@ const ApiConnectionStatus = ({
         return;
       }
       
-      // Fallback to regular connection check - Fixed here: removed the second argument
+      // Fallback to regular connection check
       const result = await grokApiService.testApiConnection();
       
       setConnectionStatus({
@@ -213,6 +212,19 @@ const ApiConnectionStatus = ({
       checkConnection();
     }
   }, [externalOfflineMode]);
+
+  // Add additional periodic connection check
+  useEffect(() => {
+    // If in offline mode, try to reconnect periodically
+    if (connectionStatus.isOfflineMode) {
+      const reconnectInterval = setInterval(() => {
+        console.log("Attempting automatic reconnection from offline mode");
+        forceConnectionCheck();
+      }, 60000); // Try reconnecting every minute when offline
+      
+      return () => clearInterval(reconnectInterval);
+    }
+  }, [connectionStatus.isOfflineMode]);
 
   return (
     <div className="mb-4">
