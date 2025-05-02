@@ -9,8 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 
 interface TranslationParams {
   content: string;
-  sourceLanguage: 'en' | 'zh';
-  targetLanguage: 'en' | 'zh';
+  sourceLanguage: 'en' | 'zh' | 'zh-CN' | 'zh-TW';
+  targetLanguage: 'en' | 'zh' | 'zh-CN' | 'zh-TW';
   format?: string;
 }
 
@@ -31,8 +31,19 @@ export const translationService = {
         return generateFallbackResponse("translation request", "No API key provided");
       }
       
-      const sourceLang = params.sourceLanguage === 'en' ? 'English' : 'Chinese';
-      const targetLang = params.targetLanguage === 'en' ? 'English' : 'Chinese';
+      // Format the language names for better clarity in the prompt
+      const getLanguageName = (lang: string) => {
+        switch(lang) {
+          case 'en': return 'English';
+          case 'zh': return 'Chinese';
+          case 'zh-CN': return 'Simplified Chinese';
+          case 'zh-TW': return 'Traditional Chinese';
+          default: return lang;
+        }
+      };
+      
+      const sourceLang = getLanguageName(params.sourceLanguage);
+      const targetLang = getLanguageName(params.targetLanguage);
       
       try {
         console.log(`Translating from ${sourceLang} to ${targetLang}`);
@@ -50,6 +61,9 @@ export const translationService = {
               content: `You are a professional financial translator specializing in Hong Kong regulations and markets. 
               Translate the following content from ${sourceLang} to ${targetLang} with high accuracy, maintaining the 
               same level of detail, comprehensiveness, and technical precision as the original text. 
+              
+              ${params.targetLanguage === 'zh-TW' ? 'IMPORTANT: Use Traditional Chinese characters in your translation.' : ''}
+              ${params.targetLanguage === 'zh-CN' ? 'IMPORTANT: Use Simplified Chinese characters in your translation.' : ''}
               
               CRITICAL INSTRUCTIONS:
               1. Ensure the translation is COMPLETE - DO NOT OMIT ANY INFORMATION from the source text
@@ -135,8 +149,8 @@ export const translationService = {
         
         // For Chinese to English, reasonable ratio is ~1.5-2.5
         // For English to Chinese, reasonable ratio is ~0.5-0.9
-        const isEnToCh = params.sourceLanguage === 'en' && params.targetLanguage === 'zh';
-        const isChToEn = params.sourceLanguage === 'zh' && params.targetLanguage === 'en';
+        const isEnToCh = params.sourceLanguage.startsWith('en') && params.targetLanguage.startsWith('zh');
+        const isChToEn = params.sourceLanguage.startsWith('zh') && params.targetLanguage.startsWith('en');
         
         const suspiciouslyShort = (isEnToCh && lengthRatio < 0.4) || (isChToEn && lengthRatio < 1.0);
         
@@ -152,7 +166,7 @@ export const translationService = {
               messages: [
                 { 
                   role: 'system', 
-                  content: `You are a professional translator. Your task is to translate the following English text into Chinese. 
+                  content: `You are a professional translator. Your task is to translate the following English text into ${params.targetLanguage === 'zh-TW' ? 'Traditional Chinese' : 'Simplified Chinese'}.
                   The translation MUST be comprehensive and include ALL details from the original text. 
                   Do not summarize or shorten the text in any way. This is extremely important.
                   

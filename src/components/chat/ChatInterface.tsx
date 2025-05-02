@@ -11,6 +11,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { FileWarning, Languages } from 'lucide-react';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
+import ProcessingOverlay from './ProcessingOverlay';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -55,13 +56,18 @@ const ChatInterface: React.FC = () => {
   } = useFileAttachments();
 
   // Language detection for input and messages
-  const { lastUserMessageIsChinese } = useLanguageDetection(messages, input);
+  const { 
+    lastUserMessageIsChinese, 
+    isTraditionalChinese, 
+    isSimplifiedChinese 
+  } = useLanguageDetection(messages, input);
   
   // Translation functionality for Chinese inputs
   const { translatingMessageIds } = useMessageTranslator({
     messages,
     setMessages,
     lastInputWasChinese: lastUserMessageIsChinese,
+    isTraditionalChinese: isTraditionalChinese,
     isLoading
   });
 
@@ -95,7 +101,7 @@ const ChatInterface: React.FC = () => {
       '清洗豁免',
       '非常重大的收购',
       '关连交易',
-      '时间表',
+      '時間表',
       '第14A章',
       '合计',
       '收购守则'
@@ -149,7 +155,7 @@ const ChatInterface: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto py-6">
+      <div className="container mx-auto py-6 relative">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
@@ -168,6 +174,13 @@ const ChatInterface: React.FC = () => {
             </AlertDescription>
           </Alert>
         )}
+        
+        {/* Processing overlay for when the system is working */}
+        {isLoading && <ProcessingOverlay 
+          currentStep={currentStep}
+          stepProgress={stepProgress}
+          isChineseInterface={lastUserMessageIsChinese}
+        />}
         
         <ChatContainer
           messages={messages}

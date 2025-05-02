@@ -10,6 +10,7 @@ interface MessageTranslatorProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   lastInputWasChinese: boolean;
+  isTraditionalChinese?: boolean;
   isLoading: boolean;
 }
 
@@ -17,6 +18,7 @@ export const useMessageTranslator = ({
   messages,
   setMessages,
   lastInputWasChinese,
+  isTraditionalChinese = false,
   isLoading
 }: MessageTranslatorProps) => {
   const [translatingMessageIds, setTranslatingMessageIds] = useState<string[]>([]);
@@ -71,6 +73,9 @@ export const useMessageTranslator = ({
             
             setMessages(messagesWithTranslating);
             
+            // Choose which Chinese variant to use for the translation
+            const targetLanguage = isTraditionalChinese ? 'zh-TW' : 'zh-CN';
+            
             // Show toast to indicate translation is in progress
             toast({
               title: "正在翻译",
@@ -79,11 +84,11 @@ export const useMessageTranslator = ({
             });
             
             // Translate the content
-            console.log('Calling translation service...');
+            console.log(`Calling translation service for ${targetLanguage}...`);
             const translatedResponse = await translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
-              targetLanguage: 'zh'
+              targetLanguage: targetLanguage
             });
             
             // Remove this message ID from the translating list
@@ -148,7 +153,7 @@ export const useMessageTranslator = ({
     if (!isLoading) {
       processLatestMessage();
     }
-  }, [messages, isLoading, lastInputWasChinese, setMessages, toast]);
+  }, [messages, isLoading, lastInputWasChinese, setMessages, toast, isTraditionalChinese]);
 
   return { translatingMessageIds };
 };
