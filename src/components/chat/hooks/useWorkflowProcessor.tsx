@@ -71,7 +71,7 @@ export const useWorkflowProcessor = ({
           
           const botMessage: Message = {
             id: Date.now().toString(),
-            content: responseResult.translatedResponse || responseResult.response || 'Sorry, I could not generate a response.',
+            content: responseResult.response || 'Sorry, I could not generate a response.',
             sender: 'bot',
             timestamp: new Date()
           };
@@ -112,7 +112,7 @@ export const useWorkflowProcessor = ({
             // Create bot response message
             const botMessage: Message = {
               id: Date.now().toString(),
-              content: stepResult.translatedResponse || stepResult.response || 'Sorry, I could not generate a response.',
+              content: stepResult.response || 'Sorry, I could not generate a response.',
               sender: 'bot',
               timestamp: new Date()
             };

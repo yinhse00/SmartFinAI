@@ -9,6 +9,7 @@ export interface StepResult {
   completed?: boolean;
   query?: string;
   error?: any;
+  response?: string;
   [key: string]: any;
 }
 
@@ -59,8 +60,7 @@ export interface Step4Result extends StepResult {
 export interface Step5Result extends StepResult {
   completed: boolean;
   response?: string;
-  originalResponse?: string;
-  translatedResponse?: string;
+  metadata?: any;
   requiresTranslation?: boolean;
-  translationError?: any;
+  error?: any;
 }
