@@ -91,7 +91,7 @@ export default defineConfig(({ mode }) => ({
                   'Access-Control-Max-Age': '86400'
                 });
               }
-              if (!res.ended && res.end) {
+              if (!res.end()) {
                 res.end();
               }
             }

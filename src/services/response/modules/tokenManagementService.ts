@@ -30,14 +30,22 @@ export const tokenManagementService = {
     prompt: string;
     isSimpleQuery?: boolean;
     retryCount?: number;
+    isBatchRequest?: boolean;
+    batchNumber?: number;
   }): number {
-    const { queryType, isRetryAttempt, prompt, isSimpleQuery, retryCount = 0 } = params;
+    const { queryType, isRetryAttempt, prompt, isSimpleQuery, retryCount = 0, isBatchRequest, batchNumber } = params;
 
     // For retry attempts, use progressively larger token limits
     if (isRetryAttempt) {
       if (retryCount >= 2) return TOKEN_LIMITS.RETRY_ATTEMPT_3;
       if (retryCount === 1) return TOKEN_LIMITS.RETRY_ATTEMPT_2;
       return TOKEN_LIMITS.RETRY_ATTEMPT_1;
+    }
+
+    // For batch requests, especially later parts, increase token limits
+    if (isBatchRequest && batchNumber && batchNumber > 1) {
+      // For continuation batches, use higher limits to ensure completion
+      return Math.min(30000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
     }
 
     if (queryType === 'specialist_technology' || 
@@ -77,11 +85,18 @@ export const tokenManagementService = {
     queryType: string;
     isRetryAttempt?: boolean;
     prompt: string;
+    isBatchRequest?: boolean;
+    batchNumber?: number;
   }): number {
-    const { isRetryAttempt, queryType, prompt } = params;
+    const { isRetryAttempt, queryType, prompt, isBatchRequest, batchNumber } = params;
 
     if (isRetryAttempt) {
       return 0.1;
+    }
+    
+    // For batch continuations, use lower temperature for consistency
+    if (isBatchRequest && batchNumber && batchNumber > 1) {
+      return 0.1; // Lower temperature for batch continuations for consistency
     }
 
     if (queryType === 'specialist_technology' || 
