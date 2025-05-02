@@ -9,6 +9,7 @@ interface BatchContinuationProps {
   currentBatchNumber: number;
   handleContinueBatch: () => void;
   lastInputWasChinese: boolean;
+  isLoading?: boolean; // Add isLoading prop to disable button during requests
 }
 
 const BatchContinuation: React.FC<BatchContinuationProps> = ({
@@ -16,7 +17,8 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
   autoBatch,
   currentBatchNumber,
   handleContinueBatch,
-  lastInputWasChinese
+  lastInputWasChinese,
+  isLoading = false
 }) => {
   if (!isBatching || autoBatch) {
     return null;
@@ -34,8 +36,9 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
         variant="default"
         className="flex items-center gap-2 bg-finance-accent-blue text-white px-6 py-2"
         onClick={handleContinueBatch}
+        disabled={isLoading}
       >
-        <RefreshCw size={16} /> 
+        <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} /> 
         {lastInputWasChinese 
           ? `继续下一部分 (第 ${currentBatchNumber + 1} 部分)` 
           : `Continue to Next Part (Part ${currentBatchNumber + 1})`

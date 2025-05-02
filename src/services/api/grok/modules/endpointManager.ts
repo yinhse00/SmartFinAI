@@ -38,12 +38,16 @@ export const attemptProxyRequest = async (
         'Authorization': `Bearer ${apiKey}`,
         'X-Request-Source': 'browser-client', // Add custom header for tracking
         'X-Request-ID': `req-${Date.now()}`, // Add request ID for tracing
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'Cache-Control': 'no-cache',  // Prevent caching for fresh responses
+        'X-API-Key-Rotation': 'enabled' // Signal key rotation is enabled
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
       credentials: 'same-origin', // Try different credentials mode
-      mode: 'cors' // Explicitly set CORS mode
+      mode: 'cors', // Explicitly set CORS mode
+      keepalive: true, // Keep connection alive for large responses
+      redirect: 'follow' // Follow redirects in case the API endpoint changes
     });
     
     clearTimeout(timeoutId);
@@ -92,7 +96,20 @@ export const attemptDirectRequest = async (
 ): Promise<any> => {
   const errors: Error[] = [];
   
-  for (const apiEndpoint of API_ENDPOINTS) {
+  // If this is a batch continuation request, prioritize different endpoints
+  const isBatchContinuation = requestBody.messages?.some((msg: any) => 
+    typeof msg.content === 'string' && 
+    msg.content.includes('[CONTINUATION_PART_')
+  );
+  
+  // Reorder endpoints for batch continuation to try different servers
+  let endpoints = [...API_ENDPOINTS];
+  if (isBatchContinuation) {
+    // For continuations, shuffle the endpoints to increase chances of success
+    endpoints = endpoints.sort(() => Math.random() - 0.5);
+  }
+  
+  for (const apiEndpoint of endpoints) {
     try {
       console.log(`Attempting direct API call to: ${apiEndpoint}`);
       
@@ -112,12 +129,15 @@ export const attemptDirectRequest = async (
           'Origin': window.location.origin,
           'X-Request-Source': 'browser-client',
           'X-Request-ID': `req-${Date.now()}`,
-          'Accept': 'application/json'
+          'X-Batch-Request': isBatchContinuation ? 'true' : 'false', // Indicate if this is a batch request
+          'Accept': 'application/json',
+          'Cache-Control': 'no-cache'
         },
         body: JSON.stringify(requestBody),
         mode: 'cors',
         signal: controller.signal,
-        credentials: 'omit' // Avoid sending credentials for cross-origin requests
+        credentials: 'omit', // Avoid sending credentials for cross-origin requests
+        keepalive: true // Keep connection alive for large responses
       };
       
       const response = await fetch(apiEndpoint, options);

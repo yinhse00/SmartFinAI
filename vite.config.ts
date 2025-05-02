@@ -17,14 +17,28 @@ export default defineConfig(({ mode }) => ({
         timeout: 600000, // 10 minute timeout for large file processing
         configure: (proxy, _options) => {
           // Add additional headers that might help with CORS
-          proxy.on('proxyReq', function(proxyReq) {
+          proxy.on('proxyReq', function(proxyReq, req) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
             proxyReq.setHeader('X-Long-Response', 'true');
             proxyReq.setHeader('Origin', 'https://api.x.ai'); // Match target origin
             proxyReq.setHeader('Referer', 'https://api.x.ai/'); // Add referer for some APIs
             proxyReq.setHeader('Access-Control-Allow-Origin', '*'); // Try to allow CORS
             proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+            proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key-Rotation');
+            
+            // Forward custom headers from the original request if present
+            const originalRequest = req as any;
+            if (originalRequest.headers && originalRequest.headers['x-request-id']) {
+              proxyReq.setHeader('X-Request-ID', originalRequest.headers['x-request-id']);
+            }
+            
+            if (originalRequest.headers && originalRequest.headers['x-api-key-rotation']) {
+              proxyReq.setHeader('X-API-Key-Rotation', originalRequest.headers['x-api-key-rotation']);
+            }
+            
+            if (originalRequest.headers && originalRequest.headers['x-batch-request']) {
+              proxyReq.setHeader('X-Batch-Request', originalRequest.headers['x-batch-request']);
+            }
           });
           
           // Better error handling for debugging
@@ -65,13 +79,23 @@ export default defineConfig(({ mode }) => ({
                 res.writeHead(200, {
                   'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-                  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key-Rotation, X-Request-ID, X-Batch-Request',
                   'Access-Control-Max-Age': '86400'
                 });
               }
               if (res.end && !res.writableEnded) {
                 res.end();
               }
+            }
+            
+            // Check for too many requests (rate limiting)
+            if (status === 429) {
+              console.error('API rate limit exceeded. Consider adding more API keys or implementing a delay between requests.');
+            }
+            
+            // Check for timeout errors
+            if (status === 504) {
+              console.error('Gateway timeout. The request took too long to complete. Consider breaking content into smaller batches.');
             }
           });
         }
