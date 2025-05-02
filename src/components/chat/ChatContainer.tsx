@@ -23,7 +23,12 @@ interface ChatContainerProps {
   isProcessingFiles?: boolean;
   attachedFiles?: File[];
   onFileRemove?: (index: number) => void;
-  isOfflineMode?: boolean; // New prop for offline mode
+  isOfflineMode?: boolean;
+  regulatoryContext?: {
+    hasRegulatoryContent: boolean;
+    sourceDocuments?: string[];
+    relevanceScore?: number;
+  };
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -41,7 +46,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   isProcessingFiles = false,
   attachedFiles = [],
   onFileRemove,
-  isOfflineMode = false // Default to false
+  isOfflineMode = false,
+  regulatoryContext
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -68,7 +74,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
       <ChatHeader 
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
-        isOfflineMode={isOfflineMode}
+        isOfflineMode={isOfflineMode} 
       />
       
       <ChatContent
@@ -77,6 +83,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onRetry={retryLastQuery}
         translatingMessageIds={translatingMessageIds}
         isOfflineMode={isOfflineMode}
+        regulatoryContext={regulatoryContext}
       />
       
       <ChatInput 

@@ -1,5 +1,4 @@
-
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
@@ -50,13 +49,42 @@ const ChatInterface: React.FC = () => {
     hasAttachedFiles 
   } = useFileAttachments();
 
+  // Track regulatory context for current conversation
+  const [regulatoryContext, setRegulatoryContext] = useState<{
+    hasRegulatoryContent: boolean;
+    sourceDocuments?: string[];
+    relevanceScore?: number;
+  }>({
+    hasRegulatoryContent: false
+  });
+
+  // Effect to update regulatory context when context changes
+  useEffect(() => {
+    // Look for context information in the messages
+    const contextMessages = messages.filter(msg => 
+      msg.sender === 'bot' && 
+      msg.metadata?.regulatoryContext
+    );
+    
+    if (contextMessages.length > 0) {
+      const latestContextMessage = contextMessages[contextMessages.length - 1];
+      const metadata = latestContextMessage.metadata;
+      
+      setRegulatoryContext({
+        hasRegulatoryContent: true,
+        sourceDocuments: metadata?.regulatoryContext?.sources || [],
+        relevanceScore: metadata?.regulatoryContext?.relevanceScore
+      });
+    }
+  }, [messages]);
+
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
     if (isOfflineMode && hasAttachedFiles) {
       toast({
         title: "Limited File Processing",
         description: "You're in offline mode. File processing will be limited.",
-        variant: "destructive", // Changed from "warning" to "destructive"
+        variant: "destructive",
         duration: 5000,
       });
     }
@@ -124,6 +152,7 @@ const ChatInterface: React.FC = () => {
           attachedFiles={attachedFiles}
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
+          regulatoryContext={regulatoryContext}
         />
       </div>
       
