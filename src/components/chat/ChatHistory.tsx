@@ -52,11 +52,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
           key={message.id} 
           message={message} 
           onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
-          onTypingProgress={() => {
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
-          }}
           isTranslating={translatingMessageIds.includes(message.id)}
         />
       ))}

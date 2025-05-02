@@ -14,6 +14,12 @@ export interface Message {
   isError?: boolean;
   isTruncated?: boolean;
   isBatchPart?: boolean;
+  queryType?: string;
+  references?: string[];
+  isTranslated?: boolean;
+  originalContent?: string;
+  isUsingFallback?: boolean;
+  reasoning?: string;
   metadata?: {
     regulatoryContext?: {
       sources?: string[];
@@ -40,6 +46,7 @@ interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
   isTranslating?: boolean;
+  onTypingProgress?: () => void;
 }
 
 const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, isTranslating }) => {

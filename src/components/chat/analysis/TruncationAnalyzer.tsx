@@ -31,6 +31,7 @@ export const useTruncationAnalyzer = ({
         !lastMessage.isTruncated
       ) {
         const content = lastMessage.content;
+        // Use optional chaining for queryType which might be undefined
         const queryType = lastMessage.queryType || '';
         const financialAnalysis = analyzeFinancialResponse(content, queryType);
         const isTruncated = financialAnalysis.isComplete === false;
