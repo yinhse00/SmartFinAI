@@ -8,10 +8,10 @@ export const LOCAL_PROXY = '/api/grok/chat/completions';
 
 // Available API endpoints for direct calls
 export const API_ENDPOINTS = [
+  'https://api.x.ai/v1/chat/completions',
   'https://api.grok.ai/v1/chat/completions',
   'https://grok-api.com/v1/chat/completions',
-  'https://grok.x.ai/v1/chat/completions',
-  'https://api.x.ai/v1/chat/completions'
+  'https://grok.x.ai/v1/chat/completions'
 ];
 
 /**
