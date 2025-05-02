@@ -20,6 +20,7 @@ export interface Message {
   isBatchPart?: boolean;
   isTranslated?: boolean;
   originalContent?: string;
+  translationInProgress?: boolean;
 }
 
 interface ChatMessageProps {
@@ -46,6 +47,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     isTruncated,
     isBatchPart,
     originalContent,
+    translationInProgress,
     id
   } = message;
   
@@ -53,8 +55,8 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [showOriginal, setShowOriginal] = useState(false);
   
   // Debug output
-  if (isTranslating) {
-    console.log(`Message ${id} is currently being translated`);
+  if (isTranslating || translationInProgress) {
+    console.log(`Message ${id} is ${translationInProgress ? 'in translation process' : 'currently being translated'}`);
   }
 
   // Determine which content to display
@@ -68,10 +70,21 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
             ? 'bg-finance-medium-blue text-white' 
             : isError 
               ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
+              : translationInProgress
+              ? 'bg-gray-50 dark:bg-gray-800 opacity-70'
               : 'bg-gray-50 dark:bg-gray-800'
         }`}>
-          {sender === 'user' || isTranslating ? (
-            <div className="whitespace-pre-line">{displayContent}</div>
+          {(sender === 'user' || isTranslating || (translationInProgress && sender === 'bot')) ? (
+            <div className="whitespace-pre-line">
+              {translationInProgress && sender === 'bot' ? (
+                <div className="flex flex-col gap-2">
+                  <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
+                  <div className="opacity-60">{displayContent}</div>
+                </div>
+              ) : (
+                displayContent
+              )}
+            </div>
           ) : (
             <TypingAnimation 
               text={displayContent} 
@@ -82,7 +95,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Toggle original/translated content option for bot messages */}
-          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && (
+          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && (
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="ghost" 
@@ -96,7 +109,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Truncated message retry button */}
-          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && (
+          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="outline" 
@@ -111,7 +124,7 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* References badges */}
-          {references && references.length > 0 && isTypingComplete && !isTranslating && (
+          {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && (
             <div className="mt-2 flex flex-wrap gap-1">
               {references.map((ref, i) => (
                 <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">

@@ -8,7 +8,9 @@ import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileWarning } from 'lucide-react';
+import { FileWarning, Languages } from 'lucide-react';
+import { useMessageTranslator } from './translation/MessageTranslator';
+import { useLanguageDetection } from './hooks/useLanguageDetection';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -52,6 +54,17 @@ const ChatInterface: React.FC = () => {
     hasAttachedFiles 
   } = useFileAttachments();
 
+  // Language detection for input and messages
+  const { lastUserMessageIsChinese } = useLanguageDetection(messages, input);
+  
+  // Translation functionality for Chinese inputs
+  const { translatingMessageIds } = useMessageTranslator({
+    messages,
+    setMessages,
+    lastInputWasChinese: lastUserMessageIsChinese,
+    isLoading
+  });
+
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
     if (isOfflineMode && hasAttachedFiles) {
@@ -77,18 +90,26 @@ const ChatInterface: React.FC = () => {
       'timetable',
       'chapter 14a',
       'aggregate',
-      'takeovers code'
+      'takeovers code',
+      '供股',
+      '清洗豁免',
+      '非常重大的收购',
+      '关连交易',
+      '时间表',
+      '第14A章',
+      '合计',
+      '收购守则'
     ];
     
     // Check if input contains any of the complex query keywords
     const hasComplexQueryTerms = complexQueryKeywords.some(keyword => 
-      input.toLowerCase().includes(keyword)
+      input.toLowerCase().includes(keyword.toLowerCase())
     );
     
     // Multiple complex keywords or long query with at least one keyword
     const isComplex = (input.split(' ').length > 15 && hasComplexQueryTerms) || 
                     complexQueryKeywords.filter(keyword => 
-                      input.toLowerCase().includes(keyword)
+                      input.toLowerCase().includes(keyword.toLowerCase())
                     ).length > 1;
     
     setIsComplexFinancialQuery(isComplex);
@@ -98,8 +119,10 @@ const ChatInterface: React.FC = () => {
   const handleSendWithFiles = async () => {
     if (hasAttachedFiles) {
       toast({
-        title: "Processing files",
-        description: `Processing ${attachedFiles.length} file(s) before sending your message...`,
+        title: lastUserMessageIsChinese ? "处理文件中" : "Processing files",
+        description: lastUserMessageIsChinese 
+          ? `正在处理 ${attachedFiles.length} 个文件，然后发送您的消息...` 
+          : `Processing ${attachedFiles.length} file(s) before sending your message...`,
       });
       
       const processedResults = await processFiles(attachedFiles);
@@ -137,8 +160,11 @@ const ChatInterface: React.FC = () => {
           <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
             <FileWarning className="h-4 w-4 text-blue-600 dark:text-blue-400" />
             <AlertDescription>
-              You're asking about a complex financial topic. For best results with topics like rights issues, 
-              timetables, or whitewash waivers, consider breaking your query into smaller, more focused questions.
+              {lastUserMessageIsChinese ? (
+                "您正在询问复杂的金融话题。为获得最佳结果，建议将您的问题拆分为更小、更集中的问题，特别是涉及供股、时间表或清洗豁免等话题。"
+              ) : (
+                "You're asking about a complex financial topic. For best results with topics like rights issues, timetables, or whitewash waivers, consider breaking your query into smaller, more focused questions."
+              )}
             </AlertDescription>
           </Alert>
         )}
@@ -167,6 +193,7 @@ const ChatInterface: React.FC = () => {
           onFileRemove={removeAttachedFile}
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
+          translatingMessageIds={translatingMessageIds}
         />
       </div>
       

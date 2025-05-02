@@ -56,12 +56,20 @@ export const useMessageTranslator = ({
             // Mark this message as being translated
             setTranslatingMessageIds(prev => [...prev, lastMessage.id]);
             
-            // Create a temporary message with an indicator that translation is in progress
+            // Show translation in progress in the UI
             const messagesWithTranslating = [...messages];
             const translatingIndex = messagesWithTranslating.length - 1;
             
             // Store original content before updating
             const originalContent = lastMessage.content;
+            
+            // Update message to show translation is in progress
+            messagesWithTranslating[translatingIndex] = {
+              ...lastMessage,
+              translationInProgress: true
+            };
+            
+            setMessages(messagesWithTranslating);
             
             // Show toast to indicate translation is in progress
             toast({
@@ -87,7 +95,8 @@ export const useMessageTranslator = ({
               ...lastMessage,
               content: translatedResponse.text,
               isTranslated: true,
-              originalContent: originalContent
+              originalContent: originalContent,
+              translationInProgress: false
             };
             
             // Update messages state with translated content
@@ -119,11 +128,12 @@ export const useMessageTranslator = ({
             // Remove from translating list even if there was an error
             setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
             
-            // Mark as translated even if there was an error to prevent infinite loops
+            // Update the message to remove the translation in progress state
             const updatedMessages = [...messages];
             updatedMessages[updatedMessages.length - 1] = {
               ...lastMessage,
-              isTranslated: true // Prevent further translation attempts
+              isTranslated: true, // Prevent further translation attempts
+              translationInProgress: false
             };
             setMessages(updatedMessages);
           } finally {
