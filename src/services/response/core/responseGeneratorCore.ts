@@ -5,7 +5,7 @@ import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
 /**
- * Core response generation functionality
+ * Core response generation functionality with improved CORS handling
  */
 export const responseGeneratorCore = {
   /**
@@ -18,10 +18,25 @@ export const responseGeneratorCore = {
       const isRetryAttempt = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                             requestBody.messages.find(m => m.role === 'user').content.includes('[RETRY_ATTEMPT]');
       const userMessage = requestBody.messages.find((m: any) => m.role === 'user')?.content || '';
+      
+      // Check for batch request to apply specialized token handling
+      const isBatchRequest = typeof userMessage === 'string' && userMessage.includes('[CONTINUATION_PART_');
+      let batchNumber = 1;
+      
+      if (isBatchRequest) {
+        const match = userMessage.match(/\[CONTINUATION_PART_(\d+)\]/);
+        if (match && match[1]) {
+          batchNumber = parseInt(match[1], 10);
+        }
+      }
+      
+      // Get effective token limit based on context
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         isRetryAttempt,
-        prompt: userMessage
+        prompt: userMessage,
+        isBatchRequest,
+        batchNumber
       });
       
       if (requestBody.max_tokens && requestBody.max_tokens > effectiveTokenLimit) {
@@ -33,13 +48,44 @@ export const responseGeneratorCore = {
         requestBody.max_tokens = effectiveTokenLimit;
       }
       
+      // Get optimal temperature based on context
       const temperature = tokenManagementService.getTemperature({
         queryType: requestBody.queryType || 'general',
         isRetryAttempt,
-        prompt: userMessage
+        prompt: userMessage,
+        isBatchRequest,
+        batchNumber
       });
       
       requestBody.temperature = temperature;
+      
+      // Add batch-specific flags to help with CORS and API endpoint selection
+      if (isBatchRequest) {
+        if (!requestBody.metadata) {
+          requestBody.metadata = {};
+        }
+        requestBody.metadata.isBatchRequest = true;
+        requestBody.metadata.batchNumber = batchNumber;
+        
+        // For batch continuations, we need to be even more careful with token limits
+        if (batchNumber > 1 && batchNumber <= 5) {
+          // Progressively increase token limit for later batches to ensure completion
+          const batchMultiplier = 1 + (batchNumber * 0.1); // 1.1x for batch 1, 1.2x for batch 2, etc.
+          const enhancedLimit = Math.floor(effectiveTokenLimit * batchMultiplier);
+          console.log(`Applying batch multiplier ${batchMultiplier}x for batch ${batchNumber}, new limit: ${enhancedLimit}`);
+          requestBody.max_tokens = enhancedLimit;
+        } else if (batchNumber > 5) {
+          // For very high batch numbers, use maximum available tokens
+          requestBody.max_tokens = 30000; // Use maximum available
+          console.log(`Using maximum token limit for high batch number ${batchNumber}`);
+        }
+        
+        // Use lower temperature for later batches to reduce variability
+        if (batchNumber > 1) {
+          requestBody.temperature = Math.max(0.1, temperature * 0.8);
+          console.log(`Reducing temperature to ${requestBody.temperature} for batch ${batchNumber}`);
+        }
+      }
       
       return await grokApiService.callChatCompletions(requestBody, apiKey);
     } catch (error) {

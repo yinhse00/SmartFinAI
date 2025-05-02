@@ -1,6 +1,6 @@
-
 /**
  * Main orchestration for Grok API key pool, selection/rotation, and legacy compat.
+ * Enhanced with better CORS and batch continuation handling.
  */
 import { 
   loadKeysFromStorage, 
@@ -27,8 +27,11 @@ let lastKeySelectionTime = Date.now();
 const KEY_ROTATION_INTERVAL = 30000; // 30 seconds minimum between forced rotations
 const BATCH_KEY_ROTATION_INTERVAL = 10000; // 10 seconds between rotations for batch requests
 
-// Track which keys were used for which conversation threads
+// Track which keys were used for which conversation threads for improved consistency
 const conversationKeyMap = new Map<string, string>();
+
+// Track which keys were used for which batch requests for better continuity
+const batchKeyMap = new Map<string, string>();
 
 /**
  * Enhanced round-robin key rotation with smart load balancing and cooldown periods
@@ -42,6 +45,33 @@ export function getGrokApiKey(options: {
   try {
     const keys = loadKeysFromStorage();
     if (!keys.length) throw new Error('No available API keys in storage or defaults.');
+    
+    // For batch requests, try to be extra consistent with key selection
+    if (options.isBatchRequest && options.batchNumber && options.conversationId) {
+      const batchKey = `${options.conversationId}-batch-${options.batchNumber}`;
+      
+      // First check if we have a previously used key for this exact batch
+      if (batchKeyMap.has(batchKey)) {
+        const existingBatchKey = batchKeyMap.get(batchKey);
+        // Verify the key is still in our pool
+        if (existingBatchKey && keys.includes(existingBatchKey)) {
+          console.log(`Using existing key for batch ${options.batchNumber} of conversation ${options.conversationId}`);
+          return existingBatchKey;
+        }
+      }
+      
+      // Next check if we have a key for this conversation
+      if (options.conversationId && conversationKeyMap.has(options.conversationId)) {
+        const existingKey = conversationKeyMap.get(options.conversationId);
+        // Verify the key is still in our pool
+        if (existingKey && keys.includes(existingKey)) {
+          console.log(`Using conversation key for batch ${options.batchNumber} of conversation ${options.conversationId}`);
+          // Save this association for future batches
+          batchKeyMap.set(batchKey, existingKey);
+          return existingKey;
+        }
+      }
+    }
     
     // If this is part of a conversation thread, try to use the same key
     if (options.conversationId && conversationKeyMap.has(options.conversationId)) {
@@ -81,9 +111,15 @@ export function getGrokApiKey(options: {
     
     const selectedKey = keys[currentKeyIndex];
     
-    // Store key association with conversation if provided
+    // Store key association with conversation and batch if provided
     if (options.conversationId) {
       conversationKeyMap.set(options.conversationId, selectedKey);
+      
+      // Also store for specific batch if applicable
+      if (options.isBatchRequest && options.batchNumber) {
+        const batchKey = `${options.conversationId}-batch-${options.batchNumber}`;
+        batchKeyMap.set(batchKey, selectedKey);
+      }
     }
     
     console.log(`API key selected: using key ${currentKeyIndex + 1} of ${keys.length} ${options.isBatchRequest ? 'for batch request' : ''}`);
@@ -158,7 +194,7 @@ export function getFreshGrokApiKey(options: {
 }
 
 /**
- * Get API key specifically optimized for batch continuation
+ * Get API key specifically optimized for batch continuation with enhanced CORS handling
  * This ensures consistent communication with the same API server
  */
 export function getBatchContinuationKey(
@@ -169,12 +205,47 @@ export function getBatchContinuationKey(
     const keys = loadKeysFromStorage();
     if (!keys.length) throw new Error('No available API keys in storage or defaults.');
     
+    // Check for batch-specific key first (most precise match)
+    if (conversationId && batchNumber) {
+      const batchKey = `${conversationId}-batch-${batchNumber}`;
+      if (batchKeyMap.has(batchKey)) {
+        const existingBatchKey = batchKeyMap.get(batchKey);
+        // Verify the key is still valid
+        if (existingBatchKey && keys.includes(existingBatchKey) && existingBatchKey.startsWith('xai-')) {
+          console.log(`Using specific key for batch ${batchNumber} of conversation ${conversationId}`);
+          return existingBatchKey;
+        }
+      }
+      
+      // Check for previous batch key
+      if (batchNumber > 1) {
+        const previousBatchKey = `${conversationId}-batch-${batchNumber-1}`;
+        if (batchKeyMap.has(previousBatchKey)) {
+          const existingBatchKey = batchKeyMap.get(previousBatchKey);
+          // Verify the key is still valid
+          if (existingBatchKey && keys.includes(existingBatchKey) && existingBatchKey.startsWith('xai-')) {
+            console.log(`Using previous batch key for batch ${batchNumber} of conversation ${conversationId}`);
+            // Save this association for the current batch too
+            batchKeyMap.set(batchKey, existingBatchKey);
+            return existingBatchKey;
+          }
+        }
+      }
+    }
+    
     // For batch continuations, try to use the same key from the conversation
     if (conversationId && conversationKeyMap.has(conversationId)) {
       const existingKey = conversationKeyMap.get(conversationId);
       // Verify the key is still valid and in our pool
       if (existingKey && keys.includes(existingKey) && existingKey.startsWith('xai-')) {
         console.log(`Using consistent key for batch continuation ${batchNumber || ''}`);
+        
+        // Store this association for the specific batch
+        if (conversationId && batchNumber) {
+          const batchKey = `${conversationId}-batch-${batchNumber}`;
+          batchKeyMap.set(batchKey, existingKey);
+        }
+        
         return existingKey;
       }
     }
@@ -186,16 +257,33 @@ export function getBatchContinuationKey(
     if (preferredKeys.length > 0) {
       const selectedKey = preferredKeys[0];
       
-      // Store this key for the conversation
+      // Store this key for the conversation and batch
       if (conversationId) {
         conversationKeyMap.set(conversationId, selectedKey);
+        
+        if (batchNumber) {
+          const batchKey = `${conversationId}-batch-${batchNumber}`;
+          batchKeyMap.set(batchKey, selectedKey);
+        }
       }
       
       return selectedKey;
     }
     
     // Fallback to basic key selection
-    return keys[0];
+    const selectedKey = keys[0];
+    
+    // Store this key for the conversation and batch
+    if (conversationId) {
+      conversationKeyMap.set(conversationId, selectedKey);
+      
+      if (batchNumber) {
+        const batchKey = `${conversationId}-batch-${batchNumber}`;
+        batchKeyMap.set(batchKey, selectedKey);
+      }
+    }
+    
+    return selectedKey;
   } catch (error) {
     console.error('Error getting batch continuation key:', error);
     return DEFAULT_DEPLOYMENT_KEYS[0];
@@ -261,6 +349,16 @@ export function hasGrokApiKey(): boolean {
 export function resetConversationKeys(): void {
   conversationKeyMap.clear();
   console.log('Conversation key associations cleared');
+}
+
+/**
+ * Clear all cached key associations
+ * Useful when API keys are changed or when encountering persistent CORS issues
+ */
+export function resetKeyAssociations(): void {
+  conversationKeyMap.clear();
+  batchKeyMap.clear();
+  console.log('All key associations reset');
 }
 
 // Enhanced key pool strategies with improved diagnostics

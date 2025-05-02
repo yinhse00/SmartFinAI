@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    cors: true, // Enable CORS for dev server
     proxy: {
       '/api/grok': {
         target: 'https://api.x.ai',
@@ -22,9 +23,9 @@ export default defineConfig(({ mode }) => ({
             proxyReq.setHeader('X-Long-Response', 'true');
             proxyReq.setHeader('Origin', 'https://api.x.ai'); // Match target origin
             proxyReq.setHeader('Referer', 'https://api.x.ai/'); // Add referer for some APIs
-            proxyReq.setHeader('Access-Control-Allow-Origin', '*'); // Try to allow CORS
-            proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-            proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key-Rotation');
+            
+            // Replace Access-Control-Allow-Origin with proper value
+            // Don't add CORS headers on request - they should be on response
             
             // Forward custom headers from the original request if present
             const originalRequest = req as any;
@@ -48,7 +49,10 @@ export default defineConfig(({ mode }) => ({
             // Attempt to send a structured response on error
             if (!res.headersSent && res.writeHead) {
               res.writeHead(500, {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*',
+                'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key-Rotation, X-Request-ID, X-Batch-Request'
               });
               
               const errorResponse = {
@@ -63,19 +67,23 @@ export default defineConfig(({ mode }) => ({
             }
           });
           
-          // Log detailed response info
+          // Improved CORS handling for proxy responses
           proxy.on('proxyRes', function(proxyRes, req, res) {
             const status = proxyRes.statusCode;
             console.log(`Proxy response from ${req.url}: ${status}`);
             
-            // Log headers for debugging
-            if (status !== 200) {
-              console.log('Response headers:', proxyRes.headers);
+            // Add CORS headers to ALL responses
+            if (!res.headersSent && proxyRes.statusCode) {
+              // Add CORS headers to the response
+              proxyRes.headers['Access-Control-Allow-Origin'] = '*';
+              proxyRes.headers['Access-Control-Allow-Methods'] = 'GET, POST, OPTIONS';
+              proxyRes.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization, X-API-Key-Rotation, X-Request-ID, X-Batch-Request';
+              proxyRes.headers['Access-Control-Max-Age'] = '86400';
             }
             
-            // Handle CORS preflight
+            // Handle CORS preflight requests with special care
             if (req.method === 'OPTIONS') {
-              if (res.writeHead && !res.headersSent) {
+              if (!res.headersSent && res.writeHead) {
                 res.writeHead(200, {
                   'Access-Control-Allow-Origin': '*',
                   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
@@ -83,7 +91,7 @@ export default defineConfig(({ mode }) => ({
                   'Access-Control-Max-Age': '86400'
                 });
               }
-              if (res.end && !res.writableEnded) {
+              if (!res.ended && res.end) {
                 res.end();
               }
             }

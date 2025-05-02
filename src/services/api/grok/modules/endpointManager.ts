@@ -1,6 +1,6 @@
 
 /**
- * Manages API endpoints and connection attempts
+ * Manages API endpoints and connection attempts with improved CORS handling
  */
 
 // Local proxy endpoint if available
@@ -14,8 +14,49 @@ export const API_ENDPOINTS = [
   'https://grok.x.ai/v1/chat/completions'
 ];
 
+// Circuit breaker implementation to avoid repeatedly trying failing endpoints
+const endpointCircuitBreakers = new Map<string, {failures: number, lastFailure: number}>();
+const MAX_FAILURES = 3;
+const RESET_TIMEOUT = 5 * 60 * 1000; // 5 minutes
+
+// Check if an endpoint is in a failed state (circuit open)
+function isCircuitOpen(endpoint: string): boolean {
+  const breaker = endpointCircuitBreakers.get(endpoint);
+  if (!breaker) return false;
+  
+  // Reset circuit breaker after timeout
+  if (Date.now() - breaker.lastFailure > RESET_TIMEOUT) {
+    endpointCircuitBreakers.delete(endpoint);
+    console.log(`Circuit breaker reset for ${endpoint}`);
+    return false;
+  }
+  
+  return breaker.failures >= MAX_FAILURES;
+}
+
+// Record endpoint failure and potentially open circuit
+function recordEndpointFailure(endpoint: string): void {
+  const breaker = endpointCircuitBreakers.get(endpoint) || { failures: 0, lastFailure: Date.now() };
+  breaker.failures++;
+  breaker.lastFailure = Date.now();
+  
+  endpointCircuitBreakers.set(endpoint, breaker);
+  
+  if (breaker.failures >= MAX_FAILURES) {
+    console.log(`Circuit breaker opened for ${endpoint} after ${breaker.failures} failures`);
+  }
+}
+
+// Record endpoint success and reset circuit if needed
+function recordEndpointSuccess(endpoint: string): void {
+  if (endpointCircuitBreakers.has(endpoint)) {
+    endpointCircuitBreakers.delete(endpoint);
+    console.log(`Circuit breaker reset after successful call to ${endpoint}`);
+  }
+}
+
 /**
- * Attempt API call using local proxy
+ * Enhanced proxy request with better CORS handling
  */
 export const attemptProxyRequest = async (
   requestBody: any, 
@@ -44,9 +85,7 @@ export const attemptProxyRequest = async (
       },
       body: JSON.stringify(requestBody),
       signal: controller.signal,
-      credentials: 'same-origin', // Try different credentials mode
-      mode: 'cors', // Explicitly set CORS mode
-      keepalive: true, // Keep connection alive for large responses
+      credentials: 'same-origin', // Use same-origin for local proxy requests
       redirect: 'follow' // Follow redirects in case the API endpoint changes
     });
     
@@ -88,7 +127,7 @@ export const attemptProxyRequest = async (
 };
 
 /**
- * Attempt direct API calls to various endpoints
+ * Attempt direct API calls with enhanced circuit breaker pattern
  */
 export const attemptDirectRequest = async (
   requestBody: any, 
@@ -109,7 +148,18 @@ export const attemptDirectRequest = async (
     endpoints = endpoints.sort(() => Math.random() - 0.5);
   }
   
-  for (const apiEndpoint of endpoints) {
+  // Filter out endpoints with open circuit breakers
+  const availableEndpoints = endpoints.filter(endpoint => !isCircuitOpen(endpoint));
+  
+  if (availableEndpoints.length === 0) {
+    console.warn("All endpoints have open circuit breakers. Using original endpoints and resetting.");
+    // Reset all circuit breakers when no endpoints are available
+    endpointCircuitBreakers.clear();
+  }
+  
+  const endpointsToTry = availableEndpoints.length > 0 ? availableEndpoints : endpoints;
+  
+  for (const apiEndpoint of endpointsToTry) {
     try {
       console.log(`Attempting direct API call to: ${apiEndpoint}`);
       
@@ -120,7 +170,7 @@ export const attemptDirectRequest = async (
         console.warn(`Direct request to ${apiEndpoint} timed out after 20 seconds`);
       }, 20000); // 20 second timeout for direct requests
       
-      // Try alternative fetch options to bypass CORS
+      // Enhanced fetch options to handle CORS
       const options: RequestInit = {
         method: 'POST',
         headers: {
@@ -129,14 +179,14 @@ export const attemptDirectRequest = async (
           'Origin': window.location.origin,
           'X-Request-Source': 'browser-client',
           'X-Request-ID': `req-${Date.now()}`,
-          'X-Batch-Request': isBatchContinuation ? 'true' : 'false', // Indicate if this is a batch request
+          'X-Batch-Request': isBatchContinuation ? 'true' : 'false',
           'Accept': 'application/json',
           'Cache-Control': 'no-cache'
         },
         body: JSON.stringify(requestBody),
         mode: 'cors',
         signal: controller.signal,
-        credentials: 'omit', // Avoid sending credentials for cross-origin requests
+        credentials: 'omit', // Avoid sending cookies for cross-origin requests
         keepalive: true // Keep connection alive for large responses
       };
       
@@ -146,10 +196,14 @@ export const attemptDirectRequest = async (
       
       if (response.ok) {
         console.log(`Direct API call to ${apiEndpoint} successful`);
+        recordEndpointSuccess(apiEndpoint);
         return await response.json();
       }
       
       console.warn(`Endpoint ${apiEndpoint} returned status: ${response.status}`);
+      
+      // Record endpoint failure for circuit breaker
+      recordEndpointFailure(apiEndpoint);
       
       // Add more detailed error information
       let errorDetails = `Status ${response.status} from ${apiEndpoint}`;
@@ -165,6 +219,7 @@ export const attemptDirectRequest = async (
       errors.push(new Error(errorDetails));
     } catch (endpointError) {
       console.warn(`Endpoint ${apiEndpoint} failed:`, endpointError);
+      recordEndpointFailure(apiEndpoint);
       errors.push(endpointError instanceof Error ? endpointError : new Error(String(endpointError)));
       // Continue to next endpoint
     }
@@ -175,7 +230,9 @@ export const attemptDirectRequest = async (
   throw new Error(`All API endpoints failed: ${errorMessage}`);
 };
 
-// Improved version of checkApiAvailability with more reliable detection
+/**
+ * Enhanced API availability check with better CORS handling
+ */
 export const checkApiAvailability = async (apiKey: string): Promise<boolean> => {
   if (!apiKey || !apiKey.startsWith('xai-')) {
     console.error("Invalid API key format for availability check");
@@ -193,11 +250,10 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
-      // Try multiple proxy paths
+      // Try simpler proxy paths first
       const proxyPaths = [
         '/api/grok/models',
-        '/api/grok/v1/models',
-        '/api/grok/chat/completions'
+        '/api/grok'
       ];
       
       for (const path of proxyPaths) {
@@ -207,10 +263,10 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
             headers: {
               'Authorization': `Bearer ${apiKey}`,
               'X-Request-Source': 'browser-client',
-              'Accept': 'application/json'
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache, no-store'
             },
             signal: controller.signal,
-            mode: 'cors',
             credentials: 'same-origin'
           });
           
@@ -231,7 +287,7 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
       console.warn("Local proxy availability check failed:", e instanceof Error ? e.message : String(e));
     }
     
-    // Try a simple OPTIONS preflight request to check CORS
+    // Use options preflight as a reliable connection test
     try {
       const preflightResponse = await fetch('/api/grok', { 
         method: 'OPTIONS',
@@ -241,7 +297,7 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
         }
       });
       
-      if (preflightResponse.ok) {
+      if (preflightResponse.ok || preflightResponse.status === 204) {
         console.log("CORS preflight request succeeded");
         return true;
       }
@@ -249,68 +305,34 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
       console.warn("CORS preflight check failed:", preflightError);
     }
     
-    // If proxy fails, try direct endpoints
-    console.log("Trying direct API endpoints...");
-    
-    // Use Promise.any to race all endpoint checks and return as soon as any succeeds
-    const endpointChecks = [
-      'https://api.grok.ai',
-      'https://grok-api.com',
-      'https://grok.x.ai',
-      'https://api.x.ai'
-    ].map(async (baseEndpoint) => {
-      try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
-        
-        // First try with proper CORS mode
-        const response = await fetch(`${baseEndpoint}/v1/models`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${apiKey}`,
-            'Accept': 'application/json'
-          },
-          mode: 'cors',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          console.log(`Direct endpoint ${baseEndpoint} is available`);
-          return true;
-        }
-        
-        return false;
-      } catch (e) {
-        // For CORS errors, try a no-cors HEAD request just to check connectivity
-        try {
-          const responseHead = await fetch(`${baseEndpoint}`, {
-            method: 'HEAD',
-            mode: 'no-cors'
-          });
-          
-          // If we get here, the server is reachable, but we may have CORS issues
-          console.log(`Endpoint ${baseEndpoint} is reachable but may have CORS restrictions`);
-          return false;
-        } catch (headError) {
-          // Both attempts failed, endpoint is likely down
-          return false;
-        }
+    // Fallback to a ping on the root endpoint
+    try {
+      const pingResponse = await fetch('/api/grok', {
+        method: 'HEAD'
+      });
+      
+      if (pingResponse.ok) {
+        console.log("API root ping successful");
+        return true;
       }
-    });
-    
-    // Wait for any endpoint check to succeed, or all to fail
-    const results = await Promise.allSettled(endpointChecks);
-    const anySucceeded = results.some(result => result.status === 'fulfilled' && result.value === true);
-    
-    if (anySucceeded) {
-      console.log("At least one direct API endpoint is available");
-      return true;
+    } catch (pingError) {
+      console.warn("API ping failed:", pingError);
     }
     
-    console.error("All API endpoints are unreachable");
-    return false;
+    // Last resort - try no-cors mode which should always work if server exists
+    try {
+      await fetch('/api/grok', {
+        mode: 'no-cors',
+        method: 'HEAD'
+      });
+      
+      // If we got here, the server is at least reachable
+      console.log("API is reachable but may have CORS issues");
+      return true;
+    } catch (e) {
+      console.error("API is completely unreachable");
+      return false;
+    }
   } catch (e) {
     console.error("API availability check failed completely:", e);
     return false;
