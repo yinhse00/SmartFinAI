@@ -1,143 +1,126 @@
 
 import React, { useState } from 'react';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Card, CardContent } from '@/components/ui/card';
+import { RefreshCw } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { RefreshCw, Check, Loader2 } from 'lucide-react';
-import { formatMessageText } from '@/utils/textFormatters';
+import TypingAnimation from './TypingAnimation';
 
 export interface Message {
   id: string;
-  content: string;
   sender: 'user' | 'bot';
+  content: string;
   timestamp: Date;
-  isError?: boolean;
-  isTruncated?: boolean;
-  isBatchPart?: boolean;
-  queryType?: string;
   references?: string[];
-  isTranslated?: boolean;
-  originalContent?: string;
   isUsingFallback?: boolean;
   reasoning?: string;
-  metadata?: {
-    regulatoryContext?: {
-      sources?: string[];
-      relevanceScore?: number;
-      citations?: {
-        text: string;
-        reference: string;
-        source: string;
-      }[];
-      knowledgeGraphLinks?: {
-        from: string;
-        to: string;
-        relationship: string;
-      }[];
-    };
-    isBackupResponse?: boolean;
-    mayRequireBatching?: boolean;
-    batchSuggestion?: string;
-    [key: string]: any;
-  };
+  isError?: boolean;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  isTranslated?: boolean;
+  originalContent?: string;
 }
 
 interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
-  isTranslating?: boolean;
   onTypingProgress?: () => void;
+  isTranslating?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ message, onRetry, isTranslating }) => {
-  const [showRegulatoryDetails, setShowRegulatoryDetails] = useState(false);
-  const { content, sender, isError } = message;
+const ChatMessage: React.FC<ChatMessageProps> = ({ 
+  message, 
+  onRetry, 
+  onTypingProgress,
+  isTranslating = false
+}) => {
+  const { 
+    sender, 
+    content, 
+    references, 
+    isError, 
+    isUsingFallback, 
+    reasoning,
+    queryType,
+    isTruncated,
+    isBatchPart,
+    originalContent,
+    id
+  } = message;
   
-  const hasCitations = 
-    message.metadata?.regulatoryContext?.citations && 
-    message.metadata.regulatoryContext.citations.length > 0;
-    
-  const hasKnowledgeGraph = 
-    message.metadata?.regulatoryContext?.knowledgeGraphLinks && 
-    message.metadata.regulatoryContext.knowledgeGraphLinks.length > 0;
+  const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
+  const [showOriginal, setShowOriginal] = useState(false);
+  
+  // Debug output
+  if (isTranslating) {
+    console.log(`Message ${id} is currently being translated`);
+  }
 
+  // Determine which content to display
+  const displayContent = showOriginal && originalContent ? originalContent : content;
+  
   return (
-    <div className={`flex items-start gap-3 mb-4 ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
-      <Avatar className={`mt-1 ${sender === 'user' ? 'bg-green-100' : 'bg-blue-100'}`}>
-        <AvatarFallback>{sender === 'user' ? 'U' : 'B'}</AvatarFallback>
-        <AvatarImage src={sender === 'user' ? '/avatars/user.png' : '/avatars/bot.png'} />
-      </Avatar>
-      
-      <div className={`max-w-[80%] ${sender === 'user' ? 'text-right' : 'text-left'}`}>
-        <Card className={`
-          inline-block 
-          ${sender === 'user' 
-            ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' 
-            : 'bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800'
-          }
-          ${isError ? 'border-red-300 dark:border-red-700 bg-red-50 dark:bg-red-950/30' : ''}
-        `}>
-          <CardContent className={`p-3 ${isError ? 'text-red-600 dark:text-red-400' : ''}`}>
-            {formatMessageText(content)}
-            
-            {/* Regulatory citations section */}
-            {hasCitations && showRegulatoryDetails && (
-              <div className="mt-3 border-t border-blue-200 dark:border-blue-800 pt-2">
-                <h4 className="text-sm font-medium mb-1">Citations</h4>
-                <div className="text-xs space-y-1">
-                  {message.metadata?.regulatoryContext?.citations?.map((citation, idx) => (
-                    <div key={idx} className="border-l-2 border-blue-300 pl-2">
-                      "{citation.text}" - <strong>{citation.reference}</strong> ({citation.source})
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-        
-        {/* Message footer with actions */}
-        <div className={`flex mt-1 text-xs text-gray-500 ${sender === 'user' ? 'justify-end' : 'justify-start'}`}>
-          {sender === 'bot' && (
-            <>
-              <span>
-                {new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
-              
-              {/* Show regulatory details toggle */}
-              {(hasCitations || hasKnowledgeGraph) && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-5 text-xs ml-2 px-1"
-                  onClick={() => setShowRegulatoryDetails(!showRegulatoryDetails)}
-                >
-                  {showRegulatoryDetails ? 'Hide sources' : 'Show sources'}
-                </Button>
-              )}
-              
-              {/* Retry button */}
-              {onRetry && (message.isError || message.isTruncated) && (
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
-                  className="h-5 text-xs ml-2 px-1"
-                  onClick={onRetry}
-                >
-                  <RefreshCw className="h-3 w-3 mr-1" /> Retry
-                </Button>
-              )}
-              
-              {/* Translate status */}
-              {isTranslating && (
-                <div className="ml-2 flex items-center">
-                  <Loader2 className="h-3 w-3 mr-1 animate-spin" /> 
-                  <span className="text-xs">Translating</span>
-                </div>
-              )}
-            </>
+    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
+      <div className={`flex items-start gap-3 max-w-[80%] ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+        <Card className={`p-3 rounded-lg ${
+          sender === 'user' 
+            ? 'bg-finance-medium-blue text-white' 
+            : isError 
+              ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
+              : 'bg-gray-50 dark:bg-gray-800'
+        }`}>
+          {sender === 'user' || isTranslating ? (
+            <div className="whitespace-pre-line">{displayContent}</div>
+          ) : (
+            <TypingAnimation 
+              text={displayContent} 
+              className="whitespace-pre-line"
+              onComplete={() => setIsTypingComplete(true)}
+              onProgress={onTypingProgress}
+            />
           )}
-        </div>
+          
+          {/* Toggle original/translated content option for bot messages */}
+          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && (
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowOriginal(!showOriginal)} 
+                className="text-xs text-finance-medium-blue dark:text-finance-light-blue"
+              >
+                {showOriginal ? "查看翻译" : "View original (English)"}
+              </Button>
+            </div>
+          )}
+          
+          {/* Truncated message retry button */}
+          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && (
+            <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRetry} 
+                className="flex items-center text-xs bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
+              >
+                <RefreshCw size={12} className="mr-1" />
+                Retry query
+              </Button>
+            </div>
+          )}
+          
+          {/* References badges */}
+          {references && references.length > 0 && isTypingComplete && !isTranslating && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {references.map((ref, i) => (
+                <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">
+                  {ref}
+                </Badge>
+              ))}
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   );
