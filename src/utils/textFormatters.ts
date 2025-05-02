@@ -1,4 +1,6 @@
 
+import React from 'react';
+
 /**
  * Utility functions for formatting message text content
  */
