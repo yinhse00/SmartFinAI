@@ -27,7 +27,12 @@ export const executeWithRetry = async <T>(
       });
       
       if (retries <= maxRetries) {
-        const backoffTime = Math.min(1000 * Math.pow(2, retries - 1), 8000);
+        // Use adaptive backoff - start small but grow quickly for later retries
+        const baseBackoff = 1000; // 1 second base
+        const exponentialFactor = Math.pow(2, retries - 1);
+        const jitter = Math.random() * 1000; // Add randomness to prevent thundering herd
+        const backoffTime = Math.min(baseBackoff * exponentialFactor + jitter, 15000); // Cap at 15 seconds
+        
         console.log(`Retrying in ${Math.round(backoffTime/1000)} seconds...`);
         await new Promise(resolve => setTimeout(resolve, backoffTime));
       } else {

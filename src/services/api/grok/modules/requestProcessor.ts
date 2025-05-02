@@ -1,4 +1,3 @@
-
 /**
  * Core API request processing logic
  */
@@ -8,10 +7,13 @@ import {
   selectBestPerformingKey,
   getBatchContinuationKey
 } from '../../../apiKeyService';
-import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability } from './endpointManager';
+import { attemptProxyRequest, attemptDirectRequest, checkApiAvailability, forceResetAllCircuitBreakers } from './endpointManager';
 import { executeWithRetry } from './retryHandler';
 import { isRetryAttempt, isBatchContinuation } from './requestHelper';
 import { prepareRequestParameters } from './queryParameterBuilder';
+
+// Keep track of complex query attempts to avoid infinite retry loops
+const complexQueryAttempts = new Map<string, number>();
 
 /**
  * Process API request with optimized parameters
@@ -35,6 +37,36 @@ export const processApiRequest = async (
     if (match && match[1]) {
       batchNumber = parseInt(match[1], 10);
     }
+  }
+  
+  // Create a query signature for tracking complex queries
+  const querySignature = typeof userMessage?.content === 'string' ? 
+    userMessage.content.substring(0, 100) : 'unknown-query';
+  
+  // Check if this is a complex query
+  const isComplexQuery = typeof userMessage?.content === 'string' && (
+    userMessage.content.toLowerCase().includes('rights issue') ||
+    userMessage.content.toLowerCase().includes('whitewash') ||
+    userMessage.content.toLowerCase().includes('timetable') ||
+    userMessage.content.toLowerCase().includes('connected transaction') ||
+    userMessage.content.toLowerCase().includes('substantial acquisition')
+  );
+  
+  // If this is a complex query, check if we're hitting a retry limit
+  if (isComplexQuery) {
+    const currentAttempts = complexQueryAttempts.get(querySignature) || 0;
+    
+    if (currentAttempts > 0) {
+      console.log(`Complex query "${querySignature}" - attempt ${currentAttempts + 1}`);
+    }
+    
+    // If we've tried this complex query too many times, force reset all circuit breakers
+    if (currentAttempts >= 2) {
+      console.log("Forcing circuit breaker reset after multiple attempts with complex query");
+      forceResetAllCircuitBreakers();
+    }
+    
+    complexQueryAttempts.set(querySignature, currentAttempts + 1);
   }
   
   // Use provided key, or select the best key based on context and load balancing
@@ -86,6 +118,20 @@ export const processApiRequest = async (
     console.log(`Batch continuation detected (batch ${batchNumber}), increasing token limit from ${requestBody.max_tokens} to ${increasedTokenLimit}`);
     requestBody.max_tokens = increasedTokenLimit;
   }
+
+  // For complex queries, always use higher token limits and lower temperature
+  if (isComplexQuery) {
+    // For complex financial queries, use maximum tokens available
+    const complexQueryTokenLimit = Math.min(30000, requestBody.max_tokens * 2);
+    console.log(`Complex financial query detected, increasing token limit to ${complexQueryTokenLimit}`);
+    requestBody.max_tokens = complexQueryTokenLimit;
+    
+    // Use lower temperature for more deterministic results with complex queries
+    if (requestBody.temperature > 0.15) {
+      console.log(`Reducing temperature for complex query from ${requestBody.temperature} to 0.15`);
+      requestBody.temperature = 0.15;
+    }
+  }
   
   console.log("Making API call to Grok financial expert API");
   console.log("Request model:", requestBody.model);
@@ -94,6 +140,7 @@ export const processApiRequest = async (
   console.log("Using API Key:", apiKey.substring(0, 8) + "***");
   console.log("Is batch request:", isBatchRequest ? `Yes (part ${batchNumber})` : "No");
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
+  console.log("Is complex query:", isComplexQuery ? "Yes" : "No");
   
   // Add conversation tracking metadata to help with key management
   if (!requestBody.metadata) {
@@ -102,24 +149,43 @@ export const processApiRequest = async (
   requestBody.metadata.conversationId = conversationId;
   requestBody.metadata.isBatchRequest = isBatchRequest;
   requestBody.metadata.batchNumber = batchNumber;
+  requestBody.metadata.isComplexQuery = isComplexQuery;
   
   try {
     // First try using the local proxy if available
     try {
       const data = await attemptProxyRequest(requestBody, apiKey);
       console.log("Financial expert API response received successfully via proxy");
+      
+      // On success, reset complex query attempts
+      if (isComplexQuery) {
+        complexQueryAttempts.delete(querySignature);
+      }
+      
       return data;
     } catch (proxyError) {
       console.warn("Proxy request failed:", proxyError);
       // Continue with direct requests
     }
     
+    // For complex queries, use more retries and longer timeouts
+    const maxRetries = isComplexQuery ? 3 : 2;
+    
     // Attempt direct API calls with retries
-    const data = await executeWithRetry(async () => {
-      return await attemptDirectRequest(requestBody, apiKey);
-    });
+    const data = await executeWithRetry(
+      async () => {
+        return await attemptDirectRequest(requestBody, apiKey);
+      }, 
+      maxRetries
+    );
     
     console.log("Financial expert API response received successfully via direct call");
+    
+    // On success, reset complex query attempts
+    if (isComplexQuery) {
+      complexQueryAttempts.delete(querySignature);
+    }
+    
     return data;
   } catch (error) {
     console.error("Financial expert API call failed:", error);

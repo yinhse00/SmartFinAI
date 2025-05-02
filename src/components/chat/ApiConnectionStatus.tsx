@@ -3,7 +3,8 @@ import { useState, useEffect } from 'react';
 import { grokApiService } from '@/services/api/grokApiService';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
-import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff } from 'lucide-react';
+import { AlertCircle, CheckCircle, RefreshCw, Wifi, WifiOff, ShieldAlert } from 'lucide-react';
+import { forceResetAllCircuitBreakers } from '@/services/api/grok/modules/endpointManager';
 
 interface ApiConnectionStatusProps {
   onOpenApiKeyDialog: () => void;
@@ -108,6 +109,38 @@ const ApiConnectionStatus = ({
       isOfflineMode: true
     });
   };
+  
+  // Force reset all circuit breakers and try reconnection
+  const forceResetAndReconnect = async () => {
+    setConnectionStatus(prev => ({
+      ...prev,
+      loading: true,
+      message: 'Resetting connection and circuit breakers...'
+    }));
+    
+    // Force reset all circuit breakers first
+    forceResetAllCircuitBreakers();
+    console.log("Circuit breakers have been forcefully reset");
+    
+    // Wait a bit before attempting reconnection
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Now try reconnecting
+    if (onTryReconnect) {
+      const success = await onTryReconnect();
+      
+      setConnectionStatus({
+        success,
+        message: success 
+          ? 'Connection successfully restored after circuit breaker reset.' 
+          : 'API is still unreachable after reset. Please try again with a different query.',
+        loading: false,
+        isOfflineMode: !success
+      });
+    } else {
+      checkConnection();
+    }
+  };
 
   useEffect(() => {
     // Only check connection if external offline mode is not provided
@@ -147,7 +180,7 @@ const ApiConnectionStatus = ({
           <AlertTitle>Offline Mode</AlertTitle>
           <AlertDescription className="flex flex-col space-y-2">
             <span>Operating in offline mode with limited functionality.</span>
-            <div className="flex gap-2 mt-1">
+            <div className="flex gap-2 mt-1 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -156,6 +189,16 @@ const ApiConnectionStatus = ({
               >
                 <Wifi className="h-3 w-3" />
                 Try Reconnect
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={forceResetAndReconnect}
+                className="h-7 gap-1 text-xs"
+                title="Reset connection state and retry with fresh settings"
+              >
+                <ShieldAlert className="h-3 w-3" />
+                Force Reset & Reconnect
               </Button>
               <Button 
                 variant="default"
@@ -174,7 +217,7 @@ const ApiConnectionStatus = ({
           <AlertTitle>API Connection Issue</AlertTitle>
           <AlertDescription className="flex flex-col space-y-2">
             <span>{connectionStatus.message}</span>
-            <div className="flex gap-2 mt-1">
+            <div className="flex gap-2 mt-1 flex-wrap">
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -183,6 +226,16 @@ const ApiConnectionStatus = ({
               >
                 <RefreshCw className="h-3 w-3" />
                 Retry
+              </Button>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={forceResetAndReconnect}
+                className="h-7 gap-1 text-xs"
+                title="Reset connection state and retry with fresh settings"
+              >
+                <ShieldAlert className="h-3 w-3" />
+                Force Reset
               </Button>
               <Button 
                 variant="outline"

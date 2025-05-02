@@ -15,6 +15,11 @@ const TOKEN_LIMITS = {
   RETRY_ATTEMPT_1: 40000,
   RETRY_ATTEMPT_2: 50000,
   RETRY_ATTEMPT_3: 60000,
+  
+  // New limits for complex financial queries
+  COMPLEX_FINANCIAL_QUERY: 40000,
+  RIGHTS_ISSUE_WITH_WAIVER: 45000,
+  COMPLEX_TRANSACTION_TIMETABLE: 50000,
 } as const;
 
 /**
@@ -32,8 +37,18 @@ export const tokenManagementService = {
     retryCount?: number;
     isBatchRequest?: boolean;
     batchNumber?: number;
+    isComplexQuery?: boolean;
   }): number {
-    const { queryType, isRetryAttempt, prompt, isSimpleQuery, retryCount = 0, isBatchRequest, batchNumber } = params;
+    const { 
+      queryType, 
+      isRetryAttempt, 
+      prompt, 
+      isSimpleQuery, 
+      retryCount = 0, 
+      isBatchRequest, 
+      batchNumber,
+      isComplexQuery 
+    } = params;
 
     // For retry attempts, use progressively larger token limits
     if (isRetryAttempt) {
@@ -47,26 +62,45 @@ export const tokenManagementService = {
       // For continuation batches, use higher limits to ensure completion
       return Math.min(30000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
     }
+    
+    // Handle the complex financial query scenarios specially
+    const promptLower = prompt.toLowerCase();
+    
+    // Check for the specific complex financial query patterns
+    if (isComplexQuery || 
+        (promptLower.includes('rights issue') && 
+         (promptLower.includes('whitewash') || 
+          promptLower.includes('waiver') || 
+          promptLower.includes('timetable') ||
+          promptLower.includes('schedule')))) {
+      return TOKEN_LIMITS.RIGHTS_ISSUE_WITH_WAIVER;
+    }
+    
+    if (promptLower.includes('timetable') && 
+        (promptLower.includes('transaction') || 
+         promptLower.includes('substantial acquisition'))) {
+      return TOKEN_LIMITS.COMPLEX_TRANSACTION_TIMETABLE;
+    }
 
     if (queryType === 'specialist_technology' || 
-        prompt.toLowerCase().includes('chapter 18c') ||
-        prompt.toLowerCase().includes('specialist technology')) {
+        promptLower.includes('chapter 18c') ||
+        promptLower.includes('specialist technology')) {
       return TOKEN_LIMITS.SPECIALIST_TECHNOLOGY;
     }
 
     if (queryType === 'rights_issue' && 
-        (prompt.toLowerCase().includes('timetable') || 
-         prompt.toLowerCase().includes('schedule'))) {
+        (promptLower.includes('timetable') || 
+         promptLower.includes('schedule'))) {
       return TOKEN_LIMITS.RIGHTS_ISSUE_TIMETABLE;
     }
 
-    if (prompt.toLowerCase().includes('what is') || 
-        prompt.toLowerCase().includes('definition')) {
+    if (promptLower.includes('what is') || 
+        promptLower.includes('definition')) {
       return TOKEN_LIMITS.DEFINITION_QUERY;
     }
 
-    if (prompt.toLowerCase().includes('connected person') || 
-        prompt.toLowerCase().includes('connected transaction') ||
+    if (promptLower.includes('connected person') || 
+        promptLower.includes('connected transaction') ||
         queryType === 'connected_transaction') {
       return TOKEN_LIMITS.CONNECTED_TRANSACTION;
     }
@@ -87,9 +121,11 @@ export const tokenManagementService = {
     prompt: string;
     isBatchRequest?: boolean;
     batchNumber?: number;
+    isComplexQuery?: boolean;
   }): number {
-    const { isRetryAttempt, queryType, prompt, isBatchRequest, batchNumber } = params;
-
+    const { isRetryAttempt, queryType, prompt, isBatchRequest, batchNumber, isComplexQuery } = params;
+    
+    // Lower temperature for retries to get more deterministic results
     if (isRetryAttempt) {
       return 0.1;
     }
@@ -97,6 +133,14 @@ export const tokenManagementService = {
     // For batch continuations, use lower temperature for consistency
     if (isBatchRequest && batchNumber && batchNumber > 1) {
       return 0.1; // Lower temperature for batch continuations for consistency
+    }
+    
+    // Specially handle complex financial queries with much lower temperature
+    if (isComplexQuery || 
+        (prompt.toLowerCase().includes('rights issue') && 
+         (prompt.toLowerCase().includes('whitewash') || 
+          prompt.toLowerCase().includes('waiver')))) {
+      return 0.05; // Very low temperature for complex financial queries
     }
 
     if (queryType === 'specialist_technology' || 

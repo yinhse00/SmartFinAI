@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
@@ -7,6 +7,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FileWarning } from 'lucide-react';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -62,6 +64,36 @@ const ChatInterface: React.FC = () => {
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
 
+  // Check if input contains complex financial query terms
+  const [isComplexFinancialQuery, setIsComplexFinancialQuery] = useState(false);
+  
+  useEffect(() => {
+    // Keywords that indicate a complex financial query
+    const complexQueryKeywords = [
+      'rights issue',
+      'whitewash waiver',
+      'very substantial acquisition',
+      'connected transaction',
+      'timetable',
+      'chapter 14a',
+      'aggregate',
+      'takeovers code'
+    ];
+    
+    // Check if input contains any of the complex query keywords
+    const hasComplexQueryTerms = complexQueryKeywords.some(keyword => 
+      input.toLowerCase().includes(keyword)
+    );
+    
+    // Multiple complex keywords or long query with at least one keyword
+    const isComplex = (input.split(' ').length > 15 && hasComplexQueryTerms) || 
+                    complexQueryKeywords.filter(keyword => 
+                      input.toLowerCase().includes(keyword)
+                    ).length > 1;
+    
+    setIsComplexFinancialQuery(isComplex);
+  }, [input]);
+
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
     if (hasAttachedFiles) {
@@ -100,6 +132,16 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
         />
+        
+        {isComplexFinancialQuery && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+            <FileWarning className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription>
+              You're asking about a complex financial topic. For best results with topics like rights issues, 
+              timetables, or whitewash waivers, consider breaking your query into smaller, more focused questions.
+            </AlertDescription>
+          </Alert>
+        )}
         
         <ChatContainer
           messages={messages}

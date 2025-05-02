@@ -91,7 +91,8 @@ export default defineConfig(({ mode }) => ({
                   'Access-Control-Max-Age': '86400'
                 });
               }
-              if (!res.end()) {
+              // Fix the syntax error in the OPTIONS handling - this was causing the HTML responses
+              if (res.end) {
                 res.end();
               }
             }
