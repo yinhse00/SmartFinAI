@@ -73,7 +73,7 @@ export const useFileProcessing = () => {
           toast({
             title: "Operating in Offline Mode",
             description: "The Grok API is currently unreachable. Files will be processed with limited functionality.",
-            variant: "destructive",
+            variant: "destructive", // This is already correct
             duration: 6000,
           });
         }
