@@ -16,16 +16,63 @@ export default defineConfig(({ mode }) => ({
         secure: true,
         timeout: 600000, // 10 minute timeout for large file processing
         configure: (proxy, _options) => {
+          // Add additional headers that might help with CORS
           proxy.on('proxyReq', function(proxyReq) {
             proxyReq.setHeader('X-Financial-Expert', 'true');
             proxyReq.setHeader('X-Long-Response', 'true');
-            proxyReq.setHeader('Origin', 'https://api.x.ai'); // Add correct origin for CORS
+            proxyReq.setHeader('Origin', 'https://api.x.ai'); // Match target origin
+            proxyReq.setHeader('Referer', 'https://api.x.ai/'); // Add referer for some APIs
+            proxyReq.setHeader('Access-Control-Allow-Origin', '*'); // Try to allow CORS
+            proxyReq.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+            proxyReq.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
           });
-          proxy.on('error', function(err, _req, _res) {
-            console.log('Proxy error:', err);
+          
+          // Better error handling for debugging
+          proxy.on('error', function(err, req, res) {
+            console.error('Proxy error:', err);
+            
+            // Attempt to send a structured response on error
+            if (!res.headersSent && res.writeHead) {
+              res.writeHead(500, {
+                'Content-Type': 'application/json'
+              });
+              
+              const errorResponse = {
+                error: true,
+                message: 'Proxy error occurred: ' + (err.message || 'Unknown error'),
+                code: 'PROXY_ERROR'
+              };
+              
+              if (res.end) {
+                res.end(JSON.stringify(errorResponse));
+              }
+            }
           });
-          proxy.on('proxyRes', function(proxyRes, req, _res) {
-            console.log(`Proxy response from ${req.url}: ${proxyRes.statusCode}`);
+          
+          // Log detailed response info
+          proxy.on('proxyRes', function(proxyRes, req, res) {
+            const status = proxyRes.statusCode;
+            console.log(`Proxy response from ${req.url}: ${status}`);
+            
+            // Log headers for debugging
+            if (status !== 200) {
+              console.log('Response headers:', proxyRes.headers);
+            }
+            
+            // Handle CORS preflight
+            if (req.method === 'OPTIONS') {
+              if (res.writeHead && !res.headersSent) {
+                res.writeHead(200, {
+                  'Access-Control-Allow-Origin': '*',
+                  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+                  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                  'Access-Control-Max-Age': '86400'
+                });
+              }
+              if (res.end && !res.writableEnded) {
+                res.end();
+              }
+            }
           });
         }
       }

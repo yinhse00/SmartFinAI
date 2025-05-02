@@ -37,10 +37,13 @@ export const attemptProxyRequest = async (
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`,
         'X-Request-Source': 'browser-client', // Add custom header for tracking
-        'X-Request-ID': `req-${Date.now()}` // Add request ID for tracing
+        'X-Request-ID': `req-${Date.now()}`, // Add request ID for tracing
+        'Accept': 'application/json'
       },
       body: JSON.stringify(requestBody),
-      signal: controller.signal
+      signal: controller.signal,
+      credentials: 'same-origin', // Try different credentials mode
+      mode: 'cors' // Explicitly set CORS mode
     });
     
     clearTimeout(timeoutId);
@@ -50,6 +53,19 @@ export const attemptProxyRequest = async (
       return await proxyResponse.json();
     }
     
+    // More detailed error handling for different status codes
+    if (proxyResponse.status === 403) {
+      console.warn("Proxy request failed with 403 Forbidden - API key may be invalid");
+      throw new Error("API key authentication failed (403 Forbidden)");
+    } else if (proxyResponse.status === 429) {
+      console.warn("Proxy request failed with 429 Too Many Requests - rate limit exceeded");
+      throw new Error("API rate limit exceeded. Please try again later (429)");
+    } else if (proxyResponse.status === 502 || proxyResponse.status === 504) {
+      console.warn(`Proxy gateway error (${proxyResponse.status}) - backend may be unreachable`);
+      throw new Error(`Gateway error (${proxyResponse.status}). API service may be down`);
+    }
+    
+    // Generic error with status
     console.warn(`Proxy request failed with status: ${proxyResponse.status}`);
     throw new Error(`Proxy request failed with status: ${proxyResponse.status}`);
   } catch (error) {
@@ -87,19 +103,24 @@ export const attemptDirectRequest = async (
         console.warn(`Direct request to ${apiEndpoint} timed out after 20 seconds`);
       }, 20000); // 20 second timeout for direct requests
       
-      const response = await fetch(apiEndpoint, {
+      // Try alternative fetch options to bypass CORS
+      const options: RequestInit = {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${apiKey}`,
           'Origin': window.location.origin,
-          'X-Request-Source': 'browser-client', // Add custom header for tracking
-          'X-Request-ID': `req-${Date.now()}` // Add request ID for tracing
+          'X-Request-Source': 'browser-client',
+          'X-Request-ID': `req-${Date.now()}`,
+          'Accept': 'application/json'
         },
         body: JSON.stringify(requestBody),
         mode: 'cors',
-        signal: controller.signal
-      });
+        signal: controller.signal,
+        credentials: 'omit' // Avoid sending credentials for cross-origin requests
+      };
+      
+      const response = await fetch(apiEndpoint, options);
       
       clearTimeout(timeoutId);
       
@@ -152,27 +173,60 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
       
-      const proxyResponse = await fetch('/api/grok/models', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'X-Request-Source': 'browser-client', // Add custom header for tracking
-        },
-        signal: controller.signal
-      });
+      // Try multiple proxy paths
+      const proxyPaths = [
+        '/api/grok/models',
+        '/api/grok/v1/models',
+        '/api/grok/chat/completions'
+      ];
       
-      clearTimeout(timeoutId);
-      
-      if (proxyResponse.ok) {
-        const data = await proxyResponse.json();
-        const modelCount = data?.data?.length || 0;
-        console.log(`Local proxy connection successful, found ${modelCount} models`);
-        return true;
+      for (const path of proxyPaths) {
+        try {
+          const proxyResponse = await fetch(path, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'X-Request-Source': 'browser-client',
+              'Accept': 'application/json'
+            },
+            signal: controller.signal,
+            mode: 'cors',
+            credentials: 'same-origin'
+          });
+          
+          if (proxyResponse.ok) {
+            clearTimeout(timeoutId);
+            console.log(`Local proxy connection successful via ${path}`);
+            return true;
+          }
+        } catch (pathError) {
+          console.warn(`Path ${path} check failed:`, pathError);
+          // Continue to next path
+        }
       }
       
-      console.warn("Local proxy availability check failed with status:", proxyResponse.status);
+      clearTimeout(timeoutId);
+      console.warn("All proxy paths failed");
     } catch (e) {
       console.warn("Local proxy availability check failed:", e instanceof Error ? e.message : String(e));
+    }
+    
+    // Try a simple OPTIONS preflight request to check CORS
+    try {
+      const preflightResponse = await fetch('/api/grok', { 
+        method: 'OPTIONS',
+        headers: {
+          'Access-Control-Request-Method': 'POST',
+          'Access-Control-Request-Headers': 'Content-Type, Authorization'
+        }
+      });
+      
+      if (preflightResponse.ok) {
+        console.log("CORS preflight request succeeded");
+        return true;
+      }
+    } catch (preflightError) {
+      console.warn("CORS preflight check failed:", preflightError);
     }
     
     // If proxy fails, try direct endpoints
@@ -194,6 +248,7 @@ export const checkApiAvailability = async (apiKey: string): Promise<boolean> => 
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${apiKey}`,
+            'Accept': 'application/json'
           },
           mode: 'cors',
           signal: controller.signal
