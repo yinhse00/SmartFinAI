@@ -59,7 +59,7 @@ export const executeStep5 = async (
       mayRequireBatching: isPotentiallyLongResponse || appearsTruncated,
       batchSuggestion: appearsTruncated ? (
         lastInputWasChinese 
-          ? "此回复似乎不完整。您可以使用"继续"按钮查看更多信息。"
+          ? '此回复似乎不完整。您可以使用"继续"按钮查看更多信息。'
           : "This response appears to be incomplete. Consider using the Continue button to see additional information."
       ) : undefined
     };
