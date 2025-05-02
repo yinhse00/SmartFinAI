@@ -56,6 +56,22 @@ export const extractConversationId = (requestBody: any): string => {
 };
 
 /**
+ * Extract prompt text from user message
+ * This function was missing and caused the build error
+ */
+export const extractPromptText = (userMessage: any): string => {
+  if (!userMessage || typeof userMessage.content !== 'string') return '';
+  
+  // Remove batch continuation markers
+  let text = userMessage.content.replace(/\[CONTINUATION_PART_\d+\]/g, '').trim();
+  
+  // Remove retry attempt markers
+  text = text.replace(/\[RETRY_ATTEMPT\s*\d*\]/g, '').trim();
+  
+  return text;
+};
+
+/**
  * Check if a request is likely to result in a large response
  */
 export const isLikelyLargeResponse = (userMessage: any): boolean => {

@@ -10,7 +10,8 @@ export {
   setGrokApiKey,
   hasGrokApiKey,
   selectLeastUsedKey,
-  selectBestPerformingKey
+  selectBestPerformingKey,
+  getBatchContinuationKey
 } from './apiKey/grokKeyManager';
 
 // Re-export tracking functions from keyUsageTracker
