@@ -231,6 +231,7 @@ export type Database = {
           parent_id: string | null
           path_reference: string | null
           rule_number: string
+          search_priority: number | null
           section: string | null
           source_document_id: string | null
           subsection: string | null
@@ -249,6 +250,7 @@ export type Database = {
           parent_id?: string | null
           path_reference?: string | null
           rule_number: string
+          search_priority?: number | null
           section?: string | null
           source_document_id?: string | null
           subsection?: string | null
@@ -267,6 +269,7 @@ export type Database = {
           parent_id?: string | null
           path_reference?: string | null
           rule_number?: string
+          search_priority?: number | null
           section?: string | null
           source_document_id?: string | null
           subsection?: string | null
@@ -395,7 +398,7 @@ export type Database = {
           {
             foreignKeyName: "search_index_provision_id_fkey"
             columns: ["provision_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "regulatory_provisions"
             referencedColumns: ["id"]
           },

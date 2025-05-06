@@ -1,20 +1,39 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { CardHeader } from '@/components/ui/card';
-import { BookOpen, Settings, WifiOff } from 'lucide-react';
+import { BookOpen, Languages, Settings, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu";
 
 interface ChatHeaderProps {
   isGrokApiKeySet: boolean;
   onOpenApiKeyDialog: () => void;
-  isOfflineMode?: boolean; // New prop for offline mode
+  isOfflineMode?: boolean;
+  currentLanguage?: 'en' | 'zh';
+  onLanguageChange?: (language: 'en' | 'zh') => void;
 }
 
 const ChatHeader: React.FC<ChatHeaderProps> = ({
   isGrokApiKeySet,
   onOpenApiKeyDialog,
-  isOfflineMode = false
+  isOfflineMode = false,
+  currentLanguage = 'en',
+  onLanguageChange
 }) => {
+  const [language, setLanguage] = useState<'en' | 'zh'>(currentLanguage);
+
+  const handleLanguageChange = (newLanguage: 'en' | 'zh') => {
+    setLanguage(newLanguage);
+    if (onLanguageChange) {
+      onLanguageChange(newLanguage);
+    }
+  };
+
   return (
     <CardHeader className="flex flex-row items-center justify-between space-y-0 p-4 bg-white dark:bg-gray-950 border-b">
       <div className="flex items-center">
@@ -34,17 +53,42 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
         </div>
       </div>
       
-      {!isGrokApiKeySet && (
-        <Button 
-          variant="outline" 
-          size="sm" 
-          className="flex items-center gap-1"
-          onClick={onOpenApiKeyDialog}
-        >
-          <Settings className="h-4 w-4 text-gray-500" />
-          <span>Set API Key</span>
-        </Button>
-      )}
+      <div className="flex items-center gap-2">
+        {/* Language Switcher */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Languages className="h-4 w-4 text-gray-500" />
+              <span>{language === 'en' ? 'EN' : '中文'}</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => handleLanguageChange('en')}>
+              English
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleLanguageChange('zh')}>
+              中文 (Chinese)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        
+        {/* API Key Button */}
+        {!isGrokApiKeySet && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1"
+            onClick={onOpenApiKeyDialog}
+          >
+            <Settings className="h-4 w-4 text-gray-500" />
+            <span>Set API Key</span>
+          </Button>
+        )}
+      </div>
     </CardHeader>
   );
 };
