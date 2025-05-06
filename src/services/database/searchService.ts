@@ -1,4 +1,3 @@
-
 /**
  * Service for searching the regulatory database
  */
@@ -15,61 +14,79 @@ export const searchService = {
   search: async (query: string, category?: string): Promise<RegulatoryEntry[]> => {
     console.log(`Searching for "${query}" in category: ${category || 'all'}`);
     
-    // Get all entries
-    const allEntries = databaseService.getAllEntries();
-    
     // Convert query to lowercase for case-insensitive matching
-    const queryTerms = query.toLowerCase().split(/\s+/).filter(term => term.length > 2);
+    const queryLower = query.toLowerCase();
     
-    // Check if query is related to FAQs or continuing obligations
-    const isFaqQuery = query.toLowerCase().includes('faq') || query.toLowerCase().includes('continuing obligation');
+    // Prepare the Supabase query
+    let supabaseQuery = supabase
+      .from('regulatory_provisions')
+      .select(`
+        id,
+        rule_number,
+        title,
+        content,
+        chapter,
+        section,
+        last_updated,
+        is_current,
+        regulatory_categories(code)
+      `);
     
-    // Filter by search term and optional category
-    const results = allEntries.filter(entry => {
-      // Check if any of the query terms match the title or content
-      const titleLower = entry.title.toLowerCase();
-      const contentLower = entry.content.toLowerCase();
+    // Map our category strings to the database category codes
+    if (category) {
+      const categoryMapping: Record<string, string[]> = {
+        'listing_rules': ['CH13', 'CH14', 'CH14A'],
+        'takeovers': ['TO'],
+        'guidance': ['GN'],
+        'decisions': ['LD'],
+        'checklists': ['CL'],
+        'other': ['OTHER']
+      };
       
-      const matchesByTerm = queryTerms.some(term => 
-        titleLower.includes(term) || contentLower.includes(term)
-      );
-      
-      // Also check for the whole phrase match for more precise queries
-      const matchesWholePhrase = 
-        titleLower.includes(query.toLowerCase()) || 
-        contentLower.includes(query.toLowerCase());
-        
-      // If neither matches, return false
-      if (!matchesByTerm && !matchesWholePhrase) {
-        return false;
-      }
-      
-      // If category is specified, filter by it
-      if (category && entry.category !== category) {
-        return false;
-      }
-      
-      return true;
-    });
-    
-    // Prioritize FAQ content if the query seems related to FAQs
-    if (isFaqQuery) {
-      return results.sort((a, b) => {
-        // Prioritize entries with "FAQ" or "Continuing Obligations" in the title
-        const aHasFaqTitle = a.title.toLowerCase().includes('faq') || 
-                             a.title.toLowerCase().includes('continuing obligation');
-        const bHasFaqTitle = b.title.toLowerCase().includes('faq') || 
-                             b.title.toLowerCase().includes('continuing obligation');
-        
-        if (aHasFaqTitle && !bHasFaqTitle) return -1;
-        if (!aHasFaqTitle && bHasFaqTitle) return 1;
-        
-        // If both or neither have FAQ in title, prioritize by content relevance
-        return 0;
-      });
+      const categoryCodes = categoryMapping[category] || ['OTHER'];
+      supabaseQuery = supabaseQuery.in('regulatory_categories.code', categoryCodes);
     }
     
-    return results;
+    // Add search condition
+    // Since we can't do complex text search with the regular Supabase query,
+    // we'll fetch the results and filter them client-side
+    const { data, error } = await supabaseQuery;
+    
+    if (error) {
+      console.error('Error searching regulatory provisions:', error);
+      return [];
+    }
+    
+    // Filter results client-side
+    const filteredData = data.filter(item => {
+      return (
+        item.title.toLowerCase().includes(queryLower) ||
+        item.content.toLowerCase().includes(queryLower) ||
+        item.rule_number.toLowerCase().includes(queryLower)
+      );
+    });
+    
+    // Map the Supabase data structure to our RegulatoryEntry type
+    return filteredData.map(item => {
+      const categoryCode = item.regulatory_categories?.code || 'other';
+      const categoryMapping: Record<string, RegulatoryEntry['category']> = {
+        'CH13': 'listing_rules',
+        'CH14': 'listing_rules',
+        'CH14A': 'listing_rules',
+        'TO': 'takeovers'
+      };
+      
+      return {
+        id: item.id,
+        title: item.title,
+        content: item.content,
+        category: categoryMapping[categoryCode] || 'other',
+        source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
+        section: item.section || undefined,
+        lastUpdated: new Date(item.last_updated),
+        status: item.is_current ? 'active' : 'archived'
+      };
+    });
   },
   
   /**
@@ -80,7 +97,7 @@ export const searchService = {
     console.log(`Searching for documents with title containing "${titleQuery}"`);
     
     // Get all entries
-    const allEntries = databaseService.getAllEntries();
+    const allEntries = await databaseService.getAllEntries();
     
     // Convert query to lowercase for case-insensitive matching
     const lowerTitleQuery = titleQuery.toLowerCase();
@@ -103,7 +120,7 @@ export const searchService = {
     console.log(`Retrieving ${sourceIds.length} entries by source IDs`);
     
     // Get all entries
-    const allEntries = databaseService.getAllEntries();
+    const allEntries = await databaseService.getAllEntries();
     
     // Filter entries by source IDs
     const results = allEntries.filter(entry => sourceIds.includes(entry.id));
@@ -122,47 +139,39 @@ export const searchService = {
     databaseEntries: RegulatoryEntry[],
     referenceDocuments: ReferenceDocument[]
   }> => {
-    // Check if query is related to FAQs or continuing obligations
-    const isFaqQuery = query.toLowerCase().includes('faq') || 
-                      query.toLowerCase().includes('continuing obligation') ||
-                      query.toLowerCase().match(/\b10\.4\b/); // Match "10.4" as a whole word
-    
-    // Search in-memory database
+    // Search for entries in the regulatory database
     const databaseEntries = await searchService.search(query, category);
     
-    // Prioritize 10.4 FAQ documents if the query appears to be related
-    if (isFaqQuery) {
-      const faqEntries = databaseEntries.filter(entry => 
-        entry.title.includes('10.4') || 
-        entry.title.toLowerCase().includes('faq') || 
-        entry.title.toLowerCase().includes('continuing obligation')
-      );
+    // Search for reference documents in Supabase
+    let referenceQuery = supabase
+      .from('reference_documents')
+      .select('*');
       
-      if (faqEntries.length > 0) {
-        console.log(`Found ${faqEntries.length} FAQ-related entries to prioritize`);
-        // Move FAQ entries to the front of the results
-        const otherEntries = databaseEntries.filter(entry => !faqEntries.includes(entry));
-        const prioritizedEntries = [...faqEntries, ...otherEntries];
-        console.log(`Prioritized ${faqEntries.length} FAQ entries out of ${databaseEntries.length} total entries`);
-        
-        // Search reference documents in Supabase but prioritize FAQ results
-        const { referenceDocuments } = await searchReferenceDocuments(query, category, true);
-        
-        return {
-          databaseEntries: prioritizedEntries,
-          referenceDocuments
-        };
-      }
+    if (category && category !== 'all') {
+      referenceQuery = referenceQuery.eq('category', category);
     }
     
-    // Standard reference document search for non-FAQ queries
-    const { referenceDocuments } = await searchReferenceDocuments(query, category);
+    // Add search filter for title and description
+    const { data: referenceData, error } = await referenceQuery.or(
+      `title.ilike.%${query}%,description.ilike.%${query}%`
+    );
     
-    console.log(`Found ${databaseEntries.length} database entries and ${referenceDocuments.length || 0} reference documents`);
+    if (error) {
+      console.error("Error searching reference documents:", error);
+      return { databaseEntries, referenceDocuments: [] };
+    }
+    
+    // Convert the raw data to ReferenceDocument type
+    const typedReferenceData = referenceData?.map(item => ({
+      ...item,
+      category: item.category as DocumentCategory
+    })) as ReferenceDocument[] || [];
+    
+    console.log(`Found ${databaseEntries.length} database entries and ${typedReferenceData.length || 0} reference documents`);
     
     return {
       databaseEntries,
-      referenceDocuments
+      referenceDocuments: typedReferenceData
     };
   }
 };

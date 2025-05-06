@@ -1,6 +1,7 @@
-
 /**
  * Sample data for the regulatory database
+ * 
+ * Note: This is now only used if Supabase data isn't available
  */
 
 import { RegulatoryEntry } from "./types";
@@ -8,11 +9,25 @@ import { databaseService } from "./databaseService";
 
 /**
  * Add initial sample data for development/testing
+ * This is only used as a fallback if Supabase connection fails
  */
-export const initializeSampleData = () => {
-  // Only add sample data if the database is empty
-  if (databaseService.getAllEntries().length === 0) {
-    databaseService.addSampleEntry({
+export const initializeSampleData = async () => {
+  console.log('Checking if Supabase data is available...');
+  
+  try {
+    // First try to get data from Supabase
+    const entries = await databaseService.getAllEntries();
+    
+    // If we have entries from Supabase, don't initialize sample data
+    if (entries.length > 0) {
+      console.log(`Found ${entries.length} entries in Supabase, skipping sample data initialization`);
+      return;
+    }
+    
+    console.log('No data found in Supabase, initializing sample data...');
+    
+    // Only proceed with sample data if Supabase is empty
+    await databaseService.addSampleEntry({
       title: "Connected Transactions",
       content: "Chapter 14A of the Hong Kong Listing Rules covers connected transactions. " +
         "A connected transaction is any transaction between a listed issuer or any of its subsidiaries and a connected person. " +
@@ -24,7 +39,7 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
-    databaseService.addSampleEntry({
+    await databaseService.addSampleEntry({
       title: "Mandatory General Offers",
       content: "Rule 26 of the Takeovers Code requires a mandatory general offer to be made when: " +
         "(a) a person acquires, whether by a series of transactions over a period of time or not, 30% or more of the voting rights of a company; or " +
@@ -37,7 +52,7 @@ export const initializeSampleData = () => {
     });
     
     // Add comprehensive information about Rights Issues Timetable
-    databaseService.addSampleEntry({
+    await databaseService.addSampleEntry({
       title: "Rights Issues Timetable",
       content: "Timetable for a Rights Issue under Hong Kong Listing Rules\n\n" +
         "This timetable outlines the typical steps and timeline for a rights issue under the Hong Kong Stock Exchange (HKEx) Listing Rules (Main Board), assuming no general meeting is required for shareholder approval (e.g., pre-emption rights are maintained per Rule 13.36(2)(a) or a general mandate exists). The schedule is indicative and may vary based on company circumstances, whether the issue is renounceable, and specific regulatory approvals.\n\n" +
@@ -66,7 +81,7 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
-    databaseService.addSampleEntry({
+    await databaseService.addSampleEntry({
       title: "Rights Issue Requirements",
       content: "Rights issues by Hong Kong listed companies are primarily governed by Chapter 10 of the HKEX Listing Rules. " +
         "Key requirements include: " +
@@ -84,7 +99,7 @@ export const initializeSampleData = () => {
     });
     
     // Add information about General Offers under Takeovers Code
-    databaseService.addSampleEntry({
+    await databaseService.addSampleEntry({
       title: "General Offers Timetable",
       content: "Takeovers Code Rule 15 establishes the timeline requirements for general offers:\n\n" +
         "1. First closing date must be at least 21 days following the posting of the offer document (Rule 15.1).\n\n" +
@@ -101,7 +116,7 @@ export const initializeSampleData = () => {
     });
     
     // Add up-to-date information about Rule 8.05 (Qualifications for Listing)
-    databaseService.addSampleEntry({
+    await databaseService.addSampleEntry({
       title: "Rule 8.05 - Qualifications for Listing",
       content: "Rule 8.05 of the HKEX Listing Rules sets out the basic financial eligibility requirements for new listing applicants. " +
         "New applicants must meet one of the following three tests:\n\n" +
@@ -129,6 +144,8 @@ export const initializeSampleData = () => {
       status: "active"
     });
     
-    console.log("Added sample regulatory data");
+    console.log('Added sample regulatory data to Supabase');
+  } catch (error) {
+    console.error('Error initializing sample data:', error);
   }
 };

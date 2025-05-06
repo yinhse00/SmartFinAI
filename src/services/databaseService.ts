@@ -18,4 +18,5 @@ import { initializeSampleData } from './database/sampleData';
 export { initializeSampleData };
 
 // Initialize sample data when importing this file
+// This will now check if data exists in Supabase first
 initializeSampleData();
