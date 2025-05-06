@@ -10,6 +10,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Chat from "./pages/Chat";
 import References from "./pages/References";
 import NotFound from "./pages/NotFound";
+import Database from "./pages/Database";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -33,6 +34,7 @@ const App = () => (
             <Route path="/" element={<Navigate to="/chat" replace />} />
             <Route path="/chat" element={<Chat />} />
             <Route path="/references" element={<References />} />
+            <Route path="/database" element={<Database />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

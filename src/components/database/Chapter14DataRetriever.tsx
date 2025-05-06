@@ -3,9 +3,10 @@ import React, { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { RefreshCcw, Database, Download, ClipboardCopy } from 'lucide-react';
+import { RefreshCcw, Database, Download, ClipboardCopy, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 
 interface Chapter14Entry {
   id: string;
@@ -35,6 +36,8 @@ const Chapter14DataRetriever: React.FC = () => {
   const [formattedData, setFormattedData] = useState<FormattedChapter14Entry[]>([]);
   const [categoryMap, setCategoryMap] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
 
   // Fetch category mappings first
   const fetchCategories = async () => {
@@ -169,6 +172,69 @@ const Chapter14DataRetriever: React.FC = () => {
     copyToClipboard();
   };
 
+  // Upload data to Supabase
+  const uploadToSupabase = async () => {
+    setIsUploading(true);
+    setError(null);
+    
+    try {
+      if (formattedData.length === 0) {
+        throw new Error('No data to upload. Please retrieve data first.');
+      }
+      
+      // First, find the category ID for Chapter 14
+      const { data: categoryData, error: categoryError } = await supabase
+        .from('regulatory_categories')
+        .select('id')
+        .eq('code', 'CH14')
+        .single();
+      
+      if (categoryError) {
+        throw new Error('Failed to find category ID for Chapter 14');
+      }
+      
+      const category_id = categoryData.id;
+      
+      // Prepare data for bulk insert
+      const provisionsToInsert = formattedData.map(entry => ({
+        rule_number: entry.ruleNumber,
+        title: entry.title,
+        content: entry.content,
+        chapter: entry.chapter,
+        section: entry.section,
+        category_id: category_id,
+        is_current: true,
+        last_updated: new Date().toISOString()
+      }));
+      
+      // Use the databaseService to bulk import
+      const { data, error } = await supabase
+        .from('regulatory_provisions')
+        .insert(provisionsToInsert);
+      
+      if (error) {
+        throw error;
+      }
+      
+      toast({
+        title: 'Success',
+        description: `Successfully uploaded ${formattedData.length} Chapter 14 entries to Supabase`,
+      });
+      
+      setIsConfirmDialogOpen(false);
+    } catch (err) {
+      console.error('Error uploading to Supabase:', err);
+      setError(err instanceof Error ? err.message : 'Failed to upload data to Supabase');
+      toast({
+        title: 'Error',
+        description: 'Failed to upload data to Supabase',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <Card className="finance-card mb-6">
       <CardHeader>
@@ -220,6 +286,13 @@ const Chapter14DataRetriever: React.FC = () => {
                   <Database className="mr-2 h-4 w-4" />
                   Update Data File
                 </Button>
+                <Button 
+                  onClick={() => setIsConfirmDialogOpen(true)} 
+                  className="bg-finance-dark-blue hover:bg-finance-accent-blue text-white"
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload to Supabase
+                </Button>
               </div>
               
               <div className="mt-4">
@@ -234,6 +307,40 @@ const Chapter14DataRetriever: React.FC = () => {
           )}
         </div>
       </CardContent>
+
+      {/* Confirmation Dialog */}
+      <Dialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Confirm Upload to Supabase</DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              Are you sure you want to upload {formattedData.length} Chapter 14 entries to Supabase? 
+              This will create new entries in the regulatory_provisions table.
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsConfirmDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={uploadToSupabase}
+              disabled={isUploading}
+              className="bg-finance-medium-blue hover:bg-finance-dark-blue"
+            >
+              {isUploading ? (
+                <>
+                  <RefreshCcw className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>Confirm Upload</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
