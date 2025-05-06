@@ -19,7 +19,7 @@ export const summaryIndexService = {
     console.log('Initializing Summary and Keyword Index');
     
     // Get all entries from the regulatory database
-    const allEntries = databaseService.getAllEntries();
+    const allEntries = await databaseService.getAllEntries();
     
     // Generate summary index entries
     summaryIndexDatabase = allEntries.map(entry => generateSummaryEntry(entry));

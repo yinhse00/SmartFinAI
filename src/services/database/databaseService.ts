@@ -113,7 +113,7 @@ export const databaseService = {
     console.log(`Fetching regulatory entries for category: ${category}`);
     
     // Map our category strings to the database category codes
-    const categoryMapping: Record<string, string> = {
+    const categoryMapping: Record<string, string[]> = {
       'listing_rules': ['CH13', 'CH14', 'CH14A'],
       'takeovers': ['TO'],
       'guidance': ['GN'],
@@ -122,7 +122,7 @@ export const databaseService = {
       'other': ['OTHER']
     };
     
-    const categoryCode = categoryMapping[category] || ['OTHER'];
+    const categoryCodes = categoryMapping[category] || ['OTHER'];
     
     const { data, error } = await supabase
       .from('regulatory_provisions')
@@ -137,7 +137,7 @@ export const databaseService = {
         is_current,
         regulatory_categories(code)
       `)
-      .in('regulatory_categories.code', categoryCode)
+      .in('regulatory_categories.code', categoryCodes)
       .order('rule_number');
       
     if (error) {
