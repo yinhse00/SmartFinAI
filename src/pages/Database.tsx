@@ -29,6 +29,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import DataImporter from '@/components/database/DataImporter';
 
 const Database = () => {
   const { toast } = useToast();
@@ -38,6 +39,7 @@ const Database = () => {
   const [activeCategory, setActiveCategory] = useState('all');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isDataImporterOpen, setIsDataImporterOpen] = useState(false);
   const [importData, setImportData] = useState('');
   const [importFormat, setImportFormat] = useState('json');
   const [isImporting, setIsImporting] = useState(false);
@@ -211,260 +213,268 @@ const Database = () => {
         </p>
       </div>
       
-      <Card className="finance-card mb-6">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-semibold">Database Management</CardTitle>
-              <CardDescription>View, search and manage regulatory knowledge entries</CardDescription>
-            </div>
-            <div className="flex gap-2">
-              <Button 
-                onClick={() => setIsImportDialogOpen(true)} 
-                variant="outline"
-                className="bg-finance-light-blue hover:bg-finance-medium-blue text-white"
-              >
-                <Upload className="mr-2 h-4 w-4" /> Import Data
-              </Button>
-              <Button 
-                onClick={() => setIsAddDialogOpen(true)}
-                className="bg-finance-medium-blue hover:bg-finance-dark-blue"
-              >
-                <Plus className="mr-2 h-4 w-4" /> Add New Entry
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="entries">
-            <TabsList className="mb-4">
-              <TabsTrigger value="entries">Knowledge Entries</TabsTrigger>
-              <TabsTrigger value="structure">Database Structure</TabsTrigger>
-              <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="entries">
-              <div className="space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between gap-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
-                    <Input
-                      type="search"
-                      placeholder="Search knowledge entries..."
-                      className="pl-9 w-full"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <Select 
-                      defaultValue="all" 
-                      value={activeCategory}
-                      onValueChange={setActiveCategory}
-                    >
-                      <SelectTrigger className="w-full sm:w-[180px]">
-                        <div className="flex items-center">
-                          <Filter className="mr-2 h-4 w-4" />
-                          <SelectValue placeholder="Category" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Categories</SelectItem>
-                        <SelectItem value="listing_rules">Listing Rules</SelectItem>
-                        <SelectItem value="takeovers">Takeovers</SelectItem>
-                        <SelectItem value="guidance">Guidance</SelectItem>
-                        <SelectItem value="decisions">Decisions</SelectItem>
-                        <SelectItem value="checklists">Checklists</SelectItem>
-                        <SelectItem value="other">Other</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    
-                    <Button variant="outline" className="flex-shrink-0" onClick={loadData} disabled={loading}>
-                      <RefreshCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
-                    </Button>
-                    <Button variant="outline" className="flex-shrink-0">
-                      <Download className="mr-2 h-4 w-4" /> Export
-                    </Button>
-                  </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div className="lg:col-span-2">
+          <Card className="finance-card">
+            <CardHeader className="pb-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-xl font-semibold">Database Management</CardTitle>
+                  <CardDescription>View, search and manage regulatory knowledge entries</CardDescription>
                 </div>
+                <div className="flex gap-2">
+                  <Button 
+                    onClick={() => setIsImportDialogOpen(true)} 
+                    variant="outline"
+                    className="bg-finance-light-blue hover:bg-finance-medium-blue text-white"
+                  >
+                    <Upload className="mr-2 h-4 w-4" /> Import Data
+                  </Button>
+                  <Button 
+                    onClick={() => setIsAddDialogOpen(true)}
+                    className="bg-finance-medium-blue hover:bg-finance-dark-blue"
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Add New Entry
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Tabs defaultValue="entries">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="entries">Knowledge Entries</TabsTrigger>
+                  <TabsTrigger value="structure">Database Structure</TabsTrigger>
+                  <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                </TabsList>
                 
-                <div className="rounded-md border">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="w-[300px]">Entry Title</TableHead>
-                        <TableHead>Rule Number</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Source</TableHead>
-                        <TableHead>Last Updated</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {loading ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            <div className="flex items-center justify-center">
-                              <RefreshCcw className="animate-spin h-6 w-6 mr-2 text-finance-medium-blue" />
-                              <span>Loading entries...</span>
+                <TabsContent value="entries">
+                  <div className="space-y-4">
+                    <div className="flex flex-col sm:flex-row justify-between gap-4">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500 dark:text-gray-400" />
+                        <Input
+                          type="search"
+                          placeholder="Search knowledge entries..."
+                          className="pl-9 w-full"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <Select 
+                          defaultValue="all" 
+                          value={activeCategory}
+                          onValueChange={setActiveCategory}
+                        >
+                          <SelectTrigger className="w-full sm:w-[180px]">
+                            <div className="flex items-center">
+                              <Filter className="mr-2 h-4 w-4" />
+                              <SelectValue placeholder="Category" />
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ) : filteredEntries.length === 0 ? (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8">
-                            No entries found. {searchQuery ? 'Try a different search query.' : 'Add some entries to get started.'}
-                          </TableCell>
-                        </TableRow>
-                      ) : (
-                        filteredEntries.map((entry) => (
-                          <TableRow key={entry.id}>
-                            <TableCell className="font-medium">{entry.title}</TableCell>
-                            <TableCell>{entry.source.split(' ')[1] || '-'}</TableCell>
-                            <TableCell>{entry.category}</TableCell>
-                            <TableCell>{entry.source}</TableCell>
-                            <TableCell>{entry.lastUpdated.toLocaleDateString()}</TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant="outline" 
-                                className={
-                                  entry.status === 'active' 
-                                    ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
-                                    : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                                }
-                              >
-                                {entry.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button variant="ghost" size="icon">
-                                  <ExternalLink className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button variant="ghost" size="icon">
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </TableCell>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Categories</SelectItem>
+                            <SelectItem value="listing_rules">Listing Rules</SelectItem>
+                            <SelectItem value="takeovers">Takeovers</SelectItem>
+                            <SelectItem value="guidance">Guidance</SelectItem>
+                            <SelectItem value="decisions">Decisions</SelectItem>
+                            <SelectItem value="checklists">Checklists</SelectItem>
+                            <SelectItem value="other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        
+                        <Button variant="outline" className="flex-shrink-0" onClick={loadData} disabled={loading}>
+                          <RefreshCcw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} /> Refresh
+                        </Button>
+                        <Button variant="outline" className="flex-shrink-0">
+                          <Download className="mr-2 h-4 w-4" /> Export
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">Entry Title</TableHead>
+                            <TableHead>Rule Number</TableHead>
+                            <TableHead>Category</TableHead>
+                            <TableHead>Source</TableHead>
+                            <TableHead>Last Updated</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))
-                      )}
-                    </TableBody>
-                  </Table>
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <Button variant="outline" disabled>
-                    Previous
-                  </Button>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    Showing {filteredEntries.length} entries
+                        </TableHeader>
+                        <TableBody>
+                          {loading ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8">
+                                <div className="flex items-center justify-center">
+                                  <RefreshCcw className="animate-spin h-6 w-6 mr-2 text-finance-medium-blue" />
+                                  <span>Loading entries...</span>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ) : filteredEntries.length === 0 ? (
+                            <TableRow>
+                              <TableCell colSpan={7} className="text-center py-8">
+                                No entries found. {searchQuery ? 'Try a different search query.' : 'Add some entries to get started.'}
+                              </TableCell>
+                            </TableRow>
+                          ) : (
+                            filteredEntries.map((entry) => (
+                              <TableRow key={entry.id}>
+                                <TableCell className="font-medium">{entry.title}</TableCell>
+                                <TableCell>{entry.source.split(' ')[1] || '-'}</TableCell>
+                                <TableCell>{entry.category}</TableCell>
+                                <TableCell>{entry.source}</TableCell>
+                                <TableCell>{entry.lastUpdated.toLocaleDateString()}</TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant="outline" 
+                                    className={
+                                      entry.status === 'active' 
+                                        ? 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400' 
+                                        : 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
+                                    }
+                                  >
+                                    {entry.status}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" size="icon">
+                                      <ExternalLink className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon">
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon">
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex justify-between items-center">
+                      <Button variant="outline" disabled>
+                        Previous
+                      </Button>
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Showing {filteredEntries.length} entries
+                      </div>
+                      <Button variant="outline">
+                        Next
+                      </Button>
+                    </div>
                   </div>
-                  <Button variant="outline">
-                    Next
-                  </Button>
-                </div>
-              </div>
-            </TabsContent>
-            
-            {/* Database Structure Tab */}
-            <TabsContent value="structure">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg font-medium">Database Schema</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Regulatory Provisions</h4>
-                          <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
-                            <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: regulatory_provisions</div>
-                            <div>- id: uuid (primary key)</div>
-                            <div>- rule_number: string</div>
-                            <div>- title: string</div>
-                            <div>- content: text</div>
-                            <div>- chapter: string</div>
-                            <div>- section: string</div>
-                            <div>- category_id: uuid (foreign key)</div>
-                            <div>- is_current: boolean</div>
-                            <div>- last_updated: timestamp</div>
+                </TabsContent>
+                
+                {/* Database Structure Tab */}
+                <TabsContent value="structure">
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg font-medium">Database Schema</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Regulatory Provisions</h4>
+                              <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
+                                <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: regulatory_provisions</div>
+                                <div>- id: uuid (primary key)</div>
+                                <div>- rule_number: string</div>
+                                <div>- title: string</div>
+                                <div>- content: text</div>
+                                <div>- chapter: string</div>
+                                <div>- section: string</div>
+                                <div>- category_id: uuid (foreign key)</div>
+                                <div>- is_current: boolean</div>
+                                <div>- last_updated: timestamp</div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Categories</h4>
+                              <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
+                                <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: regulatory_categories</div>
+                                <div>- id: uuid (primary key)</div>
+                                <div>- code: string</div>
+                                <div>- name: string</div>
+                                <div>- description: text</div>
+                              </div>
+                            </div>
+                            
+                            <div>
+                              <h4 className="text-sm font-medium mb-2">Search Index</h4>
+                              <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
+                                <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: search_index</div>
+                                <div>- id: uuid (primary key)</div>
+                                <div>- provision_id: uuid (foreign key)</div>
+                                <div>- full_text: text</div>
+                                <div>- search_vector: tsvector</div>
+                                <div>- keywords: text[]</div>
+                                <div>- last_indexed: timestamp</div>
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Categories</h4>
-                          <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
-                            <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: regulatory_categories</div>
-                            <div>- id: uuid (primary key)</div>
-                            <div>- code: string</div>
-                            <div>- name: string</div>
-                            <div>- description: text</div>
+                        </CardContent>
+                      </Card>
+                      
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-lg font-medium">Database Stats</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between pb-2 border-b">
+                              <span className="font-medium">Total Provisions:</span>
+                              <span className="font-bold text-finance-dark-blue dark:text-white">{entries.length}</span>
+                            </div>
+                            <div className="flex items-center justify-between pb-2 border-b">
+                              <span className="font-medium">Categories:</span>
+                              <span className="font-bold text-finance-dark-blue dark:text-white">7</span>
+                            </div>
+                            <div className="flex items-center justify-between pb-2 border-b">
+                              <span className="font-medium">Last Update:</span>
+                              <span className="font-bold text-finance-dark-blue dark:text-white">
+                                {entries.length > 0
+                                  ? new Date(Math.max(...entries.map(e => e.lastUpdated.getTime()))).toLocaleDateString()
+                                  : 'No entries'}
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        
-                        <div>
-                          <h4 className="text-sm font-medium mb-2">Search Index</h4>
-                          <div className="text-xs bg-gray-50 dark:bg-finance-dark-blue/50 rounded-md p-3 font-mono">
-                            <div className="text-finance-medium-blue dark:text-finance-accent-blue mb-1">Table: search_index</div>
-                            <div>- id: uuid (primary key)</div>
-                            <div>- provision_id: uuid (foreign key)</div>
-                            <div>- full_text: text</div>
-                            <div>- search_vector: tsvector</div>
-                            <div>- keywords: text[]</div>
-                            <div>- last_indexed: timestamp</div>
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-lg font-medium">Database Stats</CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between pb-2 border-b">
-                          <span className="font-medium">Total Provisions:</span>
-                          <span className="font-bold text-finance-dark-blue dark:text-white">{entries.length}</span>
-                        </div>
-                        <div className="flex items-center justify-between pb-2 border-b">
-                          <span className="font-medium">Categories:</span>
-                          <span className="font-bold text-finance-dark-blue dark:text-white">7</span>
-                        </div>
-                        <div className="flex items-center justify-between pb-2 border-b">
-                          <span className="font-medium">Last Update:</span>
-                          <span className="font-bold text-finance-dark-blue dark:text-white">
-                            {entries.length > 0
-                              ? new Date(Math.max(...entries.map(e => e.lastUpdated.getTime()))).toLocaleDateString()
-                              : 'No entries'}
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </div>
-            </TabsContent>
-            
-            <TabsContent value="analytics">
-              <div className="p-10 text-center">
-                <DatabaseIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
-                <h3 className="text-xl font-medium text-gray-500 dark:text-gray-400 mb-2">Analytics Coming Soon</h3>
-                <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-6">
-                  Advanced database analytics, performance metrics, and usage statistics will be available in a future update.
-                </p>
-              </div>
-            </TabsContent>
-          </Tabs>
-        </CardContent>
-      </Card>
+                        </CardContent>
+                      </Card>
+                    </div>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="analytics">
+                  <div className="p-10 text-center">
+                    <DatabaseIcon className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+                    <h3 className="text-xl font-medium text-gray-500 dark:text-gray-400 mb-2">Analytics Coming Soon</h3>
+                    <p className="text-gray-500 dark:text-gray-400 max-w-lg mx-auto mb-6">
+                      Advanced database analytics, performance metrics, and usage statistics will be available in a future update.
+                    </p>
+                  </div>
+                </TabsContent>
+              </Tabs>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1">
+          <DataImporter onImportComplete={loadData} />
+        </div>
+      </div>
       
       {/* Add Provision Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -586,7 +596,7 @@ const Database = () => {
                 <div className="text-sm bg-gray-50 dark:bg-finance-dark-blue/20 border rounded p-2 mt-2 text-gray-600 dark:text-gray-300">
                   {importFormat === 'json' ? (
                     <code>
-                      [{"ruleNumber": "14.01", "title": "Rule Title", "content": "Rule content", "chapter": "Chapter 14", "section": "14.01", "categoryCode": "CH14"}]
+                      {`[{"ruleNumber": "14.01", "title": "Rule Title", "content": "Rule content", "chapter": "Chapter 14", "section": "14.01", "categoryCode": "CH14"}]`}
                     </code>
                   ) : (
                     <code>
