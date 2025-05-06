@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,6 +31,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogT
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import DataImporter from '@/components/database/DataImporter';
+import Chapter14DataRetriever from '@/components/database/Chapter14DataRetriever';
 
 const Database = () => {
   const { toast } = useToast();
@@ -215,6 +217,9 @@ const Database = () => {
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
         <div className="lg:col-span-2">
+          {/* Chapter 14 Data Retriever */}
+          <Chapter14DataRetriever />
+          
           <Card className="finance-card">
             <CardHeader className="pb-4">
               <div className="flex items-center justify-between">
