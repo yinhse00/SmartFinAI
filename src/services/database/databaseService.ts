@@ -1,4 +1,3 @@
-
 /**
  * This service handles the regulatory database operations
  * Connects to Supabase for persistence
@@ -18,43 +17,68 @@ export const databaseService = {
   importFromFiles: async (files: File[]): Promise<number> => {
     console.log(`Importing ${files.length} files to regulatory database`);
     
-    // This is a placeholder for the actual import logic
-    // In a real implementation, you would:
-    // 1. Parse each file (PDF, Word, etc.)
-    // 2. Extract structured data
-    // 3. Insert into database
+    let successCount = 0;
+    const errors: Array<{ file: string, error: string }> = [];
     
-    // Create entries for each file
-    const newEntries: RegulatoryEntry[] = files.map((file, index) => ({
-      id: `imported-${Date.now()}-${index}`,
-      title: file.name.replace(/\.\w+$/, ''),
-      content: `Content extracted from ${file.name}`,
-      category: determineCategory(file.name),
-      source: file.name,
-      lastUpdated: new Date(),
-      status: 'active'
-    }));
-    
-    // Insert entries into Supabase
-    for (const entry of newEntries) {
-      const { error } = await supabase
-        .from('regulatory_provisions')
-        .insert({
-          id: entry.id,
-          rule_number: entry.id,
-          title: entry.title,
-          content: entry.content,
-          category_id: null, // Would need to map category to a proper ID
-          last_updated: entry.lastUpdated.toISOString(),
-          is_current: entry.status === 'active'
-        });
-      
-      if (error) {
-        console.error('Error inserting entry into Supabase:', error);
+    // Process each file
+    for (const file of files) {
+      try {
+        console.log(`Processing file: ${file.name}`);
+        
+        // Extract chapter and section information from filename
+        let chapter = '';
+        let categoryCode = 'OTHER';
+        
+        // Try to determine chapter from filename
+        const chapterMatch = file.name.match(/Chapter\s*(\d+[A-Za-z]?)/i);
+        if (chapterMatch) {
+          chapter = `Chapter ${chapterMatch[1]}`;
+          categoryCode = `CH${chapterMatch[1]}`;
+        }
+        
+        // Extract content from file (this is a placeholder - in production you would parse the actual file)
+        const content = await extractFileContent(file);
+        
+        // Create entries based on content structure
+        // This is simplified - in reality, you would parse sections and rules from the content
+        const entries = parseContentToEntries(content, chapter, file.name);
+        
+        // Insert entries into Supabase
+        for (const entry of entries) {
+          const { error } = await supabase
+            .from('regulatory_provisions')
+            .insert({
+              rule_number: entry.id,
+              title: entry.title,
+              content: entry.content,
+              chapter: chapter,
+              section: entry.section,
+              category_id: await getCategoryIdByCode(categoryCode),
+              last_updated: new Date().toISOString(),
+              is_current: true,
+              path_reference: file.name
+            });
+          
+          if (error) {
+            console.error('Error inserting entry into Supabase:', error);
+            errors.push({ file: file.name, error: error.message });
+          } else {
+            successCount++;
+          }
+        }
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+        console.error(`Error processing file ${file.name}:`, errorMessage);
+        errors.push({ file: file.name, error: errorMessage });
       }
     }
     
-    return newEntries.length;
+    console.log(`Import completed. Successfully imported ${successCount} provisions. Errors: ${errors.length}`);
+    if (errors.length > 0) {
+      console.error('Import errors:', errors);
+    }
+    
+    return successCount;
   },
   
   /**
@@ -85,12 +109,16 @@ export const databaseService = {
     
     // Map the Supabase data structure to our RegulatoryEntry type
     return data.map(item => {
-      const categoryCode = item.regulatory_categories?.code || 'other';
+      const categoryCode = item.regulatory_categories?.code || 'OTHER';
       const categoryMapping: Record<string, RegulatoryEntry['category']> = {
         'CH13': 'listing_rules',
         'CH14': 'listing_rules',
         'CH14A': 'listing_rules',
-        'TO': 'takeovers'
+        'TO': 'takeovers',
+        'GN': 'guidance',
+        'LD': 'decisions',
+        'CL': 'checklists',
+        'OTHER': 'other'
       };
       
       return {
@@ -187,12 +215,16 @@ export const databaseService = {
       return null;
     }
     
-    const categoryCode = data.regulatory_categories?.code || 'other';
+    const categoryCode = data.regulatory_categories?.code || 'OTHER';
     const categoryMapping: Record<string, RegulatoryEntry['category']> = {
       'CH13': 'listing_rules',
       'CH14': 'listing_rules',
       'CH14A': 'listing_rules',
-      'TO': 'takeovers'
+      'TO': 'takeovers',
+      'GN': 'guidance',
+      'LD': 'decisions',
+      'CL': 'checklists',
+      'OTHER': 'other'
     };
     
     return {
@@ -277,5 +309,274 @@ export const databaseService = {
       lastUpdated: new Date(data.last_updated),
       status: data.is_current ? 'active' : 'archived'
     };
+  },
+  
+  /**
+   * Add a new regulatory provision directly
+   */
+  addProvision: async (provision: {
+    ruleNumber: string;
+    title: string;
+    content: string;
+    chapter?: string;
+    section?: string;
+    categoryCode: string;
+  }): Promise<string | null> => {
+    console.log(`Adding new provision: ${provision.ruleNumber}`);
+    
+    try {
+      const categoryId = await getCategoryIdByCode(provision.categoryCode);
+      
+      const { data, error } = await supabase
+        .from('regulatory_provisions')
+        .insert({
+          rule_number: provision.ruleNumber,
+          title: provision.title,
+          content: provision.content,
+          chapter: provision.chapter,
+          section: provision.section,
+          category_id: categoryId,
+          last_updated: new Date().toISOString(),
+          is_current: true
+        })
+        .select('id')
+        .single();
+        
+      if (error) {
+        console.error('Error adding provision:', error);
+        return null;
+      }
+      
+      return data.id;
+    } catch (err) {
+      console.error('Error in addProvision:', err);
+      return null;
+    }
+  },
+  
+  /**
+   * Update an existing regulatory provision
+   */
+  updateProvision: async (
+    id: string,
+    updates: Partial<{
+      ruleNumber: string;
+      title: string;
+      content: string;
+      chapter: string;
+      section: string;
+      categoryCode: string;
+      isCurrent: boolean;
+    }>
+  ): Promise<boolean> => {
+    console.log(`Updating provision with ID: ${id}`);
+    
+    try {
+      const updateData: any = {};
+      
+      if (updates.ruleNumber) updateData.rule_number = updates.ruleNumber;
+      if (updates.title) updateData.title = updates.title;
+      if (updates.content) updateData.content = updates.content;
+      if (updates.chapter) updateData.chapter = updates.chapter;
+      if (updates.section) updateData.section = updates.section;
+      if (updates.categoryCode) {
+        updateData.category_id = await getCategoryIdByCode(updates.categoryCode);
+      }
+      if (updates.isCurrent !== undefined) updateData.is_current = updates.isCurrent;
+      
+      updateData.last_updated = new Date().toISOString();
+      
+      const { error } = await supabase
+        .from('regulatory_provisions')
+        .update(updateData)
+        .eq('id', id);
+        
+      if (error) {
+        console.error('Error updating provision:', error);
+        return false;
+      }
+      
+      return true;
+    } catch (err) {
+      console.error('Error in updateProvision:', err);
+      return false;
+    }
+  },
+  
+  /**
+   * Delete a regulatory provision
+   */
+  deleteProvision: async (id: string): Promise<boolean> => {
+    console.log(`Deleting provision with ID: ${id}`);
+    
+    const { error } = await supabase
+      .from('regulatory_provisions')
+      .delete()
+      .eq('id', id);
+      
+    if (error) {
+      console.error('Error deleting provision:', error);
+      return false;
+    }
+    
+    return true;
+  },
+  
+  /**
+   * Bulk import regulatory provisions
+   */
+  bulkImportProvisions: async (provisions: Array<{
+    ruleNumber: string;
+    title: string;
+    content: string;
+    chapter?: string;
+    section?: string;
+    categoryCode: string;
+  }>): Promise<{ success: number, failed: number }> => {
+    console.log(`Bulk importing ${provisions.length} provisions`);
+    
+    let success = 0;
+    let failed = 0;
+    
+    // Process in batches to avoid timeouts and rate limits
+    const batchSize = 20;
+    const batches = Math.ceil(provisions.length / batchSize);
+    
+    for (let i = 0; i < batches; i++) {
+      const batch = provisions.slice(i * batchSize, (i + 1) * batchSize);
+      console.log(`Processing batch ${i + 1} of ${batches}`);
+      
+      const supabaseRows = await Promise.all(
+        batch.map(async provision => {
+          try {
+            const categoryId = await getCategoryIdByCode(provision.categoryCode);
+            
+            return {
+              rule_number: provision.ruleNumber,
+              title: provision.title,
+              content: provision.content,
+              chapter: provision.chapter,
+              section: provision.section,
+              category_id: categoryId,
+              last_updated: new Date().toISOString(),
+              is_current: true
+            };
+          } catch (err) {
+            console.error(`Error preparing provision ${provision.ruleNumber}:`, err);
+            failed++;
+            return null;
+          }
+        })
+      );
+      
+      // Filter out failed preparations
+      const validRows = supabaseRows.filter(row => row !== null);
+      
+      if (validRows.length > 0) {
+        const { error } = await supabase
+          .from('regulatory_provisions')
+          .insert(validRows);
+          
+        if (error) {
+          console.error('Error in bulk insert:', error);
+          failed += validRows.length;
+        } else {
+          success += validRows.length;
+        }
+      }
+    }
+    
+    console.log(`Bulk import complete: ${success} successful, ${failed} failed`);
+    return { success, failed };
   }
 };
+
+/**
+ * Helper function to extract content from a file
+ * In a production system, this would parse different file types (PDF, Word, etc.)
+ */
+async function extractFileContent(file: File): Promise<string> {
+  // Placeholder implementation - in production, use proper file parsing libraries
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const content = reader.result as string;
+        resolve(content);
+      } catch (err) {
+        reject(new Error(`Failed to parse file ${file.name}: ${err}`));
+      }
+    };
+    reader.onerror = () => reject(new Error(`Failed to read file ${file.name}`));
+    reader.readAsText(file);
+  });
+}
+
+/**
+ * Parse file content into structured regulatory entries
+ */
+function parseContentToEntries(
+  content: string,
+  chapter: string,
+  source: string
+): Array<{
+  id: string;
+  title: string;
+  content: string;
+  section?: string;
+}> {
+  // This is a simplified parser - in production you would implement a more sophisticated parser
+  const entries: Array<{ id: string; title: string; content: string; section?: string }> = [];
+  
+  // Split content by rule patterns (this is a simplified example)
+  // In a real implementation, you would have a more sophisticated parser
+  const ruleSections = content.split(/(\d+\.\d+)\s+/);
+  
+  for (let i = 1; i < ruleSections.length; i += 2) {
+    if (i + 1 < ruleSections.length) {
+      const ruleNumber = ruleSections[i].trim();
+      const ruleContent = ruleSections[i + 1].trim();
+      
+      // Extract first line as title (simplified)
+      const lines = ruleContent.split('\n');
+      const title = lines[0].trim();
+      const contentText = lines.slice(1).join('\n').trim();
+      
+      entries.push({
+        id: `${chapter} ${ruleNumber}`,
+        title: title || `Rule ${ruleNumber}`,
+        content: contentText || ruleContent,
+        section: ruleNumber
+      });
+    }
+  }
+  
+  // If parsing fails or no rules found, create a single entry for the whole file
+  if (entries.length === 0) {
+    entries.push({
+      id: chapter ? `${chapter}-${Date.now()}` : `doc-${Date.now()}`,
+      title: source.replace(/\.\w+$/, ''),
+      content: content
+    });
+  }
+  
+  return entries;
+}
+
+/**
+ * Helper function to get category ID by code
+ */
+async function getCategoryIdByCode(code: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from('regulatory_categories')
+    .select('id')
+    .eq('code', code)
+    .single();
+    
+  if (error) {
+    console.error(`Error finding category with code ${code}:`, error);
+    return null;
+  }
+  
+  return data.id;
+}
