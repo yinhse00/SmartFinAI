@@ -159,7 +159,7 @@ const Chapter14DataRetriever: React.FC = () => {
         {
           ruleNumber: '14.44',
           title: 'Connected Transaction Definition',
-          content: 'A connected transaction is a transaction between a listed issuer's group and a connected person.',
+          content: 'A connected transaction is a transaction between a listed issuer\'s group and a connected person.',
           chapter: 'Chapter 14',
           section: '14.44',
           categoryCode: 'CH14'
