@@ -8,6 +8,7 @@ import { faqSearchService } from './faqSearchService';
 export const enhancedContextService = {
   /**
    * Enhanced regulatory context retrieval with specialized financial semantic search
+   * This is used by the comprehensive context service
    */
   getRegulatoryContextWithReasoning: async (query: string) => {
     try {

@@ -4,7 +4,6 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Button } from '@/components/ui/button';
 import { CalendarDays, Clock, File, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { fileProcessingService } from '@/services/documents/fileProcessingService';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
@@ -77,7 +76,7 @@ const TimetableViewer: React.FC = () => {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       });
       
-      // Process the file - FIX: Pass file as a single object, not with arguments
+      // Process the file - Fixed: Pass file as an array
       const processedResults = await processFiles([file]);
       
       if (processedResults && processedResults.length > 0) {

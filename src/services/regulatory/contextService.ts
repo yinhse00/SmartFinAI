@@ -2,6 +2,9 @@
 import { grokApiService } from '../api/grokApiService';
 import { supabase } from '@/integrations/supabase/client';
 
+/**
+ * Service for retrieving regulatory context with enhanced model selection
+ */
 export const contextService = {
   /**
    * Fetches regulatory context from the database or API
@@ -36,7 +39,9 @@ export const contextService = {
         ...(options?.metadata || {}),
         processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
         isInitialAssessment: isPreliminaryAssessment,
-        hasRegulatoryDatabase
+        hasRegulatoryDatabase,
+        // Select model based on processing stage
+        model: isPreliminaryAssessment ? 'grok-3-beta' : 'grok-3-mini-beta'
       };
       
       // Call API to get regulatory context

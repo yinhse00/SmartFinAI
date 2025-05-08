@@ -14,7 +14,7 @@ export const executeStep1 = async (
   queryText: string,
   storeTranslation: (original: string, translated: string) => void,
   setStepProgress: (progress: string) => void,
-  retrieveRegulatoryContext: (queryText: string) => Promise<any>
+  retrieveRegulatoryContext: (queryText: string, isPreliminaryAssessment?: boolean) => Promise<any>
 ) => {
   setStepProgress('Receiving query and performing initial analysis');
   
@@ -48,7 +48,7 @@ export const executeStep1 = async (
   
   try {
     // Check if query is related to Listing Rules or Takeovers Code
-    // NEW: Mark this call as a preliminary assessment to use grok-3-beta model
+    // Use preliminary assessment flag to use grok-3-beta model
     const result = await retrieveRegulatoryContext(processedQuery, true);
     const regulatoryContext = result.regulatoryContext || '';
     const reasoning = result.reasoning || '';

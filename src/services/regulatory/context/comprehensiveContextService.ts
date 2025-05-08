@@ -2,6 +2,7 @@
 import { searchService } from '../../databaseService';
 import { extractFinancialTerms } from '../utils/financialTermsExtractor';
 import { contextFormatter } from './contextFormatter';
+import { enhancedContextService } from './enhancedContextService';
 
 /**
  * Specialized service for comprehensive database searches
@@ -16,11 +17,8 @@ export const comprehensiveContextService = {
       console.group('Performing Comprehensive Database Review');
       console.log('Original Query:', query);
       
-      // Import dynamically to avoid circular dependencies
-      const { contextService } = await import('../contextService');
-      
-      // Start with standard regulatory context retrieval
-      const initialContext = await contextService.getRegulatoryContextWithReasoning(query);
+      // Use enhancedContextService instead of dynamically importing contextService
+      const initialContext = await enhancedContextService.getRegulatoryContextWithReasoning(query);
       
       // Log the initial results
       console.log('Initial context search complete');
@@ -65,6 +63,7 @@ export const comprehensiveContextService = {
       return initialContext;
     } catch (error) {
       console.error('Error in comprehensive regulatory context search:', error);
+      console.groupEnd();
       return {
         context: 'Error performing comprehensive database search',
         reasoning: 'System was unable to thoroughly search the database due to an unexpected error.'
