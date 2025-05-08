@@ -5,6 +5,7 @@ import { contextService } from './regulatory/contextService';
 import { documentService } from './documents/documentService';
 import { grokResponseGenerator } from './response/grokResponseGenerator';
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
+import { fileProcessingService } from './documents/fileProcessingService';
 
 /**
  * Main Grok service facade that integrates various specialized services
@@ -53,5 +54,18 @@ export const grokService = {
   /**
    * Generate an Excel document from text
    */
-  generateExcelDocument: documentService.generateExcelDocument
+  generateExcelDocument: documentService.generateExcelDocument,
+  
+  /**
+   * Extract text from a document file
+   */
+  extractDocumentText: async (file: File): Promise<string> => {
+    try {
+      const result = await fileProcessingService.processFile(file);
+      return result.content;
+    } catch (error) {
+      console.error("Error extracting document text:", error);
+      return "";
+    }
+  }
 };

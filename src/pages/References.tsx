@@ -5,7 +5,7 @@ import ReferenceUploader from '@/components/references/ReferenceUploader';
 import ReferenceDocumentsList from '@/components/references/ReferenceDocumentsList';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, Clock } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const References = () => {
@@ -30,14 +30,16 @@ const References = () => {
           </p>
         </div>
         
-        <Button 
-          onClick={() => navigate('/timetable')}
-          variant="outline" 
-          className="flex items-center gap-2"
-        >
-          <CalendarDays className="h-4 w-4" />
-          View Timetables
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={() => navigate('/timetable')}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <CalendarDays className="h-4 w-4" />
+            View Timetables
+          </Button>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
