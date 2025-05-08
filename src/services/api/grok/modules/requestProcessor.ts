@@ -1,3 +1,4 @@
+
 /**
  * Core API request processing logic
  */
@@ -133,6 +134,22 @@ export const processApiRequest = async (
     }
   }
   
+  // NEW: Set model based on processing stage
+  // For initial query assessment, use grok-3-beta (more capable model)
+  // For subsequent processing, use grok-3-mini-beta (faster, more efficient)
+  const isPreliminaryAssessment = !isBatchRequest && !isRetryRequest && 
+                                (requestBody.metadata?.processingStage === 'preliminary' ||
+                                 requestBody.metadata?.isInitialAssessment === true);
+  
+  // Set model based on processing stage
+  if (isPreliminaryAssessment) {
+    console.log("Using grok-3-beta for preliminary question assessment");
+    requestBody.model = "grok-3-beta";
+  } else {
+    console.log("Using grok-3-mini-beta for main response processing");
+    requestBody.model = "grok-3-mini-beta";
+  }
+  
   console.log("Making API call to Grok financial expert API");
   console.log("Request model:", requestBody.model);
   console.log("Temperature:", requestBody.temperature);
@@ -141,6 +158,7 @@ export const processApiRequest = async (
   console.log("Is batch request:", isBatchRequest ? `Yes (part ${batchNumber})` : "No");
   console.log("Is retry attempt:", isRetryRequest ? "Yes" : "No");
   console.log("Is complex query:", isComplexQuery ? "Yes" : "No");
+  console.log("Is preliminary assessment:", isPreliminaryAssessment ? "Yes" : "No");
   
   // Add conversation tracking metadata to help with key management
   if (!requestBody.metadata) {

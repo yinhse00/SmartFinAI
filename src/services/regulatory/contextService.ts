@@ -1,76 +1,55 @@
 
-import { contextServiceCore } from './context/contextServiceCore';
-import { comprehensiveContextService } from './context/comprehensiveContextService';
-import { enhancedContextService } from './context/enhancedContextService';
-import { validationContextService } from './context/validationContextService';
+import { grokApiService } from '../api/grokApiService';
+import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Financial regulatory context service - specialized for Hong Kong corporate finance
- */
 export const contextService = {
   /**
-   * Comprehensive database search that ensures all relevant sources are consulted
-   * This is the primary method for ensuring thorough database verification before answering
+   * Fetches regulatory context from the database or API
+   * Now accepts options including isPreliminaryAssessment and metadata
    */
-  getComprehensiveRegulatoryContext: comprehensiveContextService.getComprehensiveRegulatoryContext,
-
-  /**
-   * Enhanced regulatory context retrieval with specialized financial semantic search
-   */
-  getRegulatoryContextWithReasoning: enhancedContextService.getRegulatoryContextWithReasoning,
-
-  /**
-   * Get regulatory context for a given financial query (simplified version)
-   */
-  getRegulatoryContext: contextServiceCore.getRegulatoryContext,
-
-  /**
-   * Get specialized context for definition queries
-   */
-  getDefinitionContext: async (query: string) => {
-    console.log('Retrieving specialized definition context for:', query);
-    
-    // Extract the term being defined
-    const termMatch = query.match(/what\s+is\s+([^?]+)/i) || 
-                     query.match(/definition\s+of\s+([^?]+)/i);
-                     
-    const term = termMatch ? termMatch[1].trim() : query;
-    
+  getRegulatoryContext: async (
+    query: string,
+    options?: { isPreliminaryAssessment?: boolean, metadata?: any }
+  ) => {
     try {
-      // Search for the term in multiple regulatory sources
-      const sources = ['listing_rules', 'guidance', 'takeovers'];
-      let combinedContext = '';
+      console.log(`Getting regulatory context for: ${query}`);
       
-      for (const source of sources) {
-        const sourceContext = await contextServiceCore.getSourceSpecificContext(term, source);
-        if (sourceContext) {
-          combinedContext += `\n\n--- FROM ${source.toUpperCase()} ---\n\n${sourceContext}`;
-        }
+      // Check if we have a regulatory database available
+      let hasRegulatoryDatabase = false;
+      
+      try {
+        const { count, error } = await supabase
+          .from('regulatory_provisions')
+          .select('*', { count: 'exact', head: true });
+        
+        hasRegulatoryDatabase = !error && count !== null && count > 0;
+      } catch (e) {
+        console.log('Error checking regulatory database:', e);
+        hasRegulatoryDatabase = false;
       }
       
-      if (combinedContext) {
-        return {
-          context: combinedContext,
-          reasoning: `Comprehensive definition search across multiple regulatory sources for term "${term}"`
-        };
-      }
+      // For preliminary assessment, use advanced model
+      const isPreliminaryAssessment = options?.isPreliminaryAssessment === true;
       
-      // Fall back to standard context retrieval
-      return enhancedContextService.getRegulatoryContextWithReasoning(query);
-    } catch (error) {
-      console.error('Error retrieving definition context:', error);
-      return {
-        context: '',
-        reasoning: 'Error in definition search'
+      // Build request metadata
+      const metadata = {
+        ...(options?.metadata || {}),
+        processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
+        isInitialAssessment: isPreliminaryAssessment,
+        hasRegulatoryDatabase
       };
+      
+      // Call API to get regulatory context
+      const response = await grokApiService.getRegulatoryContext(
+        query, 
+        hasRegulatoryDatabase,
+        metadata
+      );
+      
+      return response;
+    } catch (error) {
+      console.error('Error in regulatory context service:', error);
+      return '';
     }
-  },
-  
-  /**
-   * Get validation context for cross-checking response accuracy
-   * This provides additional context from alternative sources to validate answers
-   */
-  getValidationContext: async (query: string) => {
-    return validationContextService.getValidationContext(query);
   }
 };

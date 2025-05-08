@@ -20,8 +20,14 @@ export const grokService = {
 
   /**
    * Fetch relevant regulatory information for context
+   * Now accepts isPreliminaryAssessment flag and additional options
    */
-  getRegulatoryContext: contextService.getRegulatoryContext,
+  getRegulatoryContext: async (
+    query: string,
+    options?: { isPreliminaryAssessment?: boolean, metadata?: any }
+  ) => {
+    return contextService.getRegulatoryContext(query, options);
+  },
   
   /**
    * Enhanced professional financial response generation with advanced context handling

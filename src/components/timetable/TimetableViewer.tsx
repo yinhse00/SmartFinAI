@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -78,7 +77,7 @@ const TimetableViewer: React.FC = () => {
         type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
       });
       
-      // Process the file
+      // Process the file - FIX: Pass file as a single object, not with arguments
       const processedResults = await processFiles([file]);
       
       if (processedResults && processedResults.length > 0) {
