@@ -26,7 +26,6 @@ export const grokApiService = {
         ],
         model: model,
         temperature: 0.1,
-        stream: false,
         metadata: metadata
       });
       

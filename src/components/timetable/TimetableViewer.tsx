@@ -72,9 +72,7 @@ const TimetableViewer: React.FC = () => {
       // Create a File object from the document URL
       const response = await fetch(timetableDoc.file_url);
       const blob = await response.blob();
-      const file = new File([blob], timetableDoc.title || "Timetable20250507.docx", {
-        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-      });
+      const file = new File([blob], timetableDoc.title || "Timetable20250507.docx");
       
       // Process the file - Fixed: Pass file as an array
       const processedResults = await processFiles([file]);
