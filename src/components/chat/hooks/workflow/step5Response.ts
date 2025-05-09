@@ -87,7 +87,8 @@ export const executeStep5 = async (
     console.error('Error in step 5:', error);
     return { 
       completed: false,
-      error
+      error,
+      response: "I'm sorry, I encountered an error while processing your request."
     };
   }
 };

@@ -138,7 +138,7 @@ export const useWorkflowProcessor = ({
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: step5Result.response,
-            metadata: step5Result.metadata
+            metadata: step5Result.metadata || {}
           };
           
           setMessages(finalMessages);
