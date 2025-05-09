@@ -150,7 +150,8 @@ export const executeStep1 = async (
       reasoning,
       isRegulatoryRelated: regulatoryContext.trim() !== '',
       isListingRulesRelated,
-      isTakeoversCodeRelated
+      isTakeoversCodeRelated,
+      skipSequentialSearches: false
     };
   }
 };

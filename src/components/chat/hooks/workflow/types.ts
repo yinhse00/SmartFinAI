@@ -10,6 +10,8 @@ export interface StepResult {
   query?: string;
   error?: any;
   response?: string;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
   [key: string]: any;
 }
 
@@ -29,6 +31,7 @@ export interface Step1Result extends StepResult {
   reasoning?: string;
   isListingRulesRelated?: boolean;
   isTakeoversCodeRelated?: boolean;
+  skipSequentialSearches?: boolean;
 }
 
 export interface Step2Result extends StepResult {
@@ -39,6 +42,8 @@ export interface Step2Result extends StepResult {
   executionRequired?: boolean;
   takeoversCodeRelated?: boolean;
   listingRulesSearchNegative?: boolean;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
 }
 
 export interface Step3Result extends StepResult {
@@ -48,6 +53,8 @@ export interface Step3Result extends StepResult {
   regulatoryContext?: string;
   executionRequired?: boolean;
   takeoversCodeSearchNegative?: boolean;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
 }
 
 export interface Step4Result extends StepResult {
@@ -55,6 +62,8 @@ export interface Step4Result extends StepResult {
   query: string;
   executionContext?: string;
   regulatoryContext?: string;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
 }
 
 export interface Step5Result extends StepResult {
@@ -63,4 +72,13 @@ export interface Step5Result extends StepResult {
   metadata?: any;
   requiresTranslation?: boolean;
   error?: any;
+}
+
+export interface InitialAssessment {
+  isRegulatoryRelated: boolean;
+  reasoning: string;
+  categories: Array<{
+    category: string;
+    confidence: number;
+  }>;
 }

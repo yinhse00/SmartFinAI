@@ -21,6 +21,7 @@ export interface Message {
   isTranslated?: boolean;
   originalContent?: string;
   translationInProgress?: boolean;
+  metadata?: any;
 }
 
 interface ChatMessageProps {

@@ -48,8 +48,9 @@ export const useWorkflowProcessor = ({
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
-        role: 'user',
+        sender: 'user',
         content: query,
+        timestamp: new Date()
       };
       
       const updatedMessages = [...messages, userMessage];
@@ -58,21 +59,23 @@ export const useWorkflowProcessor = ({
       // Create assistant message placeholder
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
+        sender: 'bot',
         content: '',
-        isLoading: true,
+        timestamp: new Date(),
+        isError: false,
+        translationInProgress: false
       };
       
       setMessages([...updatedMessages, assistantMessage]);
       
       // Step 1: Enhanced Initial Processing with parallel classification
       setCurrentStep('initial');
-      const step1Result = await step1Initial({
+      const step1Result = await step1Initial(
         query,
         storeTranslation,
         setStepProgress,
         retrieveRegulatoryContext
-      });
+      );
       
       // Get workflow parameters from step 1 result
       let params = { 
@@ -135,8 +138,7 @@ export const useWorkflowProcessor = ({
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: step5Result.response,
-            isLoading: false,
-            metadata: step5Result.metadata,
+            metadata: step5Result.metadata
           };
           
           setMessages(finalMessages);
@@ -159,15 +161,14 @@ export const useWorkflowProcessor = ({
       
       const updatedMessages = [...messages];
       const assistantIndex = updatedMessages.findIndex(
-        (m) => m.role === 'assistant' && m.isLoading
+        (m) => m.sender === 'bot' && m.isError === false
       );
       
       if (assistantIndex !== -1) {
         updatedMessages[assistantIndex] = {
           ...updatedMessages[assistantIndex],
           content: errorMessage,
-          isLoading: false,
-          error: true,
+          isError: true
         };
         
         setMessages(updatedMessages);

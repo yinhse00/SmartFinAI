@@ -62,7 +62,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
           query: params.query,
           takeoversCodeContext: enhancedContext,
           regulatoryContext: enhancedContext,
-          executionRequired: true
+          executionRequired: true,
+          skipSequentialSearches: params.skipSequentialSearches || false,
+          isRegulatoryRelated: params.isRegulatoryRelated || true
         };
       }
       
@@ -72,7 +74,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         query: params.query,
         takeoversCodeContext: enhancedContext,
         regulatoryContext: enhancedContext,
-        executionRequired: false
+        executionRequired: false,
+        skipSequentialSearches: params.skipSequentialSearches || false,
+        isRegulatoryRelated: params.isRegulatoryRelated || true
       };
     } else {
       // Step 3(g-h): Negative search - check if execution guidance is needed
@@ -91,7 +95,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
-          executionRequired: true
+          executionRequired: true,
+          skipSequentialSearches: params.skipSequentialSearches || false,
+          isRegulatoryRelated: params.isRegulatoryRelated || true
         };
       }
       
@@ -99,7 +105,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
-        takeoversCodeSearchNegative: true
+        takeoversCodeSearchNegative: true,
+        skipSequentialSearches: params.skipSequentialSearches || false,
+        isRegulatoryRelated: params.isRegulatoryRelated || true
       };
     }
   } catch (error) {
@@ -108,7 +116,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       shouldContinue: true, 
       nextStep: 'response' as WorkflowStep, 
       query: params.query,
-      error
+      error,
+      skipSequentialSearches: params.skipSequentialSearches || false,
+      isRegulatoryRelated: params.isRegulatoryRelated || true
     };
   }
 };

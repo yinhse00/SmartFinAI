@@ -48,10 +48,16 @@ export const useTranslationManager = () => {
 
       if (translation && typeof translation === 'object' && 'text' in translation) {
         // Store the translation in the message metadata
-        if (messages[messageIndex].metadata) {
-          messages[messageIndex].metadata.translation = translation.text;
+        if (!messages[messageIndex].metadata) {
+          messages[messageIndex] = {
+            ...messages[messageIndex],
+            metadata: { translation: translation.text }
+          };
         } else {
-          messages[messageIndex].metadata = { translation: translation.text };
+          messages[messageIndex].metadata = {
+            ...messages[messageIndex].metadata,
+            translation: translation.text
+          };
         }
       }
     } catch (error) {

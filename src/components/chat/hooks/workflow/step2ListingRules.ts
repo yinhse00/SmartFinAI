@@ -58,7 +58,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           nextStep: 'takeoversCode' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
-          takeoversCodeRelated: true
+          takeoversCodeRelated: true,
+          skipSequentialSearches: params.skipSequentialSearches || false,
+          isRegulatoryRelated: params.isRegulatoryRelated || true
         };
       }
       
@@ -77,7 +79,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
           listingRulesContext: enhancedContext,
-          executionRequired: true
+          executionRequired: true,
+          skipSequentialSearches: params.skipSequentialSearches || false,
+          isRegulatoryRelated: params.isRegulatoryRelated || true
         };
       }
       
@@ -87,7 +91,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         query: params.query,
         listingRulesContext: enhancedContext,
         regulatoryContext: enhancedContext,
-        executionRequired: false
+        executionRequired: false,
+        skipSequentialSearches: params.skipSequentialSearches || false,
+        isRegulatoryRelated: params.isRegulatoryRelated || true
       };
     } else {
       // Negative search result - move to Step 4 or 5 depending on execution needs
@@ -106,7 +112,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           shouldContinue: true,
           nextStep: 'execution' as WorkflowStep,
           query: params.query,
-          executionRequired: true
+          executionRequired: true,
+          skipSequentialSearches: params.skipSequentialSearches || false,
+          isRegulatoryRelated: params.isRegulatoryRelated || true
         };
       }
       
@@ -114,7 +122,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         shouldContinue: true,
         nextStep: 'response' as WorkflowStep,
         query: params.query,
-        listingRulesSearchNegative: true
+        listingRulesSearchNegative: true,
+        skipSequentialSearches: params.skipSequentialSearches || false,
+        isRegulatoryRelated: params.isRegulatoryRelated || true
       };
     }
   } catch (error) {
@@ -123,7 +133,9 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       shouldContinue: true, 
       nextStep: 'response' as WorkflowStep, 
       query: params.query,
-      error
+      error,
+      skipSequentialSearches: params.skipSequentialSearches || false,
+      isRegulatoryRelated: params.isRegulatoryRelated || true
     };
   }
 };
