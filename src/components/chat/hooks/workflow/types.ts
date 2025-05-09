@@ -23,4 +23,43 @@ export interface Step1Result {
   skipSequentialSearches: boolean;
   assessment?: any;
   contexts?: Record<string, any>;
+  error?: any;
+}
+
+export interface Step2Result {
+  shouldContinue: boolean;
+  nextStep: WorkflowStep;
+  query: string;
+  listingRulesContext?: string;
+  regulatoryContext?: string;
+  takeoversCodeRelated?: boolean;
+  executionRequired?: boolean;
+  listingRulesSearchNegative?: boolean;
+  skipSequentialSearches: boolean;
+  isRegulatoryRelated: boolean;
+  error?: any;
+}
+
+export interface Step3Result {
+  shouldContinue: boolean;
+  nextStep: WorkflowStep;
+  query: string;
+  takeoversCodeContext?: string;
+  regulatoryContext?: string;
+  executionRequired?: boolean;
+  takeoversCodeSearchNegative?: boolean;
+  skipSequentialSearches: boolean;
+  isRegulatoryRelated: boolean;
+  error?: any;
+}
+
+export interface Step4Result {
+  shouldContinue: boolean;
+  nextStep: WorkflowStep;
+  query: string;
+  executionContext?: string;
+  regulatoryContext?: string;
+  skipSequentialSearches: boolean;
+  isRegulatoryRelated: boolean;
+  error?: any;
 }
