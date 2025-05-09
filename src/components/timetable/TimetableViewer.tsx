@@ -69,12 +69,14 @@ const TimetableViewer: React.FC = () => {
       // Found a timetable document, now process it
       const timetableDoc = documents[0];
       
-      // Create a File object from the document URL
+      // Create a File object from the document URL - Fixed constructor usage
       const response = await fetch(timetableDoc.file_url);
       const blob = await response.blob();
-      const file = new File([blob], timetableDoc.title || "Timetable20250507.docx");
+      const file = new File([blob], timetableDoc.title || "Timetable20250507.docx", {
+        type: blob.type
+      });
       
-      // Process the file - Fixed: Pass file as an array
+      // Process the file
       const processedResults = await processFiles([file]);
       
       if (processedResults && processedResults.length > 0) {

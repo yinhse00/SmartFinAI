@@ -1,24 +1,14 @@
 
-// Re-export types from main types file using 'export type'
-export type { GrokRequestParams, GrokResponse } from '@/types/grok';
-
-// Define a type for message content that can be either a string or an array of content objects
-export type MessageContent = 
-  | string 
-  | Array<{ 
-      type: string; 
-      text?: string; 
-      image_url?: { 
-        url: string 
-      } 
-    }>;
-
 export interface GrokChatRequestBody {
-  messages: {
+  messages: Array<{
     role: string;
-    content: MessageContent;
-  }[];
+    content: string;
+  }>;
   model: string;
   temperature?: number;
   max_tokens?: number;
+  top_p?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  metadata?: any;
 }
