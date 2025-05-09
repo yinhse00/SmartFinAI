@@ -1,8 +1,18 @@
 
+export type MessageContent = 
+  | string 
+  | Array<{ 
+      type: string; 
+      text?: string; 
+      image_url?: { 
+        url: string 
+      } 
+    }>;
+
 export interface GrokChatRequestBody {
   messages: Array<{
     role: string;
-    content: string;
+    content: MessageContent;
   }>;
   model: string;
   temperature?: number;
