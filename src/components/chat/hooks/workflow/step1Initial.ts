@@ -1,7 +1,7 @@
 
 import { checkIsChineseInput } from '../useLanguageState';
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { Step1Result } from './types';
 import { parallelQueryProcessor } from '@/services/response/core/parallelQueryProcessor';
 
 /**
@@ -16,7 +16,7 @@ export const executeStep1 = async (
   storeTranslation: (original: string, translated: string) => void,
   setStepProgress: (progress: string) => void,
   retrieveRegulatoryContext: (queryText: string, isPreliminaryAssessment?: boolean) => Promise<any>
-) => {
+): Promise<Step1Result> => {
   setStepProgress('Receiving query and performing initial analysis');
   
   // Step 1(c): Check if input is Chinese and needs translation
@@ -61,7 +61,7 @@ export const executeStep1 = async (
       console.log('Query not related to financial regulations, skipping to response');
       return { 
         shouldContinue: false, 
-        nextStep: 'response' as WorkflowStep, 
+        nextStep: 'response',
         query: processedQuery,
         isRegulatoryRelated: false
       };
@@ -84,7 +84,7 @@ export const executeStep1 = async (
                             c.category === 'process' && c.confidence > 0.6);
     
     // Choose next step based on gathered contexts and priorities
-    let nextStep: WorkflowStep = 'response';
+    let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' = 'response';
     
     // With parallel processing, we can skip intermediate steps and go straight to response
     // if we already have all the needed context
@@ -134,7 +134,7 @@ export const executeStep1 = async (
       regulatoryContext.toLowerCase().includes('general offer');
     
     // Decide on next step based on content relevance
-    let nextStep: WorkflowStep = 'response';
+    let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' = 'response';
     
     if (isListingRulesRelated) {
       nextStep = 'listingRules';

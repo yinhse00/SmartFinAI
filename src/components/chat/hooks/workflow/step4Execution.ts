@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { Step4Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -9,7 +9,7 @@ import { supabase } from '@/integrations/supabase/client';
  * - Check Documents Checklist, Working Plan, and Timetable
  * - Compile relevant execution information
  */
-export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void) => {
+export const executeStep4 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step4Result> => {
   setStepProgress('Retrieving execution guidance documents');
   
   try {
@@ -177,18 +177,22 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     
     return {
       shouldContinue: true,
-      nextStep: 'response' as WorkflowStep,
+      nextStep: 'response',
       query: params.query,
       executionContext: combinedContext,
-      regulatoryContext: combinedContext
+      regulatoryContext: combinedContext,
+      skipSequentialSearches: Boolean(params.skipSequentialSearches),
+      isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
     };
   } catch (error) {
     console.error('Error in step 4:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response', 
       query: params.query,
-      error
+      error,
+      skipSequentialSearches: Boolean(params.skipSequentialSearches),
+      isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
     };
   }
 };

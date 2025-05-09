@@ -24,18 +24,23 @@ export interface WorkflowProcessorProps {
 }
 
 export interface Step1Result extends StepResult {
-  nextStep: WorkflowStep;
+  shouldContinue: boolean;
+  nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response';
   query: string;
   isRegulatoryRelated: boolean;
   regulatoryContext?: string;
   reasoning?: string;
+  contexts?: Record<string, any>;
   isListingRulesRelated?: boolean;
   isTakeoversCodeRelated?: boolean;
+  isProcessRelated?: boolean;
   skipSequentialSearches?: boolean;
+  assessment?: InitialAssessment;
 }
 
 export interface Step2Result extends StepResult {
-  nextStep: WorkflowStep;
+  shouldContinue: boolean;
+  nextStep: 'takeoversCode' | 'execution' | 'response';
   query: string;
   listingRulesContext?: string;
   regulatoryContext?: string;
@@ -43,27 +48,29 @@ export interface Step2Result extends StepResult {
   takeoversCodeRelated?: boolean;
   listingRulesSearchNegative?: boolean;
   skipSequentialSearches?: boolean;
-  isRegulatoryRelated?: boolean;
+  isRegulatoryRelated: boolean;
 }
 
 export interface Step3Result extends StepResult {
-  nextStep: WorkflowStep;
+  shouldContinue: boolean;
+  nextStep: 'execution' | 'response';
   query: string;
   takeoversCodeContext?: string;
   regulatoryContext?: string;
   executionRequired?: boolean;
   takeoversCodeSearchNegative?: boolean;
   skipSequentialSearches?: boolean;
-  isRegulatoryRelated?: boolean;
+  isRegulatoryRelated: boolean;
 }
 
 export interface Step4Result extends StepResult {
-  nextStep: WorkflowStep;
+  shouldContinue: boolean;
+  nextStep: 'response';
   query: string;
   executionContext?: string;
   regulatoryContext?: string;
   skipSequentialSearches?: boolean;
-  isRegulatoryRelated?: boolean;
+  isRegulatoryRelated: boolean;
 }
 
 export interface Step5Result extends StepResult {

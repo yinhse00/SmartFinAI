@@ -6,7 +6,7 @@ import { step2ListingRules } from './useStep2ListingRules';
 import { step3TakeoversCode } from './useStep3TakeoversCode';
 import { step4Execution } from './useStep4Execution';
 import { step5Response } from './useStep5Response';
-import { WorkflowStep, WorkflowProcessorProps } from './workflow/types';
+import { WorkflowStep, WorkflowProcessorProps, Step1Result } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
@@ -63,22 +63,22 @@ export const useWorkflowProcessor = ({
         content: '',
         timestamp: new Date(),
         isError: false,
-        translationInProgress: false
+        metadata: {}
       };
       
       setMessages([...updatedMessages, assistantMessage]);
       
       // Step 1: Enhanced Initial Processing with parallel classification
       setCurrentStep('initial');
-      const step1Result = await step1Initial(
+      const step1Result = await step1Initial({
         query,
         storeTranslation,
         setStepProgress,
         retrieveRegulatoryContext
-      );
+      });
       
       // Get workflow parameters from step 1 result
-      let params = { 
+      let params: any = { 
         ...step1Result,
         skipSequentialSearches: step1Result.skipSequentialSearches || false
       };
@@ -161,7 +161,7 @@ export const useWorkflowProcessor = ({
       
       const updatedMessages = [...messages];
       const assistantIndex = updatedMessages.findIndex(
-        (m) => m.sender === 'bot' && m.isError === false
+        (m) => m.sender === 'bot' && !m.isError
       );
       
       if (assistantIndex !== -1) {

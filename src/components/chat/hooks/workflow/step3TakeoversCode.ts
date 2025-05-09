@@ -1,6 +1,6 @@
 
 import { grokService } from '@/services/grokService';
-import { WorkflowStep } from './types';
+import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
@@ -9,7 +9,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
  * - Check if match found and analyze
  * - Determine if execution guidance needed
  */
-export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void) => {
+export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
   setStepProgress('Searching Takeovers Code summary and index');
   
   try {
@@ -20,7 +20,6 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     
     // Use utility function to safely extract text
     const takeoversCodeContext = safelyExtractText(response);
-    const reasoning = '';
     
     // Step 3(b-c): Check if search was positive
     const searchPositive = takeoversCodeContext && takeoversCodeContext.trim() !== '';
@@ -58,25 +57,25 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           takeoversCodeContext: enhancedContext,
           regulatoryContext: enhancedContext,
           executionRequired: true,
-          skipSequentialSearches: params.skipSequentialSearches || false,
-          isRegulatoryRelated: params.isRegulatoryRelated || true
+          skipSequentialSearches: Boolean(params.skipSequentialSearches),
+          isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
         };
       }
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         takeoversCodeContext: enhancedContext,
         regulatoryContext: enhancedContext,
         executionRequired: false,
-        skipSequentialSearches: params.skipSequentialSearches || false,
-        isRegulatoryRelated: params.isRegulatoryRelated || true
+        skipSequentialSearches: Boolean(params.skipSequentialSearches),
+        isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
       };
     } else {
       // Step 3(g-h): Negative search - check if execution guidance is needed
@@ -93,32 +92,32 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       if (executionRequired) {
         return {
           shouldContinue: true,
-          nextStep: 'execution' as WorkflowStep,
+          nextStep: 'execution',
           query: params.query,
           executionRequired: true,
-          skipSequentialSearches: params.skipSequentialSearches || false,
-          isRegulatoryRelated: params.isRegulatoryRelated || true
+          skipSequentialSearches: Boolean(params.skipSequentialSearches),
+          isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
         };
       }
       
       return {
         shouldContinue: true,
-        nextStep: 'response' as WorkflowStep,
+        nextStep: 'response',
         query: params.query,
         takeoversCodeSearchNegative: true,
-        skipSequentialSearches: params.skipSequentialSearches || false,
-        isRegulatoryRelated: params.isRegulatoryRelated || true
+        skipSequentialSearches: Boolean(params.skipSequentialSearches),
+        isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
       };
     }
   } catch (error) {
     console.error('Error in step 3:', error);
     return { 
       shouldContinue: true, 
-      nextStep: 'response' as WorkflowStep, 
+      nextStep: 'response', 
       query: params.query,
       error,
-      skipSequentialSearches: params.skipSequentialSearches || false,
-      isRegulatoryRelated: params.isRegulatoryRelated || true
+      skipSequentialSearches: Boolean(params.skipSequentialSearches),
+      isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
     };
   }
 };

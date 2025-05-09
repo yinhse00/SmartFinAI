@@ -54,9 +54,14 @@ export const useTranslationManager = () => {
             metadata: { translation: translation.text }
           };
         } else {
-          messages[messageIndex].metadata = {
+          const updatedMetadata = {
             ...messages[messageIndex].metadata,
             translation: translation.text
+          };
+          
+          messages[messageIndex] = {
+            ...messages[messageIndex],
+            metadata: updatedMetadata
           };
         }
       }
