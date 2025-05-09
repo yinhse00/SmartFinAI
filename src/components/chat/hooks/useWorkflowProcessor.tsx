@@ -1,18 +1,19 @@
 
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
-import { useQueryCore } from './useQueryCore';
-import { useLanguageState } from './useLanguageState';
+import { step1Initial } from './useStep1Initial';
+import { step2ListingRules } from './useStep2ListingRules';
+import { step3TakeoversCode } from './useStep3TakeoversCode';
+import { step4Execution } from './useStep4Execution';
+import { step5Response } from './useStep5Response';
+import { WorkflowStep, WorkflowProcessorProps } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
-import { StepResult, WorkflowProcessorProps, WorkflowStep } from './workflow/types';
-import { executeStep1 } from './workflow/step1Initial';
-import { executeStep2 } from './workflow/step2ListingRules';
-import { executeStep3 } from './workflow/step3TakeoversCode';
-import { executeStep4 } from './workflow/step4Execution';
-import { executeStep5 } from './workflow/step5Response';
+import { useLanguageState } from './useLanguageState';
+import { useTranslationManager } from './useTranslationManager';
 
 /**
- * Hook that implements the new structured workflow process
+ * Hook for managing the workflow of processing and responding to queries
+ * Enhanced with parallel processing capabilities
  */
 export const useWorkflowProcessor = ({
   messages,
@@ -23,123 +24,156 @@ export const useWorkflowProcessor = ({
 }: WorkflowProcessorProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
-  const [stepProgress, setStepProgress] = useState<string>('');
+  const [stepProgress, setStepProgress] = useState('');
   
-  const { createUserMessage, handleProcessingError } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
-  const { lastInputWasChinese, storeTranslation } = useLanguageState();
+  // Use enhanced context retrieval with parallel processing
   const { retrieveRegulatoryContext } = useContextRetrieval();
-
+  const { lastInputWasChinese, checkIsChineseInput, storeTranslation } = useLanguageState();
+  const { manageTranslations } = useTranslationManager();
+  
   /**
-   * Main workflow execution that orchestrates all steps
+   * Execute the workflow for a query with enhanced parallel processing
    */
-  const executeWorkflow = async (queryText: string) => {
-    if (!queryText.trim()) return;
-    
+  const executeWorkflow = async (query: string) => {
     if (!isGrokApiKeySet) {
       setApiKeyDialogOpen(true);
       return;
     }
     
-    setLastQuery(queryText);
-    const updatedMessages = createUserMessage(queryText, messages);
-    setMessages(updatedMessages);
-    
     setIsLoading(true);
+    setCurrentStep('initial');
+    setLastQuery(query);
     
     try {
-      // Step 1: Initial Processing
+      // Add user message
+      const userMessage: Message = {
+        id: Date.now().toString(),
+        role: 'user',
+        content: query,
+      };
+      
+      const updatedMessages = [...messages, userMessage];
+      setMessages(updatedMessages);
+      
+      // Create assistant message placeholder
+      const assistantMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: '',
+        isLoading: true,
+      };
+      
+      setMessages([...updatedMessages, assistantMessage]);
+      
+      // Step 1: Enhanced Initial Processing with parallel classification
       setCurrentStep('initial');
-      const step1Result = await executeStep1(
-        queryText, 
-        storeTranslation, 
+      const step1Result = await step1Initial({
+        query,
+        storeTranslation,
         setStepProgress,
         retrieveRegulatoryContext
-      );
+      });
       
-      if (!step1Result.shouldContinue) {
-        if (step1Result.nextStep === 'response') {
-          // Generate response with minimal context
-          setCurrentStep('response');
-          const responseResult = await executeStep5(
-            {
-              query: step1Result.query,
-              isRegulatoryRelated: step1Result.isRegulatoryRelated
-            },
-            setStepProgress,
-            lastInputWasChinese
-          );
-          
-          const botMessage: Message = {
-            id: Date.now().toString(),
-            content: responseResult.response || 'Sorry, I could not generate a response.',
-            sender: 'bot',
-            timestamp: new Date()
-          };
-          
-          setMessages([...updatedMessages, botMessage]);
-          setIsLoading(false);
-          return;
-        }
-      }
+      // Get workflow parameters from step 1 result
+      let params = { 
+        ...step1Result,
+        skipSequentialSearches: step1Result.skipSequentialSearches || false
+      };
       
-      // Determine next step based on Step 1 result
-      let nextStep: WorkflowStep = step1Result.nextStep;
-      let currentParams = { ...step1Result };
-      let stepResult: StepResult | undefined;
+      // For parallel processing path, we can often skip to response generation
+      let nextStep = step1Result.nextStep;
       
-      // Execute subsequent steps based on the workflow
-      while (nextStep !== 'complete') {
-        switch (nextStep) {
-          case 'listingRules':
-            setCurrentStep('listingRules');
-            stepResult = await executeStep2(currentParams, setStepProgress);
-            break;
-            
-          case 'takeoversCode':
-            setCurrentStep('takeoversCode');
-            stepResult = await executeStep3(currentParams, setStepProgress);
-            break;
-            
-          case 'execution':
-            setCurrentStep('execution');
-            stepResult = await executeStep4(currentParams, setStepProgress);
-            break;
-            
-          case 'response':
-            setCurrentStep('response');
-            stepResult = await executeStep5(currentParams, setStepProgress, lastInputWasChinese);
-            
-            // Create bot response message
-            const botMessage: Message = {
-              id: Date.now().toString(),
-              content: stepResult.response || 'Sorry, I could not generate a response.',
-              sender: 'bot',
-              timestamp: new Date()
-            };
-            
-            setMessages([...updatedMessages, botMessage]);
-            nextStep = 'complete';
-            break;
-            
-          default:
-            nextStep = 'complete';
-            break;
+      // If we have comprehensive context from parallel processing, skip sequential steps
+      if (params.skipSequentialSearches) {
+        console.log('Skipping sequential search steps - using parallel processed context');
+        nextStep = 'response';
+      } else {
+        // If parallel processing didn't yield sufficient context, follow sequential flow
+        // Step 2: Listing Rules
+        if (nextStep === 'listingRules') {
+          setCurrentStep('listingRules');
+          const step2Result = await step2ListingRules(params, setStepProgress);
+          params = { ...params, ...step2Result };
+          nextStep = step2Result.nextStep;
         }
         
-        if (stepResult && stepResult.nextStep && nextStep !== 'complete') {
-          nextStep = stepResult.nextStep;
-          currentParams = { ...currentParams, ...stepResult };
-        } else if (nextStep !== 'complete') {
-          nextStep = 'response';
+        // Step 3: Takeovers Code
+        if (nextStep === 'takeoversCode') {
+          setCurrentStep('takeoversCode');
+          const step3Result = await step3TakeoversCode(params, setStepProgress);
+          params = { ...params, ...step3Result };
+          nextStep = step3Result.nextStep;
+        }
+        
+        // Step 4: Execution Process
+        if (nextStep === 'execution') {
+          setCurrentStep('execution');
+          const step4Result = await step4Execution(params, setStepProgress);
+          params = { ...params, ...step4Result };
+          nextStep = step4Result.nextStep;
         }
       }
       
+      // Step 5: Response Generation (always required)
+      setCurrentStep('response');
+      const step5Result = await step5Response(
+        params, 
+        setStepProgress,
+        lastInputWasChinese
+      );
+      
+      // Update assistant message with response
+      if (step5Result.response) {
+        const finalMessages = [...updatedMessages];
+        
+        // Find and update the assistant message
+        const assistantIndex = finalMessages.findIndex(
+          (m) => m.id === assistantMessage.id
+        );
+        
+        if (assistantIndex !== -1) {
+          finalMessages[assistantIndex] = {
+            ...assistantMessage,
+            content: step5Result.response,
+            isLoading: false,
+            metadata: step5Result.metadata,
+          };
+          
+          setMessages(finalMessages);
+          
+          // Handle translations if needed
+          if (step5Result.requiresTranslation) {
+            manageTranslations(finalMessages, assistantIndex);
+          }
+        }
+      }
+      
+      setCurrentStep('complete');
     } catch (error) {
-      handleProcessingError(error, updatedMessages);
+      console.error('Workflow error:', error);
+      
+      // Update messages with error
+      const errorMessage = `I encountered an error while processing your request. Please try again.${
+        error instanceof Error ? ` (${error.message})` : ''
+      }`;
+      
+      const updatedMessages = [...messages];
+      const assistantIndex = updatedMessages.findIndex(
+        (m) => m.role === 'assistant' && m.isLoading
+      );
+      
+      if (assistantIndex !== -1) {
+        updatedMessages[assistantIndex] = {
+          ...updatedMessages[assistantIndex],
+          content: errorMessage,
+          isLoading: false,
+          error: true,
+        };
+        
+        setMessages(updatedMessages);
+      }
     } finally {
       setIsLoading(false);
-      setCurrentStep('initial');
-      setStepProgress('');
     }
   };
 

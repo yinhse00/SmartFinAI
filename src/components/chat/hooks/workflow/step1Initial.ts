@@ -2,13 +2,14 @@
 import { checkIsChineseInput } from '../useLanguageState';
 import { grokService } from '@/services/grokService';
 import { WorkflowStep } from './types';
+import { parallelQueryProcessor } from '@/services/response/core/parallelQueryProcessor';
 
 /**
- * Step 1: Initial Processing
+ * Step 1: Enhanced Initial Processing
  * - Receives user question
  * - Detects language and translates if Chinese
- * - Initial analysis by Grok
- * - Determines if regulatory-related
+ * - Uses parallel processing for comprehensive initial assessment
+ * - Determines category paths simultaneously
  */
 export const executeStep1 = async (
   queryText: string,
@@ -43,18 +44,20 @@ export const executeStep1 = async (
     }
   }
 
-  // Step 1(d-e): Process query with Grok and check if regulatory-related
-  setStepProgress('Analyzing query relevance to financial regulations');
+  // Step 1(d-e): Enhanced parallel assessment and context gathering
+  setStepProgress('Analyzing query across multiple regulatory categories');
   
   try {
-    // Check if query is related to Listing Rules or Takeovers Code
-    // Use preliminary assessment flag to use grok-3-beta model
-    const result = await retrieveRegulatoryContext(processedQuery, true);
-    const regulatoryContext = result.regulatoryContext || '';
-    const reasoning = result.reasoning || '';
+    // Use the parallel query processor for comprehensive analysis
+    const { assessment, optimizedContext, contexts } = 
+      await parallelQueryProcessor.processQueryInParallel(processedQuery);
+    
+    // Determine whether to continue processing based on assessment
+    const isRegulatoryRelated = assessment.isRegulatoryRelated && 
+                              (optimizedContext && optimizedContext.trim() !== '');
     
     // Step 1(f): If not related to regulations, skip to response
-    if (!regulatoryContext || regulatoryContext.trim() === '') {
+    if (!isRegulatoryRelated) {
       console.log('Query not related to financial regulations, skipping to response');
       return { 
         shouldContinue: false, 
@@ -63,6 +66,62 @@ export const executeStep1 = async (
         isRegulatoryRelated: false
       };
     }
+    
+    // Determine categories from the assessment
+    const highestCategory = assessment.categories
+      .sort((a, b) => b.confidence - a.confidence)[0];
+    
+    // Check for specific category types
+    const isListingRulesRelated = contexts['listing_rules'] || 
+                               highestCategory.category === 'listing_rules';
+    
+    const isTakeoversCodeRelated = contexts['takeovers_code'] || 
+                                highestCategory.category === 'takeovers_code';
+    
+    const isProcessRelated = contexts['process'] ||
+                          highestCategory.category === 'process' ||
+                          assessment.categories.some(c => 
+                            c.category === 'process' && c.confidence > 0.6);
+    
+    // Choose next step based on gathered contexts and priorities
+    let nextStep: WorkflowStep = 'response';
+    
+    // With parallel processing, we can skip intermediate steps and go straight to response
+    // if we already have all the needed context
+    if (optimizedContext && optimizedContext.trim() !== '') {
+      nextStep = 'response';
+    } else {
+      // Fall back to linear process if parallel didn't yield sufficient context
+      if (isListingRulesRelated) {
+        nextStep = 'listingRules';
+      } else if (isTakeoversCodeRelated) {
+        nextStep = 'takeoversCode';
+      } else if (isProcessRelated) {
+        nextStep = 'execution';
+      }
+    }
+    
+    return {
+      shouldContinue: true,
+      nextStep,
+      query: processedQuery,
+      regulatoryContext: optimizedContext,
+      contexts,
+      reasoning: assessment.reasoning || '',
+      isRegulatoryRelated: true,
+      isListingRulesRelated,
+      isTakeoversCodeRelated,
+      isProcessRelated,
+      assessment,
+      // Skip sequential searches if we already have comprehensive context
+      skipSequentialSearches: optimizedContext && optimizedContext.trim() !== ''
+    };
+  } catch (error) {
+    console.error('Error in enhanced step 1:', error);
+    // Fall back to traditional approach if parallel processing fails
+    const result = await retrieveRegulatoryContext(processedQuery, true);
+    const regulatoryContext = result.regulatoryContext || result.context || '';
+    const reasoning = result.reasoning || '';
     
     // Determine if Listing Rules or Takeovers Code related
     const isListingRulesRelated = 
@@ -84,23 +143,14 @@ export const executeStep1 = async (
     }
     
     return {
-      shouldContinue: true,
+      shouldContinue: regulatoryContext.trim() !== '',
       nextStep,
       query: processedQuery,
       regulatoryContext,
       reasoning,
-      isRegulatoryRelated: true,
+      isRegulatoryRelated: regulatoryContext.trim() !== '',
       isListingRulesRelated,
       isTakeoversCodeRelated
-    };
-  } catch (error) {
-    console.error('Error in step 1:', error);
-    return { 
-      shouldContinue: false, 
-      nextStep: 'response' as WorkflowStep, 
-      query: processedQuery,
-      error,
-      isRegulatoryRelated: false
     };
   }
 };

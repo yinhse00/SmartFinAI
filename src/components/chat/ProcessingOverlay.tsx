@@ -1,64 +1,121 @@
 
-import { AnimatePresence, motion } from 'framer-motion';
-import { Loader } from 'lucide-react';
+import React from 'react';
+import { WorkflowStep } from './hooks/workflow/types';
+import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check } from 'lucide-react';
 
 interface ProcessingOverlayProps {
-  currentStep: string;
+  currentStep: WorkflowStep;
   stepProgress: string;
   isChineseInterface?: boolean;
 }
 
-const ProcessingOverlay = ({ 
+const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({ 
   currentStep, 
-  stepProgress, 
+  stepProgress,
   isChineseInterface = false 
-}: ProcessingOverlayProps) => {
-  // Get the appropriate step label based on the current step and language
-  const getStepLabel = () => {
-    if (isChineseInterface) {
-      switch(currentStep) {
-        case 'initial': return '正在初始化...';
-        case 'reviewing': return '正在检索数据...';
-        case 'listingRules': return '分析上市规则...';
-        case 'takeoversCode': return '分析收购守则...';
-        case 'execution': return '处理查询...';
-        case 'processing': return '生成全面回复...';
-        case 'finalizing': return '完善回复中...';
-        case 'response': return '准备最终回复...';
-        default: return '处理中...';
-      }
-    } else {
-      switch(currentStep) {
-        case 'initial': return 'Initializing...';
-        case 'reviewing': return 'Reviewing data...';
-        case 'listingRules': return 'Analyzing listing rules...';
-        case 'takeoversCode': return 'Processing takeovers code...';
-        case 'execution': return 'Executing query...';
-        case 'processing': return 'Generating comprehensive response...';
-        case 'finalizing': return 'Finalizing response...';
-        case 'response': return 'Preparing final response...';
-        default: return 'Processing...';
-      }
-    }
+}) => {
+  // Get appropriate step labels based on language
+  const stepLabels = isChineseInterface ? {
+    initial: '初步分析',
+    listingRules: '上市规则搜索',
+    takeoversCode: '收购守则搜索',
+    execution: '执行程序搜索',
+    response: '生成回复',
+    complete: '已完成'
+  } : {
+    initial: 'Initial Analysis',
+    listingRules: 'Listing Rules Search',
+    takeoversCode: 'Takeovers Code Search',
+    execution: 'Execution Process Search',
+    response: 'Generating Response',
+    complete: 'Complete'
   };
 
+  // Step status determination
+  const getStepStatus = (step: WorkflowStep) => {
+    const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
+    const currentIndex = steps.indexOf(currentStep);
+    const stepIndex = steps.indexOf(step);
+    
+    if (stepIndex < currentIndex) return 'complete';
+    if (stepIndex === currentIndex) return 'active';
+    return 'pending';
+  };
+
+  // Step icon mapping
+  const StepIcon = ({ step }: { step: WorkflowStep }) => {
+    const status = getStepStatus(step);
+    
+    if (status === 'complete') {
+      return <Check className="h-5 w-5 text-green-500" />;
+    }
+    
+    switch (step) {
+      case 'initial':
+        return <Brain className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      case 'listingRules':
+        return <Database className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      case 'takeoversCode':
+        return <Database className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      case 'execution':
+        return <ListChecks className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      case 'response':
+        return <MessagesSquare className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      default:
+        return <Loader2 className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+    }
+  };
+  
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed bottom-[86px] right-6 bg-finance-medium-blue text-white py-2 px-4 rounded-lg shadow-lg z-50 flex items-center gap-3 min-w-[200px]"
-      >
-        <Loader className="h-4 w-4 animate-spin" />
-        <div className="flex flex-col">
-          <span className="text-sm font-medium">{getStepLabel()}</span>
-          {stepProgress && (
-            <span className="text-xs text-finance-light-blue">{stepProgress}</span>
-          )}
+    <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="flex items-center justify-center mb-4">
+          <Loader2 className="h-6 w-6 text-blue-500 animate-spin mr-2" />
+          <h2 className="text-xl font-semibold">
+            {isChineseInterface ? '正在处理您的请求' : 'Processing Your Request'}
+          </h2>
         </div>
-      </motion.div>
-    </AnimatePresence>
+        
+        <div className="space-y-4 mb-6">
+          {(['initial', 'listingRules', 'takeoversCode', 'execution', 'response'] as WorkflowStep[]).map((step) => {
+            const status = getStepStatus(step);
+            return (
+              <div 
+                key={step}
+                className={`flex items-center ${
+                  status === 'active' 
+                    ? 'text-blue-600 dark:text-blue-400' 
+                    : status === 'complete'
+                    ? 'text-green-600 dark:text-green-400'
+                    : 'text-gray-400'
+                }`}
+              >
+                <div className="flex-shrink-0 mr-3">
+                  <StepIcon step={step} />
+                </div>
+                <div className="flex-1">
+                  <p className="font-medium">{stepLabels[step]}</p>
+                  {status === 'active' && (
+                    <p className="text-sm opacity-80">{stepProgress}</p>
+                  )}
+                </div>
+                {status === 'active' && (
+                  <div className="ml-2">
+                    <div className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        
+        <p className="text-center text-sm text-gray-500">
+          {isChineseInterface 
+            ? '我们正在分析您的问题，这可能需要几秒钟时间...'
+            : 'We are analyzing your query, this may take a few seconds...'}
+        </p>
+      </div>
+    </div>
   );
 };
 
