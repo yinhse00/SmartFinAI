@@ -8,7 +8,7 @@ import TypingAnimation from './TypingAnimation';
 
 export interface Message {
   id: string;
-  sender: 'user' | 'bot';
+  sender: 'user' | 'bot' | 'system';
   content: string;
   timestamp: Date;
   references?: string[];

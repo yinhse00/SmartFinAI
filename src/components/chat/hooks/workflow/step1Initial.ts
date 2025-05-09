@@ -72,16 +72,16 @@ export const executeStep1 = async (
       .sort((a, b) => b.confidence - a.confidence)[0];
     
     // Check for specific category types
-    const isListingRulesRelated = contexts['listing_rules'] || 
-                               highestCategory.category === 'listing_rules';
+    const isListingRulesRelated = Boolean(contexts['listing_rules'] || 
+                               highestCategory.category === 'listing_rules');
     
-    const isTakeoversCodeRelated = contexts['takeovers_code'] || 
-                                highestCategory.category === 'takeovers_code';
+    const isTakeoversCodeRelated = Boolean(contexts['takeovers_code'] || 
+                                highestCategory.category === 'takeovers_code');
     
-    const isProcessRelated = contexts['process'] ||
+    const isProcessRelated = Boolean(contexts['process'] ||
                           highestCategory.category === 'process' ||
                           assessment.categories.some(c => 
-                            c.category === 'process' && c.confidence > 0.6);
+                            c.category === 'process' && c.confidence > 0.6));
     
     // Choose next step based on gathered contexts and priorities
     let nextStep: 'listingRules' | 'takeoversCode' | 'execution' | 'response' = 'response';
@@ -114,7 +114,7 @@ export const executeStep1 = async (
       isProcessRelated,
       assessment,
       // Skip sequential searches if we already have comprehensive context
-      skipSequentialSearches: optimizedContext && optimizedContext.trim() !== ''
+      skipSequentialSearches: Boolean(optimizedContext && optimizedContext.trim() !== '')
     };
   } catch (error) {
     console.error('Error in enhanced step 1:', error);

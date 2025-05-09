@@ -5,6 +5,15 @@ export interface Message {
   content: string;
   timestamp: Date;
   isError?: boolean;
+  isTruncated?: boolean;
+  queryType?: string;
+  references?: string[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  isBatchPart?: boolean;
+  isTranslated?: boolean;
+  originalContent?: string;
+  translationInProgress?: boolean;
   metadata?: {
     translation?: string;
     mayRequireBatching?: boolean;
@@ -33,3 +42,6 @@ export interface Message {
     [key: string]: any;
   };
 }
+
+// Export the ChatMessage component to fix the import issue
+export { default as ChatMessage } from './ChatMessage.tsx';

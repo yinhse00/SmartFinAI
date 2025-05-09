@@ -1,6 +1,7 @@
 
 import React, { useRef, useEffect } from 'react';
-import ChatMessage, { Message } from './ChatMessage';
+import { ChatMessage } from './ChatMessage';
+import type { Message } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
 
 interface ChatHistoryProps {
