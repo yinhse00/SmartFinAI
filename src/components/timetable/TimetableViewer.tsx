@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { CalendarDays, Clock, File, RefreshCw } from 'lucide-react';
+import { CalendarDays, Clock, File as FileIcon, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,11 +69,13 @@ const TimetableViewer: React.FC = () => {
       // Found a timetable document, now process it
       const timetableDoc = documents[0];
       
-      // Create a File object from the document URL - Fixed constructor usage
+      // Create a File object from the document URL
       const response = await fetch(timetableDoc.file_url);
       const blob = await response.blob();
       const fileName = timetableDoc.title || "Timetable20250507.docx";
-      const file = new File([blob], fileName, { type: blob.type });
+      
+      // Fix: Create a File object with the correct arguments
+      const file = new File([blob], fileName);
       
       // Process the file
       const processedResults = await processFiles([file]);
@@ -350,7 +352,7 @@ const TimetableViewer: React.FC = () => {
             onClick={() => document.getElementById('timetable-upload')?.click()}
             disabled={isLoading}
           >
-            <File className="mr-2 h-4 w-4" />
+            <FileIcon className="mr-2 h-4 w-4" />
             {isLoading ? "Processing..." : "Load Timetable Document"}
           </Button>
         </div>
