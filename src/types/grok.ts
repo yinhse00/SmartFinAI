@@ -6,6 +6,7 @@ export interface GrokRequestParams {
   reasoning?: string;
   maxTokens?: number;
   temperature?: number;
+  format?: string; // Added the format property
 }
 
 export interface GrokResponse {
