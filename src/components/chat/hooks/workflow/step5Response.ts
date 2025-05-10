@@ -40,11 +40,17 @@ export const executeStep5 = async (
       maxTokens: isPotentiallyLongResponse ? 4000 : undefined
     };
     
+    console.log('Calling grokService with params:', responseParams);
+    
     // Generate response using Grok
     const response = await grokService.generateResponse(responseParams);
     
+    console.log('Received response from grokService:', response);
+    
     // Extract response text safely using our utility
     const responseText = safelyExtractText(response);
+    
+    console.log('Extracted response text:', responseText ? responseText.substring(0, 100) + '...' : 'No response text');
     
     // Check if the response appears truncated or incomplete
     const appearsTruncated = responseText.includes('...') || 
@@ -71,7 +77,7 @@ export const executeStep5 = async (
       
       return {
         completed: true,
-        response: responseText,
+        response: responseText || "I'm sorry, I couldn't generate a response.",
         metadata,
         requiresTranslation: true
       };
@@ -80,7 +86,7 @@ export const executeStep5 = async (
     // Return English response
     return {
       completed: true,
-      response: responseText,
+      response: responseText || "I'm sorry, I couldn't generate a response.",
       metadata
     };
   } catch (error) {
@@ -92,3 +98,4 @@ export const executeStep5 = async (
     };
   }
 };
+

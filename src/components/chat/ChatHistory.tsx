@@ -20,6 +20,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
     }
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    console.log('ChatHistory rendering with messages:', messages.length);
+    console.log('First few messages:', messages.slice(0, 3).map(m => `${m.sender}: ${m.content.substring(0, 30)}...`));
+  }, [messages]);
+
   // Check if any messages are truncated
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
   
@@ -47,19 +52,25 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
         </div>
       )}
       
-      {messages.map((message) => (
-        <ChatMessage 
-          key={message.id} 
-          message={message} 
-          onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
-          onTypingProgress={() => {
-            if (messagesEndRef.current) {
-              messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-            }
-          }}
-          isTranslating={translatingMessageIds.includes(message.id)}
-        />
-      ))}
+      {messages.length > 0 ? (
+        messages.map((message) => (
+          <ChatMessage 
+            key={message.id} 
+            message={message} 
+            onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
+            onTypingProgress={() => {
+              if (messagesEndRef.current) {
+                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            isTranslating={translatingMessageIds.includes(message.id)}
+          />
+        ))
+      ) : (
+        <div className="flex justify-center items-center h-full">
+          <p className="text-gray-500">No messages yet. Start a conversation!</p>
+        </div>
+      )}
       
       {isLoading && <ChatLoadingIndicator />}
       
@@ -78,3 +89,4 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
 };
 
 export default ChatHistory;
+

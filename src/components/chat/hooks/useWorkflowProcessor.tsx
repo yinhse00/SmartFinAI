@@ -119,11 +119,13 @@ export const useWorkflowProcessor = ({
       
       // Step 5: Response Generation (always required)
       setCurrentStep('response');
+      console.log('Starting step 5 with params:', params);
       const step5Result = await step5Response(
         params, 
         setStepProgress,
         lastInputWasChinese
       );
+      console.log('Step 5 result:', step5Result);
       
       // Update assistant message with response
       if (step5Result.response) {
@@ -135,6 +137,9 @@ export const useWorkflowProcessor = ({
         );
         
         if (assistantIndex !== -1) {
+          console.log('Updating assistant message at index:', assistantIndex);
+          console.log('Response content:', step5Result.response.substring(0, 100) + '...');
+          
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: step5Result.response,
@@ -142,12 +147,17 @@ export const useWorkflowProcessor = ({
           };
           
           setMessages(finalMessages);
+          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content.substring(0, 30)}...`));
           
           // Handle translations if needed
           if (step5Result.requiresTranslation) {
             manageTranslations(finalMessages, assistantIndex);
           }
+        } else {
+          console.error('Could not find assistant message to update');
         }
+      } else {
+        console.error('No response content in step5Result:', step5Result);
       }
       
       setCurrentStep('complete');
@@ -161,7 +171,7 @@ export const useWorkflowProcessor = ({
       
       const updatedMessages = [...messages];
       const assistantIndex = updatedMessages.findIndex(
-        (m) => m.sender === 'bot' && !m.isError
+        (m) => m.sender === 'bot' && !m.content
       );
       
       if (assistantIndex !== -1) {
@@ -172,6 +182,17 @@ export const useWorkflowProcessor = ({
         };
         
         setMessages(updatedMessages);
+      } else {
+        // If we can't find the bot message, add a new one
+        const errorMsg: Message = {
+          id: Date.now().toString(),
+          sender: 'bot',
+          content: errorMessage,
+          timestamp: new Date(),
+          isError: true
+        };
+        
+        setMessages([...updatedMessages, errorMsg]);
       }
     } finally {
       setIsLoading(false);
@@ -185,3 +206,4 @@ export const useWorkflowProcessor = ({
     executeWorkflow
   };
 };
+

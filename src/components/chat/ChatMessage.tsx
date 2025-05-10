@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -56,12 +56,28 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   const [showOriginal, setShowOriginal] = useState(false);
   
   // Debug output
-  if (isTranslating || translationInProgress) {
-    console.log(`Message ${id} is ${translationInProgress ? 'in translation process' : 'currently being translated'}`);
-  }
+  useEffect(() => {
+    if (sender === 'bot') {
+      console.log(`Rendering bot message: ${content.substring(0, 50)}...`);
+      console.log('Message props:', { id, isError, isTruncated, isTranslating, translationInProgress });
+    }
+  }, [id, sender, content, isError, isTruncated, isTranslating, translationInProgress]);
 
   // Determine which content to display
   const displayContent = showOriginal && originalContent ? originalContent : content;
+  
+  if (!displayContent && sender === 'bot' && !isTranslating && !translationInProgress) {
+    console.warn('Empty message content detected in ChatMessage component');
+    return (
+      <div className="flex justify-start mb-4">
+        <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200">
+          <div className="whitespace-pre-line">
+            Message content is empty. There might be an issue with the response generation.
+          </div>
+        </Card>
+      </div>
+    );
+  }
   
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
@@ -141,3 +157,4 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 };
 
 export default ChatMessage;
+
