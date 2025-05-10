@@ -110,3 +110,8 @@
     50% { opacity: 1; }
   }
 }
+
+/* Import presentation styles */
+@import './styles/table.css';
+@import './styles/presentation.css';
+

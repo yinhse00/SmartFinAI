@@ -12,6 +12,7 @@ import { Languages } from 'lucide-react';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import ProcessingOverlay from './ProcessingOverlay';
+import PresentationView from '../presentation/PresentationView';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -71,6 +72,21 @@ const ChatInterface: React.FC = () => {
     isLoading
   });
 
+  // Presentation mode state
+  const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [presentationContent, setPresentationContent] = useState('');
+
+  // Update presentation content when new message arrives
+  useEffect(() => {
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.sender === 'bot' && lastMessage.content) {
+        setPresentationContent(lastMessage.content);
+      }
+    }
+  }, [messages]);
+
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
     if (isOfflineMode && hasAttachedFiles) {
@@ -117,6 +133,25 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  // Toggle fullscreen mode for presentation
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(err => {
+        toast({
+          title: "Fullscreen Error",
+          description: "Could not enter fullscreen mode: " + err.message,
+          variant: "destructive"
+        });
+      });
+      setIsFullscreen(true);
+    } else {
+      if (document.exitFullscreen) {
+        document.exitFullscreen();
+        setIsFullscreen(false);
+      }
+    }
+  };
+
   return (
     <>
       <div className="container mx-auto py-6 relative">
@@ -160,8 +195,19 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
+          onPresentationMode={() => setIsPresentationMode(true)}
+          hasResponse={presentationContent.length > 0}
         />
       </div>
+      
+      {/* Presentation View */}
+      <PresentationView 
+        content={presentationContent}
+        isOpen={isPresentationMode}
+        onClose={() => setIsPresentationMode(false)}
+        onToggleFullscreen={toggleFullscreen}
+        isFullscreen={isFullscreen}
+      />
       
       <APIKeyDialog
         open={apiKeyDialogOpen}

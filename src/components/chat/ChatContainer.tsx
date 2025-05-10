@@ -7,6 +7,8 @@ import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Maximize } from 'lucide-react';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -25,6 +27,8 @@ interface ChatContainerProps {
   onFileRemove?: (index: number) => void;
   isOfflineMode?: boolean;
   onTryReconnect?: () => Promise<boolean>;
+  onPresentationMode?: () => void;
+  hasResponse?: boolean;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -43,7 +47,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   attachedFiles = [],
   onFileRemove,
   isOfflineMode = false,
-  onTryReconnect
+  onTryReconnect,
+  onPresentationMode,
+  hasResponse = false
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -82,21 +88,37 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         onTryReconnect={onTryReconnect}
       />
       
-      <ChatInput 
-        input={input}
-        setInput={setInput}
-        handleSend={handleSend}
-        isLoading={isLoading}
-        isGrokApiKeySet={isGrokApiKeySet}
-        onOpenApiKeyDialog={onOpenApiKeyDialog}
-        handleKeyDown={handleKeyDown}
-        placeholder={getPlaceholder()}
-        onFileSelect={handleFileSelect}
-        isProcessingFiles={isProcessingFiles}
-        attachedFiles={attachedFiles}
-        onFileRemove={onFileRemove}
-        isOfflineMode={isOfflineMode}
-      />
+      <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-2 flex justify-between items-center">
+        {onPresentationMode && hasResponse && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1 text-sm"
+            onClick={onPresentationMode}
+          >
+            <Maximize size={14} />
+            <span className="hidden sm:inline">{lastUserMessageIsChinese ? "演示模式" : "Presentation Mode"}</span>
+            <span className="sm:hidden">Present</span>
+          </Button>
+        )}
+        <div className={`ml-auto ${onPresentationMode && hasResponse ? "" : "w-full"}`}>
+          <ChatInput 
+            input={input}
+            setInput={setInput}
+            handleSend={handleSend}
+            isLoading={isLoading}
+            isGrokApiKeySet={isGrokApiKeySet}
+            onOpenApiKeyDialog={onOpenApiKeyDialog}
+            handleKeyDown={handleKeyDown}
+            placeholder={getPlaceholder()}
+            onFileSelect={handleFileSelect}
+            isProcessingFiles={isProcessingFiles}
+            attachedFiles={attachedFiles}
+            onFileRemove={onFileRemove}
+            isOfflineMode={isOfflineMode}
+          />
+        </div>
+      </div>
     </Card>
   );
 };
