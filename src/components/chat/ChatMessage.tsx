@@ -58,16 +58,17 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
   // Debug output
   useEffect(() => {
     if (sender === 'bot') {
-      console.log(`Rendering bot message: ${content.substring(0, 50)}...`);
+      console.log(`Rendering bot message ID ${id}: ${content ? content.substring(0, 50) + '...' : '[EMPTY CONTENT]'}`);
       console.log('Message props:', { id, isError, isTruncated, isTranslating, translationInProgress });
     }
   }, [id, sender, content, isError, isTruncated, isTranslating, translationInProgress]);
 
   // Determine which content to display
-  const displayContent = showOriginal && originalContent ? originalContent : content;
+  const displayContent = showOriginal && originalContent ? originalContent : content || '';
   
+  // Handle empty content in bot messages that aren't currently being processed
   if (!displayContent && sender === 'bot' && !isTranslating && !translationInProgress) {
-    console.warn('Empty message content detected in ChatMessage component');
+    console.warn(`Empty message content detected for bot message ID: ${id}`);
     return (
       <div className="flex justify-start mb-4">
         <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200">
@@ -157,4 +158,3 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
 };
 
 export default ChatMessage;
-
