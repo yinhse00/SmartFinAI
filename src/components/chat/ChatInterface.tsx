@@ -8,7 +8,7 @@ import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { FileWarning, Languages } from 'lucide-react';
+import { Languages } from 'lucide-react';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import ProcessingOverlay from './ProcessingOverlay';
@@ -83,44 +83,8 @@ const ChatInterface: React.FC = () => {
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
 
-  // Check if input contains complex financial query terms
-  const [isComplexFinancialQuery, setIsComplexFinancialQuery] = useState(false);
+  // Removed the complex financial query detection and alert
   
-  useEffect(() => {
-    // Keywords that indicate a complex financial query
-    const complexQueryKeywords = [
-      'rights issue',
-      'whitewash waiver',
-      'very substantial acquisition',
-      'connected transaction',
-      'timetable',
-      'chapter 14a',
-      'aggregate',
-      'takeovers code',
-      '供股',
-      '清洗豁免',
-      '非常重大的收购',
-      '关连交易',
-      '時間表',
-      '第14A章',
-      '合计',
-      '收购守则'
-    ];
-    
-    // Check if input contains any of the complex query keywords
-    const hasComplexQueryTerms = complexQueryKeywords.some(keyword => 
-      input.toLowerCase().includes(keyword.toLowerCase())
-    );
-    
-    // Multiple complex keywords or long query with at least one keyword
-    const isComplex = (input.split(' ').length > 15 && hasComplexQueryTerms) || 
-                    complexQueryKeywords.filter(keyword => 
-                      input.toLowerCase().includes(keyword.toLowerCase())
-                    ).length > 1;
-    
-    setIsComplexFinancialQuery(isComplex);
-  }, [input]);
-
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
     if (hasAttachedFiles) {
@@ -162,18 +126,7 @@ const ChatInterface: React.FC = () => {
           onTryReconnect={tryReconnect}
         />
         
-        {isComplexFinancialQuery && (
-          <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
-            <FileWarning className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-            <AlertDescription>
-              {lastUserMessageIsChinese ? (
-                "您正在询问复杂的金融话题。为获得最佳结果，建议将您的问题拆分为更小、更集中的问题，特别是涉及供股、时间表或清洗豁免等话题。"
-              ) : (
-                "You're asking about a complex financial topic. For best results with topics like rights issues, timetables, or whitewash waivers, consider breaking your query into smaller, more focused questions."
-              )}
-            </AlertDescription>
-          </Alert>
-        )}
+        {/* Removed the financial query alert component that was here */}
         
         {/* Processing overlay for when the system is working */}
         {isLoading && <ProcessingOverlay 
