@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -69,10 +70,25 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
         </Card>
       </div>;
   }
+  
+  // Use full width for bot messages when fullscreen mode is activated
   const messageWidthClass = isFullWidth && sender === 'bot' ? "w-full max-w-full" : "max-w-[90%] md:max-w-[85%]";
+  
+  // Toggle fullscreen mode
+  const toggleFullWidth = () => {
+    setIsFullWidth(!isFullWidth);
+  };
+  
   return <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
       <div className={`flex items-start gap-3 ${messageWidthClass} ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
         <Card className={`p-3 rounded-lg ${sender === 'user' ? 'bg-finance-medium-blue text-white' : isError ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' : translationInProgress ? 'bg-gray-50 dark:bg-gray-800 opacity-70' : 'bg-gray-50 dark:bg-gray-800'} ${isFullWidth ? 'w-full' : ''}`}>
+          {/* Fullscreen toggle button for bot messages */}
+          {sender === 'bot' && <div className="flex justify-end mb-1">
+            <Button variant="ghost" size="sm" onClick={toggleFullWidth} className="h-6 w-6 p-0">
+              {isFullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+            </Button>
+          </div>}
+          
           {sender === 'bot' && isTypingComplete && !isTranslating && !translationInProgress}
           
           {sender === 'user' || isTranslating || translationInProgress && sender === 'bot' ? <div className="whitespace-pre-line">

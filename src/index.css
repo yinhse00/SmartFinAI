@@ -111,4 +111,59 @@
     0%, 100% { opacity: 0; }
     50% { opacity: 1; }
   }
+  
+  /* Full width table styling */
+  .full-width-table {
+    @apply w-full border-collapse my-4;
+  }
+  
+  .full-width-table th {
+    @apply bg-gray-100 dark:bg-gray-800 p-2 text-left border border-gray-200 dark:border-gray-700;
+  }
+  
+  .full-width-table td {
+    @apply p-2 border border-gray-200 dark:border-gray-700;
+  }
+  
+  /* Text alignment classes */
+  .text-align-left {
+    @apply text-left;
+  }
+  
+  .text-align-right {
+    @apply text-right;
+  }
+  
+  .text-align-center {
+    @apply text-center;
+  }
+  
+  /* Timetable specific styling */
+  .timetable {
+    @apply w-full border-collapse my-4;
+  }
+  
+  .timetable th {
+    @apply bg-finance-light-blue/20 dark:bg-finance-medium-blue/30 p-2 text-left border border-gray-200 dark:border-gray-700 font-medium;
+  }
+  
+  .timetable td {
+    @apply p-2 border border-gray-200 dark:border-gray-700;
+  }
+  
+  .timetable-date {
+    @apply font-medium text-finance-dark-blue dark:text-finance-light-blue;
+  }
+  
+  .timetable-status-pending {
+    @apply text-amber-600 dark:text-amber-400;
+  }
+  
+  .timetable-status-completed {
+    @apply text-green-600 dark:text-green-400;
+  }
+  
+  .timetable-status-upcoming {
+    @apply text-blue-600 dark:text-blue-400;
+  }
 }

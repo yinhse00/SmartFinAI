@@ -6,13 +6,15 @@ import TypingEffect from './ProcessingStages/TypingEffect';
 import ProcessingHeader from './ProcessingStages/ProcessingHeader';
 import StatusDetails from './ProcessingStages/StatusDetails';
 import { getStageMessages } from './ProcessingStages/stageMessages';
+import { Card } from '@/components/ui/card';
 
 interface ProcessingIndicatorProps {
   isVisible: boolean;
   stage: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+  inline?: boolean;
 }
 
-const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => {
+const ProcessingIndicator = ({ isVisible, stage, inline = false }: ProcessingIndicatorProps) => {
   const [progress, setProgress] = useState(0);
   const [estimatedTime, setEstimatedTime] = useState('');
   const [elapsedTime, setElapsedTime] = useState(0);
@@ -53,31 +55,65 @@ const ProcessingIndicator = ({ isVisible, stage }: ProcessingIndicatorProps) => 
   // Get the stage-specific messages
   const stageMessages = getStageMessages(stage);
   
-  return (
-    <div className="w-full p-4 bg-white dark:bg-gray-900 rounded-md shadow-sm border border-gray-200 dark:border-gray-700 mb-4">
-      <ProcessingHeader 
-        stage={stage} 
-        estimatedTime={estimatedTime} 
-        progress={progress}
-        elapsedTime={elapsedTime}
-      />
-      
-      <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-700" />
-      
-      <div className="mt-3 space-y-2">
-        {/* Enhanced visual flow chart representation */}
-        <ProcessingStageIndicator stage={stage} />
-        
-        {/* Improved typing effect with cursor */}
-        <TypingEffect 
-          messages={stageMessages}
+  // Inline version for use within the chat interface
+  if (inline) {
+    return (
+      <div className="w-full p-4 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 mb-4">
+        <ProcessingHeader 
+          stage={stage} 
+          estimatedTime={estimatedTime} 
           progress={progress}
-          isVisible={isVisible}
-          stage={stage}
+          elapsedTime={elapsedTime}
         />
         
-        {/* Additional processing details */}
-        <StatusDetails stage={stage} progress={progress} />
+        <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-700" />
+        
+        <div className="mt-3 space-y-2">
+          {/* Enhanced visual flow chart representation */}
+          <ProcessingStageIndicator stage={stage} />
+          
+          {/* Improved typing effect with cursor */}
+          <TypingEffect 
+            messages={stageMessages}
+            progress={progress}
+            isVisible={isVisible}
+            stage={stage}
+          />
+          
+          {/* Additional processing details */}
+          <StatusDetails stage={stage} progress={progress} />
+        </div>
+      </div>
+    );
+  }
+
+  // Original overlay version
+  return (
+    <div className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+        <div className="flex items-center justify-center mb-4">
+          <div className="h-6 w-6 text-blue-500 animate-spin mr-2" />
+          <h2 className="text-xl font-semibold">Processing Your Request</h2>
+        </div>
+        
+        <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-700" />
+        
+        <div className="space-y-4 mb-6">
+          <ProcessingStageIndicator stage={stage} />
+          
+          <TypingEffect 
+            messages={stageMessages}
+            progress={progress}
+            isVisible={isVisible}
+            stage={stage}
+          />
+          
+          <StatusDetails stage={stage} progress={progress} />
+        </div>
+        
+        <p className="text-center text-sm text-gray-500">
+          We are analyzing your query, this may take a few seconds...
+        </p>
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import ChatHistory from '../ChatHistory';
 import { Message } from '../ChatMessage';
 import { AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import ProcessingIndicator from '../ProcessingIndicator';
 
 interface ChatContentProps {
   messages: Message[];
@@ -13,6 +14,8 @@ interface ChatContentProps {
   translatingMessageIds?: string[];
   isOfflineMode?: boolean;
   onTryReconnect?: () => Promise<boolean>;
+  currentStep?: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+  stepProgress?: string;
 }
 
 const ChatContent: React.FC<ChatContentProps> = ({
@@ -21,7 +24,9 @@ const ChatContent: React.FC<ChatContentProps> = ({
   onRetry,
   translatingMessageIds = [],
   isOfflineMode = false,
-  onTryReconnect
+  onTryReconnect,
+  currentStep = 'preparing',
+  stepProgress = ''
 }) => {
   return (
     <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-18rem)] md:max-h-[calc(100vh-15rem)] min-h-[500px] flex flex-col bg-gray-50 w-full">
@@ -45,13 +50,24 @@ const ChatContent: React.FC<ChatContentProps> = ({
           )}
         </div>
       )}
-      
+
       <ChatHistory 
         messages={messages} 
         isLoading={isLoading} 
         onRetry={onRetry} 
         translatingMessageIds={translatingMessageIds} 
       />
+      
+      {/* Show the processing indicator inline when loading */}
+      {isLoading && (
+        <div className="px-4 pb-4">
+          <ProcessingIndicator 
+            isVisible={isLoading} 
+            stage={currentStep} 
+            inline={true} 
+          />
+        </div>
+      )}
     </CardContent>
   );
 };

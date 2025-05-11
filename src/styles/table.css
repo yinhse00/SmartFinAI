@@ -1,183 +1,148 @@
 
-/* Base table styles */
+/* Enhanced table styling for the chat interface */
+
 .chat-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   margin: 1rem 0;
   font-size: 0.875rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-radius: 0.375rem;
   overflow: hidden;
 }
 
-/* Dark mode support */
-.dark .chat-table {
-  background-color: rgba(31, 41, 55, 0.5);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-}
-
-/* Header styles */
-.chat-table th {
-  background: #f9fafb;
-  font-weight: 600;
+.chat-table thead tr {
+  background-color: rgba(0, 76, 153, 0.1);
+  color: #004c99;
   text-align: left;
-  padding: 1rem 1.5rem;
-  border-bottom: 2px solid #e5e7eb;
-  color: #111827;
-  font-size: 0.875rem;
-  text-transform: none;
-  letter-spacing: 0.025em;
 }
 
-.dark .chat-table th {
-  background: rgba(55, 65, 81, 0.5);
-  border-color: rgba(75, 85, 99, 0.5);
-  color: #f3f4f6;
-}
-
-/* Cell styles */
+.chat-table th,
 .chat-table td {
-  padding: 1rem 1.5rem;
-  border-bottom: 1px solid #e5e7eb;
-  color: #374151;
-  line-height: 1.25rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
 }
 
+.chat-table tbody tr:nth-of-type(even) {
+  background-color: rgba(0, 76, 153, 0.03);
+}
+
+/* Dark mode support */
+.dark .chat-table thead tr {
+  background-color: rgba(51, 133, 255, 0.15);
+  color: #3385ff;
+}
+
+.dark .chat-table th,
 .dark .chat-table td {
-  border-color: rgba(75, 85, 99, 0.5);
-  color: #d1d5db;
+  border-color: #2d3748;
 }
 
-/* Text alignment classes */
-.chat-table th.text-left, .chat-table td.text-left {
+.dark .chat-table tbody tr:nth-of-type(even) {
+  background-color: rgba(51, 133, 255, 0.05);
+}
+
+/* Timetable specific styling */
+.timetable-view {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.875rem;
+}
+
+.timetable-view th {
+  background-color: rgba(0, 76, 153, 0.1);
+  color: #004c99;
+  font-weight: 600;
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
   text-align: left;
 }
 
-.chat-table th.text-center, .chat-table td.text-center {
+.timetable-view td {
+  padding: 0.75rem 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.timetable-view .date-column {
+  width: 120px;
+  font-weight: 500;
+}
+
+.timetable-view .event-column {
+  min-width: 250px;
+}
+
+.timetable-view .status-column {
+  width: 100px;
   text-align: center;
 }
 
-.chat-table th.text-right, .chat-table td.text-right {
-  text-align: right;
+.dark .timetable-view th {
+  background-color: rgba(51, 133, 255, 0.15);
+  color: #3385ff;
+  border-color: #2d3748;
 }
 
-/* Row hover effects */
-.chat-table tr:hover td {
-  background: rgba(243, 244, 246, 0.5);
-  transition: background-color 150ms ease-in-out;
+.dark .timetable-view td {
+  border-color: #2d3748;
 }
 
-.dark .chat-table tr:hover td {
-  background: rgba(55, 65, 81, 0.2);
+/* Status indicators */
+.status-indicator {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
 }
 
-/* Zebra striping */
-.chat-table tr:nth-child(even) td {
-  background: rgba(249, 250, 251, 0.5);
+.status-pending {
+  background-color: #f59e0b;
 }
 
-.dark .chat-table tr:nth-child(even) td {
-  background: rgba(55, 65, 81, 0.1);
+.status-completed {
+  background-color: #10b981;
 }
 
-/* Last row styling */
-.chat-table tr:last-child td {
-  border-bottom: none;
+.status-upcoming {
+  background-color: #3b82f6;
 }
 
-/* Special styling for timetable format */
-.chat-table.timetable-format {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.chat-table.timetable-format th {
-  background-color: #f0f6ff;
-  color: #1a56db;
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.05em;
-}
-
-.dark .chat-table.timetable-format th {
-  background-color: rgba(30, 58, 138, 0.3);
-  color: #93c5fd;
-}
-
-/* Date cell styling */
-.chat-table td.date-cell {
-  font-weight: 500;
-  color: #1e40af;
-}
-
-.dark .chat-table td.date-cell {
-  color: #93c5fd;
-}
-
-/* Status row styling */
-.chat-table tr.completed-row td {
-  background-color: rgba(74, 222, 128, 0.1);
-  border-left: 3px solid #4ade80;
-}
-
-.chat-table tr.in-progress-row td {
-  background-color: rgba(59, 130, 246, 0.1);
-  border-left: 3px solid #3b82f6;
-}
-
-.chat-table tr.pending-row td {
-  background-color: rgba(250, 204, 21, 0.1);
-  border-left: 3px solid #facc15;
-}
-
-.chat-table tr.delayed-row td {
-  background-color: rgba(248, 113, 113, 0.1);
-  border-left: 3px solid #f87171;
-}
-
-.chat-table tr.upcoming-row td {
-  background-color: rgba(168, 162, 158, 0.1);
-  border-left: 3px solid #a8a29e;
-}
-
-/* Hover effects for status rows */
-.chat-table tr.completed-row:hover td {
-  background-color: rgba(74, 222, 128, 0.2);
-}
-
-.chat-table tr.in-progress-row:hover td {
-  background-color: rgba(59, 130, 246, 0.2);
-}
-
-.chat-table tr.pending-row:hover td {
-  background-color: rgba(250, 204, 21, 0.2);
-}
-
-.chat-table tr.delayed-row:hover td {
-  background-color: rgba(248, 113, 113, 0.2);
-}
-
-.chat-table tr.upcoming-row:hover td {
-  background-color: rgba(168, 162, 158, 0.2);
-}
-
-/* Ensure the table is responsive */
-@media (max-width: 768px) {
+/* Responsive table */
+@media (max-width: 640px) {
   .chat-table {
     font-size: 0.75rem;
   }
   
   .chat-table th,
   .chat-table td {
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .timetable-view {
+    font-size: 0.75rem;
+  }
+  
+  .timetable-view th,
+  .timetable-view td {
+    padding: 0.5rem 0.75rem;
+  }
+  
+  .timetable-view .date-column {
+    width: 90px;
   }
 }
 
-/* Very small screens - allow horizontal scrolling */
-@media (max-width: 480px) {
-  .overflow-x-auto {
-    margin: 0 -1rem;
-    padding: 0 1rem;
-    width: calc(100% + 2rem);
-  }
+/* Text alignment classes */
+.align-left {
+  text-align: left;
+}
+
+.align-right {
+  text-align: right;
+}
+
+.align-center {
+  text-align: center;
 }

@@ -124,13 +124,6 @@ const ChatInterface: React.FC = () => {
           onTryReconnect={tryReconnect}
         />
         
-        {/* Processing overlay for when the system is working */}
-        {isLoading && <ProcessingOverlay 
-          currentStep={currentStep}
-          stepProgress={stepProgress}
-          isChineseInterface={lastUserMessageIsChinese}
-        />}
-        
         <ChatContainer
           messages={messages}
           isLoading={isLoading || isProcessing}
@@ -156,6 +149,8 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
+          currentStep={currentStep}
+          stepProgress={stepProgress}
         />
       </div>
       
