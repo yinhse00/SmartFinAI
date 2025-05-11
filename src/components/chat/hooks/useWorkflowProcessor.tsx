@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './useStep1Initial';
@@ -141,9 +140,14 @@ export const useWorkflowProcessor = ({
           console.log('Response content length:', step5Result.response.length);
           console.log('Response content preview:', step5Result.response.substring(0, 100) + '...');
           
+          // Ensure response is never empty
+          const responseContent = step5Result.response && step5Result.response.trim() !== '' 
+            ? step5Result.response 
+            : "I wasn't able to generate a proper response. Please try again.";
+          
           finalMessages[assistantIndex] = {
             ...assistantMessage,
-            content: step5Result.response,
+            content: responseContent,
             metadata: step5Result.metadata || {}
           };
           
@@ -161,7 +165,7 @@ export const useWorkflowProcessor = ({
           const newAssistantMessage: Message = {
             id: (Date.now() + 2).toString(),
             sender: 'bot',
-            content: step5Result.response,
+            content: step5Result.response || "I wasn't able to generate a proper response. Please try again.",
             timestamp: new Date(),
             metadata: step5Result.metadata || {}
           };

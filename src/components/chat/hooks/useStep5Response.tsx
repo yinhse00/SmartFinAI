@@ -33,7 +33,8 @@ export const step5Response = async (
       };
     }
     
-    if (!result.response) {
+    // Make sure the response is never empty or undefined
+    if (!result.response || result.response.trim() === '') {
       console.error('useStep5Response: Empty response in result', result);
       result.response = "I wasn't able to generate a complete response. Please try again.";
     }

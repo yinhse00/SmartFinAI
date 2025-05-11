@@ -31,7 +31,7 @@ interface ChatMessageProps {
   isTranslating?: boolean;
 }
 
-const ChatMessage: React.FC<ChatMessageProps> = ({ 
+export const ChatMessage: React.FC<ChatMessageProps> = ({ 
   message, 
   onRetry, 
   onTypingProgress,
@@ -63,17 +63,30 @@ const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [id, sender, content, isError, isTruncated, isTranslating, translationInProgress]);
 
-  // Determine which content to display
-  const displayContent = showOriginal && originalContent ? originalContent : content || '';
+  // Determine which content to display - ensure we never have empty content
+  const displayContent = (showOriginal && originalContent) ? originalContent : content || 'No content available';
   
   // Handle empty content in bot messages that aren't currently being processed
-  if (!displayContent && sender === 'bot' && !isTranslating && !translationInProgress) {
+  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress) {
     console.warn(`Empty message content detected for bot message ID: ${id}`);
     return (
       <div className="flex justify-start mb-4">
         <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200">
           <div className="whitespace-pre-line">
             Message content is empty. There might be an issue with the response generation.
+            {onRetry && (
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onRetry} 
+                  className="bg-red-100 text-red-800 border-red-200 hover:bg-red-200"
+                >
+                  <RefreshCw size={12} className="mr-1" />
+                  Retry query
+                </Button>
+              </div>
+            )}
           </div>
         </Card>
       </div>

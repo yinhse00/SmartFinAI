@@ -1,6 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
-import { ChatMessage, Message } from './ChatMessage';
+import { Message, ChatMessage } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
 
 interface ChatHistoryProps {
@@ -23,11 +23,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   useEffect(() => {
     console.log('ChatHistory rendering with messages:', messages.length);
     
-    // Filter out empty messages
+    // Log message content for debugging
     const validMessages = messages.filter(m => m.content || m.sender === 'user');
     
     if (validMessages.length < messages.length) {
-      console.log('Filtered out', messages.length - validMessages.length, 'empty messages');
+      console.log('Found', messages.length - validMessages.length, 'messages with empty content');
     }
     
     if (validMessages.length > 0) {
