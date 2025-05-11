@@ -1,4 +1,22 @@
 
-// This file re-exports the Message type from ChatMessage.tsx to ensure consistency
-export type { Message } from './ChatMessage';
-export { ChatMessage } from './ChatMessage';
+// This file directly defines and exports the Message type to avoid circular dependencies
+export interface Message {
+  id: string;
+  sender: 'user' | 'bot' | 'system';
+  content: string;
+  timestamp: Date;
+  references?: string[];
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  isError?: boolean;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  isTranslated?: boolean;
+  originalContent?: string;
+  translationInProgress?: boolean;
+  metadata?: any;
+}
+
+// Export the ChatMessage component from the implementation file
+export { ChatMessage } from './ChatMessage.tsx';

@@ -1,28 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
-
-export interface Message {
-  id: string;
-  sender: 'user' | 'bot' | 'system';
-  content: string;
-  timestamp: Date;
-  references?: string[];
-  isUsingFallback?: boolean;
-  reasoning?: string;
-  isError?: boolean;
-  queryType?: string;
-  isTruncated?: boolean;
-  isBatchPart?: boolean;
-  isTranslated?: boolean;
-  originalContent?: string;
-  translationInProgress?: boolean;
-  metadata?: any;
-}
+import { Message } from './ChatMessage';
 
 interface ChatMessageProps {
   message: Message;
