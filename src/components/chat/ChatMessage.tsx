@@ -6,19 +6,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import TypingAnimation from './TypingAnimation';
 import { detectAndFormatTables } from '@/utils/tableFormatter';
-
-export interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-  reasoning?: string;
-  references?: string[];
-  queryType?: string;
-  isUsingFallback?: boolean;
-  isTruncated?: boolean;
-  isBatchPart?: boolean;
-}
+import { Message } from './ChatMessage';
 
 interface ChatMessageProps {
   message: Message;
