@@ -22,16 +22,6 @@ export const executeStep5 = async (
                            params.listingRulesContext || 
                            params.takeoversCodeContext || '';
     
-    // Validate that we have a query to respond to
-    if (!params.query) {
-      console.error('executeStep5: Missing query in params', params);
-      return { 
-        completed: false,
-        error: new Error("Missing query parameter"),
-        response: "I couldn't process your request because the query was missing."
-      };
-    }
-    
     // Check if the query is likely to need batching
     const isPotentiallyLongResponse = params.query.length > 300 || 
                                      params.query.toLowerCase().includes('timetable') ||
@@ -62,16 +52,6 @@ export const executeStep5 = async (
     
     console.log('Extracted response text:', responseText ? responseText.substring(0, 100) + '...' : 'No response text');
     
-    // If no response text was extracted, provide a fallback
-    if (!responseText) {
-      console.error('No response text extracted from grokService response');
-      return {
-        completed: false,
-        error: new Error("Failed to extract response text"),
-        response: "I'm sorry, I couldn't generate a proper response. Please try again."
-      };
-    }
-    
     // Check if the response appears truncated or incomplete
     const appearsTruncated = responseText.includes('...') || 
                             responseText.includes('to be continued') ||
@@ -97,7 +77,7 @@ export const executeStep5 = async (
       
       return {
         completed: true,
-        response: responseText,
+        response: responseText || "I'm sorry, I couldn't generate a response.",
         metadata,
         requiresTranslation: true
       };
@@ -106,7 +86,7 @@ export const executeStep5 = async (
     // Return English response
     return {
       completed: true,
-      response: responseText,
+      response: responseText || "I'm sorry, I couldn't generate a response.",
       metadata
     };
   } catch (error) {
@@ -114,7 +94,8 @@ export const executeStep5 = async (
     return { 
       completed: false,
       error,
-      response: "I'm sorry, I encountered an error while processing your request. Please try again."
+      response: "I'm sorry, I encountered an error while processing your request."
     };
   }
 };
+

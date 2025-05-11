@@ -22,19 +22,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
 
   useEffect(() => {
     console.log('ChatHistory rendering with messages:', messages.length);
-    
-    // Filter out empty messages
-    const validMessages = messages.filter(m => m.content || m.sender === 'user');
-    
-    if (validMessages.length < messages.length) {
-      console.log('Filtered out', messages.length - validMessages.length, 'empty messages');
-    }
-    
-    if (validMessages.length > 0) {
-      console.log('First few messages:', validMessages.slice(0, 3).map(m => 
-        `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`
-      ));
-    }
+    console.log('First few messages:', messages.slice(0, 3).map(m => `${m.sender}: ${m.content.substring(0, 30)}...`));
   }, [messages]);
 
   // Check if any messages are truncated
@@ -101,3 +89,4 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
 };
 
 export default ChatHistory;
+

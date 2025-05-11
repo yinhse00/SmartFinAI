@@ -8,11 +8,10 @@ import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { useFileAttachments } from '@/hooks/useFileAttachments';
 import ApiConnectionStatus from './ApiConnectionStatus';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Languages } from 'lucide-react';
+import { FileWarning, Languages } from 'lucide-react';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import ProcessingOverlay from './ProcessingOverlay';
-import PresentationView from '../presentation/PresentationView';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -72,21 +71,6 @@ const ChatInterface: React.FC = () => {
     isLoading
   });
 
-  // Presentation mode state
-  const [isPresentationMode, setIsPresentationMode] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [presentationContent, setPresentationContent] = useState('');
-
-  // Update presentation content when new message arrives
-  useEffect(() => {
-    if (messages.length > 0) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage.sender === 'bot' && lastMessage.content) {
-        setPresentationContent(lastMessage.content);
-      }
-    }
-  }, [messages]);
-
   // Show warning if in offline mode and there are attached files
   useEffect(() => {
     if (isOfflineMode && hasAttachedFiles) {
@@ -99,8 +83,44 @@ const ChatInterface: React.FC = () => {
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
 
-  // Removed the complex financial query detection and alert
+  // Check if input contains complex financial query terms
+  const [isComplexFinancialQuery, setIsComplexFinancialQuery] = useState(false);
   
+  useEffect(() => {
+    // Keywords that indicate a complex financial query
+    const complexQueryKeywords = [
+      'rights issue',
+      'whitewash waiver',
+      'very substantial acquisition',
+      'connected transaction',
+      'timetable',
+      'chapter 14a',
+      'aggregate',
+      'takeovers code',
+      '供股',
+      '清洗豁免',
+      '非常重大的收购',
+      '关连交易',
+      '時間表',
+      '第14A章',
+      '合计',
+      '收购守则'
+    ];
+    
+    // Check if input contains any of the complex query keywords
+    const hasComplexQueryTerms = complexQueryKeywords.some(keyword => 
+      input.toLowerCase().includes(keyword.toLowerCase())
+    );
+    
+    // Multiple complex keywords or long query with at least one keyword
+    const isComplex = (input.split(' ').length > 15 && hasComplexQueryTerms) || 
+                    complexQueryKeywords.filter(keyword => 
+                      input.toLowerCase().includes(keyword.toLowerCase())
+                    ).length > 1;
+    
+    setIsComplexFinancialQuery(isComplex);
+  }, [input]);
+
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
     if (hasAttachedFiles) {
@@ -133,25 +153,6 @@ const ChatInterface: React.FC = () => {
     }
   };
 
-  // Toggle fullscreen mode for presentation
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen().catch(err => {
-        toast({
-          title: "Fullscreen Error",
-          description: "Could not enter fullscreen mode: " + err.message,
-          variant: "destructive"
-        });
-      });
-      setIsFullscreen(true);
-    } else {
-      if (document.exitFullscreen) {
-        document.exitFullscreen();
-        setIsFullscreen(false);
-      }
-    }
-  };
-
   return (
     <>
       <div className="container mx-auto py-6 relative">
@@ -161,7 +162,18 @@ const ChatInterface: React.FC = () => {
           onTryReconnect={tryReconnect}
         />
         
-        {/* Removed the financial query alert component that was here */}
+        {isComplexFinancialQuery && (
+          <Alert className="mb-4 bg-blue-50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800">
+            <FileWarning className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+            <AlertDescription>
+              {lastUserMessageIsChinese ? (
+                "您正在询问复杂的金融话题。为获得最佳结果，建议将您的问题拆分为更小、更集中的问题，特别是涉及供股、时间表或清洗豁免等话题。"
+              ) : (
+                "You're asking about a complex financial topic. For best results with topics like rights issues, timetables, or whitewash waivers, consider breaking your query into smaller, more focused questions."
+              )}
+            </AlertDescription>
+          </Alert>
+        )}
         
         {/* Processing overlay for when the system is working */}
         {isLoading && <ProcessingOverlay 
@@ -195,19 +207,8 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          onPresentationMode={() => setIsPresentationMode(true)}
-          hasResponse={presentationContent.length > 0}
         />
       </div>
-      
-      {/* Presentation View */}
-      <PresentationView 
-        content={presentationContent}
-        isOpen={isPresentationMode}
-        onClose={() => setIsPresentationMode(false)}
-        onToggleFullscreen={toggleFullscreen}
-        isFullscreen={isFullscreen}
-      />
       
       <APIKeyDialog
         open={apiKeyDialogOpen}

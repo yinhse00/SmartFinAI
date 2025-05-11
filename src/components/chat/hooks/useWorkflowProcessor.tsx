@@ -128,7 +128,7 @@ export const useWorkflowProcessor = ({
       console.log('Step 5 result:', step5Result);
       
       // Update assistant message with response
-      if (step5Result && step5Result.response) {
+      if (step5Result.response) {
         const finalMessages = [...updatedMessages];
         
         // Find and update the assistant message
@@ -138,8 +138,7 @@ export const useWorkflowProcessor = ({
         
         if (assistantIndex !== -1) {
           console.log('Updating assistant message at index:', assistantIndex);
-          console.log('Response content length:', step5Result.response.length);
-          console.log('Response content preview:', step5Result.response.substring(0, 100) + '...');
+          console.log('Response content:', step5Result.response.substring(0, 100) + '...');
           
           finalMessages[assistantIndex] = {
             ...assistantMessage,
@@ -148,7 +147,7 @@ export const useWorkflowProcessor = ({
           };
           
           setMessages(finalMessages);
-          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`));
+          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content.substring(0, 30)}...`));
           
           // Handle translations if needed
           if (step5Result.requiresTranslation) {
@@ -156,41 +155,9 @@ export const useWorkflowProcessor = ({
           }
         } else {
           console.error('Could not find assistant message to update');
-          
-          // Add a new message if we couldn't find the original
-          const newAssistantMessage: Message = {
-            id: (Date.now() + 2).toString(),
-            sender: 'bot',
-            content: step5Result.response,
-            timestamp: new Date(),
-            metadata: step5Result.metadata || {}
-          };
-          
-          setMessages([...updatedMessages, newAssistantMessage]);
         }
       } else {
-        console.error('No valid response content in step5Result:', step5Result);
-        
-        // Handle empty response case
-        const errorMessage: Message = {
-          id: (Date.now() + 2).toString(),
-          sender: 'bot',
-          content: "I'm sorry, I couldn't generate a proper response. Please try again.",
-          timestamp: new Date(),
-          isError: true
-        };
-        
-        // Find the placeholder message and replace it with error message
-        const finalMessages = [...updatedMessages];
-        const assistantIndex = finalMessages.findIndex(m => m.id === assistantMessage.id);
-        
-        if (assistantIndex !== -1) {
-          finalMessages[assistantIndex] = errorMessage;
-          setMessages(finalMessages);
-        } else {
-          // If we can't find the original, add a new error message
-          setMessages([...updatedMessages, errorMessage]);
-        }
+        console.error('No response content in step5Result:', step5Result);
       }
       
       setCurrentStep('complete');
@@ -239,3 +206,4 @@ export const useWorkflowProcessor = ({
     executeWorkflow
   };
 };
+
