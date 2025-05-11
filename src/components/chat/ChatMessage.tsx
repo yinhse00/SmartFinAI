@@ -131,7 +131,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 {!isFullyTyped && (
                   <>
                     <div dangerouslySetInnerHTML={{ __html: formattedContent || typedContent || '...' }} />
-                    <TypingAnimation />
+                    <TypingAnimation text="" />
                   </>
                 )}
                 
@@ -181,3 +181,5 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   );
 };
 
+// Add a default export
+export default ChatMessage;

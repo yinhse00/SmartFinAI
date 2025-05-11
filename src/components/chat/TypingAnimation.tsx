@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 interface TypingAnimationProps {
-  text: string;
+  text?: string;
   speed?: number;
   className?: string;
   onComplete?: () => void;
@@ -11,7 +11,7 @@ interface TypingAnimationProps {
 }
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({ 
-  text, 
+  text = "", 
   speed = 0.15, // Faster typing speed for better UX
   className = "", 
   onComplete,
@@ -31,7 +31,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
   // Optimize the typing animation with larger batch processing
   useEffect(() => {
-    if (currentIndex >= text.length) {
+    if (text === "" || currentIndex >= text.length) {
       if (!isComplete) {
         setIsComplete(true);
         onComplete?.();

@@ -44,4 +44,4 @@ export interface Message {
 }
 
 // Export the ChatMessage component to fix the import issue
-export { default as ChatMessage } from './ChatMessage.tsx';
+export { ChatMessage } from './ChatMessage.tsx';

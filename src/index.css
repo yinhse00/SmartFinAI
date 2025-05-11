@@ -3,6 +3,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import presentation styles */
+@import './styles/table.css';
+@import './styles/presentation.css';
+
 @layer base {
   :root {
     --background: 210 33% 99%;
@@ -110,8 +114,3 @@
     50% { opacity: 1; }
   }
 }
-
-/* Import presentation styles */
-@import './styles/table.css';
-@import './styles/presentation.css';
-
