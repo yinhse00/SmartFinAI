@@ -1,4 +1,92 @@
 
+import { format, parseISO, isValid } from 'date-fns';
+
+/**
+ * Detects if a string is a valid date
+ */
+const isDateString = (str: string): boolean => {
+  // Common date formats to detect
+  const datePatterns = [
+    // ISO format: 2023-05-15
+    /^\d{4}-\d{2}-\d{2}$/,
+    // Date with time: 2023-05-15 14:30:00
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?$/,
+    // Date format: 15/05/2023 or 15-05-2023
+    /^\d{1,2}[/-]\d{1,2}[/-]\d{4}$/,
+    // Month name format: 15 May 2023
+    /^\d{1,2} (Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]* \d{4}$/i
+  ];
+  
+  // Check if the string matches any date pattern
+  if (!datePatterns.some(pattern => pattern.test(str))) {
+    return false;
+  }
+  
+  // Further validate by trying to parse it
+  try {
+    const parsed = parseISO(str);
+    return isValid(parsed);
+  } catch (e) {
+    try {
+      // Try a different approach for non-ISO formats
+      const date = new Date(str);
+      return isValid(date);
+    } catch (e) {
+      return false;
+    }
+  }
+};
+
+/**
+ * Determines if a table is likely a timetable based on column content
+ */
+const isTimetable = (tableData: string[][]): boolean => {
+  // If first row has date-related terms, it's likely a timetable
+  const dateHeaders = ['date', 'day', 'time', 'deadline', 'schedule', 'due', 'period', 'start', 'end'];
+  const firstRow = tableData[0].map(cell => cell.toLowerCase());
+  
+  const hasDateHeader = firstRow.some(cell => 
+    dateHeaders.some(term => cell.includes(term))
+  );
+  
+  // Check if any column has multiple date values
+  if (tableData.length > 2) {
+    const columns = tableData[0].length;
+    for (let col = 0; col < columns; col++) {
+      let dateCount = 0;
+      for (let row = 1; row < tableData.length; row++) {
+        if (tableData[row][col] && isDateString(tableData[row][col])) {
+          dateCount++;
+        }
+      }
+      if (dateCount > 1) return true;
+    }
+  }
+  
+  return hasDateHeader;
+};
+
+/**
+ * Detects text alignment markers in cell content
+ */
+const detectAlignment = (cell: string): { content: string, align: 'left' | 'center' | 'right' } => {
+  cell = cell.trim();
+  
+  if (cell.startsWith('->') && cell.endsWith('<-')) {
+    return { content: cell.slice(2, -2).trim(), align: 'center' };
+  } else if (cell.startsWith('->')) {
+    return { content: cell.slice(2).trim(), align: 'right' };
+  } else if (cell.endsWith('<-')) {
+    return { content: cell.slice(0, -2).trim(), align: 'left' };
+  }
+  
+  // Default to left alignment
+  return { content: cell, align: 'left' };
+};
+
+/**
+ * Main function to detect and format tables in text content
+ */
 export const detectAndFormatTables = (content: string): string => {
   // Split content into lines
   const lines = content.split('\n');
@@ -47,24 +135,36 @@ export const detectAndFormatTables = (content: string): string => {
   return formattedContent.join('\n');
 };
 
+/**
+ * Convert markdown-style table lines to an HTML table with enhanced styling
+ */
 const convertToHtmlTable = (tableLines: string[]): string => {
-  const rows = tableLines.map(line => 
+  // Parse table data from lines
+  const tableData = tableLines.map(line => 
     line.split('|')
       .map(cell => cell.trim())
       .filter(cell => cell.length > 0)
   );
 
+  // Process alignment and content in each cell
+  const processedData = tableData.map(row => 
+    row.map(cell => detectAlignment(cell))
+  );
+  
+  // Determine if this is a timetable
+  const isTimetableFormat = isTimetable(tableData);
+  
   // Create HTML table with enhanced styling
   let tableHtml = '<div class="overflow-x-auto my-4">\n';
-  tableHtml += '<table class="chat-table w-full border-collapse bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm">\n';
+  tableHtml += `<table class="chat-table w-full border-collapse ${isTimetableFormat ? 'timetable-format' : ''}">\n`;
   
   // Generate table content
-  rows.forEach((row, rowIndex) => {
+  processedData.forEach((row, rowIndex) => {
     if (rowIndex === 0) {
       // Header row
-      tableHtml += '<thead>\n<tr class="bg-gray-50 dark:bg-gray-700">\n';
+      tableHtml += '<thead>\n<tr>\n';
       row.forEach(cell => {
-        tableHtml += `<th class="px-6 py-4 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">${cell}</th>\n`;
+        tableHtml += `<th class="text-${cell.align}">${cell.content}</th>\n`;
       });
       tableHtml += '</tr>\n</thead>\n<tbody>\n';
     } else if (rowIndex === 1 && tableLines[1].includes('-|-')) {
@@ -72,9 +172,38 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       return;
     } else {
       // Data rows
-      tableHtml += '<tr class="border-t border-gray-200 dark:border-gray-700">\n';
+      const rowClasses = [];
+      
+      // Check if row has status indicators
+      const hasStatus = row.some(cell => 
+        ['pending', 'completed', 'upcoming', 'in progress', 'delayed'].some(
+          status => cell.content.toLowerCase().includes(status)
+        )
+      );
+      
+      if (hasStatus) {
+        if (row.some(cell => cell.content.toLowerCase().includes('completed'))) {
+          rowClasses.push('completed-row');
+        } else if (row.some(cell => cell.content.toLowerCase().includes('in progress'))) {
+          rowClasses.push('in-progress-row');
+        } else if (row.some(cell => cell.content.toLowerCase().includes('pending'))) {
+          rowClasses.push('pending-row');
+        } else if (row.some(cell => cell.content.toLowerCase().includes('delayed'))) {
+          rowClasses.push('delayed-row');
+        } else if (row.some(cell => cell.content.toLowerCase().includes('upcoming'))) {
+          rowClasses.push('upcoming-row');
+        }
+      }
+      
+      tableHtml += `<tr class="${rowClasses.join(' ')}">\n`;
       row.forEach(cell => {
-        tableHtml += `<td class="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">${cell}</td>\n`;
+        // Add special formatting for date cells
+        const cellClasses = [];
+        if (isDateString(cell.content)) {
+          cellClasses.push('date-cell');
+        }
+        
+        tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')}">${cell.content}</td>\n`;
       });
       tableHtml += '</tr>\n';
     }
@@ -83,3 +212,5 @@ const convertToHtmlTable = (tableLines: string[]): string => {
   tableHtml += '</tbody>\n</table>\n</div>';
   return tableHtml;
 };
+
+export default detectAndFormatTables;

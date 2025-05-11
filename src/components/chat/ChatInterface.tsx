@@ -82,8 +82,6 @@ const ChatInterface: React.FC = () => {
       });
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
-
-  // Removed the complex financial query detection and alert
   
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
@@ -119,14 +117,12 @@ const ChatInterface: React.FC = () => {
 
   return (
     <>
-      <div className="container mx-auto py-6 relative">
+      <div className="w-full mx-auto py-6 relative">
         <ApiConnectionStatus 
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
         />
-        
-        {/* Removed the financial query alert component that was here */}
         
         {/* Processing overlay for when the system is working */}
         {isLoading && <ProcessingOverlay 

@@ -6,12 +6,15 @@
   border-spacing: 0;
   margin: 1rem 0;
   font-size: 0.875rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
 /* Dark mode support */
 .dark .chat-table {
   background-color: rgba(31, 41, 55, 0.5);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 /* Header styles */
@@ -46,6 +49,19 @@
   color: #d1d5db;
 }
 
+/* Text alignment classes */
+.chat-table th.text-left, .chat-table td.text-left {
+  text-align: left;
+}
+
+.chat-table th.text-center, .chat-table td.text-center {
+  text-align: center;
+}
+
+.chat-table th.text-right, .chat-table td.text-right {
+  text-align: right;
+}
+
 /* Row hover effects */
 .chat-table tr:hover td {
   background: rgba(243, 244, 246, 0.5);
@@ -70,8 +86,83 @@
   border-bottom: none;
 }
 
-/* Responsive styles */
-@media (max-width: 640px) {
+/* Special styling for timetable format */
+.chat-table.timetable-format {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.chat-table.timetable-format th {
+  background-color: #f0f6ff;
+  color: #1a56db;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.dark .chat-table.timetable-format th {
+  background-color: rgba(30, 58, 138, 0.3);
+  color: #93c5fd;
+}
+
+/* Date cell styling */
+.chat-table td.date-cell {
+  font-weight: 500;
+  color: #1e40af;
+}
+
+.dark .chat-table td.date-cell {
+  color: #93c5fd;
+}
+
+/* Status row styling */
+.chat-table tr.completed-row td {
+  background-color: rgba(74, 222, 128, 0.1);
+  border-left: 3px solid #4ade80;
+}
+
+.chat-table tr.in-progress-row td {
+  background-color: rgba(59, 130, 246, 0.1);
+  border-left: 3px solid #3b82f6;
+}
+
+.chat-table tr.pending-row td {
+  background-color: rgba(250, 204, 21, 0.1);
+  border-left: 3px solid #facc15;
+}
+
+.chat-table tr.delayed-row td {
+  background-color: rgba(248, 113, 113, 0.1);
+  border-left: 3px solid #f87171;
+}
+
+.chat-table tr.upcoming-row td {
+  background-color: rgba(168, 162, 158, 0.1);
+  border-left: 3px solid #a8a29e;
+}
+
+/* Hover effects for status rows */
+.chat-table tr.completed-row:hover td {
+  background-color: rgba(74, 222, 128, 0.2);
+}
+
+.chat-table tr.in-progress-row:hover td {
+  background-color: rgba(59, 130, 246, 0.2);
+}
+
+.chat-table tr.pending-row:hover td {
+  background-color: rgba(250, 204, 21, 0.2);
+}
+
+.chat-table tr.delayed-row:hover td {
+  background-color: rgba(248, 113, 113, 0.2);
+}
+
+.chat-table tr.upcoming-row:hover td {
+  background-color: rgba(168, 162, 158, 0.2);
+}
+
+/* Ensure the table is responsive */
+@media (max-width: 768px) {
   .chat-table {
     font-size: 0.75rem;
   }
@@ -79,5 +170,14 @@
   .chat-table th,
   .chat-table td {
     padding: 0.75rem 1rem;
+  }
+}
+
+/* Very small screens - allow horizontal scrolling */
+@media (max-width: 480px) {
+  .overflow-x-auto {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+    width: calc(100% + 2rem);
   }
 }

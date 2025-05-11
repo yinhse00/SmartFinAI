@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Message, ChatMessage } from './ChatMessage';
 import ChatLoadingIndicator from './ChatLoadingIndicator';
@@ -44,7 +45,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
   
   return (
-    <div className="h-full py-4 space-y-4 px-4">
+    <div className="h-full py-4 space-y-4 px-4 md:px-6 lg:px-8 w-full">
       {hasTruncatedMessages && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center">
           <div className="text-sm text-amber-800 dark:text-amber-300">

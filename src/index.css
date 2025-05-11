@@ -3,6 +3,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('./styles/table.css');
+
 @layer base {
   :root {
     --background: 210 33% 99%;

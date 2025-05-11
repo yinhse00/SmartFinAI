@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
   const [showOriginal, setShowOriginal] = useState(false);
+  const [isFullWidth, setIsFullWidth] = useState(false);
   
   // Debug output
   useEffect(() => {
@@ -75,9 +77,13 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     );
   }
   
+  const messageWidthClass = isFullWidth && sender === 'bot' 
+    ? "w-full max-w-full" 
+    : "max-w-[90%] md:max-w-[85%]";
+  
   return (
-    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4`}>
-      <div className={`flex items-start gap-3 max-w-[80%] ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
+      <div className={`flex items-start gap-3 ${messageWidthClass} ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
         <Card className={`p-3 rounded-lg ${
           sender === 'user' 
             ? 'bg-finance-medium-blue text-white' 
@@ -86,7 +92,25 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : translationInProgress
               ? 'bg-gray-50 dark:bg-gray-800 opacity-70'
               : 'bg-gray-50 dark:bg-gray-800'
-        }`}>
+        } ${isFullWidth ? 'w-full' : ''}`}>
+          {sender === 'bot' && isTypingComplete && !isTranslating && !translationInProgress && (
+            <div className="flex justify-end mb-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 rounded-full"
+                onClick={() => setIsFullWidth(!isFullWidth)}
+                title={isFullWidth ? "Collapse message" : "Expand message to full width"}
+              >
+                {isFullWidth ? (
+                  <Minimize2 className="h-3 w-3 text-finance-medium-blue dark:text-finance-light-blue" />
+                ) : (
+                  <Maximize2 className="h-3 w-3 text-finance-medium-blue dark:text-finance-light-blue" />
+                )}
+              </Button>
+            </div>
+          )}
+          
           {(sender === 'user' || isTranslating || (translationInProgress && sender === 'bot')) ? (
             <div className="whitespace-pre-line">
               {translationInProgress && sender === 'bot' ? (
