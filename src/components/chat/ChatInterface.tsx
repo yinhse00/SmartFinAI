@@ -12,6 +12,28 @@ import { Languages } from 'lucide-react';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import ProcessingOverlay from './ProcessingOverlay';
+import { WorkflowStep } from './hooks/workflow/types';
+
+// Map workflow steps to processing stages
+const mapWorkflowToProcessingStage = (
+  step: WorkflowStep
+): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
+  switch (step) {
+    case 'initial':
+      return 'preparing';
+    case 'listingRules':
+    case 'takeoversCode':
+      return 'processing';
+    case 'execution':
+      return 'processing';
+    case 'response':
+      return 'finalizing';
+    case 'complete':
+      return 'reviewing';
+    default:
+      return 'preparing';
+  }
+};
 
 const ChatInterface: React.FC = () => {
   const {
@@ -115,6 +137,9 @@ const ChatInterface: React.FC = () => {
     }
   };
 
+  // Map workflow step to processing stage
+  const processingStage = mapWorkflowToProcessingStage(currentStep);
+
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
@@ -149,7 +174,7 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          currentStep={currentStep}
+          currentStep={processingStage}
           stepProgress={stepProgress}
         />
       </div>
