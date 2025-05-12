@@ -58,7 +58,7 @@ const ChatContent: React.FC<ChatContentProps> = ({
         translatingMessageIds={translatingMessageIds} 
       />
       
-      {/* Show the processing indicator inline when loading */}
+      {/* Enhanced processing indicator inline */}
       {isLoading && (
         <div className="px-4 pb-4">
           <ProcessingIndicator 

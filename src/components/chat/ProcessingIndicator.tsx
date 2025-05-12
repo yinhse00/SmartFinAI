@@ -6,7 +6,6 @@ import TypingEffect from './ProcessingStages/TypingEffect';
 import ProcessingHeader from './ProcessingStages/ProcessingHeader';
 import StatusDetails from './ProcessingStages/StatusDetails';
 import { getStageMessages } from './ProcessingStages/stageMessages';
-import { Card } from '@/components/ui/card';
 
 interface ProcessingIndicatorProps {
   isVisible: boolean;
@@ -55,10 +54,15 @@ const ProcessingIndicator = ({ isVisible, stage, inline = false }: ProcessingInd
   // Get the stage-specific messages
   const stageMessages = getStageMessages(stage);
   
-  // Inline version for use within the chat interface
+  // Enhanced inline version for use within the chat interface
   if (inline) {
     return (
-      <div className="w-full p-4 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 mb-4">
+      <div className="w-full p-4 bg-white dark:bg-gray-900 rounded-md border border-gray-200 dark:border-gray-700 mb-4 shadow-sm">
+        <div className="flex items-center justify-center mb-4">
+          <div className="h-5 w-5 text-finance-medium-blue animate-spin mr-2" />
+          <h2 className="text-lg font-semibold">Processing Your Request</h2>
+        </div>
+        
         <ProcessingHeader 
           stage={stage} 
           estimatedTime={estimatedTime} 
@@ -66,9 +70,9 @@ const ProcessingIndicator = ({ isVisible, stage, inline = false }: ProcessingInd
           elapsedTime={elapsedTime}
         />
         
-        <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-700" />
+        <Progress value={progress} className="h-2 bg-gray-200 dark:bg-gray-700 mt-2" />
         
-        <div className="mt-3 space-y-2">
+        <div className="mt-3 space-y-3">
           {/* Enhanced visual flow chart representation */}
           <ProcessingStageIndicator stage={stage} />
           
@@ -82,6 +86,10 @@ const ProcessingIndicator = ({ isVisible, stage, inline = false }: ProcessingInd
           
           {/* Additional processing details */}
           <StatusDetails stage={stage} progress={progress} />
+          
+          <p className="text-center text-xs text-gray-500 mt-2">
+            We are analyzing your query, this may take a few seconds...
+          </p>
         </div>
       </div>
     );

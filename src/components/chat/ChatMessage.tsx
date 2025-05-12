@@ -49,7 +49,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const safeContent = content || "";
   const displayContent = showOriginal && originalContent ? originalContent : safeContent;
 
-  // Handle empty content in bot messages that aren't currently being processed
+  // Only show error for empty content if it's actually an error AND processing is complete
   if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && isError) {
     return (
       <div className="flex justify-start mb-4 w-full">
@@ -161,4 +161,3 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 };
 
 export default ChatMessage;
-
