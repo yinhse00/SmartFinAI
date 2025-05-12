@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './useStep1Initial';
@@ -59,7 +60,7 @@ export const useWorkflowProcessor = ({
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         sender: 'bot',
-        content: '',
+        content: '',  // Initially empty, will be populated later
         timestamp: new Date(),
         isError: false,
         metadata: {}
@@ -140,14 +141,14 @@ export const useWorkflowProcessor = ({
           console.log('Response content length:', step5Result.response.length);
           console.log('Response content preview:', step5Result.response.substring(0, 100) + '...');
           
-          // Ensure response is never empty
+          // Ensure response is never empty - crucial fix for the empty message issue
           const responseContent = step5Result.response && step5Result.response.trim() !== '' 
             ? step5Result.response 
             : "I wasn't able to generate a proper response. Please try again.";
           
           finalMessages[assistantIndex] = {
             ...assistantMessage,
-            content: responseContent,
+            content: responseContent,  // Use the ensured non-empty content
             metadata: step5Result.metadata || {}
           };
           
@@ -161,7 +162,7 @@ export const useWorkflowProcessor = ({
         } else {
           console.error('Could not find assistant message to update');
           
-          // Add a new message if we couldn't find the original
+          // Add a new message if we couldn't find the original - with guaranteed content
           const newAssistantMessage: Message = {
             id: (Date.now() + 2).toString(),
             sender: 'bot',
@@ -175,7 +176,7 @@ export const useWorkflowProcessor = ({
       } else {
         console.error('No valid response content in step5Result:', step5Result);
         
-        // Handle empty response case
+        // Handle empty response case with a clear error message
         const errorMessage: Message = {
           id: (Date.now() + 2).toString(),
           sender: 'bot',

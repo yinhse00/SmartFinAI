@@ -58,17 +58,19 @@ export const executeStep5 = async (
     console.log('Received response from grokService:', response);
     
     // Extract response text safely using our utility
-    const responseText = safelyExtractText(response);
+    let responseText = safelyExtractText(response);
     
     console.log('Extracted response text:', responseText ? responseText.substring(0, 100) + '...' : 'No response text');
     
     // If no response text was extracted, provide a fallback
-    if (!responseText) {
-      console.error('No response text extracted from grokService response');
+    if (!responseText || responseText.trim() === '') {
+      console.error('No response text extracted from grokService response, using fallback');
+      responseText = "I'm sorry, I couldn't generate a proper response based on your query. Please try again or rephrase your question.";
+      
       return {
-        completed: false,
+        completed: true,
         error: new Error("Failed to extract response text"),
-        response: "I'm sorry, I couldn't generate a proper response. Please try again."
+        response: responseText
       };
     }
     

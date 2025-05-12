@@ -5,13 +5,31 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
-import { Message } from './ChatMessage';
+
+export interface Message {
+  id: string;
+  content: string;
+  sender: 'user' | 'bot';
+  timestamp: Date;
+  references?: string[];
+  isError?: boolean;
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  originalContent?: string;
+  translationInProgress?: boolean;
+  metadata?: any;
+}
+
 interface ChatMessageProps {
   message: Message;
   onRetry?: () => void;
   onTypingProgress?: () => void;
   isTranslating?: boolean;
 }
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onRetry,
@@ -32,43 +50,46 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     translationInProgress,
     id
   } = message;
+  
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
   const [showOriginal, setShowOriginal] = useState(false);
   const [isFullWidth, setIsFullWidth] = useState(false);
 
-  // Debug output
+  // Debug output for empty content detection
   useEffect(() => {
-    if (sender === 'bot') {
-      console.log(`Rendering bot message ID ${id}: ${content ? content.substring(0, 50) + '...' : '[EMPTY CONTENT]'}`);
-      console.log('Message props:', {
-        id,
-        isError,
-        isTruncated,
-        isTranslating,
-        translationInProgress
-      });
+    if (sender === 'bot' && (!content || content.trim() === '')) {
+      console.error(`Empty message content detected for bot message ID: ${id}`, message);
     }
-  }, [id, sender, content, isError, isTruncated, isTranslating, translationInProgress]);
+  }, [id, sender, content, message]);
 
-  // Determine which content to display - ensure we never have empty content
-  const displayContent = showOriginal && originalContent ? originalContent : content || 'No content available';
+  // Ensure displayContent always has a value
+  const safeContent = content || "No content available";
+  const displayContent = showOriginal && originalContent ? originalContent : safeContent;
 
   // Handle empty content in bot messages that aren't currently being processed
   if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress) {
-    console.warn(`Empty message content detected for bot message ID: ${id}`);
-    return <div className="flex justify-start mb-4">
-        <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200">
+    return (
+      <div className="flex justify-start mb-4">
+        <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300">
           <div className="whitespace-pre-line">
             Message content is empty. There might be an issue with the response generation.
-            {onRetry && <div className="mt-2">
-                <Button variant="outline" size="sm" onClick={onRetry} className="bg-red-100 text-red-800 border-red-200 hover:bg-red-200">
+            {onRetry && (
+              <div className="mt-2">
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={onRetry} 
+                  className="bg-red-100 text-red-800 border-red-200 hover:bg-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700"
+                >
                   <RefreshCw size={12} className="mr-1" />
                   Retry query
                 </Button>
-              </div>}
+              </div>
+            )}
           </div>
         </Card>
-      </div>;
+      </div>
+    );
   }
   
   // Use full width for bot messages when fullscreen mode is activated
@@ -79,48 +100,98 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     setIsFullWidth(!isFullWidth);
   };
   
-  return <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
+  return (
+    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
       <div className={`flex items-start gap-3 ${messageWidthClass} ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
-        <Card className={`p-3 rounded-lg ${sender === 'user' ? 'bg-finance-medium-blue text-white' : isError ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' : translationInProgress ? 'bg-gray-50 dark:bg-gray-800 opacity-70' : 'bg-gray-50 dark:bg-gray-800'} ${isFullWidth ? 'w-full' : ''}`}>
+        <Card className={`p-3 rounded-lg ${
+          sender === 'user' 
+            ? 'bg-finance-medium-blue text-white' 
+            : isError 
+              ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
+              : translationInProgress 
+                ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
+                : 'bg-gray-50 dark:bg-gray-800'
+        } ${isFullWidth ? 'w-full' : ''}`}>
           {/* Fullscreen toggle button for bot messages */}
-          {sender === 'bot' && <div className="flex justify-end mb-1">
-            <Button variant="ghost" size="sm" onClick={toggleFullWidth} className="h-6 w-6 p-0">
-              {isFullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-            </Button>
-          </div>}
+          {sender === 'bot' && (
+            <div className="flex justify-end mb-1">
+              <Button variant="ghost" size="sm" onClick={toggleFullWidth} className="h-6 w-6 p-0">
+                {isFullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+              </Button>
+            </div>
+          )}
           
-          {sender === 'bot' && isTypingComplete && !isTranslating && !translationInProgress}
+          {/* Bot message content */}
+          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
+            <TypingAnimation 
+              text={displayContent} 
+              className="whitespace-pre-line" 
+              onComplete={() => setIsTypingComplete(true)} 
+              onProgress={onTypingProgress} 
+            />
+          )}
           
-          {sender === 'user' || isTranslating || translationInProgress && sender === 'bot' ? <div className="whitespace-pre-line">
-              {translationInProgress && sender === 'bot' ? <div className="flex flex-col gap-2">
+          {/* User message content or bot message when translation is in progress */}
+          {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
+            <div className="whitespace-pre-line">
+              {translationInProgress && sender === 'bot' ? (
+                <div className="flex flex-col gap-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
                   <div className="opacity-60">{displayContent}</div>
-                </div> : displayContent}
-            </div> : <TypingAnimation text={displayContent} className="whitespace-pre-line" onComplete={() => setIsTypingComplete(true)} onProgress={onTypingProgress} />}
+                </div>
+              ) : (
+                displayContent
+              )}
+            </div>
+          )}
           
           {/* Toggle original/translated content option for bot messages */}
-          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-              <Button variant="ghost" size="sm" onClick={() => setShowOriginal(!showOriginal)} className="text-xs text-finance-medium-blue dark:text-finance-light-blue">
+          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && (
+            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                onClick={() => setShowOriginal(!showOriginal)} 
+                className="text-xs text-finance-medium-blue dark:text-finance-light-blue"
+              >
                 {showOriginal ? "查看翻译" : "View original (English)"}
               </Button>
-            </div>}
+            </div>
+          )}
           
           {/* Truncated message retry button */}
-          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
-              <Button variant="outline" size="sm" onClick={onRetry} className="flex items-center text-xs bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue">
+          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && (
+            <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onRetry} 
+                className="flex items-center text-xs bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
+              >
                 <RefreshCw size={12} className="mr-1" />
                 Retry query
               </Button>
-            </div>}
+            </div>
+          )}
           
           {/* References badges */}
-          {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && <div className="mt-2 flex flex-wrap gap-1">
-              {references.map((ref, i) => <Badge key={i} variant="outline" className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20">
+          {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && (
+            <div className="mt-2 flex flex-wrap gap-1">
+              {references.map((ref, i) => (
+                <Badge 
+                  key={i} 
+                  variant="outline" 
+                  className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20"
+                >
                   {ref}
-                </Badge>)}
-            </div>}
+                </Badge>
+              ))}
+            </div>
+          )}
         </Card>
       </div>
-    </div>;
+    </div>
+  );
 };
+
 export default ChatMessage;
