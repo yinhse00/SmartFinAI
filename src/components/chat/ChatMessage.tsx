@@ -5,23 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
-
-export interface Message {
-  id: string;
-  content: string;
-  sender: 'user' | 'bot';
-  timestamp: Date;
-  references?: string[];
-  isError?: boolean;
-  isUsingFallback?: boolean;
-  reasoning?: string;
-  queryType?: string;
-  isTruncated?: boolean;
-  isBatchPart?: boolean;
-  originalContent?: string;
-  translationInProgress?: boolean;
-  metadata?: any;
-}
+import { Message } from './ChatMessage';
 
 interface ChatMessageProps {
   message: Message;

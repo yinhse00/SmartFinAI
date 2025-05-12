@@ -2,7 +2,7 @@
 // This file directly defines and exports the Message type to avoid circular dependencies
 export interface Message {
   id: string;
-  sender: 'user' | 'bot' | 'system';
+  sender: 'user' | 'bot';  // Removing 'system' to match the type used in ChatMessage.tsx
   content: string;
   timestamp: Date;
   references?: string[];

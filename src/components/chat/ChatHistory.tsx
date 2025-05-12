@@ -1,7 +1,6 @@
 
 import React, { useRef, useEffect } from 'react';
 import { Message, ChatMessage } from './ChatMessage';
-import ChatLoadingIndicator from './ChatLoadingIndicator';
 
 interface ChatHistoryProps {
   messages: Message[];
@@ -84,7 +83,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
         </div>
       )}
       
-      {isLoading && <ChatLoadingIndicator />}
+      {isLoading && (
+        <div className="flex justify-center">
+          <div className="h-8 w-8 rounded-full border-2 border-finance-medium-blue border-t-transparent animate-spin"></div>
+        </div>
+      )}
       
       {translatingMessageIds.length > 0 && !isLoading && (
         <div className="flex justify-center">
