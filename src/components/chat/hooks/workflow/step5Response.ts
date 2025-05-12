@@ -65,13 +65,7 @@ export const executeStep5 = async (
     // If no response text was extracted, provide a fallback
     if (!responseText || responseText.trim() === '') {
       console.error('No response text extracted from grokService response, using fallback');
-      responseText = "I'm sorry, I couldn't generate a proper response based on your query. Please try again or rephrase your question.";
-      
-      return {
-        completed: true,
-        error: new Error("Failed to extract response text"),
-        response: responseText
-      };
+      responseText = "I apologize, but I couldn't generate a proper response to your query. Please try again or rephrase your question.";
     }
     
     // Check if the response appears truncated or incomplete

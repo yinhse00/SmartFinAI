@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { RefreshCw, Maximize2, Minimize2 } from 'lucide-react';
+import { RefreshCw } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -37,7 +37,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
   const [showOriginal, setShowOriginal] = useState(false);
-  const [isFullWidth, setIsFullWidth] = useState(false);
 
   // Debug output for empty content detection
   useEffect(() => {
@@ -47,14 +46,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   }, [id, sender, content, message]);
 
   // Ensure displayContent always has a value
-  const safeContent = content || "No content available";
+  const safeContent = content || "";
   const displayContent = showOriginal && originalContent ? originalContent : safeContent;
 
   // Handle empty content in bot messages that aren't currently being processed
-  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress) {
+  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && isError) {
     return (
-      <div className="flex justify-start mb-4">
-        <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300">
+      <div className="flex justify-start mb-4 w-full">
+        <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 w-full">
           <div className="whitespace-pre-line">
             Message content is empty. There might be an issue with the response generation.
             {onRetry && (
@@ -76,18 +75,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     );
   }
   
-  // Use full width for bot messages when fullscreen mode is activated
-  const messageWidthClass = isFullWidth && sender === 'bot' ? "w-full max-w-full" : "max-w-[90%] md:max-w-[85%]";
-  
-  // Toggle fullscreen mode
-  const toggleFullWidth = () => {
-    setIsFullWidth(!isFullWidth);
-  };
-  
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
-      <div className={`flex items-start gap-3 ${messageWidthClass} ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
-        <Card className={`p-3 rounded-lg ${
+      <div className={`flex items-start gap-3 w-full ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+        <Card className={`p-3 rounded-lg w-full ${
           sender === 'user' 
             ? 'bg-finance-medium-blue text-white' 
             : isError 
@@ -95,21 +86,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : translationInProgress 
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
-        } ${isFullWidth ? 'w-full' : ''}`}>
-          {/* Fullscreen toggle button for bot messages */}
-          {sender === 'bot' && (
-            <div className="flex justify-end mb-1">
-              <Button variant="ghost" size="sm" onClick={toggleFullWidth} className="h-6 w-6 p-0">
-                {isFullWidth ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-              </Button>
-            </div>
-          )}
-          
+        }`}>
           {/* Bot message content */}
           {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
               text={displayContent} 
-              className="whitespace-pre-line" 
+              className="whitespace-pre-line text-left" 
               onComplete={() => setIsTypingComplete(true)} 
               onProgress={onTypingProgress} 
             />
@@ -117,7 +99,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           
           {/* User message content or bot message when translation is in progress */}
           {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
-            <div className="whitespace-pre-line">
+            <div className={`whitespace-pre-line ${sender === 'user' ? 'text-right' : 'text-left'}`}>
               {translationInProgress && sender === 'bot' ? (
                 <div className="flex flex-col gap-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
@@ -179,3 +161,4 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 };
 
 export default ChatMessage;
+
