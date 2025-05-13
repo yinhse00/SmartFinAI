@@ -5,7 +5,7 @@ import ChatHistory from '../ChatHistory';
 import { Message } from '../ChatMessage';
 import { AlertCircle, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import ProcessingIndicator from '../ProcessingIndicator';
+import InlineProcessingOverlay from '../InlineProcessingOverlay';
 
 interface ChatContentProps {
   messages: Message[];
@@ -58,13 +58,13 @@ const ChatContent: React.FC<ChatContentProps> = ({
         translatingMessageIds={translatingMessageIds} 
       />
       
-      {/* Enhanced processing indicator inline */}
+      {/* Use our new InlineProcessingOverlay instead of ProcessingIndicator */}
       {isLoading && (
         <div className="px-4 pb-4">
-          <ProcessingIndicator 
-            isVisible={isLoading} 
-            stage={currentStep} 
-            inline={true} 
+          <InlineProcessingOverlay
+            isVisible={isLoading}
+            currentStep={currentStep}
+            stepProgress={stepProgress}
           />
         </div>
       )}
