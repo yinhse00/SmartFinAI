@@ -85,20 +85,79 @@ const detectAlignment = (cell: string): { content: string, align: 'left' | 'cent
 };
 
 /**
+ * Process markdown formatting (**, ##, etc.) in text
+ */
+const processMarkdownFormatting = (text: string): string => {
+  // Replace headers (###) with HTML headers
+  text = text.replace(/^###\s+(.+)$/gm, '<h3 class="font-bold text-lg my-2">$1</h3>');
+  text = text.replace(/^##\s+(.+)$/gm, '<h2 class="font-bold text-xl my-3">$1</h2>');
+  text = text.replace(/^#\s+(.+)$/gm, '<h1 class="font-bold text-2xl my-4">$1</h1>');
+  
+  // Replace bold (**text**) with <strong>
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
+  
+  // Replace italic (*text*) with <em>
+  text = text.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
+  
+  // Replace underline (_text_) with <u>
+  text = text.replace(/_([^_]+)_/g, '<u class="underline">$1</u>');
+  
+  return text;
+};
+
+/**
+ * Preserves paragraph formatting in text
+ */
+const preserveParagraphs = (text: string): string => {
+  // Split by double newlines (paragraph breaks)
+  const paragraphs = text.split(/\n\n+/);
+  
+  // Process each paragraph
+  return paragraphs.map(paragraph => {
+    // Skip processing if it's already HTML or empty
+    if (paragraph.trim().startsWith('<') || paragraph.trim() === '') {
+      return paragraph;
+    }
+    
+    // For regular paragraphs, wrap in p tags
+    // But avoid wrapping if it starts with a heading tag
+    if (!/^<h[1-6]/i.test(paragraph.trim())) {
+      return `<p class="mb-4">${paragraph.replace(/\n/g, '<br/>')}</p>`;
+    }
+    
+    return paragraph;
+  }).join('\n\n');
+};
+
+/**
  * Main function to detect and format tables in text content
  */
 export const detectAndFormatTables = (content: string): string => {
+  // Process markdown formatting first
+  content = processMarkdownFormatting(content);
+  
   // Split content into lines
   const lines = content.split('\n');
   let inTable = false;
   let formattedContent: string[] = [];
   let currentTable: string[] = [];
+  let currentTextBlock: string[] = [];
+
+  const flushTextBlock = () => {
+    if (currentTextBlock.length > 0) {
+      formattedContent.push(currentTextBlock.join('\n'));
+      currentTextBlock = [];
+    }
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     // Detect table header (looking for | symbols)
-    if (line.includes('|') && !inTable) {
+    if (line.includes('|') && line.trim().startsWith('|') && !inTable) {
+      // Flush any text before the table
+      flushTextBlock();
+      
       inTable = true;
       currentTable = [];
       currentTable.push(line);
@@ -110,7 +169,7 @@ export const detectAndFormatTables = (content: string): string => {
       }
     }
     // Continue collecting table rows
-    else if (inTable && line.includes('|')) {
+    else if (inTable && line.includes('|') && line.trim().startsWith('|')) {
       currentTable.push(line);
     }
     // Table has ended
@@ -119,11 +178,11 @@ export const detectAndFormatTables = (content: string): string => {
       // Convert collected table to HTML
       formattedContent.push(convertToHtmlTable(currentTable));
       currentTable = [];
-      if (line) formattedContent.push(line);
+      if (line) currentTextBlock.push(line);
     }
     // Regular non-table content
     else {
-      formattedContent.push(line);
+      currentTextBlock.push(line);
     }
   }
 
@@ -131,8 +190,12 @@ export const detectAndFormatTables = (content: string): string => {
   if (currentTable.length > 0) {
     formattedContent.push(convertToHtmlTable(currentTable));
   }
+  
+  // Handle any remaining text
+  flushTextBlock();
 
-  return formattedContent.join('\n');
+  // Join all content and preserve paragraphs
+  return preserveParagraphs(formattedContent.join('\n\n'));
 };
 
 /**
@@ -154,7 +217,7 @@ const convertToHtmlTable = (tableLines: string[]): string => {
   // Determine if this is a timetable
   const isTimetableFormat = isTimetable(tableData);
   
-  // Create HTML table with enhanced styling
+  // Create HTML table with enhanced styling and visible borders
   let tableHtml = '<div class="overflow-x-auto my-4">\n';
   tableHtml += `<table class="chat-table w-full border-collapse ${isTimetableFormat ? 'timetable-format' : ''}">\n`;
   
@@ -164,7 +227,7 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       // Header row
       tableHtml += '<thead>\n<tr>\n';
       row.forEach(cell => {
-        tableHtml += `<th class="text-${cell.align}">${cell.content}</th>\n`;
+        tableHtml += `<th class="text-${cell.align} border border-gray-300 dark:border-gray-600">${cell.content}</th>\n`;
       });
       tableHtml += '</tr>\n</thead>\n<tbody>\n';
     } else if (rowIndex === 1 && tableLines[1].includes('-|-')) {
@@ -203,7 +266,7 @@ const convertToHtmlTable = (tableLines: string[]): string => {
           cellClasses.push('date-cell');
         }
         
-        tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')}">${cell.content}</td>\n`;
+        tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')} border border-gray-300 dark:border-gray-600">${cell.content}</td>\n`;
       });
       tableHtml += '</tr>\n';
     }

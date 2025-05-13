@@ -58,10 +58,28 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
       delay *= 2;
     }
 
+    // Handle HTML tags specially
+    if (renderAsHTML) {
+      // Check if we're at the start of an HTML tag
+      if (currentChar === '<') {
+        // Find the closing bracket of this tag
+        const tagEndIndex = text.indexOf('>', characterIndex);
+        if (tagEndIndex > characterIndex) {
+          // Pause briefly for paragraph tags to simulate natural breaks
+          const tagContent = text.substring(characterIndex, tagEndIndex + 1);
+          if (tagContent.includes('p class') || tagContent.includes('h1') || 
+              tagContent.includes('h2') || tagContent.includes('h3')) {
+            delay *= 3;
+          }
+        }
+      }
+    }
+
     // Check for code blocks or tables to pause briefly
     if (
       (characterIndex > 2 && text.slice(characterIndex - 3, characterIndex) === '```') ||
-      (characterIndex > 0 && text.slice(characterIndex - 1, characterIndex) === '|')
+      (characterIndex > 0 && text.slice(characterIndex - 1, characterIndex) === '|') ||
+      (renderAsHTML && characterIndex > 4 && text.slice(characterIndex - 5, characterIndex) === '<table')
     ) {
       delay *= 2;
     }
@@ -81,7 +99,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
         clearTimeout(timerId.current);
       }
     };
-  }, [characterIndex, text, typingSpeed, isPaused, onComplete, onProgress]);
+  }, [characterIndex, text, typingSpeed, isPaused, onComplete, onProgress, renderAsHTML]);
 
   const handleClick = () => {
     if (characterIndex < text.length) {
