@@ -65,11 +65,23 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
         // Find the closing bracket of this tag
         const tagEndIndex = text.indexOf('>', characterIndex);
         if (tagEndIndex > characterIndex) {
-          // Pause briefly for paragraph tags to simulate natural breaks
+          // Pause briefly for formatting tags to simulate natural breaks
           const tagContent = text.substring(characterIndex, tagEndIndex + 1);
-          if (tagContent.includes('p class') || tagContent.includes('h1') || 
-              tagContent.includes('h2') || tagContent.includes('h3')) {
+          
+          // Longer pause for paragraph and heading tags
+          if (tagContent.includes('p class') || 
+              tagContent.includes('h1') || 
+              tagContent.includes('h2') || 
+              tagContent.includes('h3')) {
             delay *= 3;
+          }
+          
+          // Pause for list items to make them more readable
+          if (tagContent.includes('<li>') || 
+              tagContent.includes('<ul') || 
+              tagContent.includes('</ul>') ||
+              tagContent.includes('<blockquote')) {
+            delay *= 2;
           }
         }
       }

@@ -173,12 +173,14 @@
 
 .chat-content p {
   margin-bottom: 1rem;
+  line-height: 1.5;
 }
 
 .chat-content ul, 
 .chat-content ol {
   margin-left: 1.5rem;
   margin-bottom: 1rem;
+  list-style-position: outside;
 }
 
 .chat-content ul {
@@ -187,4 +189,35 @@
 
 .chat-content ol {
   list-style-type: decimal;
+}
+
+/* Enhanced list styling */
+.chat-content li {
+  margin-bottom: 0.5rem;
+}
+
+/* Blockquote styling */
+.chat-content blockquote {
+  border-left: 4px solid #e2e8f0;
+  padding-left: 1rem;
+  margin: 1rem 0;
+  color: #4a5568;
+  font-style: italic;
+}
+
+.dark .chat-content blockquote {
+  border-left-color: #4a5568;
+  color: #cbd5e0;
+}
+
+/* Improved spacing between paragraphs */
+.chat-content p + p {
+  margin-top: 0.5rem;
+}
+
+/* Better spacing for headings */
+.chat-content h1 + p,
+.chat-content h2 + p,
+.chat-content h3 + p {
+  margin-top: 0.5rem;
 }

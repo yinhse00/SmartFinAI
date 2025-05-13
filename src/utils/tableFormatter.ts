@@ -1,4 +1,3 @@
-
 import { format, parseISO, isValid } from 'date-fns';
 
 /**
@@ -96,11 +95,36 @@ const processMarkdownFormatting = (text: string): string => {
   // Replace bold (**text**) with <strong>
   text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
   
-  // Replace italic (*text*) with <em>
-  text = text.replace(/\*([^*]+)\*/g, '<em class="italic">$1</em>');
+  // Remove underline (_text_) handling as requested - use emphasis instead
+  text = text.replace(/_([^_]+)_/g, '<em class="italic">$1</em>');
   
-  // Replace underline (_text_) with <u>
-  text = text.replace(/_([^_]+)_/g, '<u class="underline">$1</u>');
+  // Process blockquotes (> text) - keep simple styling without underlines
+  text = text.replace(/^>\s+(.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 my-2 italic">$1</blockquote>');
+  
+  // Process unordered lists for better readability with bullet points
+  // Match lines starting with - or * followed by space
+  let inList = false;
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    // Check if line is a list item
+    if (lines[i].match(/^\s*[-*]\s+/)) {
+      // Start a new list if we're not in one
+      if (!inList) {
+        lines[i] = '<ul class="list-disc pl-6 my-2">\n' + lines[i].replace(/^\s*[-*]\s+(.+)$/, '<li>$1</li>');
+        inList = true;
+      } else {
+        // Continue existing list
+        lines[i] = lines[i].replace(/^\s*[-*]\s+(.+)$/, '<li>$1</li>');
+      }
+      
+      // Check if next line is not a list item or is the last line
+      if (i === lines.length - 1 || !lines[i+1].match(/^\s*[-*]\s+/)) {
+        lines[i] = lines[i] + '\n</ul>';
+        inList = false;
+      }
+    }
+  }
+  text = lines.join('\n');
   
   return text;
 };
@@ -120,8 +144,8 @@ const preserveParagraphs = (text: string): string => {
     }
     
     // For regular paragraphs, wrap in p tags
-    // But avoid wrapping if it starts with a heading tag
-    if (!/^<h[1-6]/i.test(paragraph.trim())) {
+    // But avoid wrapping if it starts with a heading tag or is part of a list
+    if (!/^<(h[1-6]|ul|li|blockquote)/i.test(paragraph.trim())) {
       return `<p class="mb-4">${paragraph.replace(/\n/g, '<br/>')}</p>`;
     }
     
