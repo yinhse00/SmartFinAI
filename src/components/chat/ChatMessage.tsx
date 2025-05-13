@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import TypingAnimation from './TypingAnimation';
 import { Message } from './ChatMessage';
+import detectAndFormatTables from '@/utils/tableFormatter';
 
 interface ChatMessageProps {
   message: Message;
@@ -37,6 +38,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
   const [showOriginal, setShowOriginal] = useState(false);
+  const [formattedContent, setFormattedContent] = useState('');
 
   // Debug output for empty content detection
   useEffect(() => {
@@ -45,9 +47,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [id, sender, content, message]);
 
-  // Ensure displayContent always has a value
-  const safeContent = content || "";
-  const displayContent = showOriginal && originalContent ? originalContent : safeContent;
+  // Process table content when message changes or when toggling between original/translated
+  useEffect(() => {
+    // Ensure displayContent always has a value
+    const safeContent = content || "";
+    const displayContent = showOriginal && originalContent ? originalContent : safeContent;
+    
+    // Format tables in the content
+    if (sender === 'bot') {
+      const formatted = detectAndFormatTables(displayContent);
+      setFormattedContent(formatted);
+    } else {
+      // For user messages, no need to format tables
+      setFormattedContent(displayContent);
+    }
+  }, [content, originalContent, showOriginal, sender]);
 
   // Only show error for empty content if it's actually an error AND processing is complete
   if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && isError) {
@@ -87,26 +101,29 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
         }`}>
-          {/* Bot message content */}
+          {/* Bot message content with typing animation */}
           {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
-              text={displayContent} 
+              text={formattedContent} 
               className="whitespace-pre-line text-left" 
               onComplete={() => setIsTypingComplete(true)} 
-              onProgress={onTypingProgress} 
+              onProgress={onTypingProgress}
+              renderAsHTML={true}
             />
           )}
           
-          {/* User message content or bot message when translation is in progress */}
+          {/* User message content or bot message when translation is in progress or typing is complete */}
           {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
-            <div className={`whitespace-pre-line ${sender === 'user' ? 'text-right' : 'text-left'}`}>
+            <div className={`${sender === 'user' ? 'text-right' : 'text-left'}`}>
               {translationInProgress && sender === 'bot' ? (
                 <div className="flex flex-col gap-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
-                  <div className="opacity-60">{displayContent}</div>
+                  <div className="opacity-60" dangerouslySetInnerHTML={{ __html: formattedContent }} />
                 </div>
+              ) : sender === 'user' ? (
+                <div className="whitespace-pre-line">{formattedContent}</div>
               ) : (
-                displayContent
+                <div dangerouslySetInnerHTML={{ __html: formattedContent }} />
               )}
             </div>
           )}
