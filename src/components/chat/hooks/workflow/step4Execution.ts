@@ -1,4 +1,3 @@
-
 import { grokService } from '@/services/grokService';
 import { Step4Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -135,7 +134,9 @@ IMPORTANT:
       regulatoryContext: params.regulatoryContext || enhancedContext,
       processType,
       guidanceContext: params.guidanceContext,
-      sourceMaterials: params.sourceMaterials
+      sourceMaterials: params.sourceMaterials,
+      skipSequentialSearches: true,
+      isRegulatoryRelated: true
     };
   } catch (error) {
     console.error('Error in step 4:', error);
@@ -144,7 +145,9 @@ IMPORTANT:
       nextStep: 'response', 
       query: params.query,
       error,
-      regulatoryContext: params.regulatoryContext
+      regulatoryContext: params.regulatoryContext,
+      skipSequentialSearches: true,
+      isRegulatoryRelated: false
     };
   }
 };
