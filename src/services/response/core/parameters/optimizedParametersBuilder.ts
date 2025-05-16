@@ -18,8 +18,8 @@ export const optimizedParametersBuilder = {
     
     if (isTimetableQuery) {
       return {
-        temperature: 0.05,
-        maxTokens: 60000   // was 12k/36k, now 5x the previous default
+        temperature: 0.3,
+        maxTokens: 60000   // Maintaining high token limit
       };
     }
     
@@ -31,8 +31,8 @@ export const optimizedParametersBuilder = {
     
     if (isExecutionProcessQuery) {
       return {
-        temperature: 0.1,
-        maxTokens: 50000  // was 10k/30k, now 5x base
+        temperature: 0.4,
+        maxTokens: 50000  // Maintaining high token limit
       };
     }
     
@@ -40,8 +40,8 @@ export const optimizedParametersBuilder = {
     if (prompt.toLowerCase().includes('what is') || 
         prompt.toLowerCase().includes('definition')) {
       return {
-        temperature: 0.1,
-        maxTokens: 40000 // was 8k/24k, now 5x
+        temperature: 0.5,
+        maxTokens: 40000 // Maintaining high token limit
       };
     }
     
@@ -49,8 +49,8 @@ export const optimizedParametersBuilder = {
     if (prompt.toLowerCase().includes('connected transaction') || 
         prompt.toLowerCase().includes('connected person')) {
       return {
-        temperature: 0.1,
-        maxTokens: 45000 // was 9k/27k, now 5x
+        temperature: 0.4,
+        maxTokens: 45000 // Maintaining high token limit
       };
     }
     
@@ -58,30 +58,29 @@ export const optimizedParametersBuilder = {
     if (prompt.toLowerCase().includes('compare') ||
         prompt.toLowerCase().includes('difference between') ||
         prompt.toLowerCase().includes('versus') ||
-        prompt.toLowerCase().includes(' vs ')) {
+        prompt.toLowerCase().includes('vs')) {
       return {
-        temperature: 0.1,
-        maxTokens: 45000 // was 9k/27k, now 5x
+        temperature: 0.4,
+        maxTokens: 45000 // Maintaining high token limit
       };
     }
     
     // For simple conversational queries
     if (isSimpleQuery && !hasContext) {
       return {
-        temperature: 0.3,
-        maxTokens: 20000 // was 4k/12k, now 5x
+        temperature: 0.7, // Higher temperature for conversational queries
+        maxTokens: 20000 // Maintaining high token limit
       };
     }
     
     // Get optimized parameters from service
     const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, prompt);
     
-    const actualTemperature = hasContext ? 0.1 : temperature;
-    const safeMaxTokens = Math.min(40000, Math.max(20000, maxTokens * 5)); // 5x old bounds
+    const actualTemperature = hasContext ? 0.4 : temperature;
     
     return { 
       temperature: actualTemperature, 
-      maxTokens: safeMaxTokens 
+      maxTokens: maxTokens 
     };
   }
 };

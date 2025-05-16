@@ -1,5 +1,6 @@
+
 /**
- * Core API request processing logic - Optimized for faster responses
+ * Core API request processing logic - Optimized for quality responses
  */
 import { 
   getGrokApiKey, 
@@ -16,7 +17,7 @@ import { prepareRequestParameters } from './queryParameterBuilder';
 const complexQueryAttempts = new Map<string, number>();
 
 /**
- * Process API request with optimized parameters for faster responses
+ * Process API request with parameters optimized for high-quality responses
  */
 export const processApiRequest = async (
   requestBody: any, 
@@ -40,10 +41,13 @@ export const processApiRequest = async (
   const querySignature = typeof userMessage?.content === 'string' ? 
     userMessage.content.substring(0, 100) : 'unknown-query';
   
-  // Check if this is a complex query
+  // Check if this is a complex query for model selection purposes
   const isComplexQuery = typeof userMessage?.content === 'string' && (
     userMessage.content.toLowerCase().includes('rights issue') ||
-    userMessage.content.toLowerCase().includes('timetable')
+    userMessage.content.toLowerCase().includes('timetable') ||
+    userMessage.content.toLowerCase().includes('connected transaction') ||
+    userMessage.content.toLowerCase().includes('takeovers code') ||
+    userMessage.content.length > 200
   );
   
   // Track complex query attempts
@@ -91,35 +95,40 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Optimize token limits for faster responses
-  if (!requestBody.max_tokens) {
-    // Use much smaller token limits for faster responses
-    const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
-    const fastResponseLimit = Math.min(1000, effectiveTokenLimit / 2);
-    console.log(`Using optimized token limit: ${fastResponseLimit}`);
-    requestBody.max_tokens = fastResponseLimit;
-  } else if (requestBody.max_tokens > 2000 && !isComplexQuery) {
-    // Cap token limit for non-complex queries
-    console.log(`Reducing token limit from ${requestBody.max_tokens} to 2000 for faster response`);
-    requestBody.max_tokens = 2000;
-  }
+  // Smart model selection strategy - use grok-3-beta for user-facing content
+  // and grok-3-mini-beta only for internal processing
+  const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
+  const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
+                              requestBody.metadata?.processingStage === undefined;
   
-  // Always use mini model for faster responses unless specifically overridden
-  if (!requestBody.model || 
-      (requestBody.model === 'grok-3-beta' && 
-       !isComplexQuery && 
-       !requestBody.metadata?.specializedQuery)) {
-    console.log("Using grok-3-mini-beta for faster response");
+  // Use full model for user-facing content and complex queries
+  if (isUserFacingQuery || isComplexQuery || isExternalProcessing) {
+    console.log("Using grok-3-beta for quality response");
+    requestBody.model = "grok-3-beta";
+  } else {
+    // Use mini model for internal processing to save costs
+    console.log("Using grok-3-mini-beta for internal processing");
     requestBody.model = "grok-3-mini-beta";
   }
   
-  // Use lower temperature for more deterministic, faster responses
-  if (requestBody.temperature > 0.2) {
-    console.log(`Reducing temperature from ${requestBody.temperature} to 0.1 for faster response`);
-    requestBody.temperature = 0.1;
+  // Prepare request parameters without aggressive token capping
+  const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
+  
+  // Don't override token limit if specified, but ensure it's reasonable
+  if (!requestBody.max_tokens) {
+    console.log(`Using default token limit: ${effectiveTokenLimit}`);
+    requestBody.max_tokens = effectiveTokenLimit;
   }
   
-  console.log("Making optimized API call to Grok financial expert API");
+  // Don't override temperature if explicitly set
+  if (requestBody.temperature === undefined && !isUserFacingQuery) {
+    requestBody.temperature = 0.3;
+  } else if (requestBody.temperature === undefined) {
+    // For user-facing queries, use balanced temperature
+    requestBody.temperature = 0.5;
+  }
+  
+  console.log("Making API call to Grok financial expert API");
   console.log("Request model:", requestBody.model);
   console.log("Temperature:", requestBody.temperature);
   console.log("Max tokens:", requestBody.max_tokens);
@@ -132,7 +141,6 @@ export const processApiRequest = async (
   requestBody.metadata.isBatchRequest = isBatchRequest;
   requestBody.metadata.batchNumber = batchNumber;
   requestBody.metadata.isComplexQuery = isComplexQuery;
-  requestBody.metadata.optimizedForSpeed = true;
   
   try {
     // First try proxy for faster response
@@ -147,10 +155,10 @@ export const processApiRequest = async (
       // Continue with direct requests
     }
     
-    // Use minimal retries for faster response
-    const maxRetries = isComplexQuery ? 1 : 0;
+    // Use appropriate number of retries based on query importance
+    const maxRetries = isUserFacingQuery ? 2 : 1;
     
-    // Attempt direct call with minimal retries
+    // Attempt direct call with appropriate retries
     const data = await executeWithRetry(
       async () => {
         return await attemptDirectRequest(requestBody, apiKey);

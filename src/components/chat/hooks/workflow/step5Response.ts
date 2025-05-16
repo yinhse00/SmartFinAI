@@ -3,7 +3,7 @@ import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 5: Enhanced Response Generation with optimized response times
+ * Step 5: Enhanced Response Generation with quality-focused parameters
  */
 export const executeStep5 = async (
   params: any, 
@@ -29,30 +29,35 @@ export const executeStep5 = async (
       };
     }
     
-    // Check if streamlined processing is appropriate
-    const isSimpleQuery = params.query.length < 100;
+    // Check if this is a complex query
+    const isComplexQuery = params.query.length > 150 || 
+                          params.query.toLowerCase().includes('timetable') ||
+                          params.query.toLowerCase().includes('rights issue');
     
-    // Create optimized instructions for fast response
+    // Create quality-focused instructions
     const enhancedInstructions = `
-IMPORTANT: Be concise and direct. Focus on the most essential information. Use tables and lists for efficient formatting.
+IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
 
 For rules interpretation: 
-- Include specific rule references
-- Focus on key requirements only
-- For timetables, show only critical dates
+- Include specific rule references with detailed explanations
+- Cover all relevant requirements and implications
+- For timetables, include all critical dates and explain their significance
+- Use tables and bullet points for clarity when appropriate
+- Bold important points and rule references for emphasis
 
-BE DIRECT AND AVOID UNNECESSARY EXPLANATION.
+Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
     
-    // Streamlined response parameters
+    // Quality-optimized response parameters
     const responseParams = {
       prompt: `${params.query}\n\n${enhancedInstructions}`,
       regulatoryContext: responseContext,
-      maxTokens: isSimpleQuery ? 1000 : 2000, // Reduced token limits for faster responses
-      temperature: 0.2
+      maxTokens: isComplexQuery ? 25000 : 15000, // Higher token limits for quality
+      temperature: 0.5, // Balanced temperature for better quality
+      model: "grok-3-beta" // Always use the full model for user responses
     };
     
-    // Generate response using Grok with optimized parameters
+    // Generate response using Grok with quality-optimized parameters
     const response = await grokService.generateResponse(responseParams);
     const responseText = safelyExtractText(response);
     

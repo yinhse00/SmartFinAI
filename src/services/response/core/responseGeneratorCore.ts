@@ -5,18 +5,18 @@ import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
 
 /**
- * Core response generation functionality with improved response times
+ * Core response generation functionality with quality-focused optimizations
  */
 export const responseGeneratorCore = {
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      console.log("Making API call with optimized parameters");
+      console.log("Making API call with quality-optimized parameters");
       
       // Check for batch request
       const isBatchRequest = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                            requestBody.messages.find(m => m.role === 'user').content.includes('[CONTINUATION_PART_');
       
-      // Determine optimal token limit - significantly reduced for faster responses
+      // Determine optimal token limit - using original high values
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
@@ -25,14 +25,20 @@ export const responseGeneratorCore = {
       });
       
       // Apply optimal token limits
-      requestBody.max_tokens = Math.min(effectiveTokenLimit, requestBody.max_tokens || effectiveTokenLimit);
+      requestBody.max_tokens = requestBody.max_tokens || effectiveTokenLimit;
       
-      // Use lower temperature for faster, more predictable responses
-      requestBody.temperature = Math.min(0.2, requestBody.temperature || 0.3);
+      // Use balanced temperature for better quality responses
+      if (!requestBody.temperature) {
+        requestBody.temperature = tokenManagementService.getTemperature({
+          queryType: requestBody.queryType || 'general',
+          prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || ''
+        });
+      }
       
-      // Use mini model for faster responses
-      if (!requestBody.model || requestBody.model === 'grok-3-beta') {
-        requestBody.model = 'grok-3-mini-beta';
+      // Smart model selection - use full model for user-facing responses
+      const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
+      if (!requestBody.model) {
+        requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
       }
       
       // Forward request to API client
@@ -45,20 +51,20 @@ export const responseGeneratorCore = {
   
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
-      console.log('Attempting backup API call with simplified parameters');
+      console.log('Attempting backup API call with quality parameters');
       
-      // Simplified system prompt for faster responses
-      const systemPrompt = 'You are a financial regulatory expert. Be concise and direct.';
+      // Enhanced system prompt for backup calls
+      const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
-      // Ultra-simplified request for faster processing
+      // Quality-focused backup request
       const backupRequestBody = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-mini-beta",
-        temperature: 0.1,
-        max_tokens: 1000 // Significantly reduced for faster responses
+        model: "grok-3-beta",
+        temperature: 0.4,
+        max_tokens: 15000 // Enhanced for quality responses
       };
       
       return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
@@ -72,8 +78,8 @@ export const responseGeneratorCore = {
     truncated: boolean,
     text: string
   } => {
-    // Define a token limit constant
-    const DEFAULT_TOKEN_LIMIT = 1000;
+    // Define a higher token limit constant
+    const DEFAULT_TOKEN_LIMIT = 10000;
     
     // If token count is near limit, mark as truncated
     if (tokenCount > DEFAULT_TOKEN_LIMIT * 0.9) {

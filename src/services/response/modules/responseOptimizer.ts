@@ -11,38 +11,38 @@ export const responseOptimizer = {
     // Analyze query complexity
     const isSimpleQuery = prompt.length < 100 && !prompt.includes('?');
     
-    // Low tokens across the board for faster responses
+    // Use enhanced token limits for comprehensive responses
     if (queryType === 'open_offer' || queryType === 'rights_issue') {
       return {
-        temperature: 0.05,
-        maxTokens: 3000  // Reduced from 12000
+        temperature: 0.3, // More balanced temperature
+        maxTokens: 30000  // Increased from 3000
       };
     }
     
     if (queryType === 'connected_transaction' || prompt.toLowerCase().includes('connected')) {
       return {
-        temperature: 0.1,
-        maxTokens: 2000  // Reduced from 9000
+        temperature: 0.4, // More balanced temperature
+        maxTokens: 25000  // Increased from 2000
       };
     }
     
     if (isSimpleQuery) {
       return {
-        temperature: 0.1,
-        maxTokens: 1000  // Reduced from 4000
+        temperature: 0.7, // Higher temperature for more natural responses
+        maxTokens: 10000  // Increased from 1000
       };
     }
     
     if (prompt.toLowerCase().includes('compare')) {
       return {
-        temperature: 0.1,
-        maxTokens: 2000  // Reduced from 9000
+        temperature: 0.4, // Balanced temperature for comparisons
+        maxTokens: 20000  // Increased from 2000
       };
     }
     
-    // Default optimized values
-    const baseTemperature = 0.1;  // Always use low temperature
-    const baseTokens = 1500;      // Default lower token count
+    // Default optimized values with more balanced parameters
+    const baseTemperature = 0.5;  // Balanced temperature
+    const baseTokens = 15000;     // Enhanced token count
     
     console.log(`Optimized Parameters - Temperature: ${baseTemperature}, Max Tokens: ${baseTokens}`);
     
