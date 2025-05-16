@@ -18,40 +18,48 @@ export const responseFormatter = {
     takeoversCodeUsed: boolean,
     isWhitewashQuery: boolean,
     hasRefDocuments: boolean,
-    isBackupResponse?: boolean  // Added optional parameter
+    isBackupResponse?: boolean
   ): GrokResponse => {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Improve formatting by replacing markdown-style headers and separators with proper HTML
+    // Improve formatting with proper HTML elements for better readability
     let formattedText = text;
     
-    // Replace markdown headers with bold paragraphs
+    // Replace markdown-style headers with semantic HTML elements
     formattedText = formattedText
-      .replace(/^###\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
-      .replace(/^##\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
-      .replace(/^#\s+(.*?)$/gm, '<p><strong>$1</strong></p>');
+      .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
+      .replace(/^##\s+(.*?)$/gm, '<h2 class="text-xl font-semibold my-3">$1</h2>')
+      .replace(/^#\s+(.*?)$/gm, '<h1 class="text-2xl font-bold my-4">$1</h1>');
     
-    // Replace horizontal rules with paragraph breaks
+    // Replace horizontal rules with proper spacing
     formattedText = formattedText
-      .replace(/^---+$/gm, '<p></p>')
-      .replace(/^\*\*\*+$/gm, '<p></p>')
-      .replace(/^___+$/gm, '<p></p>');
+      .replace(/^---+$/gm, '<div class="my-4"></div>')
+      .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
+      .replace(/^___+$/gm, '<div class="my-4"></div>');
     
-    // Enhanced paragraph and bullet point formatting
-    // First convert bullet points with proper spacing
+    // Enhance inline text formatting
     formattedText = formattedText
-      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point">$1•$2$3</p>');
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+      .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
     
-    // Ensure proper paragraph breaks with spacing
+    // Enhanced bullet point formatting with proper spacing and structure
     formattedText = formattedText
-      .replace(/\n\n/g, '</p><p>')
-      .replace(/(<\/p><p>)+/g, '</p><p>');
+      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point my-1 ml-4 relative">$3</p>');
     
-    // Wrap the whole text in paragraphs if not already wrapped
-    if (!formattedText.startsWith('<p>')) {
-      formattedText = `<p>${formattedText}</p>`;
-    }
+    // Enhance paragraphing with proper spacing
+    const paragraphs = formattedText.split(/\n\n+/);
+    formattedText = paragraphs.map(p => {
+      // Skip already formatted elements (those that start with HTML tags)
+      if (p.trim().startsWith('<')) return p;
+      
+      // Format as paragraph if it's not already HTML and isn't empty
+      if (p.trim().length > 0) {
+        return `<p class="my-2">${p.trim()}</p>`;
+      }
+      return p;
+    }).join('\n\n');
     
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
@@ -83,7 +91,7 @@ export const responseFormatter = {
           (text.toLowerCase().includes('whitewash') && 
            text.toLowerCase().includes('dealing')),
         referenceDocumentsUsed: hasRefDocuments,
-        isBackupResponse: isBackupResponse,  // Added the property
+        isBackupResponse: isBackupResponse,
         responseCompleteness: {
           isComplete: completenessOverride || !diagnostics.isTruncated,
           confidence: diagnostics.confidence,
