@@ -1,3 +1,4 @@
+
 /**
  * Manages API endpoints and circuit breakers
  */
@@ -36,41 +37,11 @@ const resetCircuitBreaker = (endpoint: string) => {
  */
 export const forceResetAllCircuitBreakers = () => {
   console.log('Forcing reset of all circuit breakers');
-  
-  // Reset all known circuit breakers
   Object.keys(circuitBreakers).forEach(endpoint => {
     resetCircuitBreaker(endpoint);
   });
-  
-  // Clear any unknown circuit breakers by recreating the object
-  for (const key in circuitBreakers) {
-    delete circuitBreakers[key];
-  }
-  
   // Also reset connection cache
   connectionTester.resetConnectionCache();
-  
-  // Clear any fetch-related browser caches if in browser environment
-  if (typeof window !== 'undefined' && window.fetch) {
-    const originalFetch = window.fetch;
-    
-    // Temporarily override fetch to include cache-busting for next few requests
-    window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-      if (typeof input === 'string' && input.includes('/api/grok')) {
-        // Add cache-busting for API requests
-        const bustCache = init?.headers ? { ...init.headers, 'Cache-Control': 'no-cache, no-store', 'X-Cache-Bust': Date.now().toString() } : { 'Cache-Control': 'no-cache, no-store', 'X-Cache-Bust': Date.now().toString() };
-        init = init ? { ...init, headers: bustCache, cache: 'no-store' } : { headers: bustCache, cache: 'no-store' };
-      }
-      return originalFetch(input, init);
-    };
-    
-    // Restore original fetch after 5 seconds
-    setTimeout(() => {
-      window.fetch = originalFetch;
-    }, 5000);
-  }
-  
-  console.log('Circuit breaker reset complete with cache and fetch resets');
 };
 
 /**

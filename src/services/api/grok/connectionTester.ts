@@ -115,25 +115,10 @@ export const connectionTester = {
     };
   },
   
-  // Reset connection cache - enhanced with more aggressive clearing
+  // Reset connection cache
   resetConnectionCache: () => {
-    console.log('Forcefully resetting connection cache and endpoint status');
     lastSuccessfulEndpoint = '';
     lastConnectionTime = 0;
-    
-    // Clear any browser caches that might be affecting API requests
-    if (typeof caches !== 'undefined') {
-      try {
-        caches.keys().then(names => {
-          names.forEach(name => {
-            console.log(`Attempting to delete cache: ${name}`);
-            caches.delete(name);
-          });
-        });
-      } catch (e) {
-        console.warn('Unable to clear browser caches:', e);
-      }
-    }
   },
   
   // Check if API is available without full testing
@@ -153,11 +138,7 @@ export const connectionTester = {
       const response = await fetch('/api/grok/models', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          // Add cache busting header to force a fresh request
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'X-Force-Fresh': Date.now().toString()
+          'Authorization': `Bearer ${apiKey}`
         }
       });
       

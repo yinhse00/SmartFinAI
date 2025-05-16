@@ -18,55 +18,40 @@ export const responseFormatter = {
     takeoversCodeUsed: boolean,
     isWhitewashQuery: boolean,
     hasRefDocuments: boolean,
-    isBackupResponse?: boolean
+    isBackupResponse?: boolean  // Added optional parameter
   ): GrokResponse => {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Improve formatting with proper HTML elements for better readability
+    // Improve formatting by replacing markdown-style headers and separators with proper HTML
     let formattedText = text;
     
-    // Replace markdown-style headers with semantic HTML elements
+    // Replace markdown headers with bold paragraphs
     formattedText = formattedText
-      .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
-      .replace(/^##\s+(.*?)$/gm, '<h2 class="text-xl font-semibold my-3">$1</h2>')
-      .replace(/^#\s+(.*?)$/gm, '<h1 class="text-2xl font-bold my-4">$1</h1>');
+      .replace(/^###\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
+      .replace(/^##\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
+      .replace(/^#\s+(.*?)$/gm, '<p><strong>$1</strong></p>');
     
-    // Replace horizontal rules with proper spacing
+    // Replace horizontal rules with paragraph breaks
     formattedText = formattedText
-      .replace(/^---+$/gm, '<div class="my-4"></div>')
-      .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
-      .replace(/^___+$/gm, '<div class="my-4"></div>');
+      .replace(/^---+$/gm, '<p></p>')
+      .replace(/^\*\*\*+$/gm, '<p></p>')
+      .replace(/^___+$/gm, '<p></p>');
     
-    // Enhance inline text formatting
+    // Enhanced paragraph and bullet point formatting
+    // First convert bullet points with proper spacing
     formattedText = formattedText
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
-      .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
+      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point">$1•$2$3</p>');
     
-    // Enhanced bullet point formatting with proper spacing and structure
+    // Ensure proper paragraph breaks with spacing
     formattedText = formattedText
-      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point my-1 ml-4 relative">$3</p>');
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/(<\/p><p>)+/g, '</p><p>');
     
-    // Enhance paragraphing with proper spacing
-    const paragraphs = formattedText.split(/\n\n+/);
-    formattedText = paragraphs.map(p => {
-      // Skip already formatted elements (those that start with HTML tags)
-      if (p.trim().startsWith('<')) return p;
-      
-      // Format as paragraph if it's not already HTML and isn't empty
-      if (p.trim().length > 0) {
-        return `<p class="my-2">${p.trim()}</p>`;
-      }
-      return p;
-    }).join('\n\n');
-    
-    // Correct the profit test requirements for HKEX listing
-    formattedText = formattedText
-      .replace(/Profit attributable to shareholders of at least HK\$50 million in the most recent financial year/g, 
-               'Profit attributable to shareholders of at least HK$35 million in the most recent financial year')
-      .replace(/Aggregate profit of at least HK\$30 million for the two preceding financial years/g, 
-               'Aggregate profit of at least HK$45 million for the two preceding financial years');
+    // Wrap the whole text in paragraphs if not already wrapped
+    if (!formattedText.startsWith('<p>')) {
+      formattedText = `<p>${formattedText}</p>`;
+    }
     
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
@@ -98,7 +83,7 @@ export const responseFormatter = {
           (text.toLowerCase().includes('whitewash') && 
            text.toLowerCase().includes('dealing')),
         referenceDocumentsUsed: hasRefDocuments,
-        isBackupResponse: isBackupResponse,
+        isBackupResponse: isBackupResponse,  // Added the property
         responseCompleteness: {
           isComplete: completenessOverride || !diagnostics.isTruncated,
           confidence: diagnostics.confidence,
