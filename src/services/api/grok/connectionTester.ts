@@ -156,5 +156,56 @@ export const connectionTester = {
     }
     
     return false;
+  },
+  
+  // Add the missing testApiKeyValidity function
+  testApiKeyValidity: async (apiKey: string): Promise<{ 
+    isValid: boolean; 
+    message: string;
+    quotaRemaining?: number;
+  }> => {
+    console.log('Testing API key validity...');
+    
+    if (!apiKey || apiKey.trim() === '') {
+      return {
+        isValid: false,
+        message: 'API key cannot be empty'
+      };
+    }
+    
+    // Basic format validation for Grok API keys
+    if (!apiKey.startsWith('xai-') || apiKey.length < 20) {
+      return {
+        isValid: false,
+        message: 'Invalid API key format. Grok API keys typically start with "xai-"'
+      };
+    }
+    
+    // Test actual connection using the key
+    try {
+      const connectionResult = await connectionTester.testApiConnection(apiKey);
+      
+      if (connectionResult.success) {
+        // Here we could add quota lookup if the API supports it
+        return {
+          isValid: true,
+          message: 'API key is valid and connection is successful',
+          quotaRemaining: undefined  // Can be implemented if API provides quota info
+        };
+      } else {
+        return {
+          isValid: false,
+          message: `API key validation failed: ${connectionResult.message}`
+        };
+      }
+    } catch (error) {
+      console.error('Error validating API key:', error);
+      return {
+        isValid: false,
+        message: error instanceof Error ? 
+          `Error validating API key: ${error.message}` : 
+          'Unknown error occurred during API key validation'
+      };
+    }
   }
 };
