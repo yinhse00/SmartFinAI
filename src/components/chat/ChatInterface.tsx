@@ -77,9 +77,6 @@ const ChatInterface: React.FC = () => {
     hasAttachedFiles 
   } = useFileAttachments();
 
-  // State for language handling
-  const [currentLanguage, setCurrentLanguage] = useState<'en' | 'zh'>('en');
-
   // Language detection for input and messages
   const { 
     lastUserMessageIsChinese, 
@@ -142,11 +139,6 @@ const ChatInterface: React.FC = () => {
 
   // Map workflow step to processing stage
   const processingStage = mapWorkflowToProcessingStage(currentStep);
-  
-  // Handle language change
-  const handleLanguageChange = (language: 'en' | 'zh') => {
-    setCurrentLanguage(language);
-  };
 
   return (
     <>
@@ -184,8 +176,6 @@ const ChatInterface: React.FC = () => {
           translatingMessageIds={translatingMessageIds}
           currentStep={processingStage}
           stepProgress={stepProgress}
-          currentLanguage={currentLanguage}
-          onLanguageChange={handleLanguageChange}
         />
       </div>
       
