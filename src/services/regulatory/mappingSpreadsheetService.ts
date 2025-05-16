@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -32,15 +31,16 @@ export const mappingSpreadsheetService = {
         query.toLowerCase().includes('major transaction') ||
         query.toLowerCase().includes('chapter 14');
         
-      // For IFA + major transaction queries, add specific search topics and key rule references
+      // For IFA + major transaction queries, add specific search topics and correct rule references
       if (hasIFAReferences && hasMajorTransactionReferences) {
         topics.push('ifa requirement');
         topics.push('financial adviser');
         topics.push('major transaction');
         topics.push('chapter 14');
-        topics.push('rule 14.08'); // Add specific rule references
-        topics.push('rule 13.39');
-        topics.push('rule 14a');
+        topics.push('rule 14.06'); // Major transaction definition
+        topics.push('rule 13.84'); // IFA independence criteria
+        topics.push('rule 14A.44'); // Connected transaction IFA requirements
+        topics.push('rule 14A.45'); // Connected transaction IFA requirements
         
         // Force unique topics
         const uniqueTopics = [...new Set(topics)];
@@ -64,7 +64,7 @@ export const mappingSpreadsheetService = {
           const listingRulesResults = await supabase
             .from('regulatory_provisions')
             .select('rule_number, title, content')
-            .or(`rule_number.ilike.%14.%,rule_number.ilike.%14A.%,rule_number.ilike.%13.84%,rule_number.ilike.%13.39%,content.ilike.%financial adviser%,content.ilike.%IFA%`)
+            .or(`rule_number.ilike.%14.06%,rule_number.ilike.%14A.44%,rule_number.ilike.%14A.45%,rule_number.ilike.%13.84%,content.ilike.%financial adviser%,content.ilike.%IFA%`)
             .limit(5);
             
           if (listingRulesResults.data && listingRulesResults.data.length > 0) {
