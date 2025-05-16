@@ -58,10 +58,55 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
       delay *= 2;
     }
 
+    // Handle HTML tags specially
+    if (renderAsHTML) {
+      // Check if we're at the start of an HTML tag
+      if (currentChar === '<') {
+        // Find the closing bracket of this tag
+        const tagEndIndex = text.indexOf('>', characterIndex);
+        if (tagEndIndex > characterIndex) {
+          // Pause briefly for formatting tags to simulate natural breaks
+          const tagContent = text.substring(characterIndex, tagEndIndex + 1);
+          
+          // Longer pause for paragraph tags to make paragraphing more clear
+          if (tagContent.includes('<p')) {
+            delay *= 5;
+          }
+          
+          // Even longer pause for bullet points to make them stand out
+          if (tagContent.includes('class="bullet-point"')) {
+            delay *= 7;
+          }
+          
+          // Pause for bold and italic formatting to emphasize them
+          if (tagContent.includes('<strong') || 
+              tagContent.includes('<em') || 
+              tagContent.includes('<b') || 
+              tagContent.includes('<i')) {
+            delay *= 2;
+          }
+          
+          // Pause for list items to make them more readable
+          if (tagContent.includes('<li>') || 
+              tagContent.includes('<ul') || 
+              tagContent.includes('</ul>') ||
+              tagContent.includes('•')) {
+            delay *= 3;
+          }
+          
+          // Extra pause for spacing elements to create natural pauses between sections
+          if (tagContent.includes('bullet-list-spacing')) {
+            delay *= 8;
+          }
+        }
+      }
+    }
+
     // Check for code blocks or tables to pause briefly
     if (
       (characterIndex > 2 && text.slice(characterIndex - 3, characterIndex) === '```') ||
-      (characterIndex > 0 && text.slice(characterIndex - 1, characterIndex) === '|')
+      (characterIndex > 0 && text.slice(characterIndex - 1, characterIndex) === '|') ||
+      (renderAsHTML && characterIndex > 4 && text.slice(characterIndex - 5, characterIndex) === '<table')
     ) {
       delay *= 2;
     }
@@ -81,7 +126,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
         clearTimeout(timerId.current);
       }
     };
-  }, [characterIndex, text, typingSpeed, isPaused, onComplete, onProgress]);
+  }, [characterIndex, text, typingSpeed, isPaused, onComplete, onProgress, renderAsHTML]);
 
   const handleClick = () => {
     if (characterIndex < text.length) {

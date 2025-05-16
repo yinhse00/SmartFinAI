@@ -35,14 +35,25 @@ export const requestBuilder = {
       systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
     }
     
-    // Add remaining instructions
+    // Enhanced formatting instructions with improved paragraph spacing and bullet point readability
+    systemMessage += "\n\nFORMATTING INSTRUCTIONS: Do NOT use markdown headings (###) or horizontal rules (---). Instead:";
+    systemMessage += "\n• Use paragraphs to separate different points or ideas";
+    systemMessage += "\n• When using bullet points, start each point on a new line with proper spacing before and after";
+    systemMessage += "\n• Each bullet point should represent a complete thought or idea";
+    systemMessage += "\n• Use **bold text** for important concepts and key terms";
+    systemMessage += "\n• Use *italic text* for emphasis or special terms";
+    systemMessage += "\n• Format tables properly when needed";
+    systemMessage += "\n• Ensure adequate spacing between paragraphs for readability";
+    systemMessage += "\n• Ensure proper spacing between bullet points for clarity";
+    
+    // Add remaining instructions with improved formatting guidance
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR DEFINITIONS: When responding to 'what is' or definition questions, provide COMPREHENSIVE explanations including the formal regulatory definition, practical implications, and relevant examples. For connected persons or connected transactions, include ALL categories of connected persons and relevant thresholds from Chapter 14A.";
     
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR RIGHTS ISSUES: When asked about rights issue timetables, provide ALL key dates and actions including: board meeting date, announcement date, circular dispatch, EGM date, record date, commencement of dealings in nil-paid rights, last day for splitting, last day for acceptance and payment, results announcement date, refund date, and dispatch date of share certificates. Include ALL key information and ensure the response is COMPLETE.";
     
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR EXECUTION PROCESSES: When explaining execution processes for any corporate action or takeover offer, always include the full timeline from preparation to implementation. For Listing Rules corporate actions, include preparation phase (2-3 days), HKEX vetting (2-10 days), circular preparation (3-10 days), HKEX circular vetting (5-20 days), shareholders' approval if required, and implementation timeline. For Takeover Code offers, include SFC-specific timelines and requirements.";
     
-    systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Be CONCISE and direct. Prioritize including all key points over lengthy explanations. If discussing a procedure with multiple steps, include ALL steps but explain each briefly. Format information efficiently. Focus on providing complete information rather than verbose explanations.";
+    systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Prioritize including all key points. If discussing a procedure with multiple steps, include ALL steps but explain each clearly. Format information efficiently with proper paragraphing and formatting.";
     
     return systemMessage;
   },

@@ -33,7 +33,7 @@ export const useApiKeyState = () => {
       
       // If no key is set, try to set the default API key
       if (!hasGrokKey) {
-        // Save the API key provided in the code for demo purposes
+        // Use the provided API key for better connectivity
         const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
         
         try {
@@ -48,7 +48,7 @@ export const useApiKeyState = () => {
               
               // Test the connection with the default key
               setKeyStatus(prev => ({ ...prev, isValidating: true }));
-              const connectionStatus = await connectionTester.testApiConnection(defaultApiKey);
+              const connectionStatus = await connectionTester.testApiConnection();
               
               setKeyStatus({
                 isValidating: false,

@@ -1,3 +1,4 @@
+
 import { Button } from '@/components/ui/button';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -20,8 +21,16 @@ const GeneratedResponseDisplay = ({
 }: GeneratedResponseDisplayProps) => {
   if (!response) return null;
 
-  // Format response with tables
+  // Format response with tables and enhanced paragraph/bullet point formatting
   const formattedResponse = detectAndFormatTables(response);
+  
+  // Additional formatting for proper bullet point spacing
+  const enhancedResponse = formattedResponse
+    // Ensure bullet points have proper spacing and structure
+    .replace(/<p>([•\-\*])\s+/g, '<p class="bullet-point">$1 ')
+    // Add extra paragraph breaks before and after bullet point lists for better readability
+    .replace(/(<\/p>)(\s*<p class="bullet-point">)/g, '$1<div class="bullet-list-spacing"></div>$2')
+    .replace(/(<\/p class="bullet-point">)(\s*<p[^>]*>)/g, '$1<div class="bullet-list-spacing"></div>$2');
 
   return (
     <div className="space-y-2 mt-4">
@@ -65,9 +74,27 @@ const GeneratedResponseDisplay = ({
         </DropdownMenu>
       </div>
       <div 
-        className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm"
-        dangerouslySetInnerHTML={{ __html: formattedResponse }}
+        className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm response-container"
+        dangerouslySetInnerHTML={{ __html: enhancedResponse }}
       />
+      <style>{`
+        .response-container p {
+          margin-bottom: 1rem;
+        }
+        .response-container p.bullet-point {
+          margin-bottom: 0.5rem;
+          margin-left: 1rem;
+          position: relative;
+        }
+        .response-container .bullet-point:before {
+          content: "•";
+          position: absolute;
+          left: -1rem;
+        }
+        .response-container .bullet-list-spacing {
+          height: 0.5rem;
+        }
+      `}</style>
     </div>
   );
 };

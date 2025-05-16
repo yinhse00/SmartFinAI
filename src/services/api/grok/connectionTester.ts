@@ -1,214 +1,215 @@
 
-import { getGrokApiKey } from '../../apiKeyService';
-
-// List of potential API endpoints to test
-const TEST_ENDPOINTS = [
-  'https://api.grok.ai',
-  'https://grok-api.com',
-  'https://grok.x.ai',
-  'https://api.x.ai'
-];
+import { forceResetAllCircuitBreakers } from './modules/endpointManager';
 
 /**
- * Enhanced API connection tester with improved diagnostics and fallback mechanisms
+ * Enhanced connection tester with cache control and improved retry logic
  */
 export const connectionTester = {
-  testApiConnection: async (apiKey?: string): Promise<{success: boolean, message: string, endpoint?: string}> => {
+  // Cache connection status to avoid unnecessary API calls
+  connectionStatusCache: {
+    isConnected: false,
+    lastCheck: 0,
+    models: [] as string[]
+  },
+  
+  /**
+   * Reset connection cache to force a fresh check
+   */
+  resetConnectionCache: () => {
+    connectionTester.connectionStatusCache.isConnected = false;
+    connectionTester.connectionStatusCache.lastCheck = 0;
+    connectionTester.connectionStatusCache.models = [];
+    console.log('Forcefully resetting connection cache and endpoint status');
+  },
+  
+  /**
+   * Test API connection by checking available models
+   * @param apiKey Optional API key to use for testing
+   */
+  testApiConnection: async (apiKey?: string): Promise<{success: boolean, message: string, models?: string[], responseTime?: number}> => {
     try {
-      console.log("Testing Grok API connection...");
-      const key = apiKey || getGrokApiKey();
+      // Check cache first - cache valid for only 30 seconds
+      const cacheAge = Date.now() - connectionTester.connectionStatusCache.lastCheck;
+      const CACHE_TTL = 30000; // 30 seconds
       
-      if (!key || !key.startsWith('xai-')) {
+      if (connectionTester.connectionStatusCache.lastCheck > 0 && cacheAge < CACHE_TTL) {
         return {
-          success: false,
-          message: "Invalid API key format. Keys should start with 'xai-'"
+          success: connectionTester.connectionStatusCache.isConnected,
+          message: connectionTester.connectionStatusCache.isConnected 
+            ? `Cached connection successful. Found ${connectionTester.connectionStatusCache.models.length} available models.`
+            : 'Cached connection unsuccessful. Try again later.',
+          models: connectionTester.connectionStatusCache.models,
+          responseTime: 0 // Cached response
         };
       }
       
-      // Check for possible CORS restrictions
-      const isBrowserEnvironment = typeof window !== 'undefined';
+      // Try local proxy endpoint first (most likely to work)
+      console.log('Testing connection to local proxy endpoint...');
+      const startTime = Date.now();
       
-      if (isBrowserEnvironment) {
-        console.log("Browser environment detected - testing with CORS preflight workarounds");
-        
-        // First try the local proxy which is most reliable
-        try {
-          const localProxyUrl = '/api/grok';
-          console.log(`Testing local proxy endpoint: ${localProxyUrl}`);
-          
-          const proxyResponse = await fetch(`${localProxyUrl}/models`, {
-            method: 'GET',
-            headers: {
-              'Authorization': `Bearer ${key}`
-            }
-          });
-          
-          if (proxyResponse.ok) {
-            const data = await proxyResponse.json();
-            const modelCount = data?.data?.length || 0;
-            
-            console.log(`Local proxy connection successful, found ${modelCount} models`);
-            return {
-              success: true,
-              message: `API connection successful via local proxy. Available models: ${modelCount}`,
-              endpoint: localProxyUrl
-            };
-          } else {
-            console.warn(`Proxy test failed with status: ${proxyResponse.status}`);
-          }
-        } catch (proxyError) {
-          console.warn("Local proxy test failed:", proxyError);
-          // Continue with other tests
-        }
-        
-        // Try using a simple HEAD request which might bypass CORS for connectivity testing
-        let connectivityTestPassed = false;
-        let workingEndpoint = null;
-        
-        // Test all endpoints in parallel for faster results
-        const endpointTests = TEST_ENDPOINTS.map(async endpoint => {
-          try {
-            console.log(`Testing basic connectivity to: ${endpoint}`);
-            
-            // Using no-cors fetch which is more likely to succeed for connectivity test
-            const response = await fetch(endpoint, {
-              method: 'HEAD',
-              mode: 'no-cors'
-            });
-            
-            console.log(`Endpoint ${endpoint} no-cors test completed`);
-            return { success: true, endpoint };
-          } catch (endpointError) {
-            console.warn(`Endpoint ${endpoint} connectivity test failed:`, endpointError);
-            return { success: false, endpoint };
-          }
-        });
-        
-        // Wait for all tests to complete
-        const results = await Promise.all(endpointTests);
-        const successfulTest = results.find(result => result.success);
-        
-        if (successfulTest) {
-          console.log(`Basic connectivity test passed for ${successfulTest.endpoint}`);
-          return {
-            success: true,
-            message: "Basic connectivity test passed. API should be reachable through a backend proxy.",
-            endpoint: successfulTest.endpoint
-          };
-        } else {
-          return {
-            success: false,
-            message: "Cannot establish basic connectivity with any Grok API endpoints. Please check your network connection and API key."
-          };
-        }
-      }
+      // Add cache busting to avoid stale responses
+      const cacheBustParam = `?cacheBust=${Date.now()}`;
+      const response = await fetch(`/api/grok/models${cacheBustParam}`, {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'X-Cache-Bust': Date.now().toString(),
+          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
+        },
+        cache: 'no-store'
+      });
       
-      // Non-browser environment - try direct connection
-      try {
-        const testEndpoint = TEST_ENDPOINTS[0] + '/v1/models';
-        console.log(`Testing direct API call to: ${testEndpoint}`);
+      const responseTime = Date.now() - startTime;
+      
+      if (!response.ok) {
+        // Update cache with failure
+        connectionTester.connectionStatusCache.isConnected = false;
+        connectionTester.connectionStatusCache.lastCheck = Date.now();
+        connectionTester.connectionStatusCache.models = [];
         
-        const response = await fetch(testEndpoint, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${key}`,
-            'Content-Type': 'application/json'
-          }
-        });
+        // Force reset circuit breakers on connection failure
+        await forceResetAllCircuitBreakers();
         
-        if (response.ok) {
-          const data = await response.json();
-          console.log("Direct API call successful:", data);
-          return {
-            success: true,
-            message: "API connection successful",
-            endpoint: testEndpoint
-          };
-        } else {
-          return {
-            success: false,
-            message: `API error: ${response.status} - ${response.statusText}`
-          };
-        }
-      } catch (apiError) {
-        console.error("API test failed:", apiError);
-        return {
-          success: false,
-          message: apiError instanceof Error ? apiError.message : String(apiError)
+        return { 
+          success: false, 
+          message: `Connection failed with status: ${response.status}. ${await response.text()}`,
+          responseTime
         };
       }
-    } catch (error) {
-      console.error("API connection test failed:", error);
+      
+      const data = await response.json();
+      const models = data?.data || [];
+      
+      // Update cache with success
+      connectionTester.connectionStatusCache.isConnected = true;
+      connectionTester.connectionStatusCache.lastCheck = Date.now();
+      connectionTester.connectionStatusCache.models = models.map((m: any) => m.id);
+      
+      console.log('Local proxy connection successful, found', models.length, 'models');
+      
       return {
-        success: false,
-        message: error instanceof Error ? error.message : String(error)
+        success: true,
+        message: `Connection successful. Found ${models.length} available models.`,
+        models: models.map((m: any) => m.id),
+        responseTime
+      };
+    } catch (error) {
+      // Update cache with failure
+      connectionTester.connectionStatusCache.isConnected = false;
+      connectionTester.connectionStatusCache.lastCheck = Date.now();
+      connectionTester.connectionStatusCache.models = [];
+      
+      console.error('Connection test failed:', error);
+      
+      // Force reset circuit breakers on connection failure
+      await forceResetAllCircuitBreakers();
+      
+      return { 
+        success: false, 
+        message: `Connection test error: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   },
   
   /**
-   * Test if an API key is valid and has sufficient quota
+   * Test if an API key is valid by attempting a connection
    */
   testApiKeyValidity: async (apiKey: string): Promise<{isValid: boolean, message: string, quotaRemaining?: number}> => {
     try {
-      // Simple test query to validate the key
-      const testBody = {
-        messages: [
-          { role: 'user', content: 'Respond with the word "valid" only' }
-        ],
-        model: "grok-3-mini-beta",
-        temperature: 0.1,
-        max_tokens: 10
-      };
+      if (!apiKey.trim()) {
+        return { isValid: false, message: 'API key cannot be empty' };
+      }
       
-      const response = await fetch('/api/grok/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        body: JSON.stringify(testBody)
-      });
+      // Use the testApiConnection method with the provided key
+      const connectionResult = await connectionTester.testApiConnection(apiKey);
       
-      if (response.ok) {
-        // Get headers to check for quota/rate limit information
-        const rateLimit = response.headers.get('x-ratelimit-remaining') || 
-                        response.headers.get('x-rate-limit-remaining');
+      if (connectionResult.success) {
+        // Further validate the models returned
+        const hasExpectedModels = connectionResult.models && 
+          connectionResult.models.some(model => model.includes('grok'));
         
-        const quotaRemaining = rateLimit ? parseInt(rateLimit, 10) : undefined;
-        
-        return {
-          isValid: true,
-          message: "API key is valid and working",
-          quotaRemaining
-        };
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        
-        if (response.status === 401) {
+        if (hasExpectedModels) {
           return {
-            isValid: false,
-            message: "Invalid API key or authorization failed"
-          };
-        } else if (response.status === 429) {
-          return {
-            isValid: true, // Key is valid but rate limited
-            message: "API key rate limit exceeded. Try again later.",
-            quotaRemaining: 0
+            isValid: true,
+            message: `API key is valid. Found compatible models.`,
+            quotaRemaining: 1000 // Placeholder - actual quota info isn't directly available
           };
         } else {
           return {
-            isValid: false,
-            message: `API error: ${errorData.error?.message || response.statusText || 'Unknown error'}`
+            isValid: false, 
+            message: 'API key seems valid but no compatible Grok models found.'
           };
         }
       }
+      
+      return { 
+        isValid: false, 
+        message: `API key validation failed: ${connectionResult.message}`
+      };
     } catch (error) {
-      console.error("API key validation test failed:", error);
+      console.error('API key validation error:', error);
       return {
         isValid: false,
-        message: error instanceof Error ? error.message : String(error)
+        message: `Error validating API key: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
+    }
+  },
+  
+  /**
+   * Check if API is available with the provided API key
+   */
+  checkApiAvailability: async (apiKey: string | null): Promise<boolean> => {
+    if (!apiKey) return false;
+    
+    try {
+      // First try our cached result if recent
+      const cacheAge = Date.now() - connectionTester.connectionStatusCache.lastCheck;
+      if (connectionTester.connectionStatusCache.lastCheck > 0 && cacheAge < 15000) { // 15 seconds cache
+        return connectionTester.connectionStatusCache.isConnected;
+      }
+      
+      // Test connection with faster timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch('/api/grok/models', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Cache-Control': 'no-cache',
+          'X-Cache-Bust': Date.now().toString()
+        },
+        signal: controller.signal,
+        cache: 'no-store'
+      });
+      
+      clearTimeout(timeoutId);
+      
+      const success = response.ok;
+      
+      // Update connection cache
+      connectionTester.connectionStatusCache.isConnected = success;
+      connectionTester.connectionStatusCache.lastCheck = Date.now();
+      
+      if (success) {
+        const data = await response.json();
+        connectionTester.connectionStatusCache.models = data?.data?.map((m: any) => m.id) || [];
+        console.log('API key validation: Valid key found');
+      } else {
+        console.log('API key validation: Invalid key or connection issue');
+      }
+      
+      return success;
+    } catch (error) {
+      console.error('Error checking API availability:', error);
+      
+      // Update connection cache with failure
+      connectionTester.connectionStatusCache.isConnected = false;
+      connectionTester.connectionStatusCache.lastCheck = Date.now();
+      
+      return false;
     }
   }
 };
+

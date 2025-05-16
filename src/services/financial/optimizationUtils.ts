@@ -1,18 +1,43 @@
+
 /**
  * Determine optimal temperature setting based on query type and content
  */
 import { tokenManagementService } from '../response/modules/tokenManagementService';
 
 export function determineOptimalTemperature(queryType: string, prompt: string): number {
-  return tokenManagementService.getTemperature({ queryType, prompt });
+  // Use enhanced balanced temperature settings
+  if (queryType === 'rights_issue' || queryType === 'connected_transaction') {
+    return 0.3; // Lower for precise regulatory content
+  }
+  
+  if (prompt.toLowerCase().includes('compare') || prompt.toLowerCase().includes('difference')) {
+    return 0.4; // Balanced for comparisons
+  }
+  
+  if (prompt.toLowerCase().includes('explain') || prompt.toLowerCase().includes('what is')) {
+    return 0.5; // Medium for explanations
+  }
+  
+  // Check for simple questions
+  if (prompt.length < 100 && !prompt.includes('?')) {
+    return 0.7; // Higher for simple, conversational queries
+  }
+  
+  // Default to a balanced temperature
+  return 0.5;
 }
 
 /**
  * Determine optimal token limit based on query complexity
- * Production-safe implementation with conservative limits
+ * Production implementation with comprehensive limits
  */
 export function determineOptimalTokens(queryType: string, prompt: string): number {
-  return tokenManagementService.getTokenLimit({ queryType, prompt });
+  // Use tokenManagementService for consistency
+  return tokenManagementService.getTokenLimit({ 
+    queryType, 
+    prompt,
+    isComplexQuery: prompt.toLowerCase().includes('timetable') || prompt.length > 150
+  });
 }
 
 /**
@@ -45,9 +70,24 @@ export function evaluateResponseRelevance(response: string, query: string, query
   
   // Check if response appears to directly quote database content
   if (response.includes('[') && response.includes(']') && 
-      (response.includes('---') || response.includes('FAQ') || 
-       response.includes('Source:') || response.includes('Reference:'))) {
+      (response.includes('Source:') || response.includes('Reference:'))) {
     score += 5; // Strongly favor responses that appear to quote database content
+  }
+  
+  // Enhance score for comprehensive, well-formatted responses
+  // Favor paragraphing and formatting over section markers
+  if (response.includes('<p>') || (response.split('\n\n').length > 3)) {
+    score += 2; // Good paragraph structure
+  }
+  
+  if (response.includes('<strong>') || response.includes('<b>') || 
+      response.includes('**') || response.includes('<em>')) {
+    score += 2; // Good text formatting
+  }
+  
+  if (response.includes('<ul>') || response.includes('<li>') || 
+      (response.match(/[\n•\-\*]/g)?.length || 0) > 5) {
+    score += 2; // Good list formatting
   }
   
   // Normalize to 0-10 scale

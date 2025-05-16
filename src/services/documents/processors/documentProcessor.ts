@@ -151,8 +151,9 @@ export const documentProcessor = {
         throw new Error('Grok API key not found');
       }
       
+      // Using grok-3-vision-latest model specifically for vision tasks
       const requestBody = {
-        model: "grok-2-vision-latest",
+        model: "grok-3-vision-latest", // Updated to use the vision-specific model
         messages: [
           {
             role: "user", 
@@ -176,7 +177,7 @@ export const documentProcessor = {
       
       // Call Grok API with a timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased timeout to 60 seconds
       
       try {
         // Call Grok API
@@ -199,14 +200,27 @@ export const documentProcessor = {
     } catch (error) {
       console.error(`Error in ${documentType} processing for ${file.name}:`, error);
       
-      // Determine if this is a connectivity issue
+      // Check if the error is related to invalid model usage
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const isModelError = 
+        errorMessage.includes("Image inputs are not supported by this model") ||
+        errorMessage.includes("invalid argument");
+        
+      if (isModelError) {
+        return {
+          content: `[Document Processing Error: The ${documentType} file '${file.name}' could not be processed because the current Grok API version doesn't support image inputs for this model. Please try using a different file format or try again later when this feature becomes available.]`,
+          source: file.name
+        };
+      }
+      
+      // Determine if this is a connectivity issue
       const isConnectivityIssue = 
         errorMessage.includes("unreachable") || 
         errorMessage.includes("failed") ||
         errorMessage.includes("network") ||
         errorMessage.includes("timeout") ||
-        errorMessage.includes("abort");
+        errorMessage.includes("abort") ||
+        errorMessage.includes("circuit breaker");
       
       if (isConnectivityIssue) {
         return {

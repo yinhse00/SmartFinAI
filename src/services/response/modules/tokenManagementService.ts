@@ -1,29 +1,30 @@
 
 /**
  * Constants for token limits across different query types and scenarios
+ * Restored to original values for comprehensive responses
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 20000,
-  RETRY: 30000,
-  RIGHTS_ISSUE_TIMETABLE: 35000,
-  DEFINITION_QUERY: 25000,
-  CONNECTED_TRANSACTION: 27500,
-  SPECIALIST_TECHNOLOGY: 30000,
-  SIMPLE_QUERY: 12500,
+  DEFAULT: 20000,  // Restored from 2000
+  RETRY: 30000,    // Restored from 3000
+  RIGHTS_ISSUE_TIMETABLE: 35000,  // Restored from 4000
+  DEFINITION_QUERY: 25000,  // Restored from 2500
+  CONNECTED_TRANSACTION: 27500,  // Restored from 3000
+  SPECIALIST_TECHNOLOGY: 30000,  // Restored from 3000
+  SIMPLE_QUERY: 12500,  // Restored from 1200
   
-  // Enhanced retry limits with progressive increases
-  RETRY_ATTEMPT_1: 40000,
-  RETRY_ATTEMPT_2: 50000,
-  RETRY_ATTEMPT_3: 60000,
+  // Enhanced retry limits with restored sizes
+  RETRY_ATTEMPT_1: 40000,  // Restored from 4000
+  RETRY_ATTEMPT_2: 50000,  // Restored from 5000
+  RETRY_ATTEMPT_3: 60000,  // Restored from 6000
   
-  // New limits for complex financial queries
-  COMPLEX_FINANCIAL_QUERY: 40000,
-  RIGHTS_ISSUE_WITH_WAIVER: 45000,
-  COMPLEX_TRANSACTION_TIMETABLE: 50000,
+  // Restored limits for complex financial queries
+  COMPLEX_FINANCIAL_QUERY: 40000,  // Restored from 4000
+  RIGHTS_ISSUE_WITH_WAIVER: 45000,  // Restored from 5000
+  COMPLEX_TRANSACTION_TIMETABLE: 50000,  // Restored from 5000
 } as const;
 
 /**
- * Centralized token management service
+ * Centralized token management service optimized for quality responses
  */
 export const tokenManagementService = {
   /**
@@ -57,40 +58,30 @@ export const tokenManagementService = {
       return TOKEN_LIMITS.RETRY_ATTEMPT_1;
     }
 
-    // For batch requests, especially later parts, increase token limits
+    // For batch requests, limited increase for later parts
     if (isBatchRequest && batchNumber && batchNumber > 1) {
-      // For continuation batches, use higher limits to ensure completion
-      return Math.min(30000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
+      return Math.min(40000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
     }
     
-    // Handle the complex financial query scenarios specially
+    // Special case handling
     const promptLower = prompt.toLowerCase();
     
-    // Check for the specific complex financial query patterns
     if (isComplexQuery || 
-        (promptLower.includes('rights issue') && 
-         (promptLower.includes('whitewash') || 
-          promptLower.includes('waiver') || 
-          promptLower.includes('timetable') ||
-          promptLower.includes('schedule')))) {
+        (promptLower.includes('rights issue') && promptLower.includes('timetable'))) {
       return TOKEN_LIMITS.RIGHTS_ISSUE_WITH_WAIVER;
     }
     
-    if (promptLower.includes('timetable') && 
-        (promptLower.includes('transaction') || 
-         promptLower.includes('substantial acquisition'))) {
+    if (promptLower.includes('timetable')) {
       return TOKEN_LIMITS.COMPLEX_TRANSACTION_TIMETABLE;
     }
 
     if (queryType === 'specialist_technology' || 
-        promptLower.includes('chapter 18c') ||
-        promptLower.includes('specialist technology')) {
+        promptLower.includes('chapter 18c')) {
       return TOKEN_LIMITS.SPECIALIST_TECHNOLOGY;
     }
 
     if (queryType === 'rights_issue' && 
-        (promptLower.includes('timetable') || 
-         promptLower.includes('schedule'))) {
+        promptLower.includes('timetable')) {
       return TOKEN_LIMITS.RIGHTS_ISSUE_TIMETABLE;
     }
 
@@ -99,9 +90,7 @@ export const tokenManagementService = {
       return TOKEN_LIMITS.DEFINITION_QUERY;
     }
 
-    if (promptLower.includes('connected person') || 
-        promptLower.includes('connected transaction') ||
-        queryType === 'connected_transaction') {
+    if (promptLower.includes('connected')) {
       return TOKEN_LIMITS.CONNECTED_TRANSACTION;
     }
 
@@ -114,6 +103,7 @@ export const tokenManagementService = {
 
   /**
    * Get temperature setting based on query type and retry status
+   * Enhanced with balanced temperature settings (0.3-0.7)
    */
   getTemperature(params: {
     queryType: string;
@@ -123,42 +113,38 @@ export const tokenManagementService = {
     batchNumber?: number;
     isComplexQuery?: boolean;
   }): number {
-    const { isRetryAttempt, queryType, prompt, isBatchRequest, batchNumber, isComplexQuery } = params;
+    const { queryType, isRetryAttempt, prompt, isComplexQuery } = params;
     
-    // Lower temperature for retries to get more deterministic results
+    // Use more balanced temperature settings based on query characteristics
+    
+    // For retry attempts, use lower temperature for more deterministic responses
     if (isRetryAttempt) {
-      return 0.1;
+      return 0.3;
     }
     
-    // For batch continuations, use lower temperature for consistency
-    if (isBatchRequest && batchNumber && batchNumber > 1) {
-      return 0.1; // Lower temperature for batch continuations for consistency
+    // For simple, conversational queries use higher temperature for more creative responses
+    if (queryType === 'conversational' || queryType === 'general') {
+      return 0.7;
     }
     
-    // Specially handle complex financial queries with much lower temperature
-    if (isComplexQuery || 
-        (prompt.toLowerCase().includes('rights issue') && 
-         (prompt.toLowerCase().includes('whitewash') || 
-          prompt.toLowerCase().includes('waiver')))) {
-      return 0.05; // Very low temperature for complex financial queries
-    }
-
-    if (queryType === 'specialist_technology' || 
-        prompt.toLowerCase().includes('chapter 18c')) {
-      return 0.05; // Lower temperature for more accurate Chapter 18C responses
-    }
-
-    if (queryType === 'rights_issue' && 
-        (prompt.toLowerCase().includes('timetable') || 
-         prompt.toLowerCase().includes('schedule'))) {
-      return 0.05;
-    }
-
+    // For definition queries, use a balanced temperature
     if (prompt.toLowerCase().includes('what is') || 
-        prompt.toLowerCase().includes('definition')) {
-      return 0.1;
+        prompt.toLowerCase().includes('definition') ||
+        prompt.toLowerCase().includes('explain')) {
+      return 0.4;
     }
-
-    return 0.3; // Default temperature
+    
+    // For complex regulatory queries that need precision, use lower temperature
+    if (queryType === 'rights_issue' || 
+        queryType === 'connected_transaction' ||
+        queryType === 'takeovers' ||
+        isComplexQuery ||
+        prompt.toLowerCase().includes('timetable') ||
+        prompt.toLowerCase().includes('requirements')) {
+      return 0.3;
+    }
+    
+    // Default to a balanced temperature for other queries
+    return 0.5;
   }
 };

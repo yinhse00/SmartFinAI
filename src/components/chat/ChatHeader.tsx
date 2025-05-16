@@ -21,56 +21,61 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   onLanguageChange
 }) => {
   const [language, setLanguage] = useState<'en' | 'zh'>(currentLanguage);
-  
+
   const handleLanguageChange = (newLanguage: 'en' | 'zh') => {
     setLanguage(newLanguage);
     if (onLanguageChange) {
       onLanguageChange(newLanguage);
     }
   };
-  
+
   return (
-    <CardHeader className="pb-0 pt-3 px-4 flex justify-between items-center border-b">
-      <div className="flex items-center">
-        <BookOpen className="w-5 h-5 text-finance-medium-blue dark:text-finance-light-blue mr-2" />
-        <h3 className="text-lg font-semibold">SmartFinAI Chat</h3>
+    <CardHeader className="border-b px-6 py-4 flex flex-row items-center justify-between">
+      <div className="flex items-center space-x-2">
+        <BookOpen className="h-5 w-5" />
+        <h2 className="text-xl font-semibold">SmartFinAI Chat</h2>
+        {isOfflineMode && (
+          <span className="inline-flex items-center ml-2 text-sm text-yellow-600 dark:text-yellow-400">
+            <WifiOff className="h-4 w-4 mr-1" />
+            Offline Mode
+          </span>
+        )}
       </div>
       
-      <div className="flex gap-2">
-        {onLanguageChange && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2">
-                <Languages size={18} className="mr-1" />
-                {language === 'en' ? 'EN' : '中文'}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleLanguageChange('en')}>
-                English
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleLanguageChange('zh')}>
-                中文
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
+      <div className="flex items-center space-x-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+              <Languages className="h-5 w-5" />
+              <span className="sr-only">Language</span>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem 
+              onClick={() => handleLanguageChange('en')}
+              className={language === 'en' ? 'bg-accent' : ''}
+            >
+              English
+            </DropdownMenuItem>
+            <DropdownMenuItem 
+              onClick={() => handleLanguageChange('zh')}
+              className={language === 'zh' ? 'bg-accent' : ''}
+            >
+              中文 (Chinese)
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
         
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onOpenApiKeyDialog}
-          className="h-8 px-2"
-        >
-          <Settings size={18} className="mr-1" />
-          API Key
-        </Button>
-        
-        {isOfflineMode && (
-          <span className="flex items-center text-xs text-amber-600 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-1 rounded-full">
-            <WifiOff size={12} className="mr-1" />
-            Offline
-          </span>
+        {!isGrokApiKeySet && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={onOpenApiKeyDialog}
+            className="flex items-center"
+          >
+            <Settings className="h-4 w-4 mr-1" />
+            API Key
+          </Button>
         )}
       </div>
     </CardHeader>

@@ -1,4 +1,3 @@
-
 import { format, parseISO, isValid } from 'date-fns';
 
 /**
@@ -39,14 +38,24 @@ const isDateString = (str: string): boolean => {
 
 /**
  * Determines if a table is likely a timetable based on column content
+ * Enhanced to better recognize regulatory timetables
  */
 const isTimetable = (tableData: string[][]): boolean => {
   // If first row has date-related terms, it's likely a timetable
-  const dateHeaders = ['date', 'day', 'time', 'deadline', 'schedule', 'due', 'period', 'start', 'end'];
+  const dateHeaders = [
+    'date', 'day', 'time', 'deadline', 'schedule', 'due', 'period', 
+    'start', 'end', 'timeline', 'phase', 't-', 't+', 'day-', 'day+'
+  ];
+  
   const firstRow = tableData[0].map(cell => cell.toLowerCase());
   
   const hasDateHeader = firstRow.some(cell => 
     dateHeaders.some(term => cell.includes(term))
+  );
+  
+  // Check for regulatory timelines with T+/- notation
+  const hasRegulatoryTimeline = tableData.some(row => 
+    row.some(cell => /^T[+-]\d+$/i.test(cell.trim()) || /^Day\s[+-]\d+$/i.test(cell.trim()))
   );
   
   // Check if any column has multiple date values
@@ -63,7 +72,15 @@ const isTimetable = (tableData: string[][]): boolean => {
     }
   }
   
-  return hasDateHeader;
+  // Check for execution process terms
+  const processTerms = ['process', 'step', 'action', 'phase', 'execution', 'procedure'];
+  const hasExecutionTerms = tableData.some(row => 
+    row.some(cell => 
+      processTerms.some(term => cell.toLowerCase().includes(term))
+    )
+  );
+  
+  return hasDateHeader || hasRegulatoryTimeline || hasExecutionTerms;
 };
 
 /**
@@ -85,20 +102,104 @@ const detectAlignment = (cell: string): { content: string, align: 'left' | 'cent
 };
 
 /**
+ * Process markdown formatting (**, ##, etc.) in text
+ */
+const processMarkdownFormatting = (text: string): string => {
+  // Replace headers (###) with HTML headers
+  text = text.replace(/^###\s+(.+)$/gm, '<h3 class="font-bold text-lg my-2">$1</h3>');
+  text = text.replace(/^##\s+(.+)$/gm, '<h2 class="font-bold text-xl my-3">$1</h2>');
+  text = text.replace(/^#\s+(.+)$/gm, '<h1 class="font-bold text-2xl my-4">$1</h1>');
+  
+  // Replace bold (**text**) with <strong>
+  text = text.replace(/\*\*(.+?)\*\*/g, '<strong class="font-bold">$1</strong>');
+  
+  // Remove underline (_text_) handling as requested - use emphasis instead
+  text = text.replace(/_([^_]+)_/g, '<em class="italic">$1</em>');
+  
+  // Process blockquotes (> text) - keep simple styling without underlines
+  text = text.replace(/^>\s+(.+)$/gm, '<blockquote class="pl-4 border-l-4 border-gray-300 my-2 italic">$1</blockquote>');
+  
+  // Process unordered lists for better readability with bullet points
+  // Match lines starting with - or * followed by space
+  let inList = false;
+  const lines = text.split('\n');
+  for (let i = 0; i < lines.length; i++) {
+    // Check if line is a list item
+    if (lines[i].match(/^\s*[-*]\s+/)) {
+      // Start a new list if we're not in one
+      if (!inList) {
+        lines[i] = '<ul class="list-disc pl-6 my-2">\n' + lines[i].replace(/^\s*[-*]\s+(.+)$/, '<li>$1</li>');
+        inList = true;
+      } else {
+        // Continue existing list
+        lines[i] = lines[i].replace(/^\s*[-*]\s+(.+)$/, '<li>$1</li>');
+      }
+      
+      // Check if next line is not a list item or is the last line
+      if (i === lines.length - 1 || !lines[i+1].match(/^\s*[-*]\s+/)) {
+        lines[i] = lines[i] + '\n</ul>';
+        inList = false;
+      }
+    }
+  }
+  text = lines.join('\n');
+  
+  return text;
+};
+
+/**
+ * Preserves paragraph formatting in text
+ */
+const preserveParagraphs = (text: string): string => {
+  // Split by double newlines (paragraph breaks)
+  const paragraphs = text.split(/\n\n+/);
+  
+  // Process each paragraph
+  return paragraphs.map(paragraph => {
+    // Skip processing if it's already HTML or empty
+    if (paragraph.trim().startsWith('<') || paragraph.trim() === '') {
+      return paragraph;
+    }
+    
+    // For regular paragraphs, wrap in p tags
+    // But avoid wrapping if it starts with a heading tag or is part of a list
+    if (!/^<(h[1-6]|ul|li|blockquote)/i.test(paragraph.trim())) {
+      return `<p class="mb-4">${paragraph.replace(/\n/g, '<br/>')}</p>`;
+    }
+    
+    return paragraph;
+  }).join('\n\n');
+};
+
+/**
  * Main function to detect and format tables in text content
  */
 export const detectAndFormatTables = (content: string): string => {
+  // Process markdown formatting first
+  content = processMarkdownFormatting(content);
+  
   // Split content into lines
   const lines = content.split('\n');
   let inTable = false;
   let formattedContent: string[] = [];
   let currentTable: string[] = [];
+  let currentTextBlock: string[] = [];
+
+  const flushTextBlock = () => {
+    if (currentTextBlock.length > 0) {
+      formattedContent.push(currentTextBlock.join('\n'));
+      currentTextBlock = [];
+    }
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     // Detect table header (looking for | symbols)
-    if (line.includes('|') && !inTable) {
+    if (line.includes('|') && line.trim().startsWith('|') && !inTable) {
+      // Flush any text before the table
+      flushTextBlock();
+      
       inTable = true;
       currentTable = [];
       currentTable.push(line);
@@ -110,7 +211,7 @@ export const detectAndFormatTables = (content: string): string => {
       }
     }
     // Continue collecting table rows
-    else if (inTable && line.includes('|')) {
+    else if (inTable && line.includes('|') && line.trim().startsWith('|')) {
       currentTable.push(line);
     }
     // Table has ended
@@ -119,11 +220,11 @@ export const detectAndFormatTables = (content: string): string => {
       // Convert collected table to HTML
       formattedContent.push(convertToHtmlTable(currentTable));
       currentTable = [];
-      if (line) formattedContent.push(line);
+      if (line) currentTextBlock.push(line);
     }
     // Regular non-table content
     else {
-      formattedContent.push(line);
+      currentTextBlock.push(line);
     }
   }
 
@@ -131,12 +232,17 @@ export const detectAndFormatTables = (content: string): string => {
   if (currentTable.length > 0) {
     formattedContent.push(convertToHtmlTable(currentTable));
   }
+  
+  // Handle any remaining text
+  flushTextBlock();
 
-  return formattedContent.join('\n');
+  // Join all content and preserve paragraphs
+  return preserveParagraphs(formattedContent.join('\n\n'));
 };
 
 /**
  * Convert markdown-style table lines to an HTML table with enhanced styling
+ * Improved to better handle regulatory timetables
  */
 const convertToHtmlTable = (tableLines: string[]): string => {
   // Parse table data from lines
@@ -154,7 +260,7 @@ const convertToHtmlTable = (tableLines: string[]): string => {
   // Determine if this is a timetable
   const isTimetableFormat = isTimetable(tableData);
   
-  // Create HTML table with enhanced styling
+  // Create HTML table with enhanced styling and visible borders
   let tableHtml = '<div class="overflow-x-auto my-4">\n';
   tableHtml += `<table class="chat-table w-full border-collapse ${isTimetableFormat ? 'timetable-format' : ''}">\n`;
   
@@ -164,7 +270,7 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       // Header row
       tableHtml += '<thead>\n<tr>\n';
       row.forEach(cell => {
-        tableHtml += `<th class="text-${cell.align}">${cell.content}</th>\n`;
+        tableHtml += `<th class="text-${cell.align} border border-gray-300 dark:border-gray-600">${cell.content}</th>\n`;
       });
       tableHtml += '</tr>\n</thead>\n<tbody>\n';
     } else if (rowIndex === 1 && tableLines[1].includes('-|-')) {
@@ -174,9 +280,9 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       // Data rows
       const rowClasses = [];
       
-      // Check if row has status indicators
+      // Check if row has status indicators or regulatory requirements
       const hasStatus = row.some(cell => 
-        ['pending', 'completed', 'upcoming', 'in progress', 'delayed'].some(
+        ['pending', 'completed', 'upcoming', 'in progress', 'delayed', 'regulatory requirement'].some(
           status => cell.content.toLowerCase().includes(status)
         )
       );
@@ -192,18 +298,49 @@ const convertToHtmlTable = (tableLines: string[]): string => {
           rowClasses.push('delayed-row');
         } else if (row.some(cell => cell.content.toLowerCase().includes('upcoming'))) {
           rowClasses.push('upcoming-row');
+        } else if (row.some(cell => 
+          cell.content.toLowerCase().includes('regulatory') || 
+          cell.content.toLowerCase().includes('required')
+        )) {
+          rowClasses.push('regulatory-deadline');
         }
       }
       
+      // Check for timeline notation (e.g., T+1, Day-2) to identify critical path items
+      const isTimelineRow = row.some(cell => 
+        /^T[+-]\d+$/i.test(cell.content.trim()) || 
+        /^Day\s[+-]\d+$/i.test(cell.content.trim())
+      );
+      
+      if (isTimelineRow) {
+        rowClasses.push('critical-path');
+      }
+      
       tableHtml += `<tr class="${rowClasses.join(' ')}">\n`;
-      row.forEach(cell => {
-        // Add special formatting for date cells
+      row.forEach((cell, cellIndex) => {
+        // Add special formatting for date cells and first column in timetables
         const cellClasses = [];
+        
         if (isDateString(cell.content)) {
           cellClasses.push('date-cell');
         }
         
-        tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')}">${cell.content}</td>\n`;
+        // First column in timetables is typically the date or timeline column
+        if (isTimetableFormat && cellIndex === 0) {
+          cellClasses.push('date-column');
+        }
+        
+        // Check for regulatory requirements in content
+        if (
+          cell.content.toLowerCase().includes('regulatory') ||
+          cell.content.toLowerCase().includes('required') ||
+          cell.content.toLowerCase().includes('deadline') ||
+          cell.content.toLowerCase().includes('rule')
+        ) {
+          cellClasses.push('regulatory-deadline');
+        }
+        
+        tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')} border border-gray-300 dark:border-gray-600">${cell.content}</td>\n`;
       });
       tableHtml += '</tr>\n';
     }
