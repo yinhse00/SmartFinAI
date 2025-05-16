@@ -24,8 +24,9 @@ export const connectionTester = {
   
   /**
    * Test API connection by checking available models
+   * @param apiKey Optional API key to use for testing
    */
-  testApiConnection: async (): Promise<{success: boolean, message: string, models?: string[], responseTime?: number}> => {
+  testApiConnection: async (apiKey?: string): Promise<{success: boolean, message: string, models?: string[], responseTime?: number}> => {
     try {
       // Check cache first - cache valid for only 30 seconds
       const cacheAge = Date.now() - connectionTester.connectionStatusCache.lastCheck;
@@ -53,7 +54,8 @@ export const connectionTester = {
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
-          'X-Cache-Bust': Date.now().toString()
+          'X-Cache-Bust': Date.now().toString(),
+          ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {})
         },
         cache: 'no-store'
       });
@@ -106,6 +108,50 @@ export const connectionTester = {
       return { 
         success: false, 
         message: `Connection test error: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  },
+  
+  /**
+   * Test if an API key is valid by attempting a connection
+   */
+  testApiKeyValidity: async (apiKey: string): Promise<{isValid: boolean, message: string, quotaRemaining?: number}> => {
+    try {
+      if (!apiKey.trim()) {
+        return { isValid: false, message: 'API key cannot be empty' };
+      }
+      
+      // Use the testApiConnection method with the provided key
+      const connectionResult = await connectionTester.testApiConnection(apiKey);
+      
+      if (connectionResult.success) {
+        // Further validate the models returned
+        const hasExpectedModels = connectionResult.models && 
+          connectionResult.models.some(model => model.includes('grok'));
+        
+        if (hasExpectedModels) {
+          return {
+            isValid: true,
+            message: `API key is valid. Found compatible models.`,
+            quotaRemaining: 1000 // Placeholder - actual quota info isn't directly available
+          };
+        } else {
+          return {
+            isValid: false, 
+            message: 'API key seems valid but no compatible Grok models found.'
+          };
+        }
+      }
+      
+      return { 
+        isValid: false, 
+        message: `API key validation failed: ${connectionResult.message}`
+      };
+    } catch (error) {
+      console.error('API key validation error:', error);
+      return {
+        isValid: false,
+        message: `Error validating API key: ${error instanceof Error ? error.message : 'Unknown error'}`
       };
     }
   },
@@ -166,3 +212,4 @@ export const connectionTester = {
     }
   }
 };
+
