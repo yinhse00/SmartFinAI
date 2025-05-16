@@ -34,23 +34,22 @@ export const executeStep5 = async (
                           params.query.toLowerCase().includes('timetable') ||
                           params.query.toLowerCase().includes('rights issue');
     
-    // Create quality-focused instructions with improved formatting guidance for paragraph and bullet points
+    // Create quality-focused instructions with improved formatting guidance for semantic HTML
     const enhancedInstructions = `
 IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
 
-FORMATTING INSTRUCTIONS:
-- Do NOT use markdown headings (###) or horizontal rules (---)
-- Use paragraphs to separate different points or ideas
-- Start each new idea or point with a new paragraph for clarity
-- Use **bold text** for important concepts and key terms
-- Use *italic text* for emphasis or special terms
-- When using bullet points:
-  • Start each bullet point on a new line
-  • Ensure adequate spacing before and after bullet point lists
-  • Each bullet point should represent a complete thought
-  • Use proper indentation for sub-points if needed
-- Format tables properly when needed
-- Ensure proper spacing between paragraphs and bullet points for readability
+FORMATTING GUIDELINES:
+- Use semantic HTML elements for structure:
+  • <h1>, <h2>, <h3> for headings instead of markdown symbols (#, ##, ###)
+  • <p> tags for paragraphs with proper spacing
+  • <strong> for bold/important text
+  • <em> for italic/emphasized text
+  • <ul> and <li> for bullet point lists
+- Create clear visual separation between different sections
+- Format bullet points properly with appropriate indentation
+- Ensure proper spacing between paragraphs and sections
+- Use tables with proper headers when presenting tabular data
+- Bold key terms, rule references, and important concepts
 
 For rules interpretation: 
 - Include specific rule references with detailed explanations
