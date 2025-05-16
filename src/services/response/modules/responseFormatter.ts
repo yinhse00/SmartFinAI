@@ -61,6 +61,13 @@ export const responseFormatter = {
       return p;
     }).join('\n\n');
     
+    // Correct the profit test requirements for HKEX listing
+    formattedText = formattedText
+      .replace(/Profit attributable to shareholders of at least HK\$50 million in the most recent financial year/g, 
+               'Profit attributable to shareholders of at least HK$35 million in the most recent financial year')
+      .replace(/Aggregate profit of at least HK\$30 million for the two preceding financial years/g, 
+               'Aggregate profit of at least HK$45 million for the two preceding financial years');
+    
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
                                text.toLowerCase().includes('aggregate') &&
