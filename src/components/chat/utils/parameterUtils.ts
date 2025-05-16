@@ -3,7 +3,7 @@ import { FINANCIAL_QUERY_TYPES } from './queryTypeUtils';
 
 /**
  * Get optimal token setting based on query type and content
- * With enhanced maximum token limit for quality responses
+ * With adjusted maximum token limit and safety checks
  */
 export const getOptimalTokens = (queryType: string, query: string): number => {
   // Check for explicit trading arrangement query with guide reference requirements
@@ -19,31 +19,31 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
      
   if (isGuideBasedTradingArrangement) {
     console.log("Using enhanced token limits for HKEX guide-based trading arrangement query");
-    return 30000; // Maintained at high level for comprehensive guide compliance
+    return 30000; // Increased from previous limits for comprehensive guide compliance
   }
   
-  // Rights issue and complex timetable queries get high token limits
+  // Rights issue and complex timetable queries now get up to 24000 tokens (3x the previous 8000)
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule')) &&
       (query.toLowerCase().includes('detailed') || 
        query.toLowerCase().includes('comprehensive'))) {
-    return 24000; // Maintained at high level
+    return 24000; // Increased from 8000
   }
   
-  // Rights issue comparison queries 
+  // Rights issue comparison queries now get up to 21000 tokens
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE) {
     if (query.toLowerCase().includes('difference between') || 
         query.toLowerCase().includes('compare') || 
         query.toLowerCase().includes('versus') || 
         query.toLowerCase().includes('vs')) {
-      return 21000; // Maintained at high level
+      return 21000; // Increased from 7000
     }
-    return 18000; // Maintained at high level
+    return 18000; // Increased from 6000
   }
   
-  // Complex corporate actions
+  // Complex corporate actions now get up to 18000 tokens
   if ([
     FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
     FINANCIAL_QUERY_TYPES.SHARE_CONSOLIDATION,
@@ -52,26 +52,26 @@ export const getOptimalTokens = (queryType: string, query: string): number => {
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 18000; // Maintained at high level
+    return 18000; // Increased from 6000
   }
   
-  // Comparison queries
+  // Comparison queries now get up to 18000 tokens
   if (query.toLowerCase().includes('difference between') || 
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 18000; // Maintained at high level
+    return 18000; // Increased from 6000
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('detail')) {
-    return 15000; // Maintained at high level
+    return 15000; // Increased from 5000
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 12000; // Maintained at high level
+    return 12000; // Increased from 4000
   }
   
-  return 9000; // Maintained at high level
+  return 9000; // Increased from 3000
 };
 
 /**
@@ -131,7 +131,7 @@ export const needsEnhancedTokenSettings = (queryType: string, query: string): bo
 };
 
 export const getOptimalTemperature = (queryType: string, query: string): number => {
-  // For guide-based trading arrangement queries, use lower temperature
+  // For guide-based trading arrangement queries, use extremely low temperature
   const isGuideBasedTradingArrangement = 
     [FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE, 
      FINANCIAL_QUERY_TYPES.OPEN_OFFER,
@@ -142,23 +142,23 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
      query.toLowerCase().includes('trading arrangement'));
      
   if (isGuideBasedTradingArrangement) {
-    return 0.3; // Lower temperature for guide compliance
+    return 0.01; // Very low temperature for strict guide compliance
   }
 
-  // For comparison queries, use balanced temperature
+  // For comparison queries, use very low temperature for maximum consistency
   if (query.toLowerCase().includes('difference between') || 
       query.toLowerCase().includes('compare') || 
       query.toLowerCase().includes('versus') || 
       query.toLowerCase().includes('vs')) {
-    return 0.4; // Balanced temperature for comparisons
+    return 0.05; // Low temperature for comparisons
   }
 
-  // Rights issue timetable queries need lower temperature for consistency
+  // Rights issue timetable queries need very low temperature for consistency
   if (queryType === FINANCIAL_QUERY_TYPES.RIGHTS_ISSUE && 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.3; // Lower temperature for structured data
+    return 0.01; // Very low temperature for structured data
   }
   
   if ([FINANCIAL_QUERY_TYPES.OPEN_OFFER, 
@@ -168,20 +168,20 @@ export const getOptimalTemperature = (queryType: string, query: string): number 
       (query.toLowerCase().includes('timetable') || 
        query.toLowerCase().includes('trading arrangement') || 
        query.toLowerCase().includes('schedule'))) {
-    return 0.3; // Lower temperature for consistent structured outputs
+    return 0.05; // Low temperature for consistent structured outputs
   }
   
   if ([FINANCIAL_QUERY_TYPES.CONNECTED_TRANSACTION, FINANCIAL_QUERY_TYPES.TAKEOVERS].includes(queryType)) {
-    return 0.4; // Balanced temperature
+    return 0.2;
   }
   
   if (query.toLowerCase().includes('explain') || query.toLowerCase().includes('analysis')) {
-    return 0.5; // Medium temperature for explanations
+    return 0.3;
   }
   
   if (query.toLowerCase().includes('example') || query.toLowerCase().includes('case study')) {
-    return 0.6; // Higher temperature for examples
+    return 0.4;
   }
   
-  return 0.5; // Balanced default temperature
+  return 0.3;
 };

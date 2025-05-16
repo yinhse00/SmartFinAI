@@ -4,37 +4,55 @@ import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 3: Takeovers Code Search using only Grok's knowledge
- * - Optimized for faster responses
+ * Step 3: Takeovers Code Search
+ * - Search in Summary and Index_Takeovers Code
+ * - Check if match found and analyze
+ * - Determine if execution guidance needed
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Takeovers Code information');
+  setStepProgress('Searching Takeovers Code summary and index');
   
   try {
-    // Fast direct query with optimized prompt
+    // Step 3(a): Search Summary and Index for Takeovers Code
     const response = await grokService.getRegulatoryContext(
-      `Hong Kong Takeovers Code regarding: ${params.query}`,
-      { metadata: { specializedQuery: 'takeovers', fastResponse: true } }
+      `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
+    // Use utility function to safely extract text
     const takeoversCodeContext = safelyExtractText(response);
+    
+    // Step 3(b-c): Check if search was positive
     const searchPositive = takeoversCodeContext && takeoversCodeContext.trim() !== '';
     
     if (searchPositive) {
-      setStepProgress('Found Takeovers Code information');
+      setStepProgress('Found relevant Takeovers Code information');
       
-      // Add previous context if available
+      // Search in the codes on takeovers and mergers document
+      const detailedResponse = await grokService.getRegulatoryContext(
+        `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
+      );
+      
+      // Use utility function to safely extract text
+      const detailedTakeoverContext = safelyExtractText(detailedResponse);
+      
       let enhancedContext = takeoversCodeContext;
+      if (detailedTakeoverContext) {
+        enhancedContext += "\n\n--- Detailed Takeovers Code Information ---\n\n" + detailedTakeoverContext;
+      }
+      
+      // Add any previous listing rules context if available
       if (params.listingRulesContext) {
         enhancedContext = params.listingRulesContext + "\n\n--- Takeovers Code Context ---\n\n" + enhancedContext;
       }
       
-      // Check for execution guidance needs
+      // Step 3(e-f): Check if execution guidance is needed
       const executionRequired = 
         params.query.toLowerCase().includes('process') ||
         params.query.toLowerCase().includes('how to') ||
         params.query.toLowerCase().includes('steps') ||
-        params.query.toLowerCase().includes('procedure');
+        params.query.toLowerCase().includes('procedure') ||
+        params.query.toLowerCase().includes('timeline') ||
+        params.query.toLowerCase().includes('timetable');
         
       if (executionRequired) {
         return {
@@ -45,7 +63,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
           regulatoryContext: enhancedContext,
           executionRequired: true,
           skipSequentialSearches: Boolean(params.skipSequentialSearches),
-          isRegulatoryRelated: true
+          isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
         };
       }
       
@@ -55,12 +73,32 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         query: params.query,
         takeoversCodeContext: enhancedContext,
         regulatoryContext: enhancedContext,
+        executionRequired: false,
         skipSequentialSearches: Boolean(params.skipSequentialSearches),
-        isRegulatoryRelated: true
+        isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
       };
     } else {
-      // Move to response if no takeovers code content found
-      setStepProgress('No specific Takeovers Code found');
+      // Step 3(g-h): Negative search - check if execution guidance is needed
+      setStepProgress('No specific Takeovers Code found, checking if execution guidance is needed');
+      
+      const executionRequired = 
+        params.query.toLowerCase().includes('process') ||
+        params.query.toLowerCase().includes('how to') ||
+        params.query.toLowerCase().includes('steps') ||
+        params.query.toLowerCase().includes('procedure') ||
+        params.query.toLowerCase().includes('timeline') ||
+        params.query.toLowerCase().includes('timetable');
+        
+      if (executionRequired) {
+        return {
+          shouldContinue: true,
+          nextStep: 'execution',
+          query: params.query,
+          executionRequired: true,
+          skipSequentialSearches: Boolean(params.skipSequentialSearches),
+          isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
+        };
+      }
       
       return {
         shouldContinue: true,
@@ -68,7 +106,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         query: params.query,
         takeoversCodeSearchNegative: true,
         skipSequentialSearches: Boolean(params.skipSequentialSearches),
-        isRegulatoryRelated: true
+        isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
       };
     }
   } catch (error) {
@@ -79,7 +117,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       query: params.query,
       error,
       skipSequentialSearches: Boolean(params.skipSequentialSearches),
-      isRegulatoryRelated: true
+      isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
     };
   }
 };

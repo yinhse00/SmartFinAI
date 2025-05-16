@@ -1,3 +1,4 @@
+
 import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
@@ -151,7 +152,7 @@ export const documentProcessor = {
       }
       
       const requestBody = {
-        model: "grok-3-beta", // Updated from grok-2-vision-latest to grok-3-beta
+        model: "grok-2-vision-latest",
         messages: [
           {
             role: "user", 
