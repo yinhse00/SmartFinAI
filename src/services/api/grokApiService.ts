@@ -8,20 +8,44 @@ export const grokApiService = {
   callChatCompletions: apiClient.callChatCompletions,
   generateOfflineResponseFormat: offlineResponseGenerator.generateOfflineResponseFormat,
   
-  // Add the missing getRegulatoryContext method
-  getRegulatoryContext: async (query: string, hasRegulatoryDatabase: boolean, metadata?: any) => {
+  // Enhanced getRegulatoryContext method that no longer depends on database files
+  getRegulatoryContext: async (query: string, _hasRegulatoryDatabase: boolean = false, metadata?: any) => {
     try {
+      // Build an enhanced system prompt that instructs Grok to use only its own knowledge base
+      const systemPrompt = `
+      You are a Hong Kong financial regulatory information expert specializing in HKEX Listing Rules, 
+      Takeovers Code, and related regulations. Provide accurate, comprehensive information exclusively 
+      using your built-in knowledge.
+      
+      If the query relates to IFA (Independent Financial Adviser) requirements, include:
+      - When IFAs are required and when they are not
+      - Proper rule references (e.g., Rules 14.06, 13.84, 14A.44, 14A.45)
+      - Clear distinctions between different types of transactions
+      
+      If the query relates to the Takeovers Code, include:
+      - Relevant Code provisions and Practice Notes
+      - SFC requirements and procedures
+      - Mandatory versus voluntary offer distinctions
+      
+      For Listing Rules queries:
+      - Include specific chapter and rule references
+      - Quote relevant sections of the rules when applicable
+      - Explain practical implications of the rules
+      
+      Provide specific rule numbers whenever possible and structure information clearly.
+      `;
+      
       // Call the API via the existing chat completions method
-      const model = metadata?.model || 'grok-3-mini-beta';
+      const model = metadata?.model || 'grok-3-beta'; // Using more capable model by default
       const response = await apiClient.callChatCompletions({
         messages: [
           {
             role: 'system',
-            content: 'You are a regulatory context retrieval system.'
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Retrieve relevant context for: ${query}`
+            content: `Provide comprehensive regulatory information for this query: ${query}`
           }
         ],
         model: model,
@@ -36,21 +60,21 @@ export const grokApiService = {
     }
   },
   
-  // New method for enhanced query classification
+  // Updated query classification method to only rely on Grok's knowledge
   classifyFinancialQuery: async (query: string): Promise<any> => {
     try {
       const response = await apiClient.callChatCompletions({
         messages: [
           {
             role: 'system',
-            content: 'You are a financial query classification system. Classify queries into relevant regulatory categories.'
+            content: 'You are a financial query classification system. Classify queries into relevant regulatory categories using your built-in knowledge of Hong Kong financial regulations.'
           },
           {
             role: 'user',
             content: `Classify this financial query and return a structured JSON response: ${query}`
           }
         ],
-        model: 'grok-3-beta', // Using more capable model for classification
+        model: 'grok-3-beta',
         temperature: 0.2,
         metadata: {
           processingStage: 'classification'
