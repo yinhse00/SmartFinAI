@@ -1,4 +1,3 @@
-
 export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
 
 export interface WorkflowProcessorProps {
@@ -55,11 +54,14 @@ export interface Step3Result {
 
 export interface Step4Result {
   shouldContinue: boolean;
-  nextStep: WorkflowStep;
+  nextStep: 'response' | string;
   query: string;
   executionContext?: string;
-  regulatoryContext?: string;
-  skipSequentialSearches: boolean;
-  isRegulatoryRelated: boolean;
   error?: any;
+  regulatoryContext?: string;
+  processType?: string;
+  guidanceContext?: string;
+  sourceMaterials?: string[];
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
 }
