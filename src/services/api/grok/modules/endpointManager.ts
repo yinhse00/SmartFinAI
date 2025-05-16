@@ -56,8 +56,8 @@ export const forceResetAllCircuitBreakers = () => {
     
     // Temporarily override fetch to include cache-busting for next few requests
     window.fetch = function(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-      if (typeof input === 'string' && input.includes('/api/grok')) {
-        // Add cache-busting for API requests
+      if (typeof input === 'string' && (input.includes('/api/grok') || input.includes('api.x.ai'))) {
+        // Add cache-busting for ALL API requests, not just proxy ones
         const bustCache = init?.headers ? { ...init.headers, 'Cache-Control': 'no-cache, no-store', 'X-Cache-Bust': Date.now().toString() } : { 'Cache-Control': 'no-cache, no-store', 'X-Cache-Bust': Date.now().toString() };
         init = init ? { ...init, headers: bustCache, cache: 'no-store' } : { headers: bustCache, cache: 'no-store' };
       }
@@ -70,7 +70,15 @@ export const forceResetAllCircuitBreakers = () => {
     }, 5000);
   }
   
+  // Force a new connection test after reset
+  setTimeout(() => {
+    connectionTester.testApiConnection().then(result => {
+      console.log('Post-reset connection test:', result);
+    });
+  }, 500);
+  
   console.log('Circuit breaker reset complete with cache and fetch resets');
+  return true; // Return success value
 };
 
 /**

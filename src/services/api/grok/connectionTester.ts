@@ -49,7 +49,7 @@ export const connectionTester = {
       console.log('Browser environment detected - testing with CORS preflight workarounds');
     }
 
-    // Try all endpoints
+    // Try all endpoints with cache-busting parameters
     for (const endpoint of API_ENDPOINTS) {
       try {
         console.log(`Testing ${endpoint === '/api/grok/models' ? 'local proxy endpoint' : 'direct API endpoint'}: ${endpoint}`);
@@ -60,8 +60,10 @@ export const connectionTester = {
             'Authorization': `Bearer ${apiKey}`,
             'Accept': 'application/json',
             'Cache-Control': 'no-cache, no-store',
-            'X-Request-Source': 'browser-client'
-          }
+            'X-Request-Source': 'browser-client',
+            'X-Cache-Bust': Date.now().toString() // Add cache busting
+          },
+          cache: 'no-store' // Force no caching
         });
 
         if (response.ok) {
@@ -132,6 +134,28 @@ export const connectionTester = {
         });
       } catch (e) {
         console.warn('Unable to clear browser caches:', e);
+      }
+    }
+    
+    // Clear localStorage cache entries if any
+    if (typeof localStorage !== 'undefined') {
+      try {
+        const cacheKeys = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.includes('cache') || key.includes('api') || key.includes('grok'))) {
+            if (!key.includes('GROK_API_KEY')) { // Don't remove the API key itself
+              cacheKeys.push(key);
+            }
+          }
+        }
+        
+        cacheKeys.forEach(key => {
+          console.log(`Removing cache-related localStorage entry: ${key}`);
+          localStorage.removeItem(key);
+        });
+      } catch (e) {
+        console.warn('Unable to clear localStorage caches:', e);
       }
     }
   },
