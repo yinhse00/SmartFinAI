@@ -73,6 +73,11 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
             delay *= 5;
           }
           
+          // Even longer pause for bullet points to make them stand out
+          if (tagContent.includes('class="bullet-point"')) {
+            delay *= 7;
+          }
+          
           // Pause for bold and italic formatting to emphasize them
           if (tagContent.includes('<strong') || 
               tagContent.includes('<em') || 
@@ -84,8 +89,14 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
           // Pause for list items to make them more readable
           if (tagContent.includes('<li>') || 
               tagContent.includes('<ul') || 
-              tagContent.includes('</ul>')) {
-            delay *= 2;
+              tagContent.includes('</ul>') ||
+              tagContent.includes('•')) {
+            delay *= 3;
+          }
+          
+          // Extra pause for spacing elements to create natural pauses between sections
+          if (tagContent.includes('bullet-list-spacing')) {
+            delay *= 8;
           }
         }
       }

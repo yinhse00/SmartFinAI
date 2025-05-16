@@ -35,8 +35,16 @@ export const requestBuilder = {
       systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
     }
     
-    // Add improved formatting instructions for paragraphing and bullet points
-    systemMessage += "\n\nSPECIAL FORMATTING INSTRUCTIONS: Do NOT use markdown headings (###) or horizontal rules (---). Instead:\n- Use paragraphs to separate main points\n- Use **bold text** for important concepts\n- Use *italic text* for emphasis\n- Use bullet points (•) for listing items\n- Use proper spacing between paragraphs\n- Format tables properly when needed";
+    // Enhanced formatting instructions with improved paragraph spacing and bullet point readability
+    systemMessage += "\n\nFORMATTING INSTRUCTIONS: Do NOT use markdown headings (###) or horizontal rules (---). Instead:";
+    systemMessage += "\n• Use paragraphs to separate different points or ideas";
+    systemMessage += "\n• When using bullet points, start each point on a new line with proper spacing before and after";
+    systemMessage += "\n• Each bullet point should represent a complete thought or idea";
+    systemMessage += "\n• Use **bold text** for important concepts and key terms";
+    systemMessage += "\n• Use *italic text* for emphasis or special terms";
+    systemMessage += "\n• Format tables properly when needed";
+    systemMessage += "\n• Ensure adequate spacing between paragraphs for readability";
+    systemMessage += "\n• Ensure proper spacing between bullet points for clarity";
     
     // Add remaining instructions with improved formatting guidance
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR DEFINITIONS: When responding to 'what is' or definition questions, provide COMPREHENSIVE explanations including the formal regulatory definition, practical implications, and relevant examples. For connected persons or connected transactions, include ALL categories of connected persons and relevant thresholds from Chapter 14A.";

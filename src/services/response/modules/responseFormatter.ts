@@ -38,7 +38,12 @@ export const responseFormatter = {
       .replace(/^\*\*\*+$/gm, '<p></p>')
       .replace(/^___+$/gm, '<p></p>');
     
-    // Ensure proper paragraph breaks
+    // Enhanced paragraph and bullet point formatting
+    // First convert bullet points with proper spacing
+    formattedText = formattedText
+      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point">$1•$2$3</p>');
+    
+    // Ensure proper paragraph breaks with spacing
     formattedText = formattedText
       .replace(/\n\n/g, '</p><p>')
       .replace(/(<\/p><p>)+/g, '</p><p>');
