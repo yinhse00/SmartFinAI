@@ -2,7 +2,7 @@
 import { Button } from '@/components/ui/button';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { detectAndFormatTables } from '@/utils/tableFormatter';
+import detectAndFormatTables from '@/utils/tableFormatter';
 
 interface GeneratedResponseDisplayProps {
   response: string | null;
