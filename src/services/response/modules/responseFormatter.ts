@@ -23,6 +23,36 @@ export const responseFormatter = {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
+    // Improve formatting by replacing markdown-style headers and separators with proper HTML
+    let formattedText = text;
+    
+    // Replace markdown headers with bold paragraphs
+    formattedText = formattedText
+      .replace(/^###\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
+      .replace(/^##\s+(.*?)$/gm, '<p><strong>$1</strong></p>')
+      .replace(/^#\s+(.*?)$/gm, '<p><strong>$1</strong></p>');
+    
+    // Replace horizontal rules with paragraph breaks
+    formattedText = formattedText
+      .replace(/^---+$/gm, '<p></p>')
+      .replace(/^\*\*\*+$/gm, '<p></p>')
+      .replace(/^___+$/gm, '<p></p>');
+    
+    // Enhanced paragraph and bullet point formatting
+    // First convert bullet points with proper spacing
+    formattedText = formattedText
+      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point">$1•$2$3</p>');
+    
+    // Ensure proper paragraph breaks with spacing
+    formattedText = formattedText
+      .replace(/\n\n/g, '</p><p>')
+      .replace(/(<\/p><p>)+/g, '</p><p>');
+    
+    // Wrap the whole text in paragraphs if not already wrapped
+    if (!formattedText.startsWith('<p>')) {
+      formattedText = `<p>${formattedText}</p>`;
+    }
+    
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
                                text.toLowerCase().includes('aggregate') &&
@@ -42,7 +72,7 @@ export const responseFormatter = {
     }
     
     return {
-      text: text,
+      text: formattedText,
       queryType: queryType,
       metadata: {
         contextUsed: contextUsed,

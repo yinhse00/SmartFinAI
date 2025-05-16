@@ -43,7 +43,7 @@
   background-color: rgba(51, 133, 255, 0.05);
 }
 
-/* Timetable specific styling */
+/* Timetable specific styling - Enhanced but preserving structure */
 .timetable-view {
   width: 100%;
   border-collapse: collapse;
@@ -80,6 +80,16 @@
   text-align: center;
 }
 
+/* Enhanced styling for regulatory requirements and deadlines */
+.timetable-view .regulatory-deadline {
+  font-weight: 600;
+  color: #e53e3e; /* Red highlighting for critical deadlines */
+}
+
+.timetable-view .critical-path {
+  background-color: rgba(229, 62, 62, 0.05);
+}
+
 .dark .timetable-view th {
   background-color: rgba(51, 133, 255, 0.15);
   color: #3385ff;
@@ -88,6 +98,10 @@
 
 .dark .timetable-view td {
   border-color: #2d3748;
+}
+
+.dark .timetable-view .regulatory-deadline {
+  color: #fc8181; /* Lighter red for dark mode */
 }
 
 /* Status indicators */
@@ -109,6 +123,15 @@
 
 .status-upcoming {
   background-color: #3b82f6;
+}
+
+/* Enhanced regulatory status indicators */
+.status-regulatory {
+  background-color: #e53e3e;
+}
+
+.status-optional {
+  background-color: #a0aec0;
 }
 
 /* Responsive table */
@@ -149,42 +172,48 @@
   text-align: center;
 }
 
-/* Markdown formatting in chat */
-.chat-content h1 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin-top: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.chat-content h2 {
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin-top: 1.25rem;
-  margin-bottom: 0.75rem;
-}
-
-.chat-content h3 {
-  font-size: 1.125rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
+/* Improved Markdown formatting in chat */
+.chat-content {
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .chat-content p {
-  margin-bottom: 1rem;
-  line-height: 1.5;
+  margin-bottom: 1.2rem;
+  line-height: 1.6;
 }
 
+/* Replace h1, h2, h3 styling with better paragraph styling */
+.chat-content strong, 
+.chat-content b {
+  font-weight: 600;
+  color: #004c99;
+}
+
+.dark .chat-content strong,
+.dark .chat-content b {
+  color: #3385ff;
+}
+
+/* Improved spacing between paragraphs */
+.chat-content p + p {
+  margin-top: 0.8rem;
+}
+
+/* Better bullet point styling */
 .chat-content ul, 
 .chat-content ol {
-  margin-left: 1.5rem;
-  margin-bottom: 1rem;
-  list-style-position: outside;
+  margin: 0.8rem 0 1.2rem 1.2rem;
+  padding-left: 0.5rem;
 }
 
 .chat-content ul {
   list-style-type: disc;
+}
+
+.chat-content ul ul {
+  list-style-type: circle;
+  margin-bottom: 0.3rem;
 }
 
 .chat-content ol {
@@ -193,31 +222,81 @@
 
 /* Enhanced list styling */
 .chat-content li {
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.7rem;
+  padding-left: 0.3rem;
+}
+
+.chat-content li:last-child {
+  margin-bottom: 0.3rem;
 }
 
 /* Blockquote styling */
 .chat-content blockquote {
-  border-left: 4px solid #e2e8f0;
-  padding-left: 1rem;
-  margin: 1rem 0;
+  border-left: 4px solid #3385ff;
+  padding: 0.5rem 0 0.5rem 1.2rem;
+  margin: 1.2rem 0;
   color: #4a5568;
   font-style: italic;
+  background-color: rgba(51, 133, 255, 0.05);
+  border-radius: 0 0.375rem 0.375rem 0;
 }
 
 .dark .chat-content blockquote {
-  border-left-color: #4a5568;
-  color: #cbd5e0;
+  border-left-color: #3385ff;
+  color: #e2e8f0;
+  background-color: rgba(51, 133, 255, 0.1);
 }
 
-/* Improved spacing between paragraphs */
-.chat-content p + p {
-  margin-top: 0.5rem;
+/* Emphasis/Italic text */
+.chat-content em,
+.chat-content i {
+  font-style: italic;
+  color: #4a5568;
 }
 
-/* Better spacing for headings */
-.chat-content h1 + p,
-.chat-content h2 + p,
-.chat-content h3 + p {
-  margin-top: 0.5rem;
+.dark .chat-content em,
+.dark .chat-content i {
+  color: #e2e8f0;
+}
+
+/* Key points highlights */
+.chat-content .key-point {
+  font-weight: 600;
+  background-color: rgba(51, 133, 255, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  color: #004c99;
+}
+
+.dark .chat-content .key-point {
+  background-color: rgba(51, 133, 255, 0.2);
+  color: #3385ff;
+}
+
+/* Enhanced code blocks */
+.chat-content pre {
+  background-color: rgba(0, 76, 153, 0.05);
+  padding: 1rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+  margin-bottom: 1.2rem;
+  font-size: 0.85rem;
+  border-left: 3px solid #3385ff;
+}
+
+.dark .chat-content pre {
+  background-color: rgba(51, 133, 255, 0.1);
+}
+
+/* Regulatory citation styling */
+.chat-content .regulatory-citation {
+  font-family: monospace;
+  background-color: rgba(229, 62, 62, 0.1);
+  padding: 0.1rem 0.3rem;
+  border-radius: 0.25rem;
+  font-weight: 500;
+}
+
+.dark .chat-content .regulatory-citation {
+  background-color: rgba(229, 62, 62, 0.2);
 }
