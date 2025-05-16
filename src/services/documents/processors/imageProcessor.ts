@@ -63,6 +63,16 @@ export const imageProcessor = {
       };
     } catch (error) {
       console.error(`Error in OCR processing for ${file.name}:`, error);
+      
+      // Check for specific model support errors
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      if (errorMessage.includes("Image inputs are not supported")) {
+        return {
+          content: `Error processing image ${file.name}: This model doesn't support image inputs. Please try again later or use a different format.`,
+          source: file.name
+        };
+      }
+      
       return {
         content: `Error extracting text from image ${file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
         source: file.name
