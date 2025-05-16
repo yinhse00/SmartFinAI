@@ -151,9 +151,9 @@ export const documentProcessor = {
         throw new Error('Grok API key not found');
       }
       
-      // Using grok-3-beta model and configuring it properly for vision tasks
+      // Using grok-3-vision-latest model specifically for vision tasks
       const requestBody = {
-        model: "grok-3-beta", // Updated from grok-2-vision-latest to grok-3-beta
+        model: "grok-3-vision-latest", // Updated to use the vision-specific model
         messages: [
           {
             role: "user", 
@@ -208,7 +208,7 @@ export const documentProcessor = {
         
       if (isModelError) {
         return {
-          content: `[Document Processing Error: The ${documentType} file '${file.name}' could not be processed because the current Grok API version doesn't support image inputs for this model. Please try providing the document in text format or try again later.]`,
+          content: `[Document Processing Error: The ${documentType} file '${file.name}' could not be processed because the current Grok API version doesn't support image inputs for this model. Please try using a different file format or try again later when this feature becomes available.]`,
           source: file.name
         };
       }

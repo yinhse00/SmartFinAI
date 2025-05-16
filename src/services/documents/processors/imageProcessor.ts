@@ -27,7 +27,7 @@ export const imageProcessor = {
       }
       
       const requestBody = {
-        model: "grok-2-vision-latest",
+        model: "grok-3-vision-latest", // Updated to correct vision model
         messages: [
           {
             role: "user", 
