@@ -3,23 +3,26 @@ import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 5: Enhanced Response Generation with quality-focused parameters
+ * Step 5: Response Generation
+ * - Compile final response from all context
+ * - Translate to Chinese if original query was Chinese
+ * - Support automatic batching for long responses
  */
 export const executeStep5 = async (
   params: any, 
   setStepProgress: (progress: string) => void,
   lastInputWasChinese: boolean
 ) => {
-  setStepProgress(lastInputWasChinese ? '正在生成回复' : 'Generating response');
+  setStepProgress(lastInputWasChinese ? '正在生成最终回复' : 'Generating final response');
   
   try {
-    // Get combined context from all sources
+    // Prepare the response parameters with all available context
     const responseContext = params.regulatoryContext || 
                            params.executionContext || 
                            params.listingRulesContext || 
                            params.takeoversCodeContext || '';
     
-    // Check for missing query parameter
+    // Validate that we have a query to respond to
     if (!params.query) {
       console.error('executeStep5: Missing query in params', params);
       return { 
@@ -29,82 +32,85 @@ export const executeStep5 = async (
       };
     }
     
-    // Check if this is a complex query
-    const isComplexQuery = params.query.length > 150 || 
-                          params.query.toLowerCase().includes('timetable') ||
-                          params.query.toLowerCase().includes('rights issue');
+    // Check if the query is likely to need batching
+    const isPotentiallyLongResponse = params.query.length > 300 || 
+                                     params.query.toLowerCase().includes('timetable') ||
+                                     params.query.toLowerCase().includes('rights issue') ||
+                                     params.query.toLowerCase().includes('connected transaction') ||
+                                     params.query.toLowerCase().includes('时间表') ||
+                                     params.query.toLowerCase().includes('供股') ||
+                                     params.query.toLowerCase().includes('关连交易');
     
-    // Create quality-focused instructions with improved formatting guidance for paragraph and bullet points
-    const enhancedInstructions = `
-IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
-
-FORMATTING INSTRUCTIONS:
-- Do NOT use markdown headings (###) or horizontal rules (---)
-- Use paragraphs to separate different points or ideas
-- Start each new idea or point with a new paragraph for clarity
-- Use **bold text** for important concepts and key terms
-- Use *italic text* for emphasis or special terms
-- When using bullet points:
-  • Start each bullet point on a new line
-  • Ensure adequate spacing before and after bullet point lists
-  • Each bullet point should represent a complete thought
-  • Use proper indentation for sub-points if needed
-- Format tables properly when needed
-- Ensure proper spacing between paragraphs and bullet points for readability
-
-For rules interpretation: 
-- Include specific rule references with detailed explanations
-- Cover all relevant requirements and implications
-- For timetables, include all critical dates and explain their significance
-- Use tables for clarity when appropriate
-- Bold important points and rule references for emphasis
-
-Ensure your response is complete, accurate, and addresses all aspects of the query.
-`;
-    
-    // Quality-optimized response parameters
     const responseParams = {
-      prompt: `${params.query}\n\n${enhancedInstructions}`,
+      prompt: isPotentiallyLongResponse 
+        ? `${params.query} [NOTE: This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.]` 
+        : params.query,
       regulatoryContext: responseContext,
-      maxTokens: isComplexQuery ? 25000 : 15000, // Higher token limits for quality
-      temperature: 0.5, // Balanced temperature for better quality
-      model: "grok-3-beta" // Always use the full model for user responses
+      // Set a modest token limit to encourage batching rather than one huge response
+      maxTokens: isPotentiallyLongResponse ? 4000 : undefined
     };
     
-    // Generate response using Grok with quality-optimized parameters
+    console.log('Calling grokService with params:', responseParams);
+    
+    // Generate response using Grok
     const response = await grokService.generateResponse(responseParams);
-    const responseText = safelyExtractText(response);
+    
+    console.log('Received response from grokService:', response);
+    
+    // Extract response text safely using our utility
+    let responseText = safelyExtractText(response);
+    
+    console.log('Extracted response text:', responseText ? responseText.substring(0, 100) + '...' : 'No response text');
     
     // If no response text was extracted, provide a fallback
     if (!responseText || responseText.trim() === '') {
-      return {
-        completed: false,
-        error: new Error("No response generated"),
-        response: "I'm having trouble processing your request right now. Please try again."
-      };
+      console.error('No response text extracted from grokService response, using fallback');
+      responseText = "I'm processing your request. Please wait a moment for the complete response.";
     }
     
-    // Return appropriate response based on language
+    // Check if the response appears truncated or incomplete
+    const appearsTruncated = responseText.includes('...') || 
+                            responseText.includes('to be continued') ||
+                            responseText.includes('in the next part') ||
+                            responseText.includes('未完待续') ||
+                            responseText.includes('下一部分') ||
+                            responseText.length > 3500;
+    
+    const metadata = {
+      ...response.metadata,
+      mayRequireBatching: isPotentiallyLongResponse || appearsTruncated,
+      batchSuggestion: appearsTruncated ? (
+        lastInputWasChinese 
+          ? '此回复似乎不完整。您可以使用"继续"按钮查看更多信息。'
+          : "This response appears to be incomplete. Consider using the Continue button to see additional information."
+      ) : undefined
+    };
+    
+    // For Chinese input, the translation will be handled by the MessageTranslator hook
+    // We just ensure the original response is returned properly
     if (lastInputWasChinese) {
+      setStepProgress('准备回复');
+      
       return {
         completed: true,
         response: responseText,
-        metadata: response.metadata,
+        metadata,
         requiresTranslation: true
       };
     }
     
+    // Return English response
     return {
       completed: true,
       response: responseText,
-      metadata: response.metadata
+      metadata
     };
   } catch (error) {
     console.error('Error in step 5:', error);
     return { 
       completed: false,
       error,
-      response: "I encountered an error while processing your request. Please try again."
+      response: "I'm sorry, I encountered an error while processing your request. Please try again."
     };
   }
 };

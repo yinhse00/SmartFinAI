@@ -47,18 +47,18 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [id, sender, content, message]);
 
-  // Process content when message changes or when toggling between original/translated
+  // Process table content when message changes or when toggling between original/translated
   useEffect(() => {
     // Ensure displayContent always has a value
     const safeContent = content || "";
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
-    // Format tables and process markdown in the content
+    // Format tables in the content
     if (sender === 'bot') {
       const formatted = detectAndFormatTables(displayContent);
       setFormattedContent(formatted);
     } else {
-      // For user messages, no formatting needed
+      // For user messages, no need to format tables
       setFormattedContent(displayContent);
     }
   }, [content, originalContent, showOriginal, sender]);
@@ -105,7 +105,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
               text={formattedContent} 
-              className="whitespace-pre-line text-left chat-content" 
+              className="whitespace-pre-line text-left" 
               onComplete={() => setIsTypingComplete(true)} 
               onProgress={onTypingProgress}
               renderAsHTML={true}
@@ -114,7 +114,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           
           {/* User message content or bot message when translation is in progress or typing is complete */}
           {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
-            <div className={`${sender === 'user' ? 'text-right' : 'text-left'} ${sender === 'bot' ? 'chat-content' : ''}`}>
+            <div className={`${sender === 'user' ? 'text-right' : 'text-left'}`}>
               {translationInProgress && sender === 'bot' ? (
                 <div className="flex flex-col gap-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
