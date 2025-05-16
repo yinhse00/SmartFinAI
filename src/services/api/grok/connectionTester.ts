@@ -1,4 +1,3 @@
-
 import { forceResetAllCircuitBreakers } from './modules/endpointManager';
 
 /**
@@ -212,4 +211,3 @@ export const connectionTester = {
     }
   }
 };
-
