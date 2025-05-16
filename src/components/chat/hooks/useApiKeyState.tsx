@@ -48,7 +48,7 @@ export const useApiKeyState = () => {
               
               // Test the connection with the default key
               setKeyStatus(prev => ({ ...prev, isValidating: true }));
-              const connectionStatus = await connectionTester.testApiConnection();
+              const connectionStatus = await connectionTester.testApiConnection(defaultApiKey);
               
               setKeyStatus({
                 isValidating: false,

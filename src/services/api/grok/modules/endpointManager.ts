@@ -13,10 +13,10 @@ const circuitBreakers: {
   }
 } = {};
 
-// Max failures before circuit opens - increased from 5 to 8 for more tolerance
-const FAILURE_THRESHOLD = 8;
-// Time in ms before attempting to close circuit again - reduced from 30000 to 15000 (15 seconds)
-const RESET_TIMEOUT = 15000; 
+// Max failures before circuit opens
+const FAILURE_THRESHOLD = 3;
+// Time in ms before attempting to close circuit again
+const RESET_TIMEOUT = 60000; // 1 minute
 
 // Proxy endpoint
 const PROXY_ENDPOINT = '/api/grok';
@@ -99,19 +99,13 @@ export const attemptProxyRequest = async (requestBody: any, apiKey: string) => {
   }
   
   try {
-    // Add cache busting headers to prevent stale responses
-    const cacheBustHeaders = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-      'X-Cache-Bust': Date.now().toString(),
-      'Cache-Control': 'no-cache, no-store, must-revalidate'
-    };
-    
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: cacheBustHeaders,
-      body: JSON.stringify(requestBody),
-      cache: 'no-store'
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(requestBody)
     });
     
     if (!response.ok) {
