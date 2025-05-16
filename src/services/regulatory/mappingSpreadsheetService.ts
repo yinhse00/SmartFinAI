@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -89,6 +90,35 @@ export const mappingSpreadsheetService = {
           }
         } catch (e) {
           console.error('Error searching listing rules for IFA requirements:', e);
+        }
+      }
+      
+      // If we don't have database results, use Grok's knowledge directly
+      if (!faqResults.context && !guidanceResults.context && !listingDecisionResults.context && !listingRulesContext) {
+        try {
+          console.log('No database results found, using Grok knowledge database');
+          const grokResponse = await grokService.getRegulatoryContext(
+            `Provide information about: ${query}`,
+            { metadata: { useGrokKnowledge: true, topics } }
+          );
+          
+          if (grokResponse) {
+            let grokContext = '';
+            if (typeof grokResponse === 'string') {
+              grokContext = grokResponse;
+            } else if (typeof grokResponse === 'object' && grokResponse.context) {
+              grokContext = grokResponse.context;
+            }
+            
+            if (grokContext) {
+              return {
+                guidanceContext: grokContext,
+                sourceMaterials: ['Grok Knowledge Database']
+              };
+            }
+          }
+        } catch (e) {
+          console.error('Error using Grok knowledge database:', e);
         }
       }
       

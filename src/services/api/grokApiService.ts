@@ -8,20 +8,39 @@ export const grokApiService = {
   callChatCompletions: apiClient.callChatCompletions,
   generateOfflineResponseFormat: offlineResponseGenerator.generateOfflineResponseFormat,
   
-  // Add the missing getRegulatoryContext method
+  // Enhanced getRegulatoryContext method
   getRegulatoryContext: async (query: string, hasRegulatoryDatabase: boolean, metadata?: any) => {
     try {
+      // Build an enhanced system prompt that instructs Grok to use its knowledge
+      const systemPrompt = `
+      You are a Hong Kong financial regulatory information retrieval system specializing in HKEX Listing Rules, 
+      Takeovers Code, and related regulations. Provide accurate, comprehensive information about Hong Kong financial 
+      regulations based on your knowledge database.
+      
+      If the query relates to IFA (Independent Financial Adviser) requirements, include:
+      - When IFAs are required and when they are not
+      - Proper rule references (e.g., Rules 14.06, 13.84, 14A.44, 14A.45)
+      - Clear distinctions between different types of transactions
+      
+      If the query relates to the Takeovers Code, include:
+      - Relevant Code provisions and Practice Notes
+      - SFC requirements and procedures
+      - Mandatory versus voluntary offer distinctions
+      
+      Provide specific rule numbers whenever possible and structure information clearly.
+      `;
+      
       // Call the API via the existing chat completions method
-      const model = metadata?.model || 'grok-3-mini-beta';
+      const model = metadata?.model || 'grok-3-beta'; // Using more capable model by default
       const response = await apiClient.callChatCompletions({
         messages: [
           {
             role: 'system',
-            content: 'You are a regulatory context retrieval system.'
+            content: systemPrompt
           },
           {
             role: 'user',
-            content: `Retrieve relevant context for: ${query}`
+            content: `Provide comprehensive regulatory information for this query: ${query}`
           }
         ],
         model: model,
