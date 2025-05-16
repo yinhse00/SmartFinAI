@@ -77,7 +77,7 @@ const GeneratedResponseDisplay = ({
         className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm response-container"
         dangerouslySetInnerHTML={{ __html: enhancedResponse }}
       />
-      <style jsx global>{`
+      <style>{`
         .response-container p {
           margin-bottom: 1rem;
         }
