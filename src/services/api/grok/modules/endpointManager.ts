@@ -1,3 +1,4 @@
+
 /**
  * Manages API endpoints and circuit breakers
  */
@@ -13,10 +14,10 @@ const circuitBreakers: {
   }
 } = {};
 
-// Max failures before circuit opens
-const FAILURE_THRESHOLD = 3;
-// Time in ms before attempting to close circuit again
-const RESET_TIMEOUT = 60000; // 1 minute
+// Max failures before circuit opens - increased from 3 to 5 for more tolerance
+const FAILURE_THRESHOLD = 5;
+// Time in ms before attempting to close circuit again - reduced from 60000 to 30000 (30 seconds)
+const RESET_TIMEOUT = 30000; 
 
 // Proxy endpoint
 const PROXY_ENDPOINT = '/api/grok';

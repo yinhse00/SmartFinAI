@@ -1,3 +1,4 @@
+
 import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
@@ -150,6 +151,7 @@ export const documentProcessor = {
         throw new Error('Grok API key not found');
       }
       
+      // Using grok-3-beta model and configuring it properly for vision tasks
       const requestBody = {
         model: "grok-3-beta", // Updated from grok-2-vision-latest to grok-3-beta
         messages: [
@@ -175,7 +177,7 @@ export const documentProcessor = {
       
       // Call Grok API with a timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 60000); // Increased timeout to 60 seconds
       
       try {
         // Call Grok API
@@ -198,14 +200,27 @@ export const documentProcessor = {
     } catch (error) {
       console.error(`Error in ${documentType} processing for ${file.name}:`, error);
       
-      // Determine if this is a connectivity issue
+      // Check if the error is related to invalid model usage
       const errorMessage = error instanceof Error ? error.message : String(error);
+      const isModelError = 
+        errorMessage.includes("Image inputs are not supported by this model") ||
+        errorMessage.includes("invalid argument");
+        
+      if (isModelError) {
+        return {
+          content: `[Document Processing Error: The ${documentType} file '${file.name}' could not be processed because the current Grok API version doesn't support image inputs for this model. Please try providing the document in text format or try again later.]`,
+          source: file.name
+        };
+      }
+      
+      // Determine if this is a connectivity issue
       const isConnectivityIssue = 
         errorMessage.includes("unreachable") || 
         errorMessage.includes("failed") ||
         errorMessage.includes("network") ||
         errorMessage.includes("timeout") ||
-        errorMessage.includes("abort");
+        errorMessage.includes("abort") ||
+        errorMessage.includes("circuit breaker");
       
       if (isConnectivityIssue) {
         return {

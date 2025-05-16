@@ -3,6 +3,7 @@
  * Functions for testing the Grok API connection
  */
 import { getGrokApiKey } from '../../apiKeyService';
+import { forceResetAllCircuitBreakers } from './modules/endpointManager';
 
 // List of endpoints to try
 const API_ENDPOINTS = [
@@ -13,7 +14,7 @@ const API_ENDPOINTS = [
 // Track connection status
 let lastSuccessfulEndpoint = '';
 let lastConnectionTime = 0;
-const CONNECTION_CACHE_TIME = 60000; // 1 minute
+const CONNECTION_CACHE_TIME = 30000; // 30 seconds - reduced from 60000
 
 /**
  * Test the API connection with improved resilience
@@ -33,7 +34,7 @@ export const connectionTester = {
 
     console.log('API key selected:', `using key ${apiKey ? '1' : '0'} of ${apiKey ? '1' : '0'} `);
 
-    // Check if we have a recent successful connection
+    // Check if we have a recent successful connection - but with reduced cache time
     const now = Date.now();
     if (lastSuccessfulEndpoint && (now - lastConnectionTime < CONNECTION_CACHE_TIME)) {
       console.log(`Using cached connection status (success) from ${lastSuccessfulEndpoint}`);
@@ -49,7 +50,7 @@ export const connectionTester = {
       console.log('Browser environment detected - testing with CORS preflight workarounds');
     }
 
-    // Try all endpoints with cache-busting parameters
+    // Try all endpoints with aggressive cache-busting parameters
     for (const endpoint of API_ENDPOINTS) {
       try {
         console.log(`Testing ${endpoint === '/api/grok/models' ? 'local proxy endpoint' : 'direct API endpoint'}: ${endpoint}`);
@@ -61,7 +62,8 @@ export const connectionTester = {
             'Accept': 'application/json',
             'Cache-Control': 'no-cache, no-store',
             'X-Request-Source': 'browser-client',
-            'X-Cache-Bust': Date.now().toString() // Add cache busting
+            'X-Cache-Bust': Date.now().toString(), // Add cache busting
+            'Pragma': 'no-cache'
           },
           cache: 'no-store' // Force no caching
         });
@@ -77,8 +79,15 @@ export const connectionTester = {
             lastSuccessfulEndpoint = endpoint;
             lastConnectionTime = now;
             
+            // Force reset all circuit breakers on successful connection
+            forceResetAllCircuitBreakers();
+            
             // Validate the API key
-            const keyValid = data.data.some(model => model.id && model.id.startsWith('grok'));
+            const keyValid = data.data.some(model => model.id && (
+              model.id.startsWith('grok') || 
+              model.id.includes('grok')
+            ));
+            
             if (keyValid) {
               console.log('API key validation: Valid key found');
               return {
@@ -109,8 +118,10 @@ export const connectionTester = {
       }
     }
 
-    // All endpoints failed
-    console.error('All API endpoints failed');
+    // All endpoints failed - try forcing a circuit breaker reset
+    console.error('All API endpoints failed, forcing circuit breaker reset');
+    forceResetAllCircuitBreakers();
+    
     return {
       success: false,
       message: 'Could not connect to any API endpoint. Please check your internet connection and API key.'
