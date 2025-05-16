@@ -4,13 +4,13 @@ import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 3: Takeovers Code Search
- * - Use Grok's built-in knowledge for Takeovers Code
+ * Step 3: Takeovers Code Search using only Grok's built-in knowledge
+ * - Use Grok's knowledge for Takeovers Code
  * - Check if match found and analyze
  * - Determine if execution guidance needed
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Hong Kong Takeovers Code information');
+  setStepProgress('Searching Hong Kong Takeovers Code information using AI knowledge');
   
   try {
     // Step 3(a): Search for Takeovers Code using Grok's knowledge base

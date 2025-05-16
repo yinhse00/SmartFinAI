@@ -1,16 +1,14 @@
 
 import { grokApiService } from '../api/grokApiService';
-import { supabase } from '@/integrations/supabase/client';
 import { parallelQueryProcessor } from '../response/core/parallelQueryProcessor';
 
 /**
  * Service for retrieving regulatory context with enhanced model selection and parallel processing
- * Now optimized to use Grok 3's built-in knowledge
+ * Optimized to use only Grok 3's built-in knowledge without database dependencies
  */
 export const contextService = {
   /**
-   * Fetches regulatory context primarily using Grok's knowledge base
-   * Now accepts options including isPreliminaryAssessment and metadata
+   * Fetches regulatory context using only Grok's knowledge base
    */
   getRegulatoryContext: async (
     query: string,
@@ -72,35 +70,21 @@ export const contextService = {
         };
       }
       
-      // Check if we have a regulatory database available (for compatibility with existing code)
-      let hasRegulatoryDatabase = false;
-      
-      try {
-        const { count, error } = await supabase
-          .from('regulatory_provisions')
-          .select('*', { count: 'exact', head: true });
-        
-        hasRegulatoryDatabase = !error && count !== null && count > 0;
-      } catch (e) {
-        console.log('Error checking regulatory database:', e);
-        hasRegulatoryDatabase = false;
-      }
-      
       // Build request metadata
       const metadata = {
         ...(options?.metadata || {}),
         processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
         isInitialAssessment: isPreliminaryAssessment,
-        hasRegulatoryDatabase,
+        hasRegulatoryDatabase: false, // Always false since we're removing database dependency
         // Select model based on processing stage and query type
         model: isIFAQuery || isTakeoversQuery ? 'grok-3-beta' : 
               (isPreliminaryAssessment ? 'grok-3-beta' : 'grok-3-mini-beta')
       };
       
-      // Call API to get regulatory context, leveraging Grok's native knowledge
+      // Call API to get regulatory context, leveraging only Grok's native knowledge
       const response = await grokApiService.getRegulatoryContext(
         query, 
-        hasRegulatoryDatabase,
+        false, // hasRegulatoryDatabase is always false
         metadata
       );
       

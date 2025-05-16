@@ -4,16 +4,16 @@ import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 2: Listing Rules Search
- * - Use Grok's built-in knowledge for Listing Rules
+ * Step 2: Listing Rules Search using only Grok's built-in knowledge
+ * - Use Grok's knowledge base for Listing Rules
  * - Check if match found and analyze
  * - Check if also Takeovers Code related
  */
 export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
-  setStepProgress('Searching HKEX Listing Rules information');
+  setStepProgress('Searching HKEX Listing Rules information using AI knowledge');
   
   try {
-    // Step 2(a): Search for Listing Rules using Grok's knowledge base
+    // Step 2(a): Search for Listing Rules using Grok's knowledge base only
     const response = await grokService.getRegulatoryContext(
       `Provide comprehensive information about HKEX Listing Rules regarding: ${params.query}`
     );
