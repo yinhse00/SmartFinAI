@@ -22,32 +22,6 @@ export const mappingSpreadsheetService = {
       const topics = queryTopics.length > 0 ? queryTopics : await this.extractTopicsFromQuery(query);
       console.log('Extracted topics:', topics);
 
-      // First check for specific regulatory topics
-      const hasIFAReferences = 
-        query.toLowerCase().includes('ifa') ||
-        query.toLowerCase().includes('independent financial adviser') ||
-        query.toLowerCase().includes('financial adviser');
-        
-      const hasMajorTransactionReferences = 
-        query.toLowerCase().includes('major transaction') ||
-        query.toLowerCase().includes('chapter 14');
-        
-      // For IFA + major transaction queries, add specific search topics and correct rule references
-      if (hasIFAReferences && hasMajorTransactionReferences) {
-        topics.push('ifa requirement');
-        topics.push('financial adviser');
-        topics.push('major transaction');
-        topics.push('chapter 14');
-        topics.push('rule 14.06'); // Major transaction definition
-        topics.push('rule 13.84'); // IFA independence criteria
-        topics.push('rule 14A.44'); // Connected transaction IFA requirements
-        topics.push('rule 14A.45'); // Connected transaction IFA requirements
-        
-        // Force unique topics
-        const uniqueTopics = [...new Set(topics)];
-        console.log('Enhanced search topics for IFA query:', uniqueTopics);
-      }
-
       // First check for exact matches in regulatory_faqs table
       const faqResults = await this.searchFAQs(query, topics);
       
@@ -56,71 +30,6 @@ export const mappingSpreadsheetService = {
       
       // Check for listing decisions
       const listingDecisionResults = await this.searchListingDecisions(query, topics);
-      
-      // For IFA queries, directly search listing rules requirements
-      let listingRulesContext = '';
-      if (hasIFAReferences) {
-        try {
-          // More comprehensive search specifically targeting IFA requirements in different chapters
-          const listingRulesResults = await supabase
-            .from('regulatory_provisions')
-            .select('rule_number, title, content')
-            .or(`rule_number.ilike.%14.06%,rule_number.ilike.%14A.44%,rule_number.ilike.%14A.45%,rule_number.ilike.%13.84%,content.ilike.%financial adviser%,content.ilike.%IFA%`)
-            .limit(5);
-            
-          if (listingRulesResults.data && listingRulesResults.data.length > 0) {
-            listingRulesContext = "### Relevant Listing Rules\n\n" + 
-              listingRulesResults.data.map(rule => 
-                `Rule ${rule.rule_number}: ${rule.title || ''}\n${rule.content.substring(0, 300)}${rule.content.length > 300 ? '...' : ''}`
-              ).join('\n\n');
-              
-            // Add explicit answer for IFA requirements in major transactions if that's the query
-            if (hasMajorTransactionReferences && hasIFAReferences && 
-                query.toLowerCase().includes('required')) {
-              listingRulesContext = "### IFA Requirements for Major Transactions\n\n" +
-                "Under the HKEX Listing Rules, an Independent Financial Adviser (IFA) is NOT generally required " +
-                "for a standard major transaction (Rule 14.06) unless:\n\n" +
-                "- The transaction is also a connected transaction (Chapter 14A)\n" +
-                "- The Exchange specifically mandates an IFA through a Notice of Compliance\n" +
-                "- There are specific conflict-of-interest concerns\n\n" +
-                "IFAs are explicitly required for connected transactions (Rules 14A.44-14A.45) and certain " +
-                "other types of transactions with potential conflicts of interest.\n\n" + 
-                listingRulesContext;
-            }
-          }
-        } catch (e) {
-          console.error('Error searching listing rules for IFA requirements:', e);
-        }
-      }
-      
-      // If we don't have database results, use Grok's knowledge directly
-      if (!faqResults.context && !guidanceResults.context && !listingDecisionResults.context && !listingRulesContext) {
-        try {
-          console.log('No database results found, using Grok knowledge database');
-          const grokResponse = await grokService.getRegulatoryContext(
-            `Provide information about: ${query}`,
-            { metadata: { useGrokKnowledge: true, topics } }
-          );
-          
-          if (grokResponse) {
-            let grokContext = '';
-            if (typeof grokResponse === 'string') {
-              grokContext = grokResponse;
-            } else if (typeof grokResponse === 'object' && grokResponse.context) {
-              grokContext = grokResponse.context;
-            }
-            
-            if (grokContext) {
-              return {
-                guidanceContext: grokContext,
-                sourceMaterials: ['Grok Knowledge Database']
-              };
-            }
-          }
-        } catch (e) {
-          console.error('Error using Grok knowledge database:', e);
-        }
-      }
       
       // Combine all results
       let combinedContext = '';
@@ -139,11 +48,6 @@ export const mappingSpreadsheetService = {
       if (listingDecisionResults.context) {
         combinedContext += "### Listing Decisions\n\n" + listingDecisionResults.context + "\n\n";
         sourceMaterials.push(...listingDecisionResults.sources);
-      }
-      
-      if (listingRulesContext) {
-        combinedContext += listingRulesContext + "\n\n";
-        sourceMaterials.push("Listing Rules Chapter 14");
       }
       
       return {

@@ -1,8 +1,7 @@
-
 import { Button } from '@/components/ui/button';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import detectAndFormatTables from '@/utils/tableFormatter';
+import { detectAndFormatTables } from '@/utils/tableFormatter';
 
 interface GeneratedResponseDisplayProps {
   response: string | null;
@@ -21,9 +20,9 @@ const GeneratedResponseDisplay = ({
 }: GeneratedResponseDisplayProps) => {
   if (!response) return null;
 
-  // Format response with tables and enhanced paragraph/bullet point formatting
+  // Format response with tables
   const formattedResponse = detectAndFormatTables(response);
-  
+
   return (
     <div className="space-y-2 mt-4">
       <div className="flex items-center justify-between">
@@ -66,74 +65,9 @@ const GeneratedResponseDisplay = ({
         </DropdownMenu>
       </div>
       <div 
-        className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm response-container"
+        className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm"
         dangerouslySetInnerHTML={{ __html: formattedResponse }}
       />
-      <style>{`
-        .response-container h1, .response-container h2, .response-container h3 {
-          font-weight: bold;
-          margin: 1rem 0 0.5rem 0;
-        }
-        
-        .response-container h1 {
-          font-size: 1.25rem;
-        }
-        
-        .response-container h2 {
-          font-size: 1.125rem;
-        }
-        
-        .response-container h3 {
-          font-size: 1rem;
-        }
-        
-        .response-container p {
-          margin-bottom: 1rem;
-          line-height: 1.5;
-        }
-        
-        .response-container strong {
-          font-weight: bold;
-        }
-        
-        .response-container em {
-          font-style: italic;
-        }
-        
-        .response-container u {
-          text-decoration: underline;
-        }
-        
-        .response-container p.bullet-point {
-          margin: 0.25rem 0 0.25rem 1.5rem;
-          position: relative;
-          padding-left: 1rem;
-        }
-        
-        .response-container .bullet-point:before {
-          content: "•";
-          position: absolute;
-          left: -0.5rem;
-        }
-        
-        .response-container table {
-          border-collapse: collapse;
-          margin: 1rem 0;
-          width: 100%;
-        }
-        
-        .response-container table th,
-        .response-container table td {
-          border: 1px solid #ddd;
-          padding: 8px;
-        }
-        
-        .response-container table th {
-          background-color: #f2f2f2;
-          font-weight: bold;
-          text-align: left;
-        }
-      `}</style>
     </div>
   );
 };
