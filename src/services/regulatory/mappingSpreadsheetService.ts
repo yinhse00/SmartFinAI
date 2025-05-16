@@ -22,6 +22,28 @@ export const mappingSpreadsheetService = {
       const topics = queryTopics.length > 0 ? queryTopics : await this.extractTopicsFromQuery(query);
       console.log('Extracted topics:', topics);
 
+      // First check for specific regulatory topics
+      const hasIFAReferences = 
+        query.toLowerCase().includes('ifa') ||
+        query.toLowerCase().includes('independent financial adviser') ||
+        query.toLowerCase().includes('financial adviser');
+        
+      const hasMajorTransactionReferences = 
+        query.toLowerCase().includes('major transaction') ||
+        query.toLowerCase().includes('chapter 14');
+        
+      // For IFA + major transaction queries, add specific search topics
+      if (hasIFAReferences && hasMajorTransactionReferences) {
+        topics.push('ifa requirement');
+        topics.push('financial adviser');
+        topics.push('major transaction');
+        topics.push('chapter 14');
+        
+        // Force unique topics
+        const uniqueTopics = [...new Set(topics)];
+        console.log('Enhanced search topics for IFA query:', uniqueTopics);
+      }
+
       // First check for exact matches in regulatory_faqs table
       const faqResults = await this.searchFAQs(query, topics);
       
@@ -30,6 +52,27 @@ export const mappingSpreadsheetService = {
       
       // Check for listing decisions
       const listingDecisionResults = await this.searchListingDecisions(query, topics);
+      
+      // For IFA queries, directly search listing rules requirements
+      let listingRulesContext = '';
+      if (hasIFAReferences) {
+        try {
+          const listingRulesResults = await supabase
+            .from('regulatory_provisions')
+            .select('rule_number, title, content')
+            .or(`rule_number.ilike.%14.%,content.ilike.%adviser%,content.ilike.%IFA%`)
+            .limit(3);
+            
+          if (listingRulesResults.data && listingRulesResults.data.length > 0) {
+            listingRulesContext = "### Relevant Listing Rules\n\n" + 
+              listingRulesResults.data.map(rule => 
+                `Rule ${rule.rule_number}: ${rule.title || ''}\n${rule.content.substring(0, 300)}${rule.content.length > 300 ? '...' : ''}`
+              ).join('\n\n');
+          }
+        } catch (e) {
+          console.error('Error searching listing rules for IFA requirements:', e);
+        }
+      }
       
       // Combine all results
       let combinedContext = '';
@@ -48,6 +91,11 @@ export const mappingSpreadsheetService = {
       if (listingDecisionResults.context) {
         combinedContext += "### Listing Decisions\n\n" + listingDecisionResults.context + "\n\n";
         sourceMaterials.push(...listingDecisionResults.sources);
+      }
+      
+      if (listingRulesContext) {
+        combinedContext += listingRulesContext + "\n\n";
+        sourceMaterials.push("Listing Rules Chapter 14");
       }
       
       return {
