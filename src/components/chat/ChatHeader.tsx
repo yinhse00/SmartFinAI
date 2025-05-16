@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CardHeader } from '@/components/ui/card';
 import { BookOpen, Languages, Settings, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,61 +20,51 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentLanguage = 'en',
   onLanguageChange
 }) => {
-  const [language, setLanguage] = useState<'en' | 'zh'>(currentLanguage);
-
+  // Remove the useState hook and use the prop directly
   const handleLanguageChange = (newLanguage: 'en' | 'zh') => {
-    setLanguage(newLanguage);
     if (onLanguageChange) {
       onLanguageChange(newLanguage);
     }
   };
-
+  
   return (
-    <CardHeader className="border-b px-6 py-4 flex flex-row items-center justify-between">
-      <div className="flex items-center space-x-2">
+    <CardHeader className="flex flex-row items-center justify-between p-4 border-b">
+      <div className="flex items-center gap-2">
         <BookOpen className="h-5 w-5" />
-        <h2 className="text-xl font-semibold">SmartFinAI Chat</h2>
+        <h2 className="text-lg font-medium">Smart Finance Assistant</h2>
         {isOfflineMode && (
-          <span className="inline-flex items-center ml-2 text-sm text-yellow-600 dark:text-yellow-400">
+          <div className="flex items-center ml-2 text-yellow-500">
             <WifiOff className="h-4 w-4 mr-1" />
-            Offline Mode
-          </span>
+            <span className="text-xs font-medium">Offline Mode</span>
+          </div>
         )}
       </div>
-      
-      <div className="flex items-center space-x-2">
+      <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+            <Button variant="ghost" size="icon">
               <Languages className="h-5 w-5" />
-              <span className="sr-only">Language</span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem 
+              className={currentLanguage === 'en' ? 'bg-muted' : ''}
               onClick={() => handleLanguageChange('en')}
-              className={language === 'en' ? 'bg-accent' : ''}
             >
               English
             </DropdownMenuItem>
             <DropdownMenuItem 
+              className={currentLanguage === 'zh' ? 'bg-muted' : ''}
               onClick={() => handleLanguageChange('zh')}
-              className={language === 'zh' ? 'bg-accent' : ''}
             >
               中文 (Chinese)
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        
         {!isGrokApiKeySet && (
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={onOpenApiKeyDialog}
-            className="flex items-center"
-          >
+          <Button variant="outline" size="sm" onClick={onOpenApiKeyDialog}>
             <Settings className="h-4 w-4 mr-1" />
-            API Key
+            Set API Key
           </Button>
         )}
       </div>

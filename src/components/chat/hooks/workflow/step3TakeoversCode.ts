@@ -4,18 +4,18 @@ import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 3: Takeovers Code Search using only Grok's built-in knowledge
- * - Use Grok's knowledge for Takeovers Code
+ * Step 3: Takeovers Code Search
+ * - Search in Summary and Index_Takeovers Code
  * - Check if match found and analyze
  * - Determine if execution guidance needed
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Hong Kong Takeovers Code information using AI knowledge');
+  setStepProgress('Searching Takeovers Code summary and index');
   
   try {
-    // Step 3(a): Search for Takeovers Code using Grok's knowledge base
+    // Step 3(a): Search Summary and Index for Takeovers Code
     const response = await grokService.getRegulatoryContext(
-      `Provide comprehensive information about Hong Kong Takeovers Code regarding: ${params.query}`
+      `Search specifically in "Summary and Index_Takeovers Code.docx" for: ${params.query}`
     );
     
     // Use utility function to safely extract text
@@ -27,9 +27,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     if (searchPositive) {
       setStepProgress('Found relevant Takeovers Code information');
       
-      // Search for more specific details if needed
+      // Search in the codes on takeovers and mergers document
       const detailedResponse = await grokService.getRegulatoryContext(
-        `Provide detailed information about specific rules, processes or requirements in the Hong Kong Takeovers Code related to: ${params.query}`
+        `Find detailed information in "the codes on takeovers and mergers and share buy backs.pdf" about: ${params.query}`
       );
       
       // Use utility function to safely extract text

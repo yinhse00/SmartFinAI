@@ -38,24 +38,14 @@ const isDateString = (str: string): boolean => {
 
 /**
  * Determines if a table is likely a timetable based on column content
- * Enhanced to better recognize regulatory timetables
  */
 const isTimetable = (tableData: string[][]): boolean => {
   // If first row has date-related terms, it's likely a timetable
-  const dateHeaders = [
-    'date', 'day', 'time', 'deadline', 'schedule', 'due', 'period', 
-    'start', 'end', 'timeline', 'phase', 't-', 't+', 'day-', 'day+'
-  ];
-  
+  const dateHeaders = ['date', 'day', 'time', 'deadline', 'schedule', 'due', 'period', 'start', 'end'];
   const firstRow = tableData[0].map(cell => cell.toLowerCase());
   
   const hasDateHeader = firstRow.some(cell => 
     dateHeaders.some(term => cell.includes(term))
-  );
-  
-  // Check for regulatory timelines with T+/- notation
-  const hasRegulatoryTimeline = tableData.some(row => 
-    row.some(cell => /^T[+-]\d+$/i.test(cell.trim()) || /^Day\s[+-]\d+$/i.test(cell.trim()))
   );
   
   // Check if any column has multiple date values
@@ -72,15 +62,7 @@ const isTimetable = (tableData: string[][]): boolean => {
     }
   }
   
-  // Check for execution process terms
-  const processTerms = ['process', 'step', 'action', 'phase', 'execution', 'procedure'];
-  const hasExecutionTerms = tableData.some(row => 
-    row.some(cell => 
-      processTerms.some(term => cell.toLowerCase().includes(term))
-    )
-  );
-  
-  return hasDateHeader || hasRegulatoryTimeline || hasExecutionTerms;
+  return hasDateHeader;
 };
 
 /**
@@ -242,7 +224,6 @@ export const detectAndFormatTables = (content: string): string => {
 
 /**
  * Convert markdown-style table lines to an HTML table with enhanced styling
- * Improved to better handle regulatory timetables
  */
 const convertToHtmlTable = (tableLines: string[]): string => {
   // Parse table data from lines
@@ -280,9 +261,9 @@ const convertToHtmlTable = (tableLines: string[]): string => {
       // Data rows
       const rowClasses = [];
       
-      // Check if row has status indicators or regulatory requirements
+      // Check if row has status indicators
       const hasStatus = row.some(cell => 
-        ['pending', 'completed', 'upcoming', 'in progress', 'delayed', 'regulatory requirement'].some(
+        ['pending', 'completed', 'upcoming', 'in progress', 'delayed'].some(
           status => cell.content.toLowerCase().includes(status)
         )
       );
@@ -298,46 +279,15 @@ const convertToHtmlTable = (tableLines: string[]): string => {
           rowClasses.push('delayed-row');
         } else if (row.some(cell => cell.content.toLowerCase().includes('upcoming'))) {
           rowClasses.push('upcoming-row');
-        } else if (row.some(cell => 
-          cell.content.toLowerCase().includes('regulatory') || 
-          cell.content.toLowerCase().includes('required')
-        )) {
-          rowClasses.push('regulatory-deadline');
         }
-      }
-      
-      // Check for timeline notation (e.g., T+1, Day-2) to identify critical path items
-      const isTimelineRow = row.some(cell => 
-        /^T[+-]\d+$/i.test(cell.content.trim()) || 
-        /^Day\s[+-]\d+$/i.test(cell.content.trim())
-      );
-      
-      if (isTimelineRow) {
-        rowClasses.push('critical-path');
       }
       
       tableHtml += `<tr class="${rowClasses.join(' ')}">\n`;
-      row.forEach((cell, cellIndex) => {
-        // Add special formatting for date cells and first column in timetables
+      row.forEach(cell => {
+        // Add special formatting for date cells
         const cellClasses = [];
-        
         if (isDateString(cell.content)) {
           cellClasses.push('date-cell');
-        }
-        
-        // First column in timetables is typically the date or timeline column
-        if (isTimetableFormat && cellIndex === 0) {
-          cellClasses.push('date-column');
-        }
-        
-        // Check for regulatory requirements in content
-        if (
-          cell.content.toLowerCase().includes('regulatory') ||
-          cell.content.toLowerCase().includes('required') ||
-          cell.content.toLowerCase().includes('deadline') ||
-          cell.content.toLowerCase().includes('rule')
-        ) {
-          cellClasses.push('regulatory-deadline');
         }
         
         tableHtml += `<td class="text-${cell.align} ${cellClasses.join(' ')} border border-gray-300 dark:border-gray-600">${cell.content}</td>\n`;

@@ -4,18 +4,18 @@ import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 2: Listing Rules Search using only Grok's built-in knowledge
- * - Use Grok's knowledge base for Listing Rules
- * - Check if match found and analyze
+ * Step 2: Listing Rules Search
+ * - Search in Summary and Keyword Index
+ * - Query related chapters if match found
  * - Check if also Takeovers Code related
  */
 export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
-  setStepProgress('Searching HKEX Listing Rules information using AI knowledge');
+  setStepProgress('Searching Listing Rules summary and keyword index');
   
   try {
-    // Step 2(a): Search for Listing Rules using Grok's knowledge base only
+    // Step 2(a): Search Summary and Keyword Index for Listing Rules
     const response = await grokService.getRegulatoryContext(
-      `Provide comprehensive information about HKEX Listing Rules regarding: ${params.query}`
+      `Search specifically in "Summary and Keyword Index_Listing Rule.docx" for: ${params.query}`
     );
     
     // Use utility function to safely extract text
@@ -25,16 +25,16 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     const searchPositive = listingRulesContext && listingRulesContext.trim() !== '';
     
     if (searchPositive) {
-      setStepProgress('Found relevant Listing Rules information');
+      setStepProgress('Found relevant Listing Rules, retrieving chapter details');
       
-      // Check for specific chapter references in the response
+      // Search in related Chapter of Listing Rules
       const chapterMatch = listingRulesContext.match(/Chapter\s+(\d+[A-Z]?)/i);
       let enhancedContext = listingRulesContext;
       
       if (chapterMatch && chapterMatch[1]) {
         const chapterNum = chapterMatch[1];
         const chapterResponse = await grokService.getRegulatoryContext(
-          `Provide detailed information specifically about Chapter ${chapterNum} of the HKEX Listing Rules related to: ${params.query}`
+          `Find detailed information about Chapter ${chapterNum} of the Listing Rules`
         );
         
         // Use utility function to safely extract text
@@ -95,7 +95,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         isRegulatoryRelated: Boolean(params.isRegulatoryRelated) || true
       };
     } else {
-      // Negative search result - move to next step depending on execution needs
+      // Negative search result - move to Step 4 or 5 depending on execution needs
       setStepProgress('No specific Listing Rules found, checking if execution guidance is needed');
       
       const executionRequired = 

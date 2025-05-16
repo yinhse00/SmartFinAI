@@ -3,10 +3,8 @@ import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 5: Enhanced Response Generation
- * - Compile final response from all context including guidance materials
- * - Prioritize practical guidance and listing decisions
- * - Maintain consistent output formatting
+ * Step 5: Response Generation
+ * - Compile final response from all context
  * - Translate to Chinese if original query was Chinese
  * - Support automatic batching for long responses
  */
@@ -23,9 +21,6 @@ export const executeStep5 = async (
                            params.executionContext || 
                            params.listingRulesContext || 
                            params.takeoversCodeContext || '';
-    
-    // Include guidance context if available
-    const guidanceContext = params.guidanceContext || '';
     
     // Validate that we have a query to respond to
     if (!params.query) {
@@ -46,43 +41,13 @@ export const executeStep5 = async (
                                      params.query.toLowerCase().includes('供股') ||
                                      params.query.toLowerCase().includes('关连交易');
     
-    // Enhanced response instructions to maintain output format but improve content
-    const enhancedInstructions = `
-IMPORTANT FORMATTING INSTRUCTIONS:
-- Maintain CONSISTENT TABLE FORMATTING using | for all tables
-- For timetables, use the format: | Timeline | Step | Description |
-- For regulatory comparisons, use format: | Rule | Requirement | Details |
-- Preserve paragraph structure and formatting
-- Use markdown headers (# , ## , ###) for section titles
-- Format lists with - or numbers
-- Use bold (**text**) for emphasis of important points
-
-CONTENT ENHANCEMENT INSTRUCTIONS:
-- Prioritize PRACTICAL guidance over theoretical rules
-- Include specific listing decisions and guidance materials when relevant
-- For execution processes, ensure COMPLETE timetables with all key dates
-- Include specific rule references and regulatory requirements
-- Provide comprehensive but concise explanations
-- For rule interpretations, include both the rule text AND practical application
-
-RESPONSE STRUCTURE:
-1. Begin with a concise summary of the answer
-2. Provide relevant rule references and requirements
-3. Include practical application and guidance
-4. For processes, include complete timetable in markdown table format
-5. End with key takeaways or recommendations
-
-${guidanceContext ? 'INCORPORATE THE FOLLOWING GUIDANCE AND LISTING DECISIONS:\n' + guidanceContext : ''}
-`;
-    
     const responseParams = {
       prompt: isPotentiallyLongResponse 
-        ? `${params.query}\n\n${enhancedInstructions}\n\n[NOTE: This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.]` 
-        : `${params.query}\n\n${enhancedInstructions}`,
+        ? `${params.query} [NOTE: This query may require multiple parts. Please focus on the most important information first and structure your response to work well with continuation.]` 
+        : params.query,
       regulatoryContext: responseContext,
       // Set a modest token limit to encourage batching rather than one huge response
-      maxTokens: isPotentiallyLongResponse ? 4000 : undefined,
-      temperature: 0.3 // Slightly higher temperature for more natural responses while maintaining accuracy
+      maxTokens: isPotentiallyLongResponse ? 4000 : undefined
     };
     
     console.log('Calling grokService with params:', responseParams);
@@ -112,16 +77,13 @@ ${guidanceContext ? 'INCORPORATE THE FOLLOWING GUIDANCE AND LISTING DECISIONS:\n
                             responseText.length > 3500;
     
     const metadata = {
-      ...(response.metadata || {}),
+      ...response.metadata,
       mayRequireBatching: isPotentiallyLongResponse || appearsTruncated,
       batchSuggestion: appearsTruncated ? (
         lastInputWasChinese 
           ? '此回复似乎不完整。您可以使用"继续"按钮查看更多信息。'
           : "This response appears to be incomplete. Consider using the Continue button to see additional information."
-      ) : undefined,
-      // Add metadata about guidance materials used
-      guidanceMaterialsUsed: Boolean(params.guidanceContext),
-      sourceMaterials: params.sourceMaterials || []
+      ) : undefined
     };
     
     // For Chinese input, the translation will be handled by the MessageTranslator hook

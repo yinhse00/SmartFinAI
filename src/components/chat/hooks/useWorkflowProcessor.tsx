@@ -10,11 +10,10 @@ import { WorkflowStep, WorkflowProcessorProps, Step1Result } from './workflow/ty
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
-import { mappingSpreadsheetService } from '@/services/regulatory/mappingSpreadsheetService';
 
 /**
  * Hook for managing the workflow of processing and responding to queries
- * Enhanced with parallel processing capabilities and improved guidance material lookup
+ * Enhanced with parallel processing capabilities
  */
 export const useWorkflowProcessor = ({
   messages,
@@ -34,7 +33,6 @@ export const useWorkflowProcessor = ({
   
   /**
    * Execute the workflow for a query with enhanced parallel processing
-   * and intelligent guidance mapping
    */
   const executeWorkflow = async (query: string) => {
     if (!isGrokApiKeySet) {
@@ -82,46 +80,41 @@ export const useWorkflowProcessor = ({
       // Get workflow parameters from step 1 result
       let params: any = { 
         ...step1Result,
-        skipSequentialSearches: true // Skip redundant checks as requested
+        skipSequentialSearches: step1Result.skipSequentialSearches || false
       };
       
-      // Extract topics from query for guidance lookups
-      const topics = await mappingSpreadsheetService.extractTopicsFromQuery(query);
+      // For parallel processing path, we can often skip to response generation
+      let nextStep = step1Result.nextStep;
       
-      // Check for guidance materials and listing decisions
-      setStepProgress(lastInputWasChinese ? '搜索相关指引和上市决定' : 'Searching for relevant guidance and listing decisions');
-      const { guidanceContext, sourceMaterials } = await mappingSpreadsheetService.findRelevantGuidance(query, topics);
-      
-      if (guidanceContext && guidanceContext !== "No specific guidance materials found.") {
-        // Add guidance context to params
-        params.guidanceContext = guidanceContext;
-        params.sourceMaterials = sourceMaterials;
-        
-        // If we have regulatory context from step 1, combine with guidance context
-        if (params.regulatoryContext) {
-          params.regulatoryContext = params.regulatoryContext + "\n\n--- Guidance and FAQs ---\n\n" + guidanceContext;
-        } else {
-          params.regulatoryContext = guidanceContext;
+      // If we have comprehensive context from parallel processing, skip sequential steps
+      if (params.skipSequentialSearches) {
+        console.log('Skipping sequential search steps - using parallel processed context');
+        nextStep = 'response';
+      } else {
+        // If parallel processing didn't yield sufficient context, follow sequential flow
+        // Step 2: Listing Rules
+        if (nextStep === 'listingRules') {
+          setCurrentStep('listingRules');
+          const step2Result = await step2ListingRules(params, setStepProgress);
+          params = { ...params, ...step2Result };
+          nextStep = step2Result.nextStep;
         }
-      }
-
-      // For execution queries, we still want to use the execution step
-      let nextStep = 'response';
-      if (query.toLowerCase().includes('process') || 
-          query.toLowerCase().includes('how to') || 
-          query.toLowerCase().includes('steps') || 
-          query.toLowerCase().includes('procedure') || 
-          query.toLowerCase().includes('timeline') || 
-          query.toLowerCase().includes('timetable')) {
-        nextStep = 'execution';
-      }
-
-      // Step 4: Execution Process (if needed)
-      if (nextStep === 'execution') {
-        setCurrentStep('execution');
-        const step4Result = await step4Execution(params, setStepProgress);
-        params = { ...params, ...step4Result };
-        nextStep = step4Result.nextStep;
+        
+        // Step 3: Takeovers Code
+        if (nextStep === 'takeoversCode') {
+          setCurrentStep('takeoversCode');
+          const step3Result = await step3TakeoversCode(params, setStepProgress);
+          params = { ...params, ...step3Result };
+          nextStep = step3Result.nextStep;
+        }
+        
+        // Step 4: Execution Process
+        if (nextStep === 'execution') {
+          setCurrentStep('execution');
+          const step4Result = await step4Execution(params, setStepProgress);
+          params = { ...params, ...step4Result };
+          nextStep = step4Result.nextStep;
+        }
       }
       
       // Step 5: Response Generation (always required)
@@ -156,11 +149,7 @@ export const useWorkflowProcessor = ({
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: responseContent,  // Use the ensured non-empty content
-            metadata: {
-              ...(step5Result.metadata || {}),
-              guidanceMaterialsUsed: Boolean(params.guidanceContext),
-              sourceMaterials: params.sourceMaterials || []
-            }
+            metadata: step5Result.metadata || {}
           };
           
           setMessages(finalMessages);
@@ -179,11 +168,7 @@ export const useWorkflowProcessor = ({
             sender: 'bot',
             content: step5Result.response || "I wasn't able to generate a proper response. Please try again.",
             timestamp: new Date(),
-            metadata: {
-              ...(step5Result.metadata || {}),
-              guidanceMaterialsUsed: Boolean(params.guidanceContext),
-              sourceMaterials: params.sourceMaterials || []
-            }
+            metadata: step5Result.metadata || {}
           };
           
           setMessages([...updatedMessages, newAssistantMessage]);
