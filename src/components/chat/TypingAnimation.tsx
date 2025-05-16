@@ -68,19 +68,23 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
           // Pause briefly for formatting tags to simulate natural breaks
           const tagContent = text.substring(characterIndex, tagEndIndex + 1);
           
-          // Longer pause for paragraph and heading tags
-          if (tagContent.includes('p class') || 
-              tagContent.includes('h1') || 
-              tagContent.includes('h2') || 
-              tagContent.includes('h3')) {
-            delay *= 3;
+          // Longer pause for paragraph tags to make paragraphing more clear
+          if (tagContent.includes('<p')) {
+            delay *= 5;
+          }
+          
+          // Pause for bold and italic formatting to emphasize them
+          if (tagContent.includes('<strong') || 
+              tagContent.includes('<em') || 
+              tagContent.includes('<b') || 
+              tagContent.includes('<i')) {
+            delay *= 2;
           }
           
           // Pause for list items to make them more readable
           if (tagContent.includes('<li>') || 
               tagContent.includes('<ul') || 
-              tagContent.includes('</ul>') ||
-              tagContent.includes('<blockquote')) {
+              tagContent.includes('</ul>')) {
             delay *= 2;
           }
         }

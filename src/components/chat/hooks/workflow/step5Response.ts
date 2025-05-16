@@ -34,15 +34,24 @@ export const executeStep5 = async (
                           params.query.toLowerCase().includes('timetable') ||
                           params.query.toLowerCase().includes('rights issue');
     
-    // Create quality-focused instructions
+    // Create quality-focused instructions with improved formatting guidance
     const enhancedInstructions = `
 IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
+
+FORMATTING INSTRUCTIONS:
+- Do NOT use markdown headings (###) or horizontal rules (---)
+- Use paragraphs to separate different points or ideas
+- Use **bold text** for important concepts and key terms
+- Use *italic text* for emphasis or special terms
+- Use bullet points (•) for listing items
+- Format tables properly when needed
+- Use proper spacing between paragraphs
 
 For rules interpretation: 
 - Include specific rule references with detailed explanations
 - Cover all relevant requirements and implications
 - For timetables, include all critical dates and explain their significance
-- Use tables and bullet points for clarity when appropriate
+- Use tables for clarity when appropriate
 - Bold important points and rule references for emphasis
 
 Ensure your response is complete, accurate, and addresses all aspects of the query.

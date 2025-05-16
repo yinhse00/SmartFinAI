@@ -14,35 +14,35 @@ export const responseOptimizer = {
     // Use enhanced token limits for comprehensive responses
     if (queryType === 'open_offer' || queryType === 'rights_issue') {
       return {
-        temperature: 0.3, // More balanced temperature
-        maxTokens: 30000  // Increased from 3000
+        temperature: 0.3, // More precise temperature for regulatory content
+        maxTokens: 30000
       };
     }
     
     if (queryType === 'connected_transaction' || prompt.toLowerCase().includes('connected')) {
       return {
-        temperature: 0.4, // More balanced temperature
-        maxTokens: 25000  // Increased from 2000
+        temperature: 0.4, // Balanced temperature
+        maxTokens: 25000
       };
     }
     
     if (isSimpleQuery) {
       return {
         temperature: 0.7, // Higher temperature for more natural responses
-        maxTokens: 10000  // Increased from 1000
+        maxTokens: 10000
       };
     }
     
     if (prompt.toLowerCase().includes('compare')) {
       return {
         temperature: 0.4, // Balanced temperature for comparisons
-        maxTokens: 20000  // Increased from 2000
+        maxTokens: 20000
       };
     }
     
     // Default optimized values with more balanced parameters
     const baseTemperature = 0.5;  // Balanced temperature
-    const baseTokens = 15000;     // Enhanced token count
+    const baseTokens = 15000;
     
     console.log(`Optimized Parameters - Temperature: ${baseTemperature}, Max Tokens: ${baseTokens}`);
     

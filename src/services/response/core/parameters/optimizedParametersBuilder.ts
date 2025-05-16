@@ -19,7 +19,7 @@ export const optimizedParametersBuilder = {
     if (isTimetableQuery) {
       return {
         temperature: 0.3,
-        maxTokens: 60000   // Maintaining high token limit
+        maxTokens: 60000
       };
     }
     
@@ -32,7 +32,7 @@ export const optimizedParametersBuilder = {
     if (isExecutionProcessQuery) {
       return {
         temperature: 0.4,
-        maxTokens: 50000  // Maintaining high token limit
+        maxTokens: 50000
       };
     }
     
@@ -41,7 +41,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes('definition')) {
       return {
         temperature: 0.5,
-        maxTokens: 40000 // Maintaining high token limit
+        maxTokens: 40000
       };
     }
     
@@ -50,7 +50,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes('connected person')) {
       return {
         temperature: 0.4,
-        maxTokens: 45000 // Maintaining high token limit
+        maxTokens: 45000
       };
     }
     
@@ -61,7 +61,7 @@ export const optimizedParametersBuilder = {
         prompt.toLowerCase().includes('vs')) {
       return {
         temperature: 0.4,
-        maxTokens: 45000 // Maintaining high token limit
+        maxTokens: 45000
       };
     }
     
@@ -69,14 +69,15 @@ export const optimizedParametersBuilder = {
     if (isSimpleQuery && !hasContext) {
       return {
         temperature: 0.7, // Higher temperature for conversational queries
-        maxTokens: 20000 // Maintaining high token limit
+        maxTokens: 20000
       };
     }
     
     // Get optimized parameters from service
     const { temperature, maxTokens } = responseOptimizer.getOptimizedParameters(queryType, prompt);
     
-    const actualTemperature = hasContext ? 0.4 : temperature;
+    // Context requires slightly lower temperature for more consistent responses
+    const actualTemperature = hasContext ? Math.max(0.4, temperature - 0.1) : temperature;
     
     return { 
       temperature: actualTemperature, 

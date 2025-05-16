@@ -18,7 +18,12 @@ export function determineOptimalTemperature(queryType: string, prompt: string): 
     return 0.5; // Medium for explanations
   }
   
-  // Default to a more balanced temperature
+  // Check for simple questions
+  if (prompt.length < 100 && !prompt.includes('?')) {
+    return 0.7; // Higher for simple, conversational queries
+  }
+  
+  // Default to a balanced temperature
   return 0.5;
 }
 
@@ -65,18 +70,24 @@ export function evaluateResponseRelevance(response: string, query: string, query
   
   // Check if response appears to directly quote database content
   if (response.includes('[') && response.includes(']') && 
-      (response.includes('---') || response.includes('FAQ') || 
-       response.includes('Source:') || response.includes('Reference:'))) {
+      (response.includes('Source:') || response.includes('Reference:'))) {
     score += 5; // Strongly favor responses that appear to quote database content
   }
   
   // Enhance score for comprehensive, well-formatted responses
-  if (response.includes('|') && response.includes('-') && response.includes('+')) {
-    score += 2; // Likely contains tables
+  // Favor paragraphing and formatting over section markers
+  if (response.includes('<p>') || (response.split('\n\n').length > 3)) {
+    score += 2; // Good paragraph structure
   }
   
-  if (response.includes('*') || response.includes('•')) {
-    score += 1; // Contains bullet points
+  if (response.includes('<strong>') || response.includes('<b>') || 
+      response.includes('**') || response.includes('<em>')) {
+    score += 2; // Good text formatting
+  }
+  
+  if (response.includes('<ul>') || response.includes('<li>') || 
+      (response.match(/[\n•\-\*]/g)?.length || 0) > 5) {
+    score += 2; // Good list formatting
   }
   
   // Normalize to 0-10 scale
