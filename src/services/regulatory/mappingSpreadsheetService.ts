@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
