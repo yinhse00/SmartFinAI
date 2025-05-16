@@ -27,6 +27,8 @@ interface ChatContainerProps {
   onTryReconnect?: () => Promise<boolean>;
   currentStep?: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
   stepProgress?: string;
+  currentLanguage?: 'en' | 'zh';
+  onLanguageChange?: (language: 'en' | 'zh') => void;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({
@@ -47,7 +49,9 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   isOfflineMode = false,
   onTryReconnect,
   currentStep = 'preparing',
-  stepProgress = ''
+  stepProgress = '',
+  currentLanguage = 'en',
+  onLanguageChange
 }) => {
   // Debug log to track message status
   if (translatingMessageIds.length > 0) {
@@ -75,6 +79,8 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
         isGrokApiKeySet={isGrokApiKeySet} 
         onOpenApiKeyDialog={onOpenApiKeyDialog} 
         isOfflineMode={isOfflineMode}
+        currentLanguage={currentLanguage}
+        onLanguageChange={onLanguageChange}
       />
       
       <ChatContent

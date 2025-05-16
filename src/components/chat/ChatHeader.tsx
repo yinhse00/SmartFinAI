@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { CardHeader } from '@/components/ui/card';
 import { BookOpen, Languages, Settings, WifiOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -20,10 +20,8 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
   currentLanguage = 'en',
   onLanguageChange
 }) => {
-  const [language, setLanguage] = useState<'en' | 'zh'>(currentLanguage);
-  
+  // Remove the useState hook and use the prop directly
   const handleLanguageChange = (newLanguage: 'en' | 'zh') => {
-    setLanguage(newLanguage);
     if (onLanguageChange) {
       onLanguageChange(newLanguage);
     }
@@ -50,13 +48,13 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
             <DropdownMenuItem 
-              className={language === 'en' ? 'bg-muted' : ''}
+              className={currentLanguage === 'en' ? 'bg-muted' : ''}
               onClick={() => handleLanguageChange('en')}
             >
               English
             </DropdownMenuItem>
             <DropdownMenuItem 
-              className={language === 'zh' ? 'bg-muted' : ''}
+              className={currentLanguage === 'zh' ? 'bg-muted' : ''}
               onClick={() => handleLanguageChange('zh')}
             >
               中文 (Chinese)
