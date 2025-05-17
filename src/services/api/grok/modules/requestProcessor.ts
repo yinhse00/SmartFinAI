@@ -96,7 +96,7 @@ export const processApiRequest = async (
   }
   
   // Smart model selection strategy for improved performance
-  // Use grok-3-mini-beta for ALL internal processing to save costs and time
+  // Use grok-3-mini for ALL internal processing to save costs and time
   const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
   const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
                               requestBody.metadata?.processingStage === undefined;
@@ -107,8 +107,8 @@ export const processApiRequest = async (
     requestBody.model = "grok-3-beta";
   } else {
     // Use mini model for ALL internal processing to save costs and improve performance
-    console.log("Using grok-3-mini-beta for processing");
-    requestBody.model = "grok-3-mini-beta";
+    console.log("Using grok-3-mini for processing");
+    requestBody.model = "grok-3-mini";
   }
   
   // Prepare request parameters with optimized token limits

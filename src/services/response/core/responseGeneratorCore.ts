@@ -38,7 +38,7 @@ export const responseGeneratorCore = {
       // Smart model selection - use mini model for internal processing to save costs and time
       const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
       if (!requestBody.model) {
-        requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
+        requestBody.model = isInternalProcessing ? 'grok-3-mini' : 'grok-3-beta';
       }
       
       // Forward request to API client
@@ -62,7 +62,7 @@ export const responseGeneratorCore = {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-mini-beta", // Use mini model for backup calls
+        model: "grok-3-mini", // Use mini model for backup calls
         temperature: 0.4,
         max_tokens: 8000 // Reduced for faster response
       };
