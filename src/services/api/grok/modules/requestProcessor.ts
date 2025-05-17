@@ -95,23 +95,23 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Smart model selection strategy - use grok-3-beta for user-facing content
-  // and grok-3-mini-beta only for internal processing
+  // Smart model selection strategy for improved performance
+  // Use grok-3-mini-beta for ALL internal processing to save costs and time
   const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
   const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
                               requestBody.metadata?.processingStage === undefined;
   
-  // Use full model for user-facing content and complex queries
-  if (isUserFacingQuery || isComplexQuery || isExternalProcessing) {
-    console.log("Using grok-3-beta for quality response");
+  // Only use full model for final user-facing content
+  if (isUserFacingQuery && isExternalProcessing) {
+    console.log("Using grok-3-beta for quality user-facing response");
     requestBody.model = "grok-3-beta";
   } else {
-    // Use mini model for internal processing to save costs
-    console.log("Using grok-3-mini-beta for internal processing");
+    // Use mini model for ALL internal processing to save costs and improve performance
+    console.log("Using grok-3-mini-beta for processing");
     requestBody.model = "grok-3-mini-beta";
   }
   
-  // Prepare request parameters without aggressive token capping
+  // Prepare request parameters with optimized token limits
   const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
   
   // Don't override token limit if specified, but ensure it's reasonable

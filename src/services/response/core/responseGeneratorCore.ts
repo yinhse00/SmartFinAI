@@ -10,13 +10,13 @@ import { tokenManagementService } from '../modules/tokenManagementService';
 export const responseGeneratorCore = {
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      console.log("Making API call with quality-optimized parameters");
+      console.log("Making API call with optimized parameters");
       
       // Check for batch request
       const isBatchRequest = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                            requestBody.messages.find(m => m.role === 'user').content.includes('[CONTINUATION_PART_');
       
-      // Determine optimal token limit - using original high values
+      // Determine optimal token limit with reduced values
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
@@ -35,7 +35,7 @@ export const responseGeneratorCore = {
         });
       }
       
-      // Smart model selection - use full model for user-facing responses
+      // Smart model selection - use mini model for internal processing to save costs and time
       const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
       if (!requestBody.model) {
         requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
@@ -51,20 +51,20 @@ export const responseGeneratorCore = {
   
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
-      console.log('Attempting backup API call with quality parameters');
+      console.log('Attempting backup API call with optimized parameters');
       
       // Enhanced system prompt for backup calls
       const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
-      // Quality-focused backup request
+      // Optimized backup request
       const backupRequestBody = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-beta",
+        model: "grok-3-mini-beta", // Use mini model for backup calls
         temperature: 0.4,
-        max_tokens: 15000 // Enhanced for quality responses
+        max_tokens: 8000 // Reduced for faster response
       };
       
       return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
@@ -78,8 +78,8 @@ export const responseGeneratorCore = {
     truncated: boolean,
     text: string
   } => {
-    // Define a higher token limit constant
-    const DEFAULT_TOKEN_LIMIT = 10000;
+    // Define a token limit constant
+    const DEFAULT_TOKEN_LIMIT = 5000; // Reduced from 10000
     
     // If token count is near limit, mark as truncated
     if (tokenCount > DEFAULT_TOKEN_LIMIT * 0.9) {

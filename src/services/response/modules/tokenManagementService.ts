@@ -1,26 +1,26 @@
 
 /**
  * Constants for token limits across different query types and scenarios
- * Restored to original values for comprehensive responses
+ * Optimized for faster responses while maintaining quality
  */
 const TOKEN_LIMITS = {
-  DEFAULT: 20000,  // Restored from 2000
-  RETRY: 30000,    // Restored from 3000
-  RIGHTS_ISSUE_TIMETABLE: 35000,  // Restored from 4000
-  DEFINITION_QUERY: 25000,  // Restored from 2500
-  CONNECTED_TRANSACTION: 27500,  // Restored from 3000
-  SPECIALIST_TECHNOLOGY: 30000,  // Restored from 3000
-  SIMPLE_QUERY: 12500,  // Restored from 1200
+  DEFAULT: 8000,  // Reduced from 20000
+  RETRY: 10000,   // Reduced from 30000
+  RIGHTS_ISSUE_TIMETABLE: 15000,  // Reduced from 35000
+  DEFINITION_QUERY: 6000,  // Reduced from 25000
+  CONNECTED_TRANSACTION: 10000,  // Reduced from 27500
+  SPECIALIST_TECHNOLOGY: 12000,  // Reduced from 30000
+  SIMPLE_QUERY: 4000,  // Reduced from 12500
   
-  // Enhanced retry limits with restored sizes
-  RETRY_ATTEMPT_1: 40000,  // Restored from 4000
-  RETRY_ATTEMPT_2: 50000,  // Restored from 5000
-  RETRY_ATTEMPT_3: 60000,  // Restored from 6000
+  // Enhanced retry limits with optimized sizes
+  RETRY_ATTEMPT_1: 10000,  // Reduced from 40000
+  RETRY_ATTEMPT_2: 12000,  // Reduced from 50000
+  RETRY_ATTEMPT_3: 15000,  // Reduced from 60000
   
-  // Restored limits for complex financial queries
-  COMPLEX_FINANCIAL_QUERY: 40000,  // Restored from 4000
-  RIGHTS_ISSUE_WITH_WAIVER: 45000,  // Restored from 5000
-  COMPLEX_TRANSACTION_TIMETABLE: 50000,  // Restored from 5000
+  // Optimized limits for complex financial queries
+  COMPLEX_FINANCIAL_QUERY: 12000,  // Reduced from 40000
+  RIGHTS_ISSUE_WITH_WAIVER: 15000,  // Reduced from 45000
+  COMPLEX_TRANSACTION_TIMETABLE: 15000,  // Reduced from 50000
 } as const;
 
 /**
@@ -60,7 +60,7 @@ export const tokenManagementService = {
 
     // For batch requests, limited increase for later parts
     if (isBatchRequest && batchNumber && batchNumber > 1) {
-      return Math.min(40000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
+      return Math.min(15000, TOKEN_LIMITS.DEFAULT * (1 + (batchNumber * 0.1)));
     }
     
     // Special case handling

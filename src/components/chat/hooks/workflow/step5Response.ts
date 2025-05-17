@@ -3,7 +3,7 @@ import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 5: Enhanced Response Generation with quality-focused parameters
+ * Step 5: Enhanced Response Generation with optimized parameters
  */
 export const executeStep5 = async (
   params: any, 
@@ -61,11 +61,11 @@ For rules interpretation:
 Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
     
-    // Quality-optimized response parameters
+    // Quality-optimized response parameters with more reasonable token limits
     const responseParams = {
       prompt: `${params.query}\n\n${enhancedInstructions}`,
       regulatoryContext: responseContext,
-      maxTokens: isComplexQuery ? 25000 : 15000, // Higher token limits for quality
+      maxTokens: isComplexQuery ? 15000 : 8000, // Optimized token limits while maintaining quality
       temperature: 0.5, // Balanced temperature for better quality
       model: "grok-3-beta" // Always use the full model for user responses
     };

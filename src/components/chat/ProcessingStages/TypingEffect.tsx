@@ -20,15 +20,15 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
   
   const targetMessage = messages[messageIndex];
 
-  // Real typing effect with variable speed based on stage
+  // Real typing effect with faster speed for better user experience
   useEffect(() => {
     if (!isVisible) return;
     
     // Don't start over if we're showing the same message
     if (typedOutput === targetMessage) return;
     
-    // Real typing effect
-    const typingSpeed = stage === 'processing' ? 35 : 45; // ms per character
+    // Faster typing effect
+    const typingSpeed = stage === 'processing' ? 20 : 25; // ms per character (reduced from 35/45)
     
     if (typingIndex < targetMessage.length) {
       const timer = setTimeout(() => {
