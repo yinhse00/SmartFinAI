@@ -20,14 +20,6 @@ export const useContextRetrieval = () => {
     const searchStart = Date.now();
     
     try {
-      // Check if this is a complex query that should use the full model
-      const isComplexQuery =
-        queryText.length > 150 ||
-        queryText.toLowerCase().includes('rights issue') ||
-        queryText.toLowerCase().includes('timetable') ||
-        queryText.toLowerCase().includes('connected transaction') ||
-        queryText.toLowerCase().includes('takeovers code');
-        
       // For preliminary assessment, use our enhanced parallel approach
       if (isPreliminaryAssessment) {
         console.log('Using parallel query processing for comprehensive assessment');
@@ -54,8 +46,7 @@ export const useContextRetrieval = () => {
           isPreliminaryAssessment,
           metadata: {
             processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
-            isInitialAssessment: isPreliminaryAssessment,
-            forceFullModel: isComplexQuery // Force full model for complex queries
+            isInitialAssessment: isPreliminaryAssessment
           }
         }
       );

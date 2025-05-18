@@ -38,18 +38,15 @@ export const grokResponseGenerator = {
           "in Hong Kong financial regulations, listing rules, and corporate actions.";
         
         try {
-          // Build simple request body for conversational queries with optimized parameters
+          // Build simple request body for conversational queries
           const requestBody = {
             messages: [
               { role: 'system', content: conversationalSystemMessage },
               { role: 'user', content: params.prompt }
             ],
-            model: "grok-3-mini", // Use mini model for conversational queries
+            model: "grok-3-mini-beta",
             temperature: 0.7,
-            max_tokens: 3000, // Reduced token limit for conversational queries
-            metadata: {
-              internalProcessing: false
-            }
+            max_tokens: 4000, // FIXED: Increase token limit for conversational queries
           };
           
           // Make API call with simpler configuration for conversational queries
@@ -91,29 +88,26 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // Use optimized token limits for better performance
-      let finalTokens = Math.min(8000, maxTokens);
-      
-      // Higher token limits only for specific complex queries
+      // CRITICAL FIX: Use much higher token limits for all requests to prevent truncation
+      // Especially for specialized financial queries like open offers and rights issues
+      // Note that we are using constants from token management service
+      let finalTokens = maxTokens;
       if (queryType === 'open_offer' || queryType === 'rights_issue') {
-        finalTokens = 12000; // Still high but lower than before
+        // Use much higher token limits for timetable queries
+        finalTokens = 10000; // Set a high but still practical limit for API
         console.log(`Using enhanced token limit (${finalTokens}) for ${queryType} query`);
+      } else {
+        // For all other queries, use higher limits than default
+        finalTokens = Math.min(8000, maxTokens); // Cap at 8K for API practicality
       }
       
-      // Build the request body with the optimized token limits
+      // Build the request body with the enhanced token limits
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
         Math.min(0.2, temperature), // Keep temperature low for consistency
-        finalTokens               // Use our optimized token limits
+        finalTokens               // Use our enhanced token limits
       );
-
-      // Mark final user response processing for model selection
-      if (!requestBody.metadata) {
-        requestBody.metadata = {};
-      }
-      requestBody.metadata.internalProcessing = false;
-      requestBody.metadata.processingStage = 'main';
 
       try {
         // Make primary API call
@@ -142,7 +136,7 @@ export const grokResponseGenerator = {
         console.groupEnd();
         return finalResponse;
       } catch (primaryApiError) {
-        // If first attempt fails, try backup approach with optimized parameters
+        // If first attempt fails, try backup approach with IDENTICAL parameters
         console.error("Primary API call failed, attempting backup approach:", primaryApiError);
         
         try {

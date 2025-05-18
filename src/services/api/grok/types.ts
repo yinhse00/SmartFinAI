@@ -23,7 +23,7 @@ export interface GrokChatRequestBody {
   metadata?: any;
 }
 
-// Enhanced types for the initial classification
+// New types for the enhanced initial classification
 export interface CategoryConfidence {
   category: string;
   confidence: number;  // 0-1 score
@@ -37,9 +37,4 @@ export interface InitialAssessment {
   suggestedContextSources?: string[];
   estimatedComplexity: 'simple' | 'moderate' | 'complex';
   requiresParallelProcessing: boolean;
-  // Add missing properties that are being used in the code
-  isRegulatoryQuery?: boolean;
-  complexity?: number;
-  primaryCategory?: string;
-  confidenceScores?: Record<string, number>;
 }

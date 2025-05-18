@@ -1,3 +1,4 @@
+
 /**
  * Build request body with appropriate parameters
  */
@@ -24,7 +25,7 @@ export const requestBodyBuilder = {
         { role: 'system', content: systemMessage },
         { role: 'user', content: enhancedPrompt }
       ],
-      model: "grok-3-mini",
+      model: "grok-3-mini-beta",
       temperature: finalTemperature,
       max_tokens: finalTokens,
     };

@@ -19,26 +19,13 @@ export const contextService = {
       const isTakeoversQuery = query.toLowerCase().includes('takeover') || 
                               query.toLowerCase().includes('general offer');
       
-      // Check for complex financial queries
-      const isComplexQuery = query.length > 150 ||
-                           query.toLowerCase().includes('rights issue') ||
-                           query.toLowerCase().includes('timetable') ||
-                           query.toLowerCase().includes('connected transaction') ||
-                           query.toLowerCase().includes('chapter 14') ||
-                           query.toLowerCase().includes('chapter 14a');
-      
-      // Always use beta model for regulatory content and complex queries
-      const shouldUseBetaModel = isIFAQuery || isTakeoversQuery || isComplexQuery || 
-                               options?.isPreliminaryAssessment === true;
-      
       // Set specialized handling for specific query types      
       const metadata = {
         ...(options?.metadata || {}),
         specializedQuery: isIFAQuery ? 'ifa' : (isTakeoversQuery ? 'takeovers' : undefined),
-        model: shouldUseBetaModel ? 'grok-3-beta' : 'grok-3-mini',
+        model: isIFAQuery || isTakeoversQuery ? 'grok-3-beta' : 'grok-3-mini-beta',
         processingStage: options?.isPreliminaryAssessment ? 'preliminary' : 'main',
-        hasRegulatoryDatabase: false, // Never use database files
-        forceFullModel: isComplexQuery || isIFAQuery || isTakeoversQuery // Force full model for important queries
+        hasRegulatoryDatabase: false // Never use database files
       };
       
       // Use faster path when possible, parallel for complex queries

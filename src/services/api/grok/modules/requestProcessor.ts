@@ -95,39 +95,29 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // ENHANCED MODEL SELECTION STRATEGY
-  // For internal processing, use mini model only for simple classification tasks
+  // Smart model selection strategy - use grok-3-beta for user-facing content
+  // and grok-3-mini-beta only for internal processing
   const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
   const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
                               requestBody.metadata?.processingStage === undefined;
-  const isRegulationContext = requestBody.metadata?.processingStage === 'preliminary' || 
-                             typeof userMessage?.content === 'string' && 
-                             userMessage.content.includes('regulatory context');
-                             
-  // Use grok-3-beta for complex scenarios even during internal processing
-  if ((isComplexQuery && isRegulationContext) || 
-      (isUserFacingQuery && isExternalProcessing) ||
-      (requestBody.metadata?.forceFullModel)) {
+  
+  // Use full model for user-facing content and complex queries
+  if (isUserFacingQuery || isComplexQuery || isExternalProcessing) {
     console.log("Using grok-3-beta for quality response");
     requestBody.model = "grok-3-beta";
   } else {
-    // Only use mini model for simple internal processing
-    console.log("Using grok-3-mini for processing");
-    requestBody.model = "grok-3-mini";
+    // Use mini model for internal processing to save costs
+    console.log("Using grok-3-mini-beta for internal processing");
+    requestBody.model = "grok-3-mini-beta";
   }
   
-  // Prepare request parameters with optimized token limits
+  // Prepare request parameters without aggressive token capping
   const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
   
   // Don't override token limit if specified, but ensure it's reasonable
   if (!requestBody.max_tokens) {
     console.log(`Using default token limit: ${effectiveTokenLimit}`);
     requestBody.max_tokens = effectiveTokenLimit;
-  } 
-  // For complex financial queries, ensure token limits are never too low
-  else if (isComplexQuery && requestBody.max_tokens < 15000) {
-    console.log(`Increasing token limit for complex query from ${requestBody.max_tokens} to 15000`);
-    requestBody.max_tokens = 15000;
   }
   
   // Don't override temperature if explicitly set

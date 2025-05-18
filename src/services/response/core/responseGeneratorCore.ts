@@ -10,31 +10,18 @@ import { tokenManagementService } from '../modules/tokenManagementService';
 export const responseGeneratorCore = {
   makeApiCall: async (requestBody: any, apiKey: string) => {
     try {
-      console.log("Making API call with optimized parameters");
+      console.log("Making API call with quality-optimized parameters");
       
       // Check for batch request
       const isBatchRequest = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                            requestBody.messages.find(m => m.role === 'user').content.includes('[CONTINUATION_PART_');
       
-      const userPrompt = requestBody.messages?.find?.(m => m.role === 'user')?.content || '';
-      
-      // Detect if this is a complex financial query
-      const isComplexFinancialQuery = 
-        userPrompt.toLowerCase().includes('rights issue') ||
-        userPrompt.toLowerCase().includes('timetable') ||
-        userPrompt.toLowerCase().includes('takeovers code') ||
-        userPrompt.toLowerCase().includes('connected transaction') ||
-        userPrompt.toLowerCase().includes('chapter 14') ||
-        userPrompt.toLowerCase().includes('chapter 14a') ||
-        userPrompt.length > 200;
-      
-      // Determine optimal token limit with appropriate values
+      // Determine optimal token limit - using original high values
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
-        prompt: userPrompt,
+        prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
         isRetryAttempt: false,
-        isBatchRequest,
-        isComplexQuery: isComplexFinancialQuery
+        isBatchRequest
       });
       
       // Apply optimal token limits
@@ -44,20 +31,14 @@ export const responseGeneratorCore = {
       if (!requestBody.temperature) {
         requestBody.temperature = tokenManagementService.getTemperature({
           queryType: requestBody.queryType || 'general',
-          prompt: userPrompt,
-          isComplexQuery: isComplexFinancialQuery
+          prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || ''
         });
       }
       
-      // Smart model selection - use appropriate model based on query complexity
+      // Smart model selection - use full model for user-facing responses
       const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
       if (!requestBody.model) {
-        // Always use beta for complex financial queries and final responses
-        if (isComplexFinancialQuery || !isInternalProcessing) {
-          requestBody.model = 'grok-3-beta';
-        } else {
-          requestBody.model = 'grok-3-mini';
-        }
+        requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
       }
       
       // Forward request to API client
@@ -70,28 +51,20 @@ export const responseGeneratorCore = {
   
   makeBackupApiCall: async (prompt: string, queryType: string | null, apiKey: string) => {
     try {
-      console.log('Attempting backup API call with optimized parameters');
+      console.log('Attempting backup API call with quality parameters');
       
       // Enhanced system prompt for backup calls
       const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
-      // Determine if this is a complex query
-      const isComplexQuery = 
-        prompt.toLowerCase().includes('rights issue') || 
-        prompt.toLowerCase().includes('timetable') ||
-        prompt.toLowerCase().includes('takeovers code') ||
-        prompt.toLowerCase().includes('connected transaction') ||
-        prompt.length > 200;
-      
-      // Optimized backup request with appropriate model
+      // Quality-focused backup request
       const backupRequestBody = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: isComplexQuery ? "grok-3-beta" : "grok-3-mini",
+        model: "grok-3-beta",
         temperature: 0.4,
-        max_tokens: isComplexQuery ? 15000 : 8000
+        max_tokens: 15000 // Enhanced for quality responses
       };
       
       return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
@@ -105,8 +78,8 @@ export const responseGeneratorCore = {
     truncated: boolean,
     text: string
   } => {
-    // Define a token limit constant - using higher value for more complete responses
-    const DEFAULT_TOKEN_LIMIT = 10000; // Increased back from 5000
+    // Define a higher token limit constant
+    const DEFAULT_TOKEN_LIMIT = 10000;
     
     // If token count is near limit, mark as truncated
     if (tokenCount > DEFAULT_TOKEN_LIMIT * 0.9) {

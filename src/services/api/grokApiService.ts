@@ -50,8 +50,7 @@ export const grokApiService = {
         query.toLowerCase().includes('takeovers code') ||
         metadata?.specializedQuery;
       
-      // ALWAYS use beta model for regulatory context to ensure quality
-      const model = 'grok-3-beta';
+      const model = isComplexQuery || metadata?.specializedQuery ? 'grok-3-beta' : 'grok-3-mini-beta';
       
       // Enhanced API call with quality-optimized parameters
       const response = await apiClient.callChatCompletions({
@@ -65,8 +64,7 @@ export const grokApiService = {
         metadata: {
           ...metadata,
           isUserFacingQuery: false,
-          internalProcessing: true,
-          forceFullModel: true // Force full model for regulatory context
+          internalProcessing: true
         }
       });
       
@@ -91,7 +89,7 @@ export const grokApiService = {
             content: `Classify: ${query}`
           }
         ],
-        model: 'grok-3-mini', // Use mini model for internal classification to save costs
+        model: 'grok-3-mini-beta', // Use mini model for internal classification to save costs
         temperature: 0.3,
         max_tokens: 1000, // Sufficient for classification
         metadata: {

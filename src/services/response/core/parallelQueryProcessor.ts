@@ -4,178 +4,261 @@ import { InitialAssessment, CategoryConfidence } from '../../api/grok/types';
 import { contextService } from '../../regulatory/contextService';
 
 /**
- * Process regulatory queries in parallel for optimal context retrieval
+ * Service for parallel query processing with enhanced classification
  */
 export const parallelQueryProcessor = {
   /**
-   * Process a query for comprehensive context with optimized parameter selection
+   * Perform initial query classification to determine processing paths
    */
-  processQueryInParallel: async (query: string) => {
+  classifyQuery: async (query: string): Promise<InitialAssessment> => {
     try {
-      console.log('Starting parallel query processing');
+      console.log('Performing enhanced initial classification for query:', query);
       
-      // Step 1: Initial assessment of query complexity and type
-      const systemMessage = `You are an expert in Hong Kong financial regulations. 
-Analyze this query to determine the most relevant regulatory areas and complexity.
-Classify the query into one or more of these categories: 
-- listingRules
-- takeoversCode
-- securitiesFutures
-- openOffer
-- rightsIssue
-- connectedTransaction
-- ipoListing
-- financialReporting
-- corporateGovernance
-- insiderDealing
-- marketManipulation
-- disclosureOfInterests
-- generative (if asking for content generation)
-- conversational (if simple greeting or question)
-
+      // Create a specialized system message for classification
+      const systemMessage = `You are a financial query classification system. 
+Your task is to analyze financial regulatory queries and classify them into relevant categories.
+Determine if this query is regulatory-related, and if so, which specific areas it concerns.
 Provide confidence scores (0-1) for each potential category.
 DO NOT answer the query - ONLY classify it.`;
       
-      // Check if this is a complex query
-      const isComplexQuery = 
-        query.toLowerCase().includes('rights issue') ||
-        query.toLowerCase().includes('timetable') ||
-        query.toLowerCase().includes('connected transaction') ||
-        query.toLowerCase().includes('takeovers code') ||
-        query.length > 200;
-      
-      // Call the appropriate Grok model based on query complexity
+      // Call the Grok-3-Beta model for enhanced classification
       const response = await grokApiService.callChatCompletions({
         messages: [
           { role: 'system', content: systemMessage },
-          { role: 'user', content: `Query to classify: ${query}` },
-          { role: 'assistant', content: `
-I'll classify this query but not answer it.
-
+          { role: 'user', content: `Classify this financial query: ${query}
+Output ONLY a JSON object with these fields:
 {
-  "categories": [],
-  "primaryCategory": "",
-  "confidenceScores": {},
-  "complexity": 0.0,
-  "isRegulatoryQuery": false,
-  "reasoning": ""
+  "isRegulatoryRelated": boolean,
+  "categories": [
+    {"category": "listing_rules", "confidence": 0.X, "priority": 1-5},
+    {"category": "takeovers_code", "confidence": 0.X, "priority": 1-5},
+    {"category": "faq", "confidence": 0.X, "priority": 1-5},
+    {"category": "process", "confidence": 0.X, "priority": 1-5},
+    {"category": "conversational", "confidence": 0.X, "priority": 1-5}
+  ],
+  "reasoning": "Your reasoning for these classifications",
+  "suggestedContextSources": ["listing_rules_chapter_X", "takeovers_code_section_Y"],
+  "estimatedComplexity": "simple|moderate|complex",
+  "requiresParallelProcessing": boolean
 }` 
           }
         ],
-        model: isComplexQuery ? 'grok-3-beta' : 'grok-3-mini',
+        model: 'grok-3-beta',
         temperature: 0.2,
         max_tokens: 1000,
         metadata: {
-          internalProcessing: true,
-          processingStage: 'assessment'
+          processingStage: 'classification',
+          isInitialAssessment: true
         }
       });
       
-      // Extract assessment from response
-      let assessment: InitialAssessment = {
-        categories: [],
-        reasoning: '',
-        isRegulatoryRelated: false,
-        estimatedComplexity: 'simple',
-        requiresParallelProcessing: false,
-        // Initialize other properties with default values
-        primaryCategory: '',
-        confidenceScores: {} as Record<string, number>,
-        complexity: 0,
-        isRegulatoryQuery: false
-      };
+      // Parse the classification response
+      const content = response?.choices?.[0]?.message?.content || '';
+      let assessment: InitialAssessment;
       
       try {
-        const content = response?.choices?.[0]?.message?.content || '';
+        // Extract JSON from the response (handling potential text wrapping)
         const jsonMatch = content.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          const parsedJson = JSON.parse(jsonMatch[0]);
-          
-          // Map the parsed properties to our assessment object
-          assessment = { 
-            ...assessment,
-            primaryCategory: parsedJson.primaryCategory || '',
-            confidenceScores: parsedJson.confidenceScores || {},
-            complexity: parsedJson.complexity || 0,
-            isRegulatoryQuery: parsedJson.isRegulatoryQuery || false,
-            isRegulatoryRelated: parsedJson.isRegulatoryQuery || false,
-            reasoning: parsedJson.reasoning || '',
-            // Convert numeric complexity to string complexity
-            estimatedComplexity: parsedJson.complexity > 0.7 ? 'complex' : 
-                               parsedJson.complexity > 0.3 ? 'moderate' : 'simple',
-            requiresParallelProcessing: parsedJson.complexity > 0.5,
-            categories: parsedJson.categories || []
-          };
-        }
-      } catch (error) {
-        console.error('Error parsing assessment:', error);
-      }
-      
-      console.log('Query assessment:', assessment);
-      
-      // Step 2: Get context from appropriate sources based on assessment
-      const contexts: Record<string, string> = {};
-      
-      if (assessment.isRegulatoryQuery || assessment.complexity > 0.5) {
-        // Use full beta model for complex or regulatory queries
-        const contextOptions = {
-          isPreliminaryAssessment: true,
-          metadata: {
-            categories: assessment.categories,
-            complexity: assessment.complexity,
-            model: 'grok-3-beta'
-          }
+        const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
+        assessment = JSON.parse(jsonStr) as InitialAssessment;
+      } catch (jsonError) {
+        console.error('Error parsing classification JSON:', jsonError);
+        // Fallback to basic assessment
+        assessment = {
+          isRegulatoryRelated: content.toLowerCase().includes('regulation') || 
+                               content.toLowerCase().includes('rule') ||
+                               content.toLowerCase().includes('code'),
+          categories: [
+            { category: 'general', confidence: 0.5, priority: 3 }
+          ],
+          reasoning: 'Failed to parse classification response',
+          estimatedComplexity: 'moderate',
+          requiresParallelProcessing: false
         };
-        
-        // Get comprehensive context with appropriate model
-        const regulatoryContext = await contextService.getRegulatoryContext(query, contextOptions);
-        contexts['comprehensive'] = regulatoryContext;
-      } else {
-        // For simple queries, use mini model
-        const simpleContextOptions = {
-          isPreliminaryAssessment: true,
-          metadata: {
-            categories: assessment.categories,
-            complexity: assessment.complexity,
-            model: 'grok-3-mini'
-          }
-        };
-        
-        const basicContext = await contextService.getRegulatoryContext(query, simpleContextOptions);
-        contexts['basic'] = basicContext;
       }
       
-      console.log('Obtained contexts for categories:', Object.keys(contexts));
-      
-      // Step 3: Create optimized combined context
-      let optimizedContext = contexts['comprehensive'] || contexts['basic'] || '';
-      
-      if (optimizedContext.length > 20000) {
-        console.log('Context is very long, truncating to optimal size');
-        optimizedContext = optimizedContext.substring(0, 20000);
-      }
-      
-      console.log('Completed parallel query processing');
+      console.log('Classification result:', assessment);
+      return assessment;
+    } catch (error) {
+      console.error('Error in query classification:', error);
+      // Return a default assessment on error
       return {
-        optimizedContext,
+        isRegulatoryRelated: true, // Assume regulatory to be safe
+        categories: [
+          { category: 'general', confidence: 0.5, priority: 3 }
+        ],
+        reasoning: 'Error in classification process',
+        estimatedComplexity: 'moderate',
+        requiresParallelProcessing: false
+      };
+    }
+  },
+  
+  /**
+   * Gather contexts in parallel based on category confidences
+   */
+  gatherContextsInParallel: async (
+    query: string, 
+    assessment: InitialAssessment
+  ): Promise<Record<string, string>> => {
+    console.log('Starting parallel context gathering');
+    
+    // Skip context gathering for simple conversational queries
+    const isConversational = assessment.categories.find(c => 
+      c.category === 'conversational' && c.confidence > 0.7);
+      
+    if (isConversational && assessment.estimatedComplexity === 'simple') {
+      console.log('Skipping context gathering for simple conversational query');
+      return {};
+    }
+    
+    // Identify high-confidence categories (> 0.5) for parallel processing
+    const highConfidenceCategories = assessment.categories
+      .filter(c => c.confidence > 0.5)
+      .sort((a, b) => b.priority - a.priority || b.confidence - a.confidence);
+    
+    // For very simple queries or when parallel processing isn't required, only process top category
+    if (!assessment.requiresParallelProcessing || assessment.estimatedComplexity === 'simple') {
+      highConfidenceCategories.splice(1); // Keep only the top category
+    }
+    
+    // Process each category in parallel
+    const contextPromises = highConfidenceCategories.map(async (category) => {
+      try {
+        // Set different options based on category
+        const options: any = { 
+          isPreliminaryAssessment: false,
+          metadata: {
+            category: category.category,
+            confidence: category.confidence,
+            processingStage: 'parallel',
+            suggestedSources: assessment.suggestedContextSources
+          }
+        };
+        
+        // For FAQ queries, explicitly look for FAQ content
+        if (category.category === 'faq') {
+          options.metadata.searchFAQ = true;
+          options.metadata.searchPattern = '10.4 FAQ';
+        }
+        
+        // Get context for this specific category
+        const result = await contextService.getRegulatoryContext(
+          `[CATEGORY:${category.category}] ${query}`, 
+          options
+        );
+        
+        let contextContent = '';
+        if (typeof result === 'string') {
+          contextContent = result;
+        } else if (result && typeof result === 'object') {
+          contextContent = result.context || result.regulatoryContext || '';
+        }
+        
+        return { category: category.category, context: contextContent };
+      } catch (error) {
+        console.error(`Error gathering context for ${category.category}:`, error);
+        return { category: category.category, context: '' };
+      }
+    });
+    
+    // Wait for all context gathering to complete
+    const contextResults = await Promise.all(contextPromises);
+    
+    // Combine contexts into a single record with category keys
+    const combinedContexts: Record<string, string> = {};
+    contextResults.forEach(result => {
+      if (result.context && result.context.trim() !== '') {
+        combinedContexts[result.category] = result.context;
+      }
+    });
+    
+    console.log('Gathered contexts for categories:', Object.keys(combinedContexts));
+    return combinedContexts;
+  },
+  
+  /**
+   * Build optimized context for final response generation
+   */
+  buildOptimizedContext: (
+    contexts: Record<string, string>,
+    assessment: InitialAssessment
+  ): string => {
+    // If no contexts were found, return empty string
+    if (Object.keys(contexts).length === 0) {
+      return '';
+    }
+    
+    // Start with highest priority contexts based on assessment
+    const sortedCategories = assessment.categories
+      .filter(c => contexts[c.category])
+      .sort((a, b) => b.priority - a.priority || b.confidence - a.confidence);
+    
+    let combinedContext = '';
+    let totalLength = 0;
+    const MAX_CONTEXT_LENGTH = 6000; // Prevent token limit issues
+    
+    // Add contexts in priority order until we hit the max length
+    for (const category of sortedCategories) {
+      const categoryContext = contexts[category.category];
+      if (!categoryContext) continue;
+      
+      // Add category header for clarity
+      const categorySection = `\n\n### ${category.category.toUpperCase()} CONTEXT (Confidence: ${Math.round(category.confidence * 100)}%)\n${categoryContext}`;
+      
+      // Check if adding this would exceed our max length
+      if (totalLength + categorySection.length <= MAX_CONTEXT_LENGTH) {
+        combinedContext += categorySection;
+        totalLength += categorySection.length;
+      } else {
+        // If it would exceed, truncate and add a note
+        const remainingSpace = MAX_CONTEXT_LENGTH - totalLength;
+        if (remainingSpace > 200) { // Only add if we have reasonable space left
+          combinedContext += `\n\n### ${category.category.toUpperCase()} CONTEXT (TRUNCATED)\n${categoryContext.substring(0, remainingSpace - 50)}...(truncated for length)`;
+        }
+        break;
+      }
+    }
+    
+    return combinedContext;
+  },
+  
+  /**
+   * Master function for parallel query processing
+   */
+  processQueryInParallel: async (query: string): Promise<{
+    assessment: InitialAssessment;
+    optimizedContext: string;
+    contexts: Record<string, string>;
+  }> => {
+    try {
+      console.log('Starting parallel query processing for:', query);
+      
+      // Step 1: Classify the query to determine processing strategy
+      const assessment = await parallelQueryProcessor.classifyQuery(query);
+      
+      // Step 2: Gather contexts in parallel based on the classification
+      const contexts = await parallelQueryProcessor.gatherContextsInParallel(query, assessment);
+      
+      // Step 3: Build optimized context combining the parallel results
+      const optimizedContext = parallelQueryProcessor.buildOptimizedContext(contexts, assessment);
+      
+      return {
         assessment,
+        optimizedContext,
         contexts
       };
     } catch (error) {
       console.error('Error in parallel query processing:', error);
       return {
-        optimizedContext: '',
         assessment: {
-          categories: [],
-          reasoning: 'Error during assessment',
-          isRegulatoryRelated: false,
-          estimatedComplexity: 'simple',
-          requiresParallelProcessing: false,
-          primaryCategory: '',
-          confidenceScores: {} as Record<string, number>,
-          complexity: 0,
-          isRegulatoryQuery: false
+          isRegulatoryRelated: true,
+          categories: [{ category: 'general', confidence: 1, priority: 1 }],
+          reasoning: 'Error occurred during parallel processing',
+          estimatedComplexity: 'moderate',
+          requiresParallelProcessing: false
         },
+        optimizedContext: '',
         contexts: {}
       };
     }
