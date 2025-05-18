@@ -32,7 +32,9 @@ export const executeStep5 = async (
     // Check if this is a complex query
     const isComplexQuery = params.query.length > 150 || 
                           params.query.toLowerCase().includes('timetable') ||
-                          params.query.toLowerCase().includes('rights issue');
+                          params.query.toLowerCase().includes('rights issue') ||
+                          params.query.toLowerCase().includes('connected transaction') ||
+                          params.query.toLowerCase().includes('takeovers code');
     
     // Create quality-focused instructions with improved formatting guidance for semantic HTML
     const enhancedInstructions = `
@@ -61,12 +63,12 @@ For rules interpretation:
 Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
     
-    // Quality-optimized response parameters with more reasonable token limits
+    // Quality-optimized response parameters with appropriate token limits based on complexity
     const responseParams = {
       prompt: `${params.query}\n\n${enhancedInstructions}`,
       regulatoryContext: responseContext,
-      maxTokens: isComplexQuery ? 15000 : 8000, // Optimized token limits while maintaining quality
-      temperature: 0.5, // Balanced temperature for better quality
+      maxTokens: isComplexQuery ? 30000 : 15000, // Restored higher token limits for complex queries
+      temperature: isComplexQuery ? 0.3 : 0.5, // Lower temperature for more precise responses on complex queries
       model: "grok-3-beta" // Always use the full model for user responses
     };
     

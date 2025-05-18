@@ -50,7 +50,8 @@ export const grokApiService = {
         query.toLowerCase().includes('takeovers code') ||
         metadata?.specializedQuery;
       
-      const model = isComplexQuery || metadata?.specializedQuery ? 'grok-3-beta' : 'grok-3-mini';
+      // ALWAYS use beta model for regulatory context to ensure quality
+      const model = 'grok-3-beta';
       
       // Enhanced API call with quality-optimized parameters
       const response = await apiClient.callChatCompletions({
@@ -64,7 +65,8 @@ export const grokApiService = {
         metadata: {
           ...metadata,
           isUserFacingQuery: false,
-          internalProcessing: true
+          internalProcessing: true,
+          forceFullModel: true // Force full model for regulatory context
         }
       });
       

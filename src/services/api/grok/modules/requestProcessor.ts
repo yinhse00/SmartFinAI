@@ -95,18 +95,23 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Smart model selection strategy for improved performance
-  // Use grok-3-mini for ALL internal processing to save costs and time
+  // ENHANCED MODEL SELECTION STRATEGY
+  // For internal processing, use mini model only for simple classification tasks
   const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
   const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
                               requestBody.metadata?.processingStage === undefined;
-  
-  // Only use full model for final user-facing content
-  if (isUserFacingQuery && isExternalProcessing) {
-    console.log("Using grok-3-beta for quality user-facing response");
+  const isRegulationContext = requestBody.metadata?.processingStage === 'preliminary' || 
+                             typeof userMessage?.content === 'string' && 
+                             userMessage.content.includes('regulatory context');
+                             
+  // Use grok-3-beta for complex scenarios even during internal processing
+  if ((isComplexQuery && isRegulationContext) || 
+      (isUserFacingQuery && isExternalProcessing) ||
+      (requestBody.metadata?.forceFullModel)) {
+    console.log("Using grok-3-beta for quality response");
     requestBody.model = "grok-3-beta";
   } else {
-    // Use mini model for ALL internal processing to save costs and improve performance
+    // Only use mini model for simple internal processing
     console.log("Using grok-3-mini for processing");
     requestBody.model = "grok-3-mini";
   }
@@ -118,6 +123,11 @@ export const processApiRequest = async (
   if (!requestBody.max_tokens) {
     console.log(`Using default token limit: ${effectiveTokenLimit}`);
     requestBody.max_tokens = effectiveTokenLimit;
+  } 
+  // For complex financial queries, ensure token limits are never too low
+  else if (isComplexQuery && requestBody.max_tokens < 15000) {
+    console.log(`Increasing token limit for complex query from ${requestBody.max_tokens} to 15000`);
+    requestBody.max_tokens = 15000;
   }
   
   // Don't override temperature if explicitly set

@@ -16,12 +16,25 @@ export const responseGeneratorCore = {
       const isBatchRequest = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                            requestBody.messages.find(m => m.role === 'user').content.includes('[CONTINUATION_PART_');
       
-      // Determine optimal token limit with reduced values
+      const userPrompt = requestBody.messages?.find?.(m => m.role === 'user')?.content || '';
+      
+      // Detect if this is a complex financial query
+      const isComplexFinancialQuery = 
+        userPrompt.toLowerCase().includes('rights issue') ||
+        userPrompt.toLowerCase().includes('timetable') ||
+        userPrompt.toLowerCase().includes('takeovers code') ||
+        userPrompt.toLowerCase().includes('connected transaction') ||
+        userPrompt.toLowerCase().includes('chapter 14') ||
+        userPrompt.toLowerCase().includes('chapter 14a') ||
+        userPrompt.length > 200;
+      
+      // Determine optimal token limit with appropriate values
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
-        prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
+        prompt: userPrompt,
         isRetryAttempt: false,
-        isBatchRequest
+        isBatchRequest,
+        isComplexQuery: isComplexFinancialQuery
       });
       
       // Apply optimal token limits
@@ -31,14 +44,20 @@ export const responseGeneratorCore = {
       if (!requestBody.temperature) {
         requestBody.temperature = tokenManagementService.getTemperature({
           queryType: requestBody.queryType || 'general',
-          prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || ''
+          prompt: userPrompt,
+          isComplexQuery: isComplexFinancialQuery
         });
       }
       
-      // Smart model selection - use mini model for internal processing to save costs and time
+      // Smart model selection - use appropriate model based on query complexity
       const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
       if (!requestBody.model) {
-        requestBody.model = isInternalProcessing ? 'grok-3-mini' : 'grok-3-beta';
+        // Always use beta for complex financial queries and final responses
+        if (isComplexFinancialQuery || !isInternalProcessing) {
+          requestBody.model = 'grok-3-beta';
+        } else {
+          requestBody.model = 'grok-3-mini';
+        }
       }
       
       // Forward request to API client
@@ -56,15 +75,23 @@ export const responseGeneratorCore = {
       // Enhanced system prompt for backup calls
       const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
-      // Optimized backup request
+      // Determine if this is a complex query
+      const isComplexQuery = 
+        prompt.toLowerCase().includes('rights issue') || 
+        prompt.toLowerCase().includes('timetable') ||
+        prompt.toLowerCase().includes('takeovers code') ||
+        prompt.toLowerCase().includes('connected transaction') ||
+        prompt.length > 200;
+      
+      // Optimized backup request with appropriate model
       const backupRequestBody = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-mini", // Use mini model for backup calls
+        model: isComplexQuery ? "grok-3-beta" : "grok-3-mini",
         temperature: 0.4,
-        max_tokens: 8000 // Reduced for faster response
+        max_tokens: isComplexQuery ? 15000 : 8000
       };
       
       return await grokApiService.callChatCompletions(backupRequestBody, apiKey);
@@ -78,8 +105,8 @@ export const responseGeneratorCore = {
     truncated: boolean,
     text: string
   } => {
-    // Define a token limit constant
-    const DEFAULT_TOKEN_LIMIT = 5000; // Reduced from 10000
+    // Define a token limit constant - using higher value for more complete responses
+    const DEFAULT_TOKEN_LIMIT = 10000; // Increased back from 5000
     
     // If token count is near limit, mark as truncated
     if (tokenCount > DEFAULT_TOKEN_LIMIT * 0.9) {
