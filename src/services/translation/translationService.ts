@@ -1,4 +1,3 @@
-
 /**
  * Service for handling translations
  */
@@ -88,7 +87,7 @@ export const translationService = {
               content: contentToTranslate
             }
           ],
-          model: "grok-3-mini-beta",
+          model: "grok-3-mini",
           temperature: 0.1, // Lower temperature for more accurate translations
           max_tokens: 10000,  // Increased token limit to prevent truncation
           top_p: 0.95        // Maintain high coherence

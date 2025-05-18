@@ -1,4 +1,3 @@
-
 import { grokApiService } from '../../api/grokApiService';
 import { InitialAssessment, CategoryConfidence } from '../../api/grok/types';
 import { contextService } from '../../regulatory/contextService';
@@ -21,7 +20,7 @@ Determine if this query is regulatory-related, and if so, which specific areas i
 Provide confidence scores (0-1) for each potential category.
 DO NOT answer the query - ONLY classify it.`;
       
-      // Call the Grok-3-Beta model for enhanced classification
+      // Call the Grok model for enhanced classification
       const response = await grokApiService.callChatCompletions({
         messages: [
           { role: 'system', content: systemMessage },
@@ -43,7 +42,7 @@ Output ONLY a JSON object with these fields:
 }` 
           }
         ],
-        model: 'grok-3-beta',
+        model: 'grok-3-mini',
         temperature: 0.2,
         max_tokens: 1000,
         metadata: {

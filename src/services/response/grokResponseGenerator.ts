@@ -44,7 +44,7 @@ export const grokResponseGenerator = {
               { role: 'system', content: conversationalSystemMessage },
               { role: 'user', content: params.prompt }
             ],
-            model: "grok-3-mini-beta", // Use mini model for conversational queries
+            model: "grok-3-mini", // Use mini model for conversational queries
             temperature: 0.7,
             max_tokens: 3000, // Reduced token limit for conversational queries
             metadata: {
