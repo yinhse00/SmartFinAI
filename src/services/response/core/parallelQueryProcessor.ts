@@ -74,18 +74,38 @@ I'll classify this query but not answer it.
       // Extract assessment from response
       let assessment: InitialAssessment = {
         categories: [],
+        reasoning: '',
+        isRegulatoryRelated: false,
+        estimatedComplexity: 'simple',
+        requiresParallelProcessing: false,
+        // Initialize other properties with default values
         primaryCategory: '',
         confidenceScores: {} as Record<string, number>,
         complexity: 0,
-        isRegulatoryQuery: false,
-        reasoning: ''
+        isRegulatoryQuery: false
       };
       
       try {
         const content = response?.choices?.[0]?.message?.content || '';
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
-          assessment = { ...assessment, ...JSON.parse(jsonMatch[0]) };
+          const parsedJson = JSON.parse(jsonMatch[0]);
+          
+          // Map the parsed properties to our assessment object
+          assessment = { 
+            ...assessment,
+            primaryCategory: parsedJson.primaryCategory || '',
+            confidenceScores: parsedJson.confidenceScores || {},
+            complexity: parsedJson.complexity || 0,
+            isRegulatoryQuery: parsedJson.isRegulatoryQuery || false,
+            isRegulatoryRelated: parsedJson.isRegulatoryQuery || false,
+            reasoning: parsedJson.reasoning || '',
+            // Convert numeric complexity to string complexity
+            estimatedComplexity: parsedJson.complexity > 0.7 ? 'complex' : 
+                               parsedJson.complexity > 0.3 ? 'moderate' : 'simple',
+            requiresParallelProcessing: parsedJson.complexity > 0.5,
+            categories: parsedJson.categories || []
+          };
         }
       } catch (error) {
         console.error('Error parsing assessment:', error);
@@ -147,11 +167,14 @@ I'll classify this query but not answer it.
         optimizedContext: '',
         assessment: {
           categories: [],
+          reasoning: 'Error during assessment',
+          isRegulatoryRelated: false,
+          estimatedComplexity: 'simple',
+          requiresParallelProcessing: false,
           primaryCategory: '',
           confidenceScores: {} as Record<string, number>,
           complexity: 0,
-          isRegulatoryQuery: false,
-          reasoning: 'Error during assessment'
+          isRegulatoryQuery: false
         },
         contexts: {}
       };
