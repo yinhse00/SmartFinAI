@@ -139,14 +139,20 @@ export const mappingValidationService = {
         return null;
       }
       
+      // Create a safely typed document with the base properties
+      const safeDoc = {
+        id: String(rawDoc.id),
+        title: String(rawDoc.title),
+        updated_at: String(rawDoc.updated_at),
+        content: '' // Default empty content, will be filled below
+      };
+      
       // Now we can safely check for content or file_url
       if (hasContentColumn && 'content' in rawDoc && typeof rawDoc.content === 'string') {
         // Document with content field
         return {
-          id: String(rawDoc.id),
-          title: String(rawDoc.title),
-          content: rawDoc.content,
-          updated_at: String(rawDoc.updated_at)
+          ...safeDoc,
+          content: rawDoc.content
         };
       } 
       // If we need to fetch content from file_url
@@ -154,10 +160,8 @@ export const mappingValidationService = {
         // For now, return a placeholder for content
         console.log('Found document with file_url but no content column. Using placeholder content.');
         return {
-          id: String(rawDoc.id),
-          title: String(rawDoc.title),
-          content: 'Placeholder content - file content fetching not implemented',
-          updated_at: String(rawDoc.updated_at)
+          ...safeDoc,
+          content: 'Placeholder content - file content fetching not implemented'
         };
       } else {
         console.error('Document does not have required content or file_url field');
