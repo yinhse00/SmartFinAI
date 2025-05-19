@@ -74,9 +74,11 @@ export const executeStep5 = async (
           // Format the guidance context with bullet points if applicable
           let formattedGuidance = guidanceContext;
           
+          // Convert numbered list items to proper HTML
+          formattedGuidance = formattedGuidance.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, '<li>$3</li>');
+          
           // Convert bullet-point style text to proper HTML
-          formattedGuidance = formattedGuidance.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
-                                              .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+          formattedGuidance = formattedGuidance.replace(/^(\s*)[•\-\*]\s+(.+)$/gm, '<li>$2</li>');
           
           // If any bullet points were formatted, wrap them in a list
           if (formattedGuidance.includes('<li>')) {
@@ -129,9 +131,11 @@ export const executeStep5 = async (
         // Format the regulatory context with proper HTML
         let formattedContext = regulatoryContext.substring(0, 500) + (regulatoryContext.length > 500 ? '...' : '');
         
+        // Handle numbered list items in the context
+        formattedContext = formattedContext.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, '<li>$3</li>');
+        
         // Handle bullet points in the context
-        formattedContext = formattedContext.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
-                                        .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+        formattedContext = formattedContext.replace(/^(\s*)[•\-*]\s+(.+)$/gm, '<li>$2</li>');
         
         // If any bullet points were formatted, wrap them in a list
         if (formattedContext.includes('<li>')) {
@@ -146,9 +150,11 @@ export const executeStep5 = async (
         // Format the guidance context with bullet points if applicable
         let formattedGuidance = guidanceContext;
         
+        // Convert numbered list items to proper HTML
+        formattedGuidance = formattedGuidance.replace(/^(\s*)(\d+)\.\s+(.+)$/gm, '<li>$3</li>');
+        
         // Convert bullet-point style text to proper HTML
-        formattedGuidance = formattedGuidance.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
-                                            .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+        formattedGuidance = formattedGuidance.replace(/^(\s*)[•\-*]\s+(.+)$/gm, '<li>$2</li>');
         
         // If any bullet points were formatted, wrap them in a list
         if (formattedGuidance.includes('<li>')) {
@@ -189,3 +195,4 @@ export const executeStep5 = async (
     };
   }
 };
+
