@@ -25,16 +25,16 @@ export const executeStep5 = async (
   try {
     // If there's a streaming handler, use it to update the response incrementally
     if (handleStreamUpdate) {
-      handleStreamUpdate("Processing your request...");
+      handleStreamUpdate("<p>Processing your request...</p>");
       
       // Show different stages of response generation
       await new Promise(resolve => setTimeout(resolve, 300));
-      handleStreamUpdate("Processing your request...\n\nAnalyzing regulatory context...");
+      handleStreamUpdate("<p>Processing your request...</p><p>Analyzing regulatory context...</p>");
       
       await new Promise(resolve => setTimeout(resolve, 300));
       
-      // Generate initial response
-      let initialResponse = "Processing your request...\n\nAnalyzing regulatory context...\n\n";
+      // Generate initial response with proper HTML formatting
+      let initialResponse = "<p>Processing your request...</p><p>Analyzing regulatory context...</p><p>";
       
       // Add information about context if available
       if (regulatoryContext) {
@@ -42,9 +42,9 @@ export const executeStep5 = async (
         if (sourceMaterials && sourceMaterials.length > 0) {
           initialResponse += ` from ${sourceMaterials.length} source(s)`;
         }
-        initialResponse += ".\n\n";
+        initialResponse += ".</p>";
       } else {
-        initialResponse += "I couldn't find specific regulatory information directly related to your query.\n\n";
+        initialResponse += "I couldn't find specific regulatory information directly related to your query.</p>";
       }
       
       handleStreamUpdate(initialResponse);
@@ -56,33 +56,47 @@ export const executeStep5 = async (
       
       // Add regulatory information if available
       if (regulatoryContext) {
-        finalResponse += "Based on the Hong Kong regulatory framework";
+        finalResponse += "<p>Based on the Hong Kong regulatory framework";
         if (financialQueryType && financialQueryType !== 'conversational') {
           finalResponse += ` and specifically regarding ${financialQueryType.replace('_', ' ')} requirements`;
         }
-        finalResponse += ", here's my response:\n\n";
+        finalResponse += ", here's my response:</p>";
         
-        // Add contextual information from the regulatory database
-        finalResponse += `${regulatoryContext ? 
+        // Add contextual information from the regulatory database with proper HTML formatting
+        finalResponse += `<p>${regulatoryContext ? 
           "The relevant regulatory guidance indicates that this matter falls under " +
-          "the jurisdiction of the Hong Kong regulatory authorities. " : 
+          "the jurisdiction of the <strong>Hong Kong regulatory authorities</strong>. " : 
           "While I don't have specific regulatory text on this matter, "
-        }`;
+        }</p>`;
         
         // Add guidance context if available
         if (guidanceContext) {
-          finalResponse += `\n\nAdditionally, the following guidance may be relevant: ${guidanceContext}\n\n`;
+          // Format the guidance context with bullet points if applicable
+          let formattedGuidance = guidanceContext;
+          
+          // Convert bullet-point style text to proper HTML
+          formattedGuidance = formattedGuidance.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
+                                              .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+          
+          // If any bullet points were formatted, wrap them in a list
+          if (formattedGuidance.includes('<li>')) {
+            formattedGuidance = `<p>Additionally, the following guidance may be relevant:</p><ul>${formattedGuidance}</ul>`;
+          } else {
+            formattedGuidance = `<p>Additionally, the following guidance may be relevant:</p><p>${formattedGuidance}</p>`;
+          }
+          
+          finalResponse += formattedGuidance;
         }
         
         // Add conclusion
-        finalResponse += `\n\nIn conclusion, I recommend consulting with a qualified financial advisor or legal expert for specific advice on your situation, as regulatory requirements may change over time.`;
+        finalResponse += `<p><strong>In conclusion</strong>, I recommend consulting with a qualified financial advisor or legal expert for specific advice on your situation, as regulatory requirements may change over time.</p>`;
       } else {
         // For general queries without regulatory context
-        finalResponse += "I understand you're asking about Hong Kong financial regulations, but I don't have specific regulatory text that addresses this query directly. ";
-        finalResponse += "However, I can provide some general information based on my knowledge:\n\n";
-        finalResponse += "Hong Kong's financial regulatory environment is primarily overseen by the Securities and Futures Commission (SFC) and the Hong Kong Exchanges and Clearing Limited (HKEX). ";
-        finalResponse += "These organizations establish and enforce rules related to securities trading, corporate governance, and market operations.\n\n";
-        finalResponse += "For your specific question, I recommend consulting the HKEX Listing Rules or contacting the SFC directly for the most accurate and up-to-date information.";
+        finalResponse += "<p>I understand you're asking about Hong Kong financial regulations, but I don't have specific regulatory text that addresses this query directly.</p>";
+        finalResponse += "<p>However, I can provide some general information based on my knowledge:</p>";
+        finalResponse += "<p>Hong Kong's financial regulatory environment is primarily overseen by the <strong>Securities and Futures Commission (SFC)</strong> and the <strong>Hong Kong Exchanges and Clearing Limited (HKEX)</strong>. ";
+        finalResponse += "These organizations establish and enforce rules related to securities trading, corporate governance, and market operations.</p>";
+        finalResponse += "<p>For your specific question, I recommend consulting the HKEX Listing Rules or contacting the SFC directly for the most accurate and up-to-date information.</p>";
       }
       
       // Update with final response
@@ -92,45 +106,67 @@ export const executeStep5 = async (
     // Construct the response object
     let responseText = "";
     
-    // Generate response content based on available information
+    // Generate response content based on available information with proper formatting
     if (regulatoryContext) {
-      responseText = `Based on my analysis of the Hong Kong regulatory framework${
+      responseText = `<p>Based on my analysis of the Hong Kong regulatory framework${
         financialQueryType && financialQueryType !== 'conversational' ? 
         ` and specifically regarding ${financialQueryType.replace('_', ' ')} requirements` : 
         ''
-      }, I can provide the following information:\n\n`;
+      }, I can provide the following information:</p>`;
       
       // Add contextual information from the regulatory database
-      responseText += `${regulatoryContext ? 
+      responseText += `<p>${regulatoryContext ? 
         "The relevant regulatory guidance indicates that this matter falls under " +
-        "the jurisdiction of the Hong Kong regulatory authorities. " : 
+        "the jurisdiction of the <strong>Hong Kong regulatory authorities</strong>. " : 
         "While I don't have specific regulatory text on this matter, "
-      }`;
+      }</p>`;
       
       // Add specific details from the query
-      responseText += `In response to your query about "${query?.substring(0, 100)}${query?.length > 100 ? '...' : ''}", `;
+      responseText += `<p>In response to your query about "<em>${query?.substring(0, 100)}${query?.length > 100 ? '...' : ''}</em>", `;
       
       // Add details from regulatory context
       if (regulatoryContext) {
-        responseText += `the regulatory framework provides specific guidance: \n\n${
-          regulatoryContext.substring(0, 500)}${regulatoryContext.length > 500 ? '...' : ''
-        }\n\n`;
+        // Format the regulatory context with proper HTML
+        let formattedContext = regulatoryContext.substring(0, 500) + (regulatoryContext.length > 500 ? '...' : '');
+        
+        // Handle bullet points in the context
+        formattedContext = formattedContext.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
+                                        .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+        
+        // If any bullet points were formatted, wrap them in a list
+        if (formattedContext.includes('<li>')) {
+          responseText += `the regulatory framework provides specific guidance:</p><ul>${formattedContext}</ul>`;
+        } else {
+          responseText += `the regulatory framework provides specific guidance:</p><p>${formattedContext}</p>`;
+        }
       }
       
       // Add guidance context if available
       if (guidanceContext) {
-        responseText += `\n\nAdditionally, the following guidance may be relevant: ${guidanceContext}\n\n`;
+        // Format the guidance context with bullet points if applicable
+        let formattedGuidance = guidanceContext;
+        
+        // Convert bullet-point style text to proper HTML
+        formattedGuidance = formattedGuidance.replace(/^[\s-]*(\d+\.\s+)(.+)$/gm, '<li>$2</li>')
+                                            .replace(/^[\s-]*[•\-*]\s+(.+)$/gm, '<li>$1</li>');
+        
+        // If any bullet points were formatted, wrap them in a list
+        if (formattedGuidance.includes('<li>')) {
+          responseText += `<p>Additionally, the following guidance may be relevant:</p><ul>${formattedGuidance}</ul>`;
+        } else {
+          responseText += `<p>Additionally, the following guidance may be relevant:</p><p>${formattedGuidance}</p>`;
+        }
       }
       
       // Add conclusion
-      responseText += `\n\nIn conclusion, I recommend consulting with a qualified financial advisor or legal expert for specific advice on your situation, as regulatory requirements may change over time.`;
+      responseText += `<p><strong>In conclusion</strong>, I recommend consulting with a qualified financial advisor or legal expert for specific advice on your situation, as regulatory requirements may change over time.</p>`;
     } else {
       // For general queries without regulatory context
-      responseText = "I understand you're asking about Hong Kong financial regulations, but I don't have specific regulatory text that addresses this query directly. ";
-      responseText += "However, I can provide some general information based on my knowledge:\n\n";
-      responseText += "Hong Kong's financial regulatory environment is primarily overseen by the Securities and Futures Commission (SFC) and the Hong Kong Exchanges and Clearing Limited (HKEX). ";
-      responseText += "These organizations establish and enforce rules related to securities trading, corporate governance, and market operations.\n\n";
-      responseText += "For your specific question, I recommend consulting the HKEX Listing Rules or contacting the SFC directly for the most accurate and up-to-date information.";
+      responseText = "<p>I understand you're asking about Hong Kong financial regulations, but I don't have specific regulatory text that addresses this query directly.</p>";
+      responseText += "<p>However, I can provide some general information based on my knowledge:</p>";
+      responseText += "<p>Hong Kong's financial regulatory environment is primarily overseen by the <strong>Securities and Futures Commission (SFC)</strong> and the <strong>Hong Kong Exchanges and Clearing Limited (HKEX)</strong>. ";
+      responseText += "These organizations establish and enforce rules related to securities trading, corporate governance, and market operations.</p>";
+      responseText += "<p>For your specific question, I recommend consulting the HKEX Listing Rules or contacting the SFC directly for the most accurate and up-to-date information.</p>";
     }
     
     // Return a properly structured response with all required fields
@@ -148,7 +184,7 @@ export const executeStep5 = async (
     console.error("Error in step5Response:", error);
     return {
       completed: false,
-      response: "I encountered an error while processing your request. Please try again.",
+      response: "<p>I encountered an error while processing your request. Please try again.</p>",
       error
     };
   }
