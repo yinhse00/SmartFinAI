@@ -3,6 +3,16 @@ import { connectionTester } from './grok/connectionTester';
 import { apiClient } from './grok/apiClient';
 import { offlineResponseGenerator } from './grok/offlineResponseGenerator';
 
+// Context cache implementation
+const contextCache = new Map<string, {
+  context: string;
+  timestamp: number;
+  category?: string;
+}>();
+
+// Cache expiration (15 minutes)
+const CONTEXT_CACHE_EXPIRATION = 15 * 60 * 1000;
+
 export const grokApiService = {
   testApiConnection: connectionTester.testApiConnection,
   callChatCompletions: apiClient.callChatCompletions,
@@ -11,6 +21,15 @@ export const grokApiService = {
   // Enhanced getRegulatoryContext method with quality-focused responses
   getRegulatoryContext: async (query: string, _hasRegulatoryDatabase: boolean = false, metadata?: any) => {
     try {
+      // Check cache first
+      const cacheKey = query.toLowerCase().substring(0, 100);
+      const cachedContext = contextCache.get(cacheKey);
+      
+      if (cachedContext && (Date.now() - cachedContext.timestamp < CONTEXT_CACHE_EXPIRATION)) {
+        console.log('Using cached regulatory context');
+        return cachedContext.context;
+      }
+      
       // Quality-focused system prompt for comprehensive responses with improved paragraph formatting
       const systemPrompt = `
       You are a Hong Kong financial regulatory expert specializing in HKEX Listing Rules, 
@@ -42,15 +61,8 @@ export const grokApiService = {
       Ensure your response is complete, accurate, and provides the user with all relevant information.
       `;
       
-      // Smart model selection based on query complexity
-      const isComplexQuery = query.length > 150 || 
-        query.toLowerCase().includes('timetable') ||
-        query.toLowerCase().includes('rights issue') ||
-        query.toLowerCase().includes('connected transaction') ||
-        query.toLowerCase().includes('takeovers code') ||
-        metadata?.specializedQuery;
-      
-      const model = isComplexQuery || metadata?.specializedQuery ? 'grok-3-beta' : 'grok-3-mini-beta';
+      // OPTIMIZATION: Always use grok-3-beta to maintain quality
+      const model = 'grok-3-beta';
       
       // Enhanced API call with quality-optimized parameters
       const response = await apiClient.callChatCompletions({
@@ -59,23 +71,38 @@ export const grokApiService = {
           { role: 'user', content: `Provide comprehensive regulatory information: ${query}` }
         ],
         model: model,
-        temperature: metadata?.specializedQuery ? 0.3 : 0.5, // Balanced temperature for better quality
-        max_tokens: isComplexQuery ? 25000 : 15000, // Higher token limits for comprehensive responses
+        temperature: 0.5, // Balanced temperature for better quality
+        max_tokens: 25000, // Higher token limits for comprehensive responses
         metadata: {
-          ...metadata,
-          isUserFacingQuery: false,
-          internalProcessing: true
+          ...metadata
         }
       });
       
-      return response?.choices?.[0]?.message?.content || '';
+      const contextContent = response?.choices?.[0]?.message?.content || '';
+      
+      // Cache the result
+      if (contextContent) {
+        contextCache.set(cacheKey, {
+          context: contextContent,
+          timestamp: Date.now(),
+          category: metadata?.category
+        });
+        
+        // Limit cache size
+        if (contextCache.size > 30) {
+          const oldestKey = Array.from(contextCache.keys())[0];
+          contextCache.delete(oldestKey);
+        }
+      }
+      
+      return contextContent;
     } catch (error) {
       console.error('Error in grokApiService.getRegulatoryContext:', error);
       return '';
     }
   },
   
-  // Enhanced query classification method
+  // Enhanced query classification method - also using full model
   classifyFinancialQuery: async (query: string): Promise<any> => {
     try {
       const response = await apiClient.callChatCompletions({
@@ -89,12 +116,11 @@ export const grokApiService = {
             content: `Classify: ${query}`
           }
         ],
-        model: 'grok-3-mini-beta', // Use mini model for internal classification to save costs
+        model: 'grok-3-beta', // OPTIMIZATION: Use full model for classification
         temperature: 0.3,
         max_tokens: 1000, // Sufficient for classification
         metadata: {
-          processingStage: 'classification',
-          internalProcessing: true
+          processingStage: 'classification'
         }
       });
       
@@ -110,5 +136,11 @@ export const grokApiService = {
       console.error('Error in grokApiService.classifyFinancialQuery:', error);
       return { error: 'Classification service error' };
     }
+  },
+  
+  // Flush context cache - useful for testing and debugging
+  flushContextCache: () => {
+    contextCache.clear();
+    console.log('Context cache flushed');
   }
 };

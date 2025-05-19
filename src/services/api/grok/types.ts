@@ -1,3 +1,4 @@
+
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 
 export type ChatCompletionMessageContent = 
@@ -22,6 +23,7 @@ export type ChatCompletionRequest = {
   presence_penalty?: number;
   frequency_penalty?: number;
   metadata?: Record<string, any>;
+  stream?: boolean;  // Added streaming support
 };
 
 export type CategoryConfidence = {
@@ -52,6 +54,8 @@ export type EnhancedContext = {
   reasoning: string;
   searchResults: any[];
   usedSummaryIndex: boolean;
+  cacheHit?: boolean;  // Added cache indicator
+  cacheAge?: number;   // Added cache age tracking
 };
 
 export type ApiResponseFormat = {
@@ -72,3 +76,5 @@ export type GrokModelInfo = {
   capabilities: string[];
   maxTokens?: number;
 };
+
+export type ProgressCallback = (progress: number, stage: string) => void;  // Added for progressive updates

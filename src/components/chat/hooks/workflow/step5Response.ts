@@ -61,13 +61,17 @@ For rules interpretation:
 Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
     
-    // Quality-optimized response parameters
+    // Quality-optimized response parameters - ALWAYS use full model
     const responseParams = {
       prompt: `${params.query}\n\n${enhancedInstructions}`,
       regulatoryContext: responseContext,
       maxTokens: isComplexQuery ? 25000 : 15000, // Higher token limits for quality
       temperature: 0.5, // Balanced temperature for better quality
-      model: "grok-3-beta" // Always use the full model for user responses
+      model: "grok-3-beta", // Always use the full model for user responses
+      progressCallback: (progress: number, stage: string) => {
+        // Update progress during response generation
+        setStepProgress(`${lastInputWasChinese ? '生成回复' : 'Generating'} - ${Math.round(progress)}%`);
+      }
     };
     
     // Generate response using Grok with quality-optimized parameters

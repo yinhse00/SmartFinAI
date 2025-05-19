@@ -25,53 +25,9 @@ export const grokResponseGenerator = {
       // Process the query and enhance with context
       const { enhancedParams, queryType, isSimpleQuery, isFaqQuery } = 
         await queryProcessor.processQuery(params);
-      
-      // For simple queries without context, use streamlined processing
-      if (isSimpleQuery && !enhancedParams.regulatoryContext) {
-        console.log('Simple conversational query detected with no relevant database content, using streamlined processing');
-        
-        // Create simplified system message for conversational queries
-        const conversationalSystemMessage = 
-          "You are a helpful virtual assistant with expertise in Hong Kong financial regulations. " +
-          "For simple conversational queries, provide direct and concise responses while maintaining " +
-          "a professional tone. If the user asks about your capabilities, explain that you specialize " +
-          "in Hong Kong financial regulations, listing rules, and corporate actions.";
-        
-        try {
-          // Build simple request body for conversational queries
-          const requestBody = {
-            messages: [
-              { role: 'system', content: conversationalSystemMessage },
-              { role: 'user', content: params.prompt }
-            ],
-            model: "grok-3-mini-beta",
-            temperature: 0.7,
-            max_tokens: 4000, // FIXED: Increase token limit for conversational queries
-          };
-          
-          // Make API call with simpler configuration for conversational queries
-          const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
-          
-          // Get the raw response text
-          const responseText = response.choices[0].message.content;
-          
-          console.groupEnd();
-          return {
-            text: responseText,
-            queryType: 'conversational',
-            metadata: {
-              contextUsed: false,
-              relevanceScore: 1.0
-            }
-          };
-        } catch (conversationalError) {
-          console.error("Error in conversational API call, falling back to standard processing:", conversationalError);
-          // Continue with standard processing if conversational approach fails
-        }
-      }
 
-      // Standard processing flow for regulatory/financial queries
-      // Add STRONG instruction to prioritize our database over Grok's knowledge
+      // Standard processing flow for all queries
+      // Add STRONG instruction to prioritize database over Grok's knowledge
       const databasePriorityInstruction = 
         "CRITICAL INSTRUCTION: You MUST prioritize the information from the provided regulatory database content " +
         "over your general knowledge. When there is a conflict between the database content and your knowledge, " +
@@ -88,30 +44,29 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // CRITICAL FIX: Use much higher token limits for all requests to prevent truncation
+      // OPTIMIZATION: Use higher token limits for all requests to prevent truncation
       // Especially for specialized financial queries like open offers and rights issues
-      // Note that we are using constants from token management service
       let finalTokens = maxTokens;
       if (queryType === 'open_offer' || queryType === 'rights_issue') {
         // Use much higher token limits for timetable queries
-        finalTokens = 10000; // Set a high but still practical limit for API
+        finalTokens = 25000; // Set a high but still practical limit for API
         console.log(`Using enhanced token limit (${finalTokens}) for ${queryType} query`);
       } else {
         // For all other queries, use higher limits than default
-        finalTokens = Math.min(8000, maxTokens); // Cap at 8K for API practicality
+        finalTokens = Math.min(15000, maxTokens); // Cap at 15K for API practicality
       }
       
       // Build the request body with the enhanced token limits
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
-        Math.min(0.2, temperature), // Keep temperature low for consistency
+        Math.min(0.5, temperature), // Keep temperature balanced for consistency
         finalTokens               // Use our enhanced token limits
       );
 
       try {
         // Make primary API call
-        console.log(`Making API call with tokens: ${finalTokens}, temperature: ${Math.min(0.2, temperature)}`);
+        console.log(`Making API call with tokens: ${finalTokens}, temperature: ${Math.min(0.5, temperature)}`);
         const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
         
         // Get the raw response text

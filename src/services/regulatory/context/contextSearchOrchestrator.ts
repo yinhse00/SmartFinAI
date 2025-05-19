@@ -6,11 +6,41 @@ import { removeDuplicateResults, prioritizeByRelevance } from '../utils/resultPr
 import { summaryIndexService } from '../../database/summaryIndexService';
 import { contextFormatter } from './contextFormatter';
 
+// Cache for search results
+const searchResultsCache = new Map<string, {
+  results: RegulatoryEntry[],
+  timestamp: number,
+  category?: string
+}>();
+
+// Cache expiration time (15 minutes)
+const CACHE_EXPIRATION = 15 * 60 * 1000;
+
+// Generate cache key for search
+const generateSearchCacheKey = (query: string, category?: string) => {
+  return `${query.toLowerCase().substring(0, 100)}${category ? `-${category}` : ''}`;
+};
+
 export const contextSearchOrchestrator = {
   executeComprehensiveSearch: async (query: string) => {
     try {
       console.group('Orchestrating Enhanced Financial Search');
       console.log('Original Query:', query);
+      
+      // Generate cache key for this query
+      const cacheKey = generateSearchCacheKey(query);
+      
+      // Check cache first
+      const cachedResults = searchResultsCache.get(cacheKey);
+      if (cachedResults && (Date.now() - cachedResults.timestamp < CACHE_EXPIRATION)) {
+        console.log('Using cached search results');
+        // Use cached results but still format them
+        const context = contextFormatter.formatEntriesToContext(cachedResults.results);
+        console.groupEnd();
+        
+        return contextFormatter.createContextResponse(context, 
+          `Cached results from previous search (${Math.round((Date.now() - cachedResults.timestamp) / 1000)}s ago)`);
+      }
       
       let searchResults: RegulatoryEntry[] = [];
       
@@ -31,7 +61,7 @@ export const contextSearchOrchestrator = {
       // we search ALL sources regardless of initial matches
       const needsComprehensiveSearch = isDefinitionQuery || isConnectedPersonQuery || isChapter18CQuery;
       
-      // STEP 2: Check multiple Summary and Keyword Indexes first
+      // STEP 2: Check multiple Summary and Keyword Indexes first - run in parallel for speed
       console.log('STEP 2: Checking Multiple Summary and Keyword Indexes');
       
       const summaryFiles = [
@@ -40,16 +70,23 @@ export const contextSearchOrchestrator = {
         'Takeovers Code Summary.docx'
       ];
       
-      // Search across multiple summary files
-      for (const file of summaryFiles) {
-        console.log(`Searching summary file: ${file}`);
-        const summarySummary = await summaryIndexService.findRelevantSummaryByFile(query, file);
-        
-        if (summarySummary.found) {
-          console.log(`Found matches in ${file}`);
-          const fileResults = await searchService.getEntriesBySourceIds(summarySummary.sourceIds || []);
-          searchResults = [...searchResults, ...fileResults];
-        }
+      // Search across multiple summary files in parallel
+      const summaryPromises = summaryFiles.map(file => 
+        summaryIndexService.findRelevantSummaryByFile(query, file)
+      );
+      
+      const summaryResults = await Promise.all(summaryPromises);
+      
+      // Process summary results and collect source IDs
+      const allSourceIds = summaryResults
+        .filter(result => result.found)
+        .flatMap(result => result.sourceIds || []);
+      
+      if (allSourceIds.length > 0) {
+        console.log(`Found matches in summary files`);
+        // Get all entries in a single batch
+        const fileResults = await searchService.getEntriesBySourceIds(allSourceIds);
+        searchResults = [...searchResults, ...fileResults];
       }
       
       // STEP 2.5: For Chapter 18C queries, explicitly search for Chapter 18C content
@@ -67,14 +104,19 @@ export const contextSearchOrchestrator = {
       if (needsComprehensiveSearch) {
         console.log('Important regulatory term detected - performing comprehensive search');
         
-        // Search across all categories
+        // Search across all categories in parallel
         const searchCategories = ['listing_rules', 'guidance', 'takeovers'];
         
-        for (const category of searchCategories) {
-          console.log(`Searching category: ${category}`);
-          const categoryResults = await searchService.search(query, category);
-          searchResults = [...searchResults, ...categoryResults];
-        }
+        const categoryPromises = searchCategories.map(category => 
+          searchService.search(query, category)
+        );
+        
+        const categoryResults = await Promise.all(categoryPromises);
+        
+        // Combine all category results
+        categoryResults.forEach(results => {
+          searchResults = [...searchResults, ...results];
+        });
         
         // For connected person queries, prioritize Chapter 14A content
         if (isConnectedPersonQuery) {
@@ -109,6 +151,21 @@ export const contextSearchOrchestrator = {
       
       const prioritizedResults = prioritizeByRelevance(uniqueResults, financialTerms);
       
+      // Cache search results for future use
+      searchResultsCache.set(cacheKey, {
+        results: prioritizedResults,
+        timestamp: Date.now(),
+        category: isChapter18CQuery ? 'chapter18c' : 
+                 isConnectedPersonQuery ? 'connected' : 
+                 isDefinitionQuery ? 'definition' : 'general'
+      });
+      
+      // Limit cache size
+      if (searchResultsCache.size > 30) {
+        const oldestKey = Array.from(searchResultsCache.keys())[0];
+        searchResultsCache.delete(oldestKey);
+      }
+      
       // Format context with section headings and regulatory citations
       const context = contextFormatter.formatEntriesToContext(prioritizedResults);
       
@@ -133,5 +190,11 @@ export const contextSearchOrchestrator = {
         reasoning: 'Search workflow encountered an unexpected error.'
       };
     }
+  },
+  
+  // Clear the search results cache - useful for testing and debugging
+  clearSearchCache: () => {
+    searchResultsCache.clear();
+    console.log('Search results cache cleared');
   }
 };

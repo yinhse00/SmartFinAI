@@ -9,7 +9,6 @@ import { GrokResponse } from '@/types/grok';
 import { useTokenManagement } from './useTokenManagement';
 import { useResponseProcessor } from './useResponseProcessor';
 
-// Add batchInfo param
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,
@@ -22,7 +21,6 @@ export const useResponseHandling = (
   const { enhanceTokenLimits } = useTokenManagement();
   const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
 
-  // batchInfo: { batchNumber, isContinuing, onContinue }
   const handleApiResponse = async (
     queryText: string,
     responseParams: any,
@@ -40,6 +38,7 @@ export const useResponseHandling = (
       const isAggregationQuery = queryText.toLowerCase().includes('aggregate') ||
         queryText.toLowerCase().includes('rule 7.19a');
 
+      // Enhanced token limits without sacrificing quality
       let enhancedParams = enhanceTokenLimits(
         queryText,
         responseParams,
@@ -60,6 +59,16 @@ export const useResponseHandling = (
       } else if (!batchInfo && enhancedParams.prompt) {
         // For initial responses that might need batching, add instruction to be concise
         enhancedParams.prompt += " IMPORTANT: Provide a concise but COMPLETE response. Prioritize including all key information rather than details. If the response needs to be split into multiple parts, focus on the most important information in this first part.";
+      }
+
+      // OPTIMIZATION: Always use grok-3-beta model for highest quality
+      if (!enhancedParams.model) {
+        enhancedParams.model = 'grok-3-beta';
+      }
+
+      // Set higher token limits for all requests
+      if (!enhancedParams.maxTokens || enhancedParams.maxTokens < 10000) {
+        enhancedParams.maxTokens = isSimpleQuery ? 10000 : 20000;
       }
 
       const isProduction = !window.location.href.includes('localhost') &&

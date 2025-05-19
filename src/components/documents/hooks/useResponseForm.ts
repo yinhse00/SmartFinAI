@@ -22,6 +22,16 @@ export interface UseResponseFormReturn {
   handleDownloadPdf: () => Promise<void>;
 }
 
+// Cache for document responses
+const documentResponseCache = new Map<string, {
+  response: string,
+  timestamp: number,
+  type: string
+}>();
+
+// Cache expiration (15 minutes)
+const DOCUMENT_CACHE_EXPIRATION = 15 * 60 * 1000;
+
 export function useResponseForm(): UseResponseFormReturn {
   const [responseType, setResponseType] = useState('');
   const [promptText, setPromptText] = useState('');
@@ -31,6 +41,11 @@ export function useResponseForm(): UseResponseFormReturn {
   const [useAutoRegSearch, setUseAutoRegSearch] = useState(true);
   const [regulatoryContext, setRegulatoryContext] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState<boolean>(false);
+
+  // Generate cache key
+  const generateCacheKey = (prompt: string, type: string, context?: string) => {
+    return `${prompt.substring(0, 100).toLowerCase()}-${type}-${context ? 'with-context' : 'no-context'}`;
+  };
 
   const handleSearchRegulations = async () => {
     if (!promptText.trim()) {
@@ -46,7 +61,14 @@ export function useResponseForm(): UseResponseFormReturn {
     setRegulatoryContext(null);
 
     try {
-      const context = await grokService.getRegulatoryContext(promptText);
+      // OPTIMIZATION: Always use full-quality model
+      const context = await grokService.getRegulatoryContext(promptText, {
+        metadata: {
+          processingStage: 'document-preparation',
+          specializationLevel: 'high'
+        }
+      });
+      
       setRegulatoryContext(context);
       
       toast({
@@ -94,23 +116,75 @@ export function useResponseForm(): UseResponseFormReturn {
 
     setIsGenerating(true);
     setGeneratedResponse(null);
+    
+    // Check cache for this prompt and response type
+    const cacheKey = generateCacheKey(promptText, responseType, regulatoryContext || undefined);
+    const cachedResponse = documentResponseCache.get(cacheKey);
+    
+    if (cachedResponse && (Date.now() - cachedResponse.timestamp < DOCUMENT_CACHE_EXPIRATION)) {
+      console.log('Using cached document response');
+      setGeneratedResponse(cachedResponse.response);
+      setIsGenerating(false);
+      
+      toast({
+        title: "Response generated",
+        description: "Your regulatory response has been loaded from cache.",
+      });
+      
+      return;
+    }
 
     try {
       if (useAutoRegSearch && !regulatoryContext) {
         try {
-          const context = await grokService.getRegulatoryContext(promptText);
+          // OPTIMIZATION: Always use full-quality model for context retrieval
+          const context = await grokService.getRegulatoryContext(promptText, {
+            metadata: {
+              processingStage: 'document-preparation',
+              specializationLevel: 'high'
+            }
+          });
+          
           setRegulatoryContext(context);
         } catch (error) {
           console.error("Error auto-searching regulations:", error);
         }
       }
-
+      
+      // Format prompt based on document type
+      let formattedPrompt = promptText;
+      
+      if (responseType === 'timetable') {
+        formattedPrompt = `${promptText}\n\nGenerate a comprehensive timetable with all relevant dates and requirements.`;
+      } else if (responseType === 'comparison') {
+        formattedPrompt = `${promptText}\n\nCreate a detailed comparison with clear structure and formatting.`;
+      } else if (responseType === 'checklist') {
+        formattedPrompt = `${promptText}\n\nProvide a comprehensive checklist with clear structure and step-by-step format.`;
+      }
+      
+      // OPTIMIZATION: Always use full-quality model
       const response = await grokService.generateResponse({
-        prompt: promptText,
-        regulatoryContext: regulatoryContext || undefined
+        prompt: formattedPrompt,
+        regulatoryContext: regulatoryContext || undefined,
+        model: 'grok-3-beta',
+        maxTokens: 25000, // Higher token limit for comprehensive document responses
+        temperature: 0.4  // Lower temperature for more consistent formatting
       });
       
       setGeneratedResponse(response.text);
+      
+      // Cache the response
+      documentResponseCache.set(cacheKey, {
+        response: response.text,
+        timestamp: Date.now(),
+        type: responseType
+      });
+      
+      // Limit cache size
+      if (documentResponseCache.size > 15) {
+        const oldestKey = Array.from(documentResponseCache.keys())[0];
+        documentResponseCache.delete(oldestKey);
+      }
       
       toast({
         title: "Response generated",

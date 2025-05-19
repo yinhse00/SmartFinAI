@@ -4,6 +4,16 @@ import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
 import { ChatCompletionRequest } from '../../api/grok/types';
 
+// Cache for image extraction results
+const imageExtractionCache = new Map<string, {
+  content: string, 
+  source: string, 
+  timestamp: number
+}>();
+
+// Cache expiration time (30 minutes)
+const CACHE_EXPIRATION = 30 * 60 * 1000;
+
 /**
  * Processor for extracting text from images using Grok Vision
  */
@@ -14,6 +24,19 @@ export const imageProcessor = {
   extractText: async (file: File): Promise<{ content: string; source: string }> => {
     try {
       console.log(`Processing image with Grok Vision: ${file.name}`);
+      
+      // Generate cache key using file name and size
+      const cacheKey = `${file.name}-${file.size}`;
+      
+      // Check cache for this image
+      const cachedResult = imageExtractionCache.get(cacheKey);
+      if (cachedResult && (Date.now() - cachedResult.timestamp < CACHE_EXPIRATION)) {
+        console.log(`Using cached OCR result for ${file.name}`);
+        return {
+          content: cachedResult.content,
+          source: cachedResult.source
+        };
+      }
       
       // Convert file to base64
       const base64Data = await fileConverter.fileToBase64(file);
@@ -28,7 +51,7 @@ export const imageProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-3-beta",
+        model: "grok-3-beta", // OPTIMIZATION: Always use full model for image processing
         messages: [
           {
             role: "user" as const, 
@@ -58,6 +81,21 @@ export const imageProcessor = {
       
       console.log(`Successfully extracted text from image ${file.name}`);
       
+      // Cache the result
+      const result = {
+        content: extractedText,
+        source: file.name,
+        timestamp: Date.now()
+      };
+      
+      imageExtractionCache.set(cacheKey, result);
+      
+      // Limit cache size
+      if (imageExtractionCache.size > 20) {
+        const oldestKey = Array.from(imageExtractionCache.keys())[0];
+        imageExtractionCache.delete(oldestKey);
+      }
+      
       return {
         content: extractedText,
         source: file.name
@@ -69,5 +107,11 @@ export const imageProcessor = {
         source: file.name
       };
     }
+  },
+  
+  // Clear the image extraction cache
+  clearImageCache: () => {
+    imageExtractionCache.clear();
+    console.log('Image extraction cache cleared');
   }
 };

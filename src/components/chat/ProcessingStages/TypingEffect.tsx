@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 
 interface TypingEffectProps {
   messages: string[];
@@ -11,38 +11,64 @@ interface TypingEffectProps {
 const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisible, stage }) => {
   const [typedOutput, setTypedOutput] = useState('');
   const [typingIndex, setTypingIndex] = useState(0);
-
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
+  const previousStage = useRef(stage);
+  const typingSpeedRef = useRef({ preparing: 40, processing: 30, finalizing: 35, reviewing: 45 });
+  const pauseBeforeNewMessageRef = useRef(300);
+  
   // Select message based on progress
   const messageIndex = Math.min(
     Math.floor((progress / 100) * messages.length),
     messages.length - 1
   );
   
-  const targetMessage = messages[messageIndex];
-
-  // Real typing effect with variable speed based on stage
+  // When stage changes, choose a new message
   useEffect(() => {
-    if (!isVisible) return;
+    if (previousStage.current !== stage) {
+      previousStage.current = stage;
+      setTypingIndex(0);
+      setTypedOutput('');
+      setCurrentMessageIndex(messageIndex);
+    }
+  }, [stage, messageIndex]);
+  
+  const targetMessage = messages[currentMessageIndex];
+
+  // Enhanced typing effect with variable speed and natural pauses
+  useEffect(() => {
+    if (!isVisible || !targetMessage) return;
     
-    // Don't start over if we're showing the same message
-    if (typedOutput === targetMessage) return;
+    // If we're showing a complete message and progress indicates we should move to the next one
+    if (typedOutput === targetMessage && currentMessageIndex !== messageIndex) {
+      const timer = setTimeout(() => {
+        setCurrentMessageIndex(messageIndex);
+        setTypingIndex(0);
+        setTypedOutput('');
+      }, pauseBeforeNewMessageRef.current);
+      
+      return () => clearTimeout(timer);
+    }
     
-    // Real typing effect
-    const typingSpeed = stage === 'processing' ? 35 : 45; // ms per character
-    
+    // Real typing effect with natural rhythm
     if (typingIndex < targetMessage.length) {
+      // Vary typing speed slightly for realism
+      const randomVariation = Math.random() * 0.5 + 0.75; // 0.75 to 1.25 multiplier
+      const currentChar = targetMessage[typingIndex];
+      
+      // Pause longer after punctuation
+      const isPunctuation = ['.', ',', '!', '?', ':'].includes(currentChar);
+      const typingDelay = isPunctuation 
+        ? typingSpeedRef.current[stage] * 3 * randomVariation 
+        : typingSpeedRef.current[stage] * randomVariation;
+      
       const timer = setTimeout(() => {
         setTypedOutput(targetMessage.substring(0, typingIndex + 1));
         setTypingIndex(prev => prev + 1);
-      }, typingSpeed);
+      }, typingDelay);
       
       return () => clearTimeout(timer);
-    } else if (typedOutput !== targetMessage) {
-      // When switching to a new message
-      setTypedOutput('');
-      setTypingIndex(0);
     }
-  }, [isVisible, stage, progress, typedOutput, typingIndex, targetMessage]);
+  }, [isVisible, stage, progress, typedOutput, typingIndex, targetMessage, currentMessageIndex, messageIndex]);
 
   return (
     <div className="text-sm text-gray-600 dark:text-gray-400 mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 min-h-[2rem]">

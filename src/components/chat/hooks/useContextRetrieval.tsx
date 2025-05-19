@@ -4,18 +4,42 @@ import { grokService } from '@/services/grokService';
 import { useToast } from '@/hooks/use-toast';
 import { parallelQueryProcessor } from '@/services/response/core/parallelQueryProcessor';
 
+// Cache for context retrieval
+const contextCache = new Map<string, {
+  result: any,
+  timestamp: number
+}>();
+
+// Cache expiration time (10 minutes)
+const CACHE_EXPIRATION_MS = 10 * 60 * 1000;
+
 export const useContextRetrieval = () => {
   const { toast } = useToast();
   const [lastRegulationSearchTime, setLastRegulationSearchTime] = useState<number>(0);
 
   /**
-   * Enhanced regulatory context retrieval using parallel processing
+   * Enhanced regulatory context retrieval using parallel processing with caching
    */
   const retrieveRegulatoryContext = async (
     queryText: string,
     isPreliminaryAssessment: boolean = false
   ) => {
     console.log(`Retrieving regulatory context for query${isPreliminaryAssessment ? " (parallel assessment)" : ""}`);
+    
+    // Generate cache key from query text
+    const cacheKey = queryText.toLowerCase().substring(0, 100);
+    
+    // Check cache first for faster response
+    const cachedContext = contextCache.get(cacheKey);
+    if (cachedContext && (Date.now() - cachedContext.timestamp < CACHE_EXPIRATION_MS)) {
+      console.log('Using cached regulatory context');
+      // Return cached result with cache hit metadata
+      return {
+        ...cachedContext.result,
+        cacheHit: true,
+        cacheAge: Math.round((Date.now() - cachedContext.timestamp) / 1000)
+      };
+    }
     
     // Detect if this is a new listing or listed issuer query
     const isNewListingQuery = queryText.toLowerCase().includes('new listing') ||
@@ -36,7 +60,8 @@ export const useContextRetrieval = () => {
         const contextTime = Date.now() - searchStart;
         console.log(`Parallel context retrieval completed in ${contextTime}ms`);
         
-        return {
+        // Cache the result
+        const resultToCache = {
           regulatoryContext: result.optimizedContext,
           reasoning: result.assessment.reasoning,
           contextTime,
@@ -45,6 +70,13 @@ export const useContextRetrieval = () => {
           contexts: result.contexts,
           isNewListingQuery: result.assessment.isNewListingQuery || isNewListingQuery
         };
+        
+        contextCache.set(cacheKey, {
+          result: resultToCache,
+          timestamp: Date.now()
+        });
+        
+        return resultToCache;
       }
       
       // For non-preliminary assessments, call the regular context service
@@ -88,7 +120,8 @@ export const useContextRetrieval = () => {
         console.log('Found relevant regulatory context');
       }
       
-      return {
+      // Create result object
+      const result = {
         regulatoryContext,
         reasoning,
         contextTime,
@@ -97,6 +130,23 @@ export const useContextRetrieval = () => {
         categories,
         isNewListingQuery
       };
+      
+      // Cache the result if we have content
+      if (regulatoryContext.trim() !== '') {
+        contextCache.set(cacheKey, {
+          result,
+          timestamp: Date.now()
+        });
+        
+        // Limit cache size
+        if (contextCache.size > 25) {
+          // Delete oldest entry
+          const oldestKey = Array.from(contextCache.keys())[0];
+          contextCache.delete(oldestKey);
+        }
+      }
+      
+      return result;
     } catch (error) {
       console.error('Error retrieving regulatory context:', error);
       
@@ -115,7 +165,14 @@ export const useContextRetrieval = () => {
     }
   };
 
+  // Function to manually clear the context cache
+  const clearContextCache = () => {
+    contextCache.clear();
+    console.log('Context cache cleared');
+  };
+
   return {
-    retrieveRegulatoryContext
+    retrieveRegulatoryContext,
+    clearContextCache
   };
 };

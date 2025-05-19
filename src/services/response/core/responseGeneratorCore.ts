@@ -36,10 +36,9 @@ export const responseGeneratorCore = {
         });
       }
       
-      // Smart model selection - use full model for user-facing responses
-      const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
+      // OPTIMIZED: Always use full model for all responses to maintain quality
       if (!requestBody.model) {
-        requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
+        requestBody.model = 'grok-3-beta';
       }
       
       // Forward request to API client
@@ -57,7 +56,7 @@ export const responseGeneratorCore = {
       // Enhanced system prompt for backup calls
       const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
-      // Quality-focused backup request
+      // Quality-focused backup request - ALWAYS use full model
       const backupRequestBody: ChatCompletionRequest = {
         messages: [
           { role: 'system', content: systemPrompt },

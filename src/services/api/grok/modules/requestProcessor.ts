@@ -1,4 +1,3 @@
-
 /**
  * Core API request processing logic - Optimized for quality responses
  */
@@ -15,6 +14,88 @@ import { prepareRequestParameters } from './queryParameterBuilder';
 
 // Keep track of complex query attempts to avoid infinite retry loops
 const complexQueryAttempts = new Map<string, number>();
+
+// Response cache for similar queries
+const responseCache = new Map<string, {
+  response: any,
+  timestamp: number,
+  conversationId: string
+}>();
+
+// Cache expiration time (10 minutes)
+const CACHE_EXPIRATION_MS = 10 * 60 * 1000;
+
+// Generate cache key from request
+const generateCacheKey = (requestBody: any): string => {
+  const userMessage = requestBody.messages?.find((msg: any) => msg.role === 'user');
+  const content = typeof userMessage?.content === 'string' ? 
+    userMessage.content : JSON.stringify(userMessage?.content);
+  
+  // Include model and temperature in cache key
+  const model = requestBody.model || 'default';
+  const temperature = requestBody.temperature || 'default';
+  
+  // Check if is an internal processing request (exclude from cache)
+  if (requestBody.metadata?.internalProcessing) {
+    return `no-cache-${Date.now()}-${Math.random()}`;
+  }
+  
+  return `${content.substring(0, 100)}-${model}-${temperature}`;
+};
+
+// Check cache for similar requests
+const checkCache = (requestBody: any) => {
+  const cacheKey = generateCacheKey(requestBody);
+  const cached = responseCache.get(cacheKey);
+  
+  if (cached) {
+    const now = Date.now();
+    // Check if cache is still valid
+    if (now - cached.timestamp < CACHE_EXPIRATION_MS) {
+      console.log('Cache hit! Using cached response');
+      return {
+        ...cached.response,
+        metadata: {
+          ...cached.response.metadata,
+          cacheHit: true,
+          cacheAge: Math.round((now - cached.timestamp) / 1000)
+        }
+      };
+    } else {
+      // Clear expired cache
+      responseCache.delete(cacheKey);
+    }
+  }
+  
+  return null;
+};
+
+// Update cache with new response
+const updateCache = (requestBody: any, response: any) => {
+  // Only cache successful responses
+  if (!response || !response.choices || response.error) {
+    return;
+  }
+  
+  // Don't cache internal processing responses
+  if (requestBody.metadata?.internalProcessing) {
+    return;
+  }
+  
+  const cacheKey = generateCacheKey(requestBody);
+  responseCache.set(cacheKey, {
+    response,
+    timestamp: Date.now(),
+    conversationId: requestBody.metadata?.conversationId || 'unknown'
+  });
+  
+  // Limit cache size to 50 entries
+  if (responseCache.size > 50) {
+    // Delete oldest cache entry
+    const oldestKey = Array.from(responseCache.keys())[0];
+    responseCache.delete(oldestKey);
+  }
+};
 
 /**
  * Process API request with parameters optimized for high-quality responses
@@ -95,21 +176,16 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Smart model selection strategy - use grok-3-beta for user-facing content
-  // and grok-3-mini-beta only for internal processing
-  const isUserFacingQuery = !requestBody.metadata?.internalProcessing;
-  const isExternalProcessing = requestBody.metadata?.processingStage === 'main' || 
-                              requestBody.metadata?.processingStage === undefined;
-  
-  // Use full model for user-facing content and complex queries
-  if (isUserFacingQuery || isComplexQuery || isExternalProcessing) {
-    console.log("Using grok-3-beta for quality response");
-    requestBody.model = "grok-3-beta";
-  } else {
-    // Use mini model for internal processing to save costs
-    console.log("Using grok-3-mini-beta for internal processing");
-    requestBody.model = "grok-3-mini-beta";
+  // Check cache for similar requests (unless it's a retry or batch)
+  if (!isRetryRequest && !isBatchRequest) {
+    const cachedResponse = checkCache(requestBody);
+    if (cachedResponse) {
+      return cachedResponse;
+    }
   }
+  
+  // OPTIMIZATION: Always use full model for all queries to maintain quality
+  requestBody.model = "grok-3-beta";
   
   // Prepare request parameters without aggressive token capping
   const { effectiveTokenLimit } = prepareRequestParameters(requestBody);
@@ -121,10 +197,8 @@ export const processApiRequest = async (
   }
   
   // Don't override temperature if explicitly set
-  if (requestBody.temperature === undefined && !isUserFacingQuery) {
-    requestBody.temperature = 0.3;
-  } else if (requestBody.temperature === undefined) {
-    // For user-facing queries, use balanced temperature
+  if (requestBody.temperature === undefined) {
+    // Use balanced temperature
     requestBody.temperature = 0.5;
   }
   
@@ -150,13 +224,17 @@ export const processApiRequest = async (
       if (isComplexQuery) {
         complexQueryAttempts.delete(querySignature);
       }
+      
+      // Update cache with response
+      updateCache(requestBody, data);
+      
       return data;
     } catch (proxyError) {
       // Continue with direct requests
     }
     
     // Use appropriate number of retries based on query importance
-    const maxRetries = isUserFacingQuery ? 2 : 1;
+    const maxRetries = 2;
     
     // Attempt direct call with appropriate retries
     const data = await executeWithRetry(
@@ -170,6 +248,9 @@ export const processApiRequest = async (
     if (isComplexQuery) {
       complexQueryAttempts.delete(querySignature);
     }
+    
+    // Update cache with response
+    updateCache(requestBody, data);
     
     return data;
   } catch (error) {
