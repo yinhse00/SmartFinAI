@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
-import { step1Initial } from './workflow/step1Initial';
+import { step1Initial } from './useStep1Initial';
 import { step2ListingRules } from './useStep2ListingRules';
 import { step3TakeoversCode } from './useStep3TakeoversCode';
 import { step4Execution } from './useStep4Execution';
 import { step5Response } from './useStep5Response';
-import { WorkflowStep, WorkflowProcessorProps } from './workflow/types';
+import { WorkflowStep, WorkflowProcessorProps, Step1Result } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
@@ -26,7 +26,6 @@ export const useWorkflowProcessor = ({
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
   const [stepProgress, setStepProgress] = useState('');
-  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   
   // Use enhanced context retrieval with parallel processing
   const { retrieveRegulatoryContext } = useContextRetrieval();
@@ -66,12 +65,10 @@ export const useWorkflowProcessor = ({
         content: '',  // Initially empty, will be populated later
         timestamp: new Date(),
         isError: false,
-        metadata: {},
-        isStreaming: true // Mark as streaming
+        metadata: {}
       };
       
       setMessages([...updatedMessages, assistantMessage]);
-      setStreamingMessageId(assistantMessage.id);
       
       // Step 1: Enhanced Initial Processing with parallel classification
       setCurrentStep('initial');
@@ -127,45 +124,24 @@ export const useWorkflowProcessor = ({
         nextStep = step4Result.nextStep;
       }
       
-      // Step 5: Response Generation with streaming (always required)
+      // Step 5: Response Generation (always required)
       setCurrentStep('response');
       console.log('Starting step 5 with params:', params);
-      
-      // Create a function to handle streaming updates
-      const handleStreamUpdate = (chunk: string) => {
-        setMessages(currentMessages => {
-          const updatedMessages = [...currentMessages];
-          const assistantIndex = updatedMessages.findIndex(m => m.id === assistantMessage.id);
-          
-          if (assistantIndex !== -1) {
-            // Update the message with the new chunk
-            updatedMessages[assistantIndex] = {
-              ...updatedMessages[assistantIndex],
-              content: chunk,
-              isStreaming: true
-            };
-          }
-          
-          return updatedMessages;
-        });
-      };
-      
-      // Execute step 5 with streaming support
       const step5Result = await step5Response(
         params, 
         setStepProgress,
-        lastInputWasChinese,
-        handleStreamUpdate // Pass the streaming handler
+        lastInputWasChinese
       );
-      
       console.log('Step 5 result:', step5Result);
       
-      // Update assistant message with final response
+      // Update assistant message with response
       if (step5Result && step5Result.response) {
         const finalMessages = [...updatedMessages];
         
         // Find and update the assistant message
-        const assistantIndex = finalMessages.findIndex(m => m.id === assistantMessage.id);
+        const assistantIndex = finalMessages.findIndex(
+          (m) => m.id === assistantMessage.id
+        );
         
         if (assistantIndex !== -1) {
           console.log('Updating assistant message at index:', assistantIndex);
@@ -176,32 +152,22 @@ export const useWorkflowProcessor = ({
           const responseContent = step5Result.response && step5Result.response.trim() !== '' 
             ? step5Result.response 
             : "I wasn't able to generate a proper response. Please try again.";
-            
-          // Extract metadata if it exists, otherwise provide empty object
-          const responseMetadata = step5Result.completed 
-            ? (step5Result.metadata || {}) 
-            : {};
-            
-          const requiresTranslation = step5Result.completed 
-            ? (step5Result.requiresTranslation || false) 
-            : false;
           
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: responseContent,  // Use the ensured non-empty content
-            isStreaming: false,  // Mark streaming as complete
             metadata: {
-              ...responseMetadata,
+              ...(step5Result.metadata || {}),
               guidanceMaterialsUsed: Boolean(params.guidanceContext),
               sourceMaterials: params.sourceMaterials || []
             }
           };
           
           setMessages(finalMessages);
-          setStreamingMessageId(null);
+          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`));
           
           // Handle translations if needed
-          if (requiresTranslation) {
+          if (step5Result.requiresTranslation) {
             manageTranslations(finalMessages, assistantIndex);
           }
         } else {
@@ -213,16 +179,11 @@ export const useWorkflowProcessor = ({
             sender: 'bot',
             content: step5Result.response || "I wasn't able to generate a proper response. Please try again.",
             timestamp: new Date(),
-            metadata: step5Result.completed 
-              ? {
-                  ...(step5Result.metadata || {}),
-                  guidanceMaterialsUsed: Boolean(params.guidanceContext),
-                  sourceMaterials: params.sourceMaterials || []
-                }
-              : {
-                  guidanceMaterialsUsed: Boolean(params.guidanceContext),
-                  sourceMaterials: params.sourceMaterials || []
-                }
+            metadata: {
+              ...(step5Result.metadata || {}),
+              guidanceMaterialsUsed: Boolean(params.guidanceContext),
+              sourceMaterials: params.sourceMaterials || []
+            }
           };
           
           setMessages([...updatedMessages, newAssistantMessage]);
@@ -270,8 +231,7 @@ export const useWorkflowProcessor = ({
         updatedMessages[assistantIndex] = {
           ...updatedMessages[assistantIndex],
           content: errorMessage,
-          isError: true,
-          isStreaming: false
+          isError: true
         };
         
         setMessages(updatedMessages);
@@ -287,8 +247,6 @@ export const useWorkflowProcessor = ({
         
         setMessages([...updatedMessages, errorMsg]);
       }
-      
-      setStreamingMessageId(null);
     } finally {
       setIsLoading(false);
     }
@@ -298,7 +256,6 @@ export const useWorkflowProcessor = ({
     isLoading,
     currentStep,
     stepProgress,
-    executeWorkflow,
-    streamingMessageId
+    executeWorkflow
   };
 };

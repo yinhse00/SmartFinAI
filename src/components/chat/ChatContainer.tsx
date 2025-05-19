@@ -27,7 +27,6 @@ interface ChatContainerProps {
   onTryReconnect?: () => Promise<boolean>;
   currentStep?: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
   stepProgress?: string;
-  streamingMessageId?: string | null;
 }
 
 const ChatContainer: React.FC<ChatContainerProps> = ({

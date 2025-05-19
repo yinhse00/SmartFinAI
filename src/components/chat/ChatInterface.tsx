@@ -58,8 +58,7 @@ const ChatInterface: React.FC = () => {
     stepProgress,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch,
-    streamingMessageId // Get streaming message ID
+    handleContinueBatch
   } = useChatLogic();
 
   const { toast } = useToast();
@@ -141,21 +140,6 @@ const ChatInterface: React.FC = () => {
   // Map workflow step to processing stage
   const processingStage = mapWorkflowToProcessingStage(currentStep);
 
-  // Handle API key save as a function that doesn't return anything to match the expected type
-  const handleSaveApiKeyWrapper = () => {
-    if (grokApiKeyInput) {
-      handleSaveApiKeys(grokApiKeyInput);
-    }
-  };
-
-  // Create a keyboard event handler that works for both textarea and input elements
-  const handleKeyDownWrapper = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendWithFiles();
-    }
-  };
-
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
@@ -172,7 +156,15 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={handleKeyDownWrapper}
+          handleKeyDown={hasAttachedFiles ? 
+            (e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                handleSendWithFiles();
+              }
+            } : 
+            handleKeyDown
+          }
           onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
@@ -182,7 +174,6 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          streamingMessageId={streamingMessageId} // Pass streaming message ID to ChatContainer
           currentStep={processingStage}
           stepProgress={stepProgress}
         />
@@ -193,7 +184,7 @@ const ChatInterface: React.FC = () => {
         onOpenChange={setApiKeyDialogOpen}
         grokApiKeyInput={grokApiKeyInput}
         setGrokApiKeyInput={setGrokApiKeyInput}
-        handleSaveApiKeys={handleSaveApiKeyWrapper}
+        handleSaveApiKeys={handleSaveApiKeys}
       />
     </>
   );

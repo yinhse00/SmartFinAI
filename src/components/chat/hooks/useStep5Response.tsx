@@ -1,28 +1,11 @@
 
 import { executeStep5 } from './workflow/step5Response';
 
-// Define the return types explicitly to match how they're used in useWorkflowProcessor
-export interface Step5SuccessResult {
-  completed: true;
-  response: string;
-  metadata?: any;
-  requiresTranslation?: boolean;
-}
-
-export interface Step5ErrorResult {
-  completed: false;
-  error: any;
-  response: string;
-}
-
-export type Step5Result = Step5SuccessResult | Step5ErrorResult;
-
 export const step5Response = async (
   params: any,
   setStepProgress: (progress: string) => void,
-  lastInputWasChinese: boolean,
-  handleStreamUpdate?: (chunk: string) => void
-): Promise<Step5Result> => {
+  lastInputWasChinese: boolean
+) => {
   console.log('useStep5Response: Starting with params:', params);
   
   try {
@@ -36,7 +19,7 @@ export const step5Response = async (
       };
     }
     
-    const result = await executeStep5(params, setStepProgress, lastInputWasChinese, handleStreamUpdate);
+    const result = await executeStep5(params, setStepProgress, lastInputWasChinese);
     
     console.log('useStep5Response: Got result:', result ? 
       `completed: ${result.completed}, response length: ${result.response?.length || 0}` : 'No result');
@@ -53,58 +36,10 @@ export const step5Response = async (
     // Make sure the response is never empty or undefined
     if (!result.response || result.response.trim() === '') {
       console.error('useStep5Response: Empty response in result', result);
-      if (result.completed === true) {
-        // Type guard ensures this is the success type
-        const successResult: Step5SuccessResult = {
-          completed: true,
-          response: "I wasn't able to generate a complete response. Please try again.",
-        };
-        
-        // Only add these properties if they exist in the result
-        if ('metadata' in result && result.metadata) {
-          successResult.metadata = result.metadata;
-        }
-        
-        if ('requiresTranslation' in result && result.requiresTranslation !== undefined) {
-          successResult.requiresTranslation = result.requiresTranslation;
-        }
-        
-        return successResult;
-      } else {
-        return {
-          completed: false,
-          error: new Error("Empty response"),
-          response: "I wasn't able to generate a complete response. Please try again."
-        };
-      }
+      result.response = "I wasn't able to generate a complete response. Please try again.";
     }
     
-    // Return the result with proper typing - explicitly cast based on completed property
-    if (result.completed === true) {
-      // For success case
-      const successResult: Step5SuccessResult = {
-        completed: true,
-        response: result.response
-      };
-      
-      // Only add these properties if they exist in the result
-      if ('metadata' in result && result.metadata) {
-        successResult.metadata = result.metadata;
-      }
-      
-      if ('requiresTranslation' in result && result.requiresTranslation !== undefined) {
-        successResult.requiresTranslation = result.requiresTranslation;
-      }
-      
-      return successResult;
-    } else {
-      // For error case
-      return {
-        completed: false,
-        error: ('error' in result && result.error) ? result.error : new Error("Unknown error"),
-        response: result.response
-      };
-    }
+    return result;
   } catch (error) {
     console.error('useStep5Response: Error during execution:', error);
     return {
