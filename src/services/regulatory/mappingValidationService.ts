@@ -101,8 +101,9 @@ export const mappingValidationService = {
       
       return data[0];
     } catch (error) {
+      // Fix the error handling here to return null instead of an error object
       console.error('Error retrieving listing guidance document:', error);
-      return null;
+      return null; // Return null for any error case to match the function return type
     }
   },
   
