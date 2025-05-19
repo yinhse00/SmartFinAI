@@ -2,6 +2,7 @@
 import { databaseService } from '../../database/databaseService';
 import { extractKeyTerms } from '../../database/utils/textProcessing';
 import { searchService } from '../../databaseService';
+import { mappingValidationService } from '../mappingValidationService';
 
 /**
  * Service to provide validation context for cross-checking response accuracy
@@ -14,6 +15,36 @@ export const validationContextService = {
   getValidationContext: async (query: string) => {
     try {
       console.log('Retrieving validation context for cross-checking response accuracy');
+      
+      // First check if the query relates to new listing applicants
+      const isNewListingQuery = 
+        query.toLowerCase().includes('new listing') ||
+        query.toLowerCase().includes('ipo') ||
+        query.toLowerCase().includes('initial public offering') ||
+        query.toLowerCase().includes('listing applicant');
+      
+      // If it's a new listing query, prioritize validation against the mapping guide
+      if (isNewListingQuery) {
+        console.log('Detected new listing query, checking mapping guidance for validation');
+        // Get the guidance document for validation context
+        const guidanceDoc = await mappingValidationService.getListingGuidanceDocument();
+        
+        if (guidanceDoc) {
+          console.log('Found listing guidance document for validation context');
+          // Extract relevant sections for validation context
+          const relevantGuidance = await mappingValidationService.extractRelevantGuidance(
+            guidanceDoc.content,
+            query
+          );
+          
+          if (relevantGuidance) {
+            return {
+              context: `[VALIDATION: New Listing Applicant Guide]:\n${relevantGuidance}`,
+              source: 'mapping-guidance'
+            };
+          }
+        }
+      }
       
       // Extract key financial terms for targeted search
       const keyTerms = extractKeyTerms(query);

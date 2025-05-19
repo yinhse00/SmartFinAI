@@ -1,55 +1,115 @@
 
-import { 
-  determineOptimalTemperature, 
-  determineOptimalTokens,
-  evaluateResponseRelevance 
-} from '../../financial/optimizationUtils';
-import { getOptimalTemperature, getOptimalTokens } from '@/components/chat/utils/parameterUtils';
+import { analyzeFinancialResponse } from '@/utils/truncation/financialResponseAnalyzer';
+import { mappingValidationService } from '../../regulatory/mappingValidationService';
 
+/**
+ * Optimizes and enhances responses with verification against mapping guides
+ */
 export const responseOptimizer = {
-  getOptimizedParameters: (queryType: string, prompt: string) => {
-    // Analyze query complexity
-    const isSimpleQuery = prompt.length < 100 && !prompt.includes('?');
+  /**
+   * Calculate relevance score based on query and response
+   */
+  calculateRelevanceScore: (query: string, response: string): number => {
+    // Simple relevance calculation based on keywords
+    const queryKeywords = query.toLowerCase().split(/\s+/);
+    const uniqueKeywords = [...new Set(queryKeywords)].filter(word => word.length > 3);
     
-    // Use enhanced token limits for comprehensive responses
-    if (queryType === 'open_offer' || queryType === 'rights_issue') {
-      return {
-        temperature: 0.3, // More precise temperature for regulatory content
-        maxTokens: 30000
-      };
-    }
+    // Calculate how many keywords from the query appear in the response
+    const matchedKeywords = uniqueKeywords.filter(keyword => 
+      response.toLowerCase().includes(keyword)
+    );
     
-    if (queryType === 'connected_transaction' || prompt.toLowerCase().includes('connected')) {
-      return {
-        temperature: 0.4, // Balanced temperature
-        maxTokens: 25000
-      };
-    }
-    
-    if (isSimpleQuery) {
-      return {
-        temperature: 0.7, // Higher temperature for more natural responses
-        maxTokens: 10000
-      };
-    }
-    
-    if (prompt.toLowerCase().includes('compare')) {
-      return {
-        temperature: 0.4, // Balanced temperature for comparisons
-        maxTokens: 20000
-      };
-    }
-    
-    // Default optimized values with more balanced parameters
-    const baseTemperature = 0.5;  // Balanced temperature
-    const baseTokens = 15000;
-    
-    console.log(`Optimized Parameters - Temperature: ${baseTemperature}, Max Tokens: ${baseTokens}`);
-    
-    return { temperature: baseTemperature, maxTokens: baseTokens };
+    // Calculate relevance score (0 to 1)
+    return uniqueKeywords.length > 0 ? 
+      Math.min(1, matchedKeywords.length / uniqueKeywords.length) : 0.5;
   },
   
-  calculateRelevanceScore: (response: string, prompt: string, queryType: string): number => {
-    return evaluateResponseRelevance(response, prompt, queryType);
+  /**
+   * Enhance response with metadata about completeness and relevance
+   */
+  enhanceResponseWithMetadata: async (
+    response: string,
+    query: string,
+    queryType: string
+  ): Promise<{ 
+    enhancedResponse: string;
+    metadata: {
+      relevanceScore: number;
+      completenessScore: number;
+      isVerified: boolean;
+      verificationConfidence?: number;
+      correctionsMade?: boolean;
+    };
+  }> => {
+    let enhancedResponse = response;
+    
+    // Calculate relevance score
+    const relevanceScore = responseOptimizer.calculateRelevanceScore(query, response);
+    
+    // Check if response is complete based on query type
+    const completenessAnalysis = analyzeFinancialResponse(response, queryType);
+    const completenessScore = completenessAnalysis.isComplete ? 1 : 0.5;
+    
+    // Detect if this is related to new listing applicants
+    const isNewListingQuery = 
+      query.toLowerCase().includes('new listing') ||
+      query.toLowerCase().includes('ipo') ||
+      query.toLowerCase().includes('initial public offering') ||
+      query.toLowerCase().includes('listing applicant');
+    
+    // Only verify responses for new listing queries
+    if (isNewListingQuery) {
+      console.log('Verifying new listing response against mapping guide');
+      
+      // Verify the response against the mapping guide
+      const validationResult = await mappingValidationService.validateAgainstListingGuidance(
+        response,
+        query
+      );
+      
+      // If the response is invalid with high confidence, make corrections
+      if (!validationResult.isValid && validationResult.confidence > 0.7 && validationResult.corrections) {
+        console.log('Making corrections based on mapping guide validation');
+        
+        // Add corrected information to the response
+        enhancedResponse = response + "\n\n---\n\n**Important clarification based on the New Listing Applicant Guide:**\n\n" + 
+          validationResult.corrections;
+        
+        return {
+          enhancedResponse,
+          metadata: {
+            relevanceScore,
+            completenessScore,
+            isVerified: true,
+            verificationConfidence: validationResult.confidence,
+            correctionsMade: true
+          }
+        };
+      }
+      
+      // Return metadata about verification even if no corrections were made
+      return {
+        enhancedResponse,
+        metadata: {
+          relevanceScore,
+          completenessScore,
+          isVerified: true,
+          verificationConfidence: validationResult.confidence,
+          correctionsMade: false
+        }
+      };
+    }
+    
+    // For non-listing queries, return standard metadata
+    return {
+      enhancedResponse,
+      metadata: {
+        relevanceScore,
+        completenessScore,
+        isVerified: false
+      }
+    };
   }
 };
+
+export default responseOptimizer;

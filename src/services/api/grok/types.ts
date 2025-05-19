@@ -78,3 +78,22 @@ export type GrokModelInfo = {
 };
 
 export type ProgressCallback = (progress: number, stage: string) => void;  // Added for progressive updates
+
+export type ValidationResult = {
+  isValid: boolean;
+  confidence: number;
+  corrections?: string;
+  sourceMaterials: string[];
+};
+
+export type MappingDocumentMetadata = {
+  isListingGuidance: boolean;
+  isListedIssuerGuidance: boolean;
+  isRegulatoryMapping: boolean;
+  purpose: 'new_listing_guidance' | 'listed_issuer_guidance';
+  timestamp: string;
+  validationPriority: 'high' | 'medium' | 'low';
+  contentType?: string;
+  processingLevel?: 'enhanced' | 'basic';
+  processingError?: boolean | string;
+};
