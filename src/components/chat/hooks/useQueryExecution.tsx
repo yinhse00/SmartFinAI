@@ -6,7 +6,6 @@ import { useQueryCore } from './useQueryCore';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useQueryPreparation } from './useQueryPreparation';
 import { Message } from '../ChatMessage';
-import { useBatchHandling } from './useBatchHandling';
 
 export const useQueryExecution = (
   messages: Message[],
@@ -25,7 +24,6 @@ export const useQueryExecution = (
   const { createUserMessage, handleProcessingError } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
-  const { startBatching, handleBatchResult } = useBatchHandling();
 
   // The main execution function
   const executeQuery = async (
@@ -39,21 +37,12 @@ export const useQueryExecution = (
       setApiKeyDialogOpen(true);
       return;
     }
-
-    // Set up batch handling if this is the first part
-    if (!batchInfo || batchInfo.batchNumber === 1) {
-      console.log('Starting new batch process with query:', queryText.substring(0, 50) + '...');
-      startBatching(queryText, true); // Use auto-batching
-    }
     
     setLastQuery(queryText);
     const updatedMessages = createUserMessage(queryText, messages);
 
-    // Only add user message for new queries, not batch continuations
-    if (!batchInfo || !batchInfo.isContinuing) {
-      setMessages(updatedMessages);
-      setInput('');
-    }
+    setMessages(updatedMessages);
+    setInput('');
 
     try {
       logQueryStart(queryText);
@@ -103,33 +92,11 @@ export const useQueryExecution = (
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        {
-          batchNumber: batchInfo?.batchNumber || 1,
-          isContinuing: batchInfo?.isContinuing || false,
-          isSeamlessBatch: true // Always use seamless batching
-        }
+        batchInfo
       );
 
       const processingTime = Date.now() - processingStart;
       console.log(`Response generated in ${processingTime}ms`);
-
-      // Handle batch continuation if needed
-      if (result && result.isTruncated) {
-        console.log('Response is truncated, handling batch continuation');
-        handleBatchResult(
-          true, 
-          queryText, 
-          true, // Always use auto-batch
-          batchInfo?.batchNumber || 1
-        );
-      } else {
-        handleBatchResult(
-          false,
-          queryText,
-          true,
-          batchInfo?.batchNumber || 1
-        );
-      }
 
       setProcessingStage('finalizing');
 

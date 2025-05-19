@@ -26,7 +26,7 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
   }
 
   return (
-    <div className="flex flex-col items-center my-4 gap-2 animate-fade-in">
+    <div className="flex flex-col items-center my-4 gap-2">
       <div className="text-sm text-gray-500 dark:text-gray-400">
         {lastInputWasChinese 
           ? `回复尚未完成，需要继续生成更多内容。` 
@@ -35,7 +35,7 @@ const BatchContinuation: React.FC<BatchContinuationProps> = ({
       </div>
       <Button
         variant="default"
-        className="flex items-center gap-2 bg-finance-accent-blue text-white px-6 py-2 animate-pulse hover:bg-finance-accent-blue/90 transition-colors"
+        className="flex items-center gap-2 bg-finance-accent-blue text-white px-6 py-2 animate-pulse"
         onClick={handleContinueBatch}
         disabled={isLoading}
       >
