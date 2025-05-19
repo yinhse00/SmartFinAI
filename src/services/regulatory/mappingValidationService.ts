@@ -3,6 +3,19 @@ import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 
 /**
+ * Type definition for the document we expect from the database
+ */
+interface ListingGuidanceDocument {
+  id: string;
+  title: string;
+  content: string;
+  updated_at: string;
+  file_url?: string;
+  file_type?: string;
+  [key: string]: any; // Allow for additional properties
+}
+
+/**
  * Service for validating responses against regulatory mapping data
  */
 export const mappingValidationService = {
@@ -74,39 +87,32 @@ export const mappingValidationService = {
   /**
    * Get the latest listing guidance document
    */
-  async getListingGuidanceDocument(): Promise<{
-    id: string;
-    title: string;
-    content: string;
-    updated_at: string;
-  } | null> {
+  async getListingGuidanceDocument(): Promise<ListingGuidanceDocument | null> {
     try {
       console.log('Fetching listing guidance document from the database');
       
-      // Search for the guidance document in the reference_documents table
-      // First check if the table has a content column
-      const { data: columns, error: columnsError } = await supabase
+      // First determine if the reference_documents table has a content column
+      const { data: schemaCheck, error: schemaError } = await supabase
         .from('reference_documents')
         .select('*')
         .limit(1);
       
-      if (columnsError) {
-        console.error('Error checking reference_documents schema:', columnsError);
+      if (schemaError) {
+        console.error('Error checking reference_documents schema:', schemaError);
         return null;
       }
       
-      // Determine if we need to use file_url instead of content
-      const hasContentColumn = columns && columns[0] && 'content' in columns[0];
+      const hasContentColumn = schemaCheck && 
+                              schemaCheck.length > 0 && 
+                              'content' in schemaCheck[0];
       
-      // Adjust query based on available columns
-      let query = supabase
+      // Now query for the specific document we need
+      const { data, error } = await supabase
         .from('reference_documents')
-        .select('id, title, updated_at' + (hasContentColumn ? ', content' : ', file_url'))
+        .select(hasContentColumn ? '*' : 'id, title, updated_at, file_url, file_type')
         .ilike('title', '%Guide for New Listing Applicants%')
         .order('updated_at', { ascending: false })
         .limit(1);
-      
-      const { data, error } = await query;
       
       if (error) {
         console.error('Error fetching listing guidance document:', error);
@@ -118,40 +124,40 @@ export const mappingValidationService = {
         return null;
       }
       
-      // Using destructuring and default values to safely handle the document
-      // This completely avoids any "possibly null" TypeScript errors
-      const doc = data[0];
+      const doc = data[0] as any;
       
       if (!doc) {
         return null;
       }
       
-      // Safely extract and transform document properties with type assertion
-      const documentData = {
-        id: typeof doc.id !== 'undefined' ? String(doc.id) : '',
-        title: typeof doc.title !== 'undefined' ? String(doc.title) : '',
-        updated_at: typeof doc.updated_at !== 'undefined' ? String(doc.updated_at) : '',
+      // Construct a properly typed document object
+      const result: ListingGuidanceDocument = {
+        id: String(doc.id || ''),
+        title: String(doc.title || ''),
+        updated_at: String(doc.updated_at || ''),
         content: ''
       };
       
       // Validate required fields
-      if (!documentData.id || !documentData.title || !documentData.updated_at) {
+      if (!result.id || !result.title || !result.updated_at) {
         console.error('Document missing required fields');
         return null;
       }
       
       // Handle content based on what's available
-      if (hasContentColumn && doc.content && typeof doc.content === 'string') {
-        documentData.content = doc.content;
-      } else if (doc.file_url && typeof doc.file_url === 'string') {
+      if (hasContentColumn && typeof doc.content === 'string') {
+        result.content = doc.content;
+      } else if (typeof doc.file_url === 'string') {
         console.log('Using placeholder content from file_url');
-        documentData.content = 'Placeholder content - file content fetching not implemented';
+        result.content = 'Placeholder content - file content fetching not implemented';
+        // Store the file_url in case we need it later
+        result.file_url = doc.file_url;
       } else {
         console.error('Document does not have required content or file_url field');
         return null;
       }
       
-      return documentData;
+      return result;
     } catch (error) {
       console.error('Error retrieving listing guidance document:', error);
       return null;
