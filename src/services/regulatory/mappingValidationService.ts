@@ -99,14 +99,22 @@ export const mappingValidationService = {
         return null;
       }
       
-      return data[0] as {
-        id: string;
-        title: string;
-        content: string;
-        updated_at: string;
+      // Safely check if data[0] has all required properties
+      const doc = data[0];
+      if (!doc || typeof doc.id !== 'string' || typeof doc.title !== 'string' || 
+          typeof doc.content !== 'string' || typeof doc.updated_at !== 'string') {
+        console.error('Invalid document format returned from database');
+        return null;
+      }
+      
+      // Return a properly typed object
+      return {
+        id: doc.id,
+        title: doc.title,
+        content: doc.content,
+        updated_at: doc.updated_at
       };
     } catch (error) {
-      // Return null on any error to match the function's return type
       console.error('Error retrieving listing guidance document:', error);
       return null;
     }
