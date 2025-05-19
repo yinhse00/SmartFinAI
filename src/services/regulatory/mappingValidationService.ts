@@ -118,11 +118,23 @@ export const mappingValidationService = {
         return null;
       }
       
-      // Get the first document and validate it has the expected properties
+      // Get the first document
       const rawDoc = data[0];
       
-      // Type guard to check we have a valid document
-      if (!rawDoc || typeof rawDoc !== 'object' || !('id' in rawDoc) || !('title' in rawDoc) || !('updated_at' in rawDoc)) {
+      // Make sure rawDoc exists before accessing its properties
+      if (!rawDoc) {
+        console.error('Document is null or undefined');
+        return null;
+      }
+      
+      // Type guard to check we have a valid document with required base properties
+      if (typeof rawDoc !== 'object') {
+        console.error('Document is not an object');
+        return null;
+      }
+      
+      // Check for required base fields
+      if (!('id' in rawDoc) || !('title' in rawDoc) || !('updated_at' in rawDoc)) {
         console.error('Document does not have required base fields');
         return null;
       }
