@@ -26,6 +26,7 @@ export const useWorkflowProcessor = ({
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
   const [stepProgress, setStepProgress] = useState('');
+  const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null);
   
   // Use enhanced context retrieval with parallel processing
   const { retrieveRegulatoryContext } = useContextRetrieval();
@@ -65,10 +66,12 @@ export const useWorkflowProcessor = ({
         content: '',  // Initially empty, will be populated later
         timestamp: new Date(),
         isError: false,
-        metadata: {}
+        metadata: {},
+        isStreaming: true // Mark as streaming
       };
       
       setMessages([...updatedMessages, assistantMessage]);
+      setStreamingMessageId(assistantMessage.id);
       
       // Step 1: Enhanced Initial Processing with parallel classification
       setCurrentStep('initial');
@@ -124,24 +127,45 @@ export const useWorkflowProcessor = ({
         nextStep = step4Result.nextStep;
       }
       
-      // Step 5: Response Generation (always required)
+      // Step 5: Response Generation with streaming (always required)
       setCurrentStep('response');
       console.log('Starting step 5 with params:', params);
+      
+      // Create a function to handle streaming updates
+      const handleStreamUpdate = (chunk: string) => {
+        setMessages(currentMessages => {
+          const updatedMessages = [...currentMessages];
+          const assistantIndex = updatedMessages.findIndex(m => m.id === assistantMessage.id);
+          
+          if (assistantIndex !== -1) {
+            // Update the message with the new chunk
+            updatedMessages[assistantIndex] = {
+              ...updatedMessages[assistantIndex],
+              content: chunk,
+              isStreaming: true
+            };
+          }
+          
+          return updatedMessages;
+        });
+      };
+      
+      // Execute step 5 with streaming support
       const step5Result = await step5Response(
         params, 
         setStepProgress,
-        lastInputWasChinese
+        lastInputWasChinese,
+        handleStreamUpdate // Pass the streaming handler
       );
+      
       console.log('Step 5 result:', step5Result);
       
-      // Update assistant message with response
+      // Update assistant message with final response
       if (step5Result && step5Result.response) {
         const finalMessages = [...updatedMessages];
         
         // Find and update the assistant message
-        const assistantIndex = finalMessages.findIndex(
-          (m) => m.id === assistantMessage.id
-        );
+        const assistantIndex = finalMessages.findIndex(m => m.id === assistantMessage.id);
         
         if (assistantIndex !== -1) {
           console.log('Updating assistant message at index:', assistantIndex);
@@ -156,6 +180,7 @@ export const useWorkflowProcessor = ({
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: responseContent,  // Use the ensured non-empty content
+            isStreaming: false,  // Mark streaming as complete
             metadata: {
               ...(step5Result.metadata || {}),
               guidanceMaterialsUsed: Boolean(params.guidanceContext),
@@ -164,7 +189,7 @@ export const useWorkflowProcessor = ({
           };
           
           setMessages(finalMessages);
-          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`));
+          setStreamingMessageId(null);
           
           // Handle translations if needed
           if (step5Result.requiresTranslation) {
@@ -231,7 +256,8 @@ export const useWorkflowProcessor = ({
         updatedMessages[assistantIndex] = {
           ...updatedMessages[assistantIndex],
           content: errorMessage,
-          isError: true
+          isError: true,
+          isStreaming: false
         };
         
         setMessages(updatedMessages);
@@ -247,6 +273,8 @@ export const useWorkflowProcessor = ({
         
         setMessages([...updatedMessages, errorMsg]);
       }
+      
+      setStreamingMessageId(null);
     } finally {
       setIsLoading(false);
     }
@@ -256,6 +284,7 @@ export const useWorkflowProcessor = ({
     isLoading,
     currentStep,
     stepProgress,
-    executeWorkflow
+    executeWorkflow,
+    streamingMessageId
   };
 };

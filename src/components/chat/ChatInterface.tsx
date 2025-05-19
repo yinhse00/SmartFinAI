@@ -58,7 +58,8 @@ const ChatInterface: React.FC = () => {
     stepProgress,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch
+    handleContinueBatch,
+    streamingMessageId // Get streaming message ID
   } = useChatLogic();
 
   const { toast } = useToast();
@@ -174,6 +175,7 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
+          streamingMessageId={streamingMessageId} // Pass streaming message ID to ChatContainer
           currentStep={processingStage}
           stepProgress={stepProgress}
         />

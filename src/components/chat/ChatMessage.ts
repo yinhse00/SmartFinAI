@@ -15,6 +15,7 @@ export interface Message {
   isTranslated?: boolean;
   originalContent?: string;
   translationInProgress?: boolean;
+  isStreaming?: boolean;  // Added streaming flag
   metadata?: any;
 }
 

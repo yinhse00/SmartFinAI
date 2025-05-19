@@ -33,6 +33,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     isBatchPart,
     originalContent,
     translationInProgress,
+    isStreaming,
     id
   } = message;
   
@@ -64,7 +65,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   }, [content, originalContent, showOriginal, sender]);
 
   // Only show error for empty content if it's actually an error AND processing is complete
-  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && isError) {
+  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && !isStreaming && isError) {
     return (
       <div className="flex justify-start mb-4 w-full">
         <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 w-full">
@@ -102,7 +103,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 : 'bg-gray-50 dark:bg-gray-800'
         }`}>
           {/* Bot message content with typing animation */}
-          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
+          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && !isStreaming && (
             <TypingAnimation 
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
@@ -112,8 +113,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             />
           )}
           
+          {/* Bot message in streaming mode */}
+          {sender === 'bot' && isStreaming && (
+            <div className="text-left chat-content">
+              <div dangerouslySetInnerHTML={{ __html: formattedContent || '<p>Generating response...</p>' }} />
+              <div className="inline-block w-2 h-4 ml-0.5 bg-finance-light-blue animate-pulse"></div>
+            </div>
+          )}
+          
           {/* User message content or bot message when translation is in progress or typing is complete */}
-          {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
+          {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete && !isStreaming)) && (
             <div className={`${sender === 'user' ? 'text-right' : 'text-left'} ${sender === 'bot' ? 'chat-content' : ''}`}>
               {translationInProgress && sender === 'bot' ? (
                 <div className="flex flex-col gap-2">
@@ -129,7 +138,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Toggle original/translated content option for bot messages */}
-          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && (
+          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && !isStreaming && (
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="ghost" 
@@ -143,7 +152,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Truncated message retry button */}
-          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && (
+          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && !isStreaming && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="outline" 
@@ -158,7 +167,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* References badges */}
-          {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && (
+          {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && !isStreaming && (
             <div className="mt-2 flex flex-wrap gap-1">
               {references.map((ref, i) => (
                 <Badge 

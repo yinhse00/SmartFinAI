@@ -1,16 +1,20 @@
-
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
+import { streamingService } from '@/services/streaming/streamingService';
 
 /**
- * Step 5: Enhanced Response Generation with quality-focused parameters
+ * Step 5: Enhanced Response Generation with quality-focused parameters and streaming support
  */
 export const executeStep5 = async (
   params: any, 
   setStepProgress: (progress: string) => void,
-  lastInputWasChinese: boolean
+  lastInputWasChinese: boolean,
+  onStreamUpdate?: (chunk: string) => void // Add streaming callback
 ) => {
   setStepProgress(lastInputWasChinese ? '正在生成回复' : 'Generating response');
+  
+  // Determine if we should use streaming mode
+  const useStreaming = Boolean(onStreamUpdate);
   
   try {
     // Get combined context from all sources
@@ -61,7 +65,48 @@ For rules interpretation:
 Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
     
-    // Quality-optimized response parameters
+    // If we're using streaming mode, handle it differently
+    if (useStreaming) {
+      console.log('Executing step 5 with streaming mode');
+      
+      // Start with an empty response that will be updated incrementally
+      let streamedResponse = '';
+      
+      // Create a promise that will resolve when streaming is complete
+      const streamingPromise = new Promise<{ 
+        completed: boolean; 
+        response: string;
+        metadata?: any;
+        requiresTranslation?: boolean;
+      }>((resolve, reject) => {
+        streamingService.streamResponse(
+          `${params.query}\n\n${enhancedInstructions}`,
+          {
+            onChunk: (chunk: string) => {
+              streamedResponse += chunk;
+              if (onStreamUpdate) {
+                onStreamUpdate(streamedResponse);
+              }
+            },
+            onComplete: (fullResponse: string) => {
+              resolve({
+                completed: true,
+                response: fullResponse,
+                metadata: { streamingCompleted: true },
+                requiresTranslation: lastInputWasChinese
+              });
+            },
+            onError: (error: Error) => {
+              reject(error);
+            }
+          }
+        );
+      });
+      
+      return await streamingPromise;
+    }
+    
+    // Regular non-streaming path (unchanged)
     const responseParams = {
       prompt: `${params.query}\n\n${enhancedInstructions}`,
       regulatoryContext: responseContext,

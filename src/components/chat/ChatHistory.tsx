@@ -7,23 +7,40 @@ interface ChatHistoryProps {
   isLoading: boolean;
   onRetry?: () => void;
   translatingMessageIds?: string[];
+  streamingMessageId?: string | null;
 }
 
-const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
+const ChatHistory: React.FC<ChatHistoryProps> = ({ 
+  messages, 
+  isLoading, 
+  onRetry, 
+  translatingMessageIds = [],
+  streamingMessageId = null
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages or streaming updates
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isLoading]);
+  }, [messages, isLoading, streamingMessageId]);
+
+  // Scroll on streaming content updates
+  useEffect(() => {
+    const streamingMessage = streamingMessageId ? 
+      messages.find(m => m.id === streamingMessageId) : null;
+    
+    if (streamingMessage && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, streamingMessageId]);
 
   useEffect(() => {
     console.log('ChatHistory rendering with messages:', messages.length);
     
     // Log message content for debugging
-    const validMessages = messages.filter(m => m.content || m.sender === 'user');
+    const validMessages = messages.filter(m => m.content || m.sender === 'user' || m.isStreaming);
     
     if (validMessages.length < messages.length) {
       console.log('Found', messages.length - validMessages.length, 'messages with empty content');
@@ -42,6 +59,9 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   // Check if we're displaying Chinese content
   const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
+  
+  // Check if any message is currently streaming
+  const hasStreamingMessages = messages.some(message => message.isStreaming);
   
   return (
     <div className="h-full py-4 space-y-4 px-4 md:px-6 lg:px-8 w-full">
@@ -83,7 +103,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
         </div>
       )}
       
-      {isLoading && (
+      {isLoading && !hasStreamingMessages && (
         <div className="flex justify-center">
           <div className="h-8 w-8 rounded-full border-2 border-finance-medium-blue border-t-transparent animate-spin"></div>
         </div>

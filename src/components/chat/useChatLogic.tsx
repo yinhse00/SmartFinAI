@@ -1,58 +1,35 @@
 
-import { useMessageState } from './hooks/useMessageState';
-import { useApiKeyState } from './hooks/useApiKeyState';
-import { useInputState } from './hooks/useInputState';
-import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
-import { useBatchHandling } from './hooks/useBatchHandling';
-import { useLanguageState } from './hooks/useLanguageState';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Message } from './ChatMessage';
+import { useGrokConnection } from '@/hooks/useGrokConnection';
 import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
+import useLocalStorage from '@/hooks/useLocalStorage';
+import { getGrokApiKey } from '@/services/apiKeyService';
 
-/**
- * Main hook that orchestrates chat functionality with the new structured workflow
- */
 export const useChatLogic = () => {
-  // Message state management
-  const {
-    messages,
-    setMessages,
-    clearConversationMemory
-  } = useMessageState();
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
+  const [lastQuery, setLastQuery] = useState('');
+  const [batchState, setBatchState] = useState({ isBatching: false, currentBatchNumber: 1 });
   
-  // API key management
-  const {
-    grokApiKeyInput,
-    setGrokApiKeyInput,
-    isGrokApiKeySet,
-    apiKeyDialogOpen,
-    setApiKeyDialogOpen,
-    handleSaveApiKeys
-  } = useApiKeyState();
+  // API Key management
+  const [grokApiKeyInput, setGrokApiKeyInput] = useState('');
+  const [isGrokApiKeySet, setIsGrokApiKeySet] = useState(false);
+  const [apiKeyDialogOpen, setApiKeyDialogOpen] = useState(false);
   
-  // Input state management
-  const { input, setInput, lastQuery, setLastQuery } = useInputState();
+  // Memory management
+  const [localStorageMessages, setLocalStorageMessages] = useLocalStorage<Message[]>('chatMessages', []);
   
-  // Reference documents
-  const { data: referenceDocuments = [] } = useReferenceDocuments();
+  // Custom hooks
+  const { isConnected, testConnection } = useGrokConnection();
   
-  // Language state management
-  const { lastInputWasChinese, checkIsChineseInput } = useLanguageState();
-  
-  // Batch handling
-  const {
-    isBatching,
-    currentBatchNumber,
-    autoBatch,
-    handleBatchContinuation: continueBatch,
-    handleBatchResult,
-    startBatching
-  } = useBatchHandling();
-
-  // New workflow processor implementing the structured steps
-  const {
-    isLoading,
-    currentStep,
-    stepProgress,
-    executeWorkflow
+  // Use enhanced workflow processor
+  const { 
+    isLoading, 
+    currentStep, 
+    stepProgress, 
+    executeWorkflow,
+    streamingMessageId // Include streaming message ID from workflow processor
   } = useWorkflowProcessor({
     messages,
     setMessages,
@@ -60,72 +37,123 @@ export const useChatLogic = () => {
     isGrokApiKeySet,
     setApiKeyDialogOpen
   });
-
-  // Handle sending messages
-  const handleSend = () => {
-    checkIsChineseInput(input);
-    executeWorkflow(input);
-    setInput('');
-  };
   
-  // Handle keyboard input
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
+  // Load messages from localStorage on initial load
+  useEffect(() => {
+    if (localStorageMessages.length > 0) {
+      console.log('Loading messages from localStorage:', localStorageMessages.length);
+      setMessages(localStorageMessages);
+    }
+  }, []);
+  
+  // Save messages to localStorage when they change
+  useEffect(() => {
+    if (messages.length > 0) {
+      setLocalStorageMessages(messages);
+    }
+  }, [messages, setLocalStorageMessages]);
+
+  // Check API key on load
+  useEffect(() => {
+    const apiKey = getGrokApiKey();
+    const isValidKey = apiKey && apiKey.startsWith('xai-') && apiKey.length > 30;
+    
+    setIsGrokApiKeySet(isValidKey);
+    
+    if (isValidKey) {
+      testConnection();
+    } else {
+      console.log('No valid API key found');
+    }
+  }, [testConnection]);
+
+  // Handle saving API keys
+  const handleSaveApiKeys = useCallback((apiKey: string) => {
+    localStorage.setItem('grokApiKey', apiKey);
+    const isValidKey = apiKey && apiKey.startsWith('xai-') && apiKey.length > 30;
+    setIsGrokApiKeySet(isValidKey);
+    
+    if (isValidKey) {
+      testConnection();
+    }
+    
+    return isValidKey;
+  }, [testConnection]);
+
+  // Process queries (could come from search, input or batch continuation)
+  const processQuery = useCallback((query: string) => {
+    executeWorkflow(query);
+  }, [executeWorkflow]);
+
+  // Handle send button click
+  const handleSend = useCallback(() => {
+    if (!input.trim()) return;
+    
+    processQuery(input);
+    setInput('');
+  }, [input, processQuery]);
+
+  // Handle Enter key press
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
       handleSend();
     }
-  };
-  
+  }, [handleSend]);
+
+  // Handle retry of last query
+  const retryLastQuery = useCallback(() => {
+    if (!lastQuery) return;
+    
+    const retryQuery = `[RETRY_ATTEMPT] ${lastQuery}`;
+    processQuery(retryQuery);
+  }, [lastQuery, processQuery]);
+
   // Handle batch continuation
-  const handleContinueBatch = async () => {
-    // Create a Promise-returning function that wraps executeWorkflow
-    await continueBatch(async (query) => {
-      checkIsChineseInput(query);
-      await executeWorkflow(query);
+  const handleContinueBatch = useCallback(() => {
+    if (!lastQuery) return;
+    
+    const nextBatchNumber = batchState.currentBatchNumber + 1;
+    const continuationQuery = `[CONTINUATION_PART_${nextBatchNumber}] ${lastQuery}`;
+    
+    setBatchState({
+      isBatching: true,
+      currentBatchNumber: nextBatchNumber
     });
-  };
-  
-  // Handle retrying queries
-  const retryLastQuery = () => {
-    if (lastQuery) {
-      executeWorkflow(`${lastQuery} [RETRY_ATTEMPT]`);
-    }
-  };
+    
+    processQuery(continuationQuery);
+  }, [lastQuery, batchState, processQuery]);
+
+  // Clear conversation memory
+  const clearConversationMemory = useCallback(() => {
+    setMessages([]);
+    setLocalStorageMessages([]);
+  }, [setLocalStorageMessages]);
 
   return {
-    // Message state
     messages,
     setMessages,
-    clearConversationMemory,
-
-    // API key state
+    input,
+    setInput,
+    isLoading,
+    lastQuery,
+    setLastQuery,
+    handleSend,
+    handleKeyDown,
+    processQuery,
+    retryLastQuery,
     grokApiKeyInput,
     setGrokApiKeyInput,
     isGrokApiKeySet,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
-
-    // Input state
-    input,
-    setInput,
-    lastQuery,
-
-    // Query processing
-    isLoading,
-    handleSend,
-    handleKeyDown,
-    processQuery: executeWorkflow,  // Renamed for backward compatibility
-    retryLastQuery,
+    clearConversationMemory,
     currentStep,
     stepProgress,
-
-    // Batch handling
-    isBatching,
-    currentBatchNumber,
+    isBatching: batchState.isBatching,
+    currentBatchNumber: batchState.currentBatchNumber,
     handleContinueBatch,
-    autoBatch,
-    
-    // Language detection
-    lastInputWasChinese
+    streamingMessageId // Return streaming message ID
   };
 };

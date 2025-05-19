@@ -7,6 +7,7 @@ export interface GrokRequestParams {
   maxTokens?: number;
   temperature?: number;
   format?: string; // Added the format property
+  stream?: boolean; // Add streaming option
 }
 
 export interface GrokResponse {
@@ -35,5 +36,13 @@ export interface GrokResponse {
     };
     responseWasTruncated?: boolean;
     isOfflineMode?: boolean;
+    streamingCompleted?: boolean;
   };
+}
+
+// Add streaming specific types
+export interface StreamingOptions {
+  onChunk: (chunk: string) => void;
+  onComplete: (fullResponse: string) => void;
+  onError: (error: Error) => void;
 }

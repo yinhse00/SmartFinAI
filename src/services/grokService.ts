@@ -6,6 +6,7 @@ import { documentService } from './documents/documentService';
 import { grokResponseGenerator } from './response/grokResponseGenerator';
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
 import { fileProcessingService } from './documents/fileProcessingService';
+import { streamingService, StreamOptions } from './streaming/streamingService';
 
 /**
  * Main Grok service facade that integrates various specialized services
@@ -40,6 +41,13 @@ export const grokService = {
     
     // Use the enhanced grokResponseGenerator service
     return await grokResponseGenerator.generateResponse(params);
+  },
+  
+  /**
+   * Stream response with real-time updates
+   */
+  streamResponse: async (prompt: string, options: StreamOptions, apiKey?: string): Promise<void> => {
+    return streamingService.streamResponse(prompt, options, apiKey);
   },
 
   /**
