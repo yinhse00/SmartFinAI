@@ -27,7 +27,7 @@ export const imageProcessor = {
       }
       
       const requestBody = {
-        model: "grok-2-vision-latest",
+        model: "grok-3-beta",
         messages: [
           {
             role: "user", 
