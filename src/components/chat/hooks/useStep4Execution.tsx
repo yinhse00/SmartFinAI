@@ -1,4 +1,7 @@
 
-import { executeStep4 } from './workflow/step4Execution';
+import { step4Execution as executeStep4 } from './workflow/step4Execution';
 
-export const step4Execution = executeStep4;
+// Re-export the function with the correct name
+export const step4Execution = async (params: any, setStepProgress: (progress: string) => void) => {
+  return await executeStep4(params, setStepProgress);
+};

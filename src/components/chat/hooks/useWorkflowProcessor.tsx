@@ -178,8 +178,13 @@ export const useWorkflowProcessor = ({
             : "I wasn't able to generate a proper response. Please try again.";
             
           // Extract metadata if it exists, otherwise provide empty object
-          const responseMetadata = step5Result.metadata || {};
-          const requiresTranslation = step5Result.requiresTranslation || false;
+          const responseMetadata = step5Result.completed 
+            ? (step5Result.metadata || {}) 
+            : {};
+            
+          const requiresTranslation = step5Result.completed 
+            ? (step5Result.requiresTranslation || false) 
+            : false;
           
           finalMessages[assistantIndex] = {
             ...assistantMessage,
@@ -208,11 +213,16 @@ export const useWorkflowProcessor = ({
             sender: 'bot',
             content: step5Result.response || "I wasn't able to generate a proper response. Please try again.",
             timestamp: new Date(),
-            metadata: {
-              ...(step5Result.metadata || {}),
-              guidanceMaterialsUsed: Boolean(params.guidanceContext),
-              sourceMaterials: params.sourceMaterials || []
-            }
+            metadata: step5Result.completed 
+              ? {
+                  ...(step5Result.metadata || {}),
+                  guidanceMaterialsUsed: Boolean(params.guidanceContext),
+                  sourceMaterials: params.sourceMaterials || []
+                }
+              : {
+                  guidanceMaterialsUsed: Boolean(params.guidanceContext),
+                  sourceMaterials: params.sourceMaterials || []
+                }
           };
           
           setMessages([...updatedMessages, newAssistantMessage]);

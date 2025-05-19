@@ -1,12 +1,28 @@
 
 import { executeStep5 } from './workflow/step5Response';
 
+// Define the return types explicitly to match how they're used in useWorkflowProcessor
+export interface Step5SuccessResult {
+  completed: true;
+  response: string;
+  metadata?: any;
+  requiresTranslation?: boolean;
+}
+
+export interface Step5ErrorResult {
+  completed: false;
+  error: any;
+  response: string;
+}
+
+export type Step5Result = Step5SuccessResult | Step5ErrorResult;
+
 export const step5Response = async (
   params: any,
   setStepProgress: (progress: string) => void,
   lastInputWasChinese: boolean,
   handleStreamUpdate?: (chunk: string) => void
-) => {
+): Promise<Step5Result> => {
   console.log('useStep5Response: Starting with params:', params);
   
   try {
@@ -37,10 +53,22 @@ export const step5Response = async (
     // Make sure the response is never empty or undefined
     if (!result.response || result.response.trim() === '') {
       console.error('useStep5Response: Empty response in result', result);
-      result.response = "I wasn't able to generate a complete response. Please try again.";
+      if (result.completed) {
+        return {
+          ...result,
+          response: "I wasn't able to generate a complete response. Please try again."
+        };
+      } else {
+        return {
+          completed: false,
+          error: new Error("Empty response"),
+          response: "I wasn't able to generate a complete response. Please try again."
+        };
+      }
     }
     
-    return result;
+    // Return the result with proper typing
+    return result as Step5Result;
   } catch (error) {
     console.error('useStep5Response: Error during execution:', error);
     return {
