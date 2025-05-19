@@ -7,7 +7,8 @@ interface TypingAnimationProps {
   className?: string;
   onComplete?: () => void;
   onProgress?: () => void;
-  renderAsHTML?: boolean; // New prop to indicate if the content should be rendered as HTML
+  renderAsHTML?: boolean; // Prop to indicate if the content should be rendered as HTML
+  initialVisibleChars?: number; // Show this many characters immediately
 }
 
 const TypingAnimation: React.FC<TypingAnimationProps> = ({
@@ -16,12 +17,32 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   className = '',
   onComplete,
   onProgress,
-  renderAsHTML = false
+  renderAsHTML = false,
+  initialVisibleChars = 60 // Show first 60 chars immediately for better responsiveness
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [characterIndex, setCharacterIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const timerId = useRef<NodeJS.Timeout | null>(null);
+  const contentPriority = useRef<{ highPriority: string; normalPriority: string }>({ highPriority: '', normalPriority: '' });
+  
+  // Process content on initial render to identify high-priority segments
+  useEffect(() => {
+    // Identify high-priority content (first sentence, important elements)
+    const firstSentenceMatch = text.match(/^(.*?[.!?])\s/);
+    const firstSentence = firstSentenceMatch ? firstSentenceMatch[1] : text.substring(0, Math.min(100, text.length));
+    
+    contentPriority.current = {
+      highPriority: firstSentence,
+      normalPriority: text.substring(firstSentence.length)
+    };
+    
+    // Show initial characters immediately for perceived responsiveness
+    if (initialVisibleChars > 0 && text.length > 0) {
+      setDisplayedText(text.substring(0, Math.min(initialVisibleChars, text.length)));
+      setCharacterIndex(Math.min(initialVisibleChars, text.length));
+    }
+  }, [text, initialVisibleChars]);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -34,12 +55,12 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
   // Reset when text changes
   useEffect(() => {
-    setCharacterIndex(0);
-    setDisplayedText('');
+    setCharacterIndex(initialVisibleChars > 0 ? Math.min(initialVisibleChars, text.length) : 0);
+    setDisplayedText(initialVisibleChars > 0 ? text.substring(0, Math.min(initialVisibleChars, text.length)) : '');
     setIsPaused(false);
-  }, [text]);
+  }, [text, initialVisibleChars]);
 
-  // Typing effect
+  // Enhanced typing effect with adaptive speed
   useEffect(() => {
     if (characterIndex >= text.length) {
       onComplete && onComplete();
@@ -48,78 +69,72 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
     if (isPaused) return;
 
-    let delay = 1000 / typingSpeed;
-
-    // Slow down for punctuation for more natural typing
+    // Base typing speed
+    let baseDelay = 1000 / typingSpeed;
+    
+    // Adaptive typing speed based on content
     const currentChar = text[characterIndex] || '';
-    if (['.', '!', '?', '\n'].includes(currentChar)) {
-      delay *= 4;
+    const nextChars = text.substring(characterIndex, characterIndex + 10);
+    
+    // Content-aware speed adjustments
+    if (['.', '!', '?'].includes(currentChar)) {
+      baseDelay *= 3; // Longer pause after sentences
     } else if ([',', ';', ':'].includes(currentChar)) {
-      delay *= 2;
+      baseDelay *= 1.5; // Medium pause for punctuation
+    } else if (currentChar === '\n' || (currentChar === ' ' && nextChars.includes('\n'))) {
+      baseDelay *= 2; // Pause at paragraph breaks
+    } else if (characterIndex < 100) {
+      baseDelay *= 0.8; // Faster at the beginning for responsiveness
+    } else if (text.length - characterIndex < 50) {
+      baseDelay *= 1.2; // Slow down slightly at the end
     }
-
+    
+    // Special content-based speed (like code blocks, lists)
+    if (nextChars.includes('```') || nextChars.includes('|')) {
+      baseDelay *= 0.5; // Speed through code blocks and tables
+    }
+    
     // Handle HTML tags specially
     if (renderAsHTML) {
-      // Check if we're at the start of an HTML tag
       if (currentChar === '<') {
-        // Find the closing bracket of this tag
         const tagEndIndex = text.indexOf('>', characterIndex);
         if (tagEndIndex > characterIndex) {
-          // Pause briefly for formatting tags to simulate natural breaks
           const tagContent = text.substring(characterIndex, tagEndIndex + 1);
           
-          // Longer pause for paragraph tags to make paragraphing more clear
-          if (tagContent.includes('<p')) {
-            delay *= 5;
+          if (tagContent.includes('<p') || tagContent.includes('<h')) {
+            baseDelay *= 2; // Pause for paragraph tags
+          } else if (tagContent.includes('bullet-point') || tagContent.includes('<li')) {
+            baseDelay *= 1.5; // Pause for list items
+          } else if (tagContent.includes('<strong') || tagContent.includes('<b')) {
+            baseDelay *= 0.7; // Faster for emphasized text
           }
           
-          // Even longer pause for bullet points to make them stand out
-          if (tagContent.includes('class="bullet-point"')) {
-            delay *= 7;
-          }
+          // Speed up tag rendering (don't need to see tags typed out character by character)
+          timerId.current = setTimeout(() => {
+            setDisplayedText(text.slice(0, tagEndIndex + 1));
+            setCharacterIndex(tagEndIndex + 1);
+            
+            // Notify progress
+            if (onProgress && characterIndex % 20 === 0) {
+              onProgress();
+            }
+          }, baseDelay);
           
-          // Pause for bold and italic formatting to emphasize them
-          if (tagContent.includes('<strong') || 
-              tagContent.includes('<em') || 
-              tagContent.includes('<b') || 
-              tagContent.includes('<i')) {
-            delay *= 2;
-          }
-          
-          // Pause for list items to make them more readable
-          if (tagContent.includes('<li>') || 
-              tagContent.includes('<ul') || 
-              tagContent.includes('</ul>') ||
-              tagContent.includes('•')) {
-            delay *= 3;
-          }
-          
-          // Extra pause for spacing elements to create natural pauses between sections
-          if (tagContent.includes('bullet-list-spacing')) {
-            delay *= 8;
-          }
+          return;
         }
       }
     }
 
-    // Check for code blocks or tables to pause briefly
-    if (
-      (characterIndex > 2 && text.slice(characterIndex - 3, characterIndex) === '```') ||
-      (characterIndex > 0 && text.slice(characterIndex - 1, characterIndex) === '|') ||
-      (renderAsHTML && characterIndex > 4 && text.slice(characterIndex - 5, characterIndex) === '<table')
-    ) {
-      delay *= 2;
-    }
-
+    // Normal character typing
     timerId.current = setTimeout(() => {
       setDisplayedText(text.slice(0, characterIndex + 1));
       setCharacterIndex(prev => prev + 1);
       
       // Notify parent component of progress
-      if (onProgress && characterIndex % 30 === 0) {
+      if (onProgress && characterIndex % 20 === 0) {
         onProgress();
       }
-    }, delay);
+    }, baseDelay);
 
     return () => {
       if (timerId.current) {
@@ -128,6 +143,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
     };
   }, [characterIndex, text, typingSpeed, isPaused, onComplete, onProgress, renderAsHTML]);
 
+  // Handle click to show full text immediately
   const handleClick = () => {
     if (characterIndex < text.length) {
       // If clicked before completion, show all text
@@ -138,7 +154,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   };
 
   return (
-    <div className={className} onClick={handleClick}>
+    <div className={`${className} cursor-pointer`} onClick={handleClick}>
       {renderAsHTML ? (
         <div dangerouslySetInnerHTML={{ __html: displayedText }} />
       ) : (

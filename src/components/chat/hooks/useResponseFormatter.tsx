@@ -43,14 +43,16 @@ export const useResponseFormatter = () => {
                         hasExplicitTruncationMarker ||
                         (response.metadata?.responseCompleteness?.isComplete === false);
     
-    // For batch parts, modify the content to indicate part numbers
+    // For batch parts, process the content
     let content = response.text;
-    if (response.batchPart && response.batchPart > 1) {
-      // Check if content already starts with a part marker
-      if (!content.startsWith('[Part') && !content.startsWith('Part')) {
-        content = `[Part ${response.batchPart}]\n\n${content}`;
-      }
+    
+    // Remove any part markers from content for cleaner presentation
+    if (content.startsWith('[Part') || content.startsWith('Part')) {
+      content = content.replace(/^\[Part \d+\]\s*\n+/i, '').replace(/^Part \d+\s*\n+/i, '');
     }
+    
+    // Clean up any CONTINUATION markers in the content (used by backend)
+    content = content.replace(/\[CONTINUATION_PART_\d+\]/g, '');
     
     // Log detailed truncation analysis for debugging
     if (isTruncated) {
@@ -63,7 +65,7 @@ export const useResponseFormatter = () => {
     }
     
     const botMessage: Message = {
-      id: (Date.now() + 1).toString(),
+      id: (Date.now() + Math.random()).toString(),
       content: content,
       sender: 'bot',
       timestamp: new Date(),
@@ -100,7 +102,7 @@ export const useResponseFormatter = () => {
     toast({
       title: "Continue for More Information",
       description: truncationReason + " Click 'Continue' to get the next part of the answer.",
-      duration: 15000,
+      duration: 10000,
       action: <Button 
                onClick={retryLastQuery}
                variant="outline"
@@ -108,7 +110,7 @@ export const useResponseFormatter = () => {
                className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
               >
                 <RefreshCw size={14} />
-                Retry with Different Approach
+                Continue
               </Button>
     });
   };

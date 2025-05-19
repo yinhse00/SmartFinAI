@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { WorkflowStep } from './hooks/workflow/types';
 import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
@@ -28,6 +28,41 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
   isChineseInterface = false,
   isVisible
 }) => {
+  const [progressValue, setProgressValue] = useState(15);
+  
+  // Calculate progress based on current step
+  useEffect(() => {
+    if (!isVisible) return;
+    
+    const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
+    const workflowStep = typeof currentStep === 'string' && 
+      ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep) 
+      ? mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing') 
+      : currentStep as WorkflowStep;
+    
+    const stepIndex = steps.indexOf(workflowStep);
+    
+    // Calculate progress percentage based on step
+    const baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 90);
+    
+    // Animate progress smoothly
+    const targetProgress = baseProgress;
+    let currentProgress = progressValue;
+    
+    const animateProgress = () => {
+      if (currentProgress < targetProgress) {
+        currentProgress += 0.5;
+        setProgressValue(currentProgress);
+        
+        if (currentProgress < targetProgress) {
+          requestAnimationFrame(animateProgress);
+        }
+      }
+    };
+    
+    requestAnimationFrame(animateProgress);
+  }, [currentStep, isVisible, progressValue]);
+  
   if (!isVisible) return null;
   
   // Handle both WorkflowStep and processing stage formats
@@ -89,7 +124,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
   };
   
   return (
-    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700 w-full">
+    <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700 w-full animate-fade-in">
       <div className="flex items-center justify-center mb-4">
         <Loader2 className="h-6 w-6 text-blue-500 animate-spin mr-2" />
         <h2 className="text-xl font-semibold">
@@ -97,7 +132,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
         </h2>
       </div>
       
-      <Progress value={65} className="h-2 bg-gray-200 dark:bg-gray-700 mb-4" />
+      <Progress value={progressValue} className="h-2 bg-gray-200 dark:bg-gray-700 mb-4" />
       
       <div className="space-y-4 mb-4">
         {(['initial', 'listingRules', 'takeoversCode', 'execution', 'response'] as WorkflowStep[]).map((step) => {
@@ -105,7 +140,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
           return (
             <div 
               key={step}
-              className={`flex items-center ${
+              className={`flex items-center transition-all duration-300 ${
                 status === 'active' 
                   ? 'text-blue-600 dark:text-blue-400' 
                   : status === 'complete'

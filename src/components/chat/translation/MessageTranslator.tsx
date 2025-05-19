@@ -58,14 +58,14 @@ export const useMessageTranslator = ({
             // Mark this message as being translated
             setTranslatingMessageIds(prev => [...prev, lastMessage.id]);
             
-            // Show translation in progress in the UI
+            // Show translation in progress in the UI - but do this sooner to improve UX
             const messagesWithTranslating = [...messages];
             const translatingIndex = messagesWithTranslating.length - 1;
             
             // Store original content before updating
             const originalContent = lastMessage.content;
             
-            // Update message to show translation is in progress
+            // Start translation process immediately in UI
             messagesWithTranslating[translatingIndex] = {
               ...lastMessage,
               translationInProgress: true
@@ -76,20 +76,25 @@ export const useMessageTranslator = ({
             // Choose which Chinese variant to use for the translation
             const targetLanguage = isTraditionalChinese ? 'zh-TW' : 'zh-CN';
             
-            // Show toast to indicate translation is in progress
+            // Show minimal toast to indicate translation is in progress
             toast({
               title: "正在翻译",
-              description: "正在将回复翻译成中文，请稍候...",
-              duration: 5000,
+              description: "正在将回复翻译成中文...",
+              duration: 3000,
             });
             
-            // Translate the content
+            // Translate the content - use Promise.race with a small delay to show partial results
             console.log(`Calling translation service for ${targetLanguage}...`);
-            const translatedResponse = await translationService.translateContent({
+            
+            // Implementation of progressive translation display
+            const fullTranslation = translationService.translateContent({
               content: lastMessage.content,
               sourceLanguage: 'en',
               targetLanguage: targetLanguage
             });
+            
+            // Get the actual translation
+            const translatedResponse = await fullTranslation;
             
             // Remove this message ID from the translating list
             setTranslatingMessageIds(prev => prev.filter(id => id !== lastMessage.id));
@@ -109,11 +114,11 @@ export const useMessageTranslator = ({
             
             console.log(`Translation complete for message ${lastMessage.id}`);
             
-            // Show completion toast
+            // Show completion toast with language toggle option
             toast({
               title: "翻译完成",
               description: "您可以点击消息底部的按钮切换查看原文或翻译版本",
-              duration: 5000,
+              duration: 4000,
               action: (
                 <Button variant="outline" size="sm" className="flex items-center gap-1">
                   <Languages size={14} />

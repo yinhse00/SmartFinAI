@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
@@ -22,7 +21,12 @@ export const useResponseProcessor = (
     reasoning: string | undefined,
     financialQueryType: string,
     completenessCheck: any,
-    batchInfo?: { batchNumber: number, isContinuing: boolean, onContinue?: () => void }
+    batchInfo?: { 
+      batchNumber: number, 
+      isContinuing: boolean, 
+      onContinue?: () => void,
+      isSeamlessBatch?: boolean  // New flag for seamless batching
+    }
   ): Message => {
     const isUsingFallback = isFallbackResponse(apiResponse.text);
 
@@ -34,10 +38,48 @@ export const useResponseProcessor = (
       isUsingFallback
     ) as Message;
 
-    // If in batching mode, mark the message batch part.
+    // Handle batch continuations more intelligently
     if (batchInfo && batchInfo.batchNumber > 1) {
-      botMessage.content = `[Part ${batchInfo.batchNumber}]\n\n${botMessage.content}`;
-      botMessage.isBatchPart = true;
+      if (batchInfo.isSeamlessBatch) {
+        // For seamless batching, don't add part numbers to the content
+        // Just keep the content as is, but mark it as a batch part
+        botMessage.isBatchPart = true;
+        
+        // For seamless batching, find the previous bot message and append this content
+        const updatedMessages = [...processedMessages];
+        let lastBotMessageIndex = updatedMessages.length - 1;
+        
+        // Find the last bot message (might not be the last message if there are user messages)
+        while (lastBotMessageIndex >= 0 && updatedMessages[lastBotMessageIndex].sender !== 'bot') {
+          lastBotMessageIndex--;
+        }
+        
+        if (lastBotMessageIndex >= 0) {
+          // Instead of creating a new message, append to the existing one
+          const existingBotMessage = updatedMessages[lastBotMessageIndex];
+          
+          // Only append if it's a bot message and not an error message
+          if (existingBotMessage && !existingBotMessage.isError) {
+            // Combine the content
+            updatedMessages[lastBotMessageIndex] = {
+              ...existingBotMessage,
+              content: existingBotMessage.content + botMessage.content,
+              isBatchPart: true,
+              isTruncated: completenessCheck && !completenessCheck.isComplete
+            };
+            
+            setMessages(updatedMessages);
+            console.log('Seamlessly appended batch content to previous message');
+            
+            // Return the updated message for reference
+            return updatedMessages[lastBotMessageIndex];
+          }
+        }
+      } else {
+        // Traditional batch handling with part numbers
+        botMessage.content = `[Part ${batchInfo.batchNumber}]\n\n${botMessage.content}`;
+        botMessage.isBatchPart = true;
+      }
     }
 
     // Only mark as truncated for non-simple queries that failed completeness check
@@ -49,20 +91,23 @@ export const useResponseProcessor = (
       botMessage.isTruncated = true;
     }
 
-    setMessages([...processedMessages, botMessage]);
-    console.log('Response delivered successfully');
+    // Only add a new message for non-seamless batches or first parts
+    if (!(batchInfo?.isSeamlessBatch) || !batchInfo || batchInfo.batchNumber === 1) {
+      setMessages([...processedMessages, botMessage]);
+      console.log('Response delivered successfully');
+    }
 
-    // Show continue ("next part") button if batch continuation needed
-    if (botMessage.isTruncated && batchInfo && batchInfo.onContinue) {
+    // Show continue button if batch continuation needed and not using seamless batching
+    if (botMessage.isTruncated && batchInfo && batchInfo.onContinue && !batchInfo.isSeamlessBatch) {
       const diagnosticsReasons = completenessCheck?.reasons || [];
       const diagnosticMessage = diagnosticsReasons.length > 0
         ? { reasons: diagnosticsReasons }
         : { reasons: ['Response appears incomplete'] };
 
       toast({
-        title: `Part ${batchInfo.batchNumber} delivered`,
-        description: "The answer is not yet complete. Click 'Continue' for the next part of the response.",
-        duration: 16000,
+        title: `Additional information available`,
+        description: "The answer continues. Click 'Continue' to see more.",
+        duration: 10000,
         action: (
           <button
             className="ml-1 px-2 py-1 rounded bg-finance-light-blue text-finance-dark-blue hover:bg-finance-medium-blue"
@@ -70,7 +115,7 @@ export const useResponseProcessor = (
           >Continue</button>
         )
       });
-    } else if (botMessage.isTruncated && completenessCheck) {
+    } else if (botMessage.isTruncated && completenessCheck && !batchInfo?.isSeamlessBatch) {
       // Only call showTruncationToast if completenessCheck has valid data
       if (completenessCheck.reasons || completenessCheck.financialAnalysis) {
         showTruncationToast(

@@ -39,6 +39,21 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
   const [showOriginal, setShowOriginal] = useState(false);
   const [formattedContent, setFormattedContent] = useState('');
+  
+  // Determine initial characters to display immediately for the typing effect
+  const getInitialVisibleChars = () => {
+    if (sender !== 'bot') return 0;
+    
+    // For batch parts, show more initial content for better UX
+    if (isBatchPart) return 120;
+    
+    // For regular messages, show the first sentence or first 60 chars
+    const firstSentenceMatch = content?.match(/^([^.!?]+[.!?])\s/);
+    if (firstSentenceMatch && firstSentenceMatch[1].length < 100) {
+      return firstSentenceMatch[1].length;
+    }
+    return 60;
+  };
 
   // Debug output for empty content detection
   useEffect(() => {
@@ -100,8 +115,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : translationInProgress 
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
-        }`}>
-          {/* Bot message content with typing animation */}
+        } ${isBatchPart ? 'animate-fade-in' : ''}`}>
+          {/* Bot message content with enhanced typing animation */}
           {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
               text={formattedContent} 
@@ -109,6 +124,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               onComplete={() => setIsTypingComplete(true)} 
               onProgress={onTypingProgress}
               renderAsHTML={true}
+              initialVisibleChars={getInitialVisibleChars()}
             />
           )}
           
@@ -152,7 +168,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                 className="flex items-center text-xs bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
               >
                 <RefreshCw size={12} className="mr-1" />
-                Retry query
+                Continue
               </Button>
             </div>
           )}
