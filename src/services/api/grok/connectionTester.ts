@@ -142,6 +142,79 @@ export const connectionTester = {
     };
   },
   
+  /**
+   * Test API key validity with specific validation
+   */
+  testApiKeyValidity: async (apiKey: string): Promise<{ isValid: boolean; message: string; quotaRemaining?: number }> => {
+    if (!apiKey) {
+      return { 
+        isValid: false, 
+        message: 'API key is empty. Please provide a valid API key.'
+      };
+    }
+
+    // Check API key format - Grok API keys should start with 'xai-' prefix
+    if (!apiKey.startsWith('xai-')) {
+      return { 
+        isValid: false, 
+        message: 'Invalid API key format. Grok API keys should start with "xai-".'
+      };
+    }
+
+    try {
+      // Test connection using the provided key
+      const connectionStatus = await connectionTester.testApiConnection(apiKey);
+      
+      if (connectionStatus.success) {
+        // For successful connections, also check quota if possible
+        let quotaRemaining: number | undefined;
+        
+        // Use the key that worked in the connection test
+        const endpoint = lastSuccessfulEndpoint || API_ENDPOINTS[0];
+        
+        try {
+          const quotaResponse = await fetch(`${endpoint.includes('/api/grok') ? '/api/grok/usage' : 'https://api.x.ai/v1/usage'}`, {
+            method: 'GET',
+            headers: {
+              'Authorization': `Bearer ${apiKey}`,
+              'Accept': 'application/json',
+              'Cache-Control': 'no-cache, no-store'
+            }
+          });
+          
+          if (quotaResponse.ok) {
+            const quotaData = await quotaResponse.json();
+            if (quotaData && typeof quotaData.total_available === 'number') {
+              quotaRemaining = quotaData.total_available;
+            }
+          }
+        } catch (error) {
+          console.warn('Failed to retrieve quota information:', error);
+          // Continue without quota information
+        }
+        
+        return {
+          isValid: true,
+          message: 'API key is valid and working properly',
+          quotaRemaining
+        };
+      }
+      
+      return {
+        isValid: false,
+        message: connectionStatus.message || 'API key validation failed'
+      };
+    } catch (error) {
+      console.error('Error validating API key:', error);
+      return {
+        isValid: false,
+        message: error instanceof Error ? 
+          `Error validating API key: ${error.message}` : 
+          'Unknown error occurred while validating API key'
+      };
+    }
+  },
+  
   // Reset connection cache - enhanced with more aggressive clearing
   resetConnectionCache: () => {
     console.log('Forcefully resetting connection cache and endpoint status');
