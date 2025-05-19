@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Message } from './ChatMessage';
 import { useGrokConnection } from '@/hooks/useGrokConnection';
 import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
@@ -44,7 +44,7 @@ export const useChatLogic = () => {
       console.log('Loading messages from localStorage:', localStorageMessages.length);
       setMessages(localStorageMessages);
     }
-  }, []);
+  }, [localStorageMessages]);
   
   // Save messages to localStorage when they change
   useEffect(() => {

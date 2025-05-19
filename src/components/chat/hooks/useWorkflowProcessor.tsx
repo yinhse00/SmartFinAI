@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
-import { step1Initial } from './useStep1Initial';
-import { step2ListingRules } from './useStep2ListingRules';
-import { step3TakeoversCode } from './useStep3TakeoversCode';
-import { step4Execution } from './useStep4Execution';
-import { step5Response } from './useStep5Response';
-import { WorkflowStep, WorkflowProcessorProps, Step1Result } from './workflow/types';
+import { step1Initial } from './workflow/step1Initial';
+import { step2ListingRules } from './workflow/step2ListingRules';
+import { step3TakeoversCode } from './workflow/step3TakeoversCode';
+import { step4Execution } from './workflow/step4Execution';
+import { step5Response } from './workflow/step5Response';
+import { WorkflowStep, WorkflowProcessorProps } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
@@ -176,13 +176,17 @@ export const useWorkflowProcessor = ({
           const responseContent = step5Result.response && step5Result.response.trim() !== '' 
             ? step5Result.response 
             : "I wasn't able to generate a proper response. Please try again.";
+            
+          // Extract metadata if it exists, otherwise provide empty object
+          const responseMetadata = step5Result.metadata || {};
+          const requiresTranslation = step5Result.requiresTranslation || false;
           
           finalMessages[assistantIndex] = {
             ...assistantMessage,
             content: responseContent,  // Use the ensured non-empty content
             isStreaming: false,  // Mark streaming as complete
             metadata: {
-              ...(step5Result.metadata || {}),
+              ...responseMetadata,
               guidanceMaterialsUsed: Boolean(params.guidanceContext),
               sourceMaterials: params.sourceMaterials || []
             }
@@ -192,7 +196,7 @@ export const useWorkflowProcessor = ({
           setStreamingMessageId(null);
           
           // Handle translations if needed
-          if (step5Result.requiresTranslation) {
+          if (requiresTranslation) {
             manageTranslations(finalMessages, assistantIndex);
           }
         } else {

@@ -4,7 +4,8 @@ import { executeStep5 } from './workflow/step5Response';
 export const step5Response = async (
   params: any,
   setStepProgress: (progress: string) => void,
-  lastInputWasChinese: boolean
+  lastInputWasChinese: boolean,
+  handleStreamUpdate?: (chunk: string) => void
 ) => {
   console.log('useStep5Response: Starting with params:', params);
   
@@ -19,7 +20,7 @@ export const step5Response = async (
       };
     }
     
-    const result = await executeStep5(params, setStepProgress, lastInputWasChinese);
+    const result = await executeStep5(params, setStepProgress, lastInputWasChinese, handleStreamUpdate);
     
     console.log('useStep5Response: Got result:', result ? 
       `completed: ${result.completed}, response length: ${result.response?.length || 0}` : 'No result');
