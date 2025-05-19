@@ -121,52 +121,51 @@ export const mappingValidationService = {
       // Get the first document
       const rawDoc = data[0];
       
-      // Make sure rawDoc exists before accessing its properties
+      // Early null check - if rawDoc doesn't exist, return null
       if (!rawDoc) {
         console.error('Document is null or undefined');
         return null;
       }
       
-      // Type guard to check we have a valid document with required base properties
+      // Type guard to check if we have a valid document object
       if (typeof rawDoc !== 'object') {
         console.error('Document is not an object');
         return null;
       }
       
-      // Check for required base fields
+      // Check if the required base properties exist
       if (!('id' in rawDoc) || !('title' in rawDoc) || !('updated_at' in rawDoc)) {
         console.error('Document does not have required base fields');
         return null;
       }
       
-      // Create a safely typed document with the base properties
-      const safeDoc = {
-        id: String(rawDoc.id),
-        title: String(rawDoc.title),
-        updated_at: String(rawDoc.updated_at),
-        content: '' // Default empty content, will be filled below
+      // Now we have confirmed that the base fields exist
+      const id = String(rawDoc.id);
+      const title = String(rawDoc.title);
+      const updated_at = String(rawDoc.updated_at);
+      
+      // Create the document with base properties
+      let document = {
+        id,
+        title,
+        updated_at,
+        content: '' // Default empty content
       };
       
-      // Now we can safely check for content or file_url
+      // Check for content or file_url field
       if (hasContentColumn && 'content' in rawDoc && typeof rawDoc.content === 'string') {
-        // Document with content field
-        return {
-          ...safeDoc,
-          content: rawDoc.content
-        };
-      } 
-      // If we need to fetch content from file_url
-      else if ('file_url' in rawDoc && typeof rawDoc.file_url === 'string') {
-        // For now, return a placeholder for content
+        // Set content if available
+        document.content = rawDoc.content;
+      } else if ('file_url' in rawDoc && typeof rawDoc.file_url === 'string') {
+        // Use placeholder content if only file_url is available
         console.log('Found document with file_url but no content column. Using placeholder content.');
-        return {
-          ...safeDoc,
-          content: 'Placeholder content - file content fetching not implemented'
-        };
+        document.content = 'Placeholder content - file content fetching not implemented';
       } else {
         console.error('Document does not have required content or file_url field');
         return null;
       }
+      
+      return document;
     } catch (error) {
       console.error('Error retrieving listing guidance document:', error);
       return null;
