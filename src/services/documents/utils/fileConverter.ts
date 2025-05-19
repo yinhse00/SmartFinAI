@@ -83,12 +83,14 @@ export const fileConverter = {
   
   /**
    * Extract text from Excel files using client-side processing
+   * Enhanced implementation to better utilize SheetJS/XLSX
    */
   getExcelText: async (file: File): Promise<string> => {
     try {
-      // Try to use SheetJS if available
-      if (typeof window !== 'undefined' && 'XLSX' in window) {
-        const XLSX = (window as any).XLSX;
+      // Check if SheetJS is properly loaded
+      if (typeof window !== 'undefined' && 'XLSX' in window && window.XLSX) {
+        const XLSX = window.XLSX;
+        console.log("SheetJS/XLSX is available for Excel processing");
         
         return new Promise((resolve, reject) => {
           const reader = new FileReader();
@@ -102,6 +104,8 @@ export const fileConverter = {
               // Parse the Excel file
               const data = new Uint8Array(e.target.result as ArrayBuffer);
               const workbook = XLSX.read(data, { type: 'array' });
+              
+              console.log(`Excel file parsed. Sheets found: ${workbook.SheetNames.length}`);
               
               let result = '';
               
@@ -121,6 +125,7 @@ export const fileConverter = {
               
               resolve(result.trim());
             } catch (error) {
+              console.error("SheetJS parsing error:", error);
               reject(error);
             }
           };
@@ -132,11 +137,12 @@ export const fileConverter = {
           reader.readAsArrayBuffer(file);
         });
       } else {
-        return '[Excel processing requires the SheetJS library which is not available. Using basic extraction instead.]';
+        console.warn("SheetJS/XLSX library not available");
+        return '[Excel processing requires the SheetJS library which is not available. Unable to extract content in offline mode.]';
       }
     } catch (e) {
       console.warn('Excel extraction failed:', e);
-      return '[Excel text extraction failed. Please ensure the file is not corrupted.]';
+      return '[Excel text extraction failed. Please ensure the file is not corrupted and the SheetJS library is properly loaded.]';
     }
   },
   

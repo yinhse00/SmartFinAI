@@ -34,6 +34,8 @@ export const fileProcessingService = {
     const fileType = fileTypeDetector.detectFileType(file);
     const { mammothAvailable, xlsxAvailable } = checkDocumentLibraries();
     
+    console.log(`Processing file: ${file.name}, type: ${fileType}, libraries available:`, { mammothAvailable, xlsxAvailable });
+    
     try {
       switch (fileType) {
         case 'pdf':

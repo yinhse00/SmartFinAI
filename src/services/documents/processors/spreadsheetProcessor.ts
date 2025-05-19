@@ -15,35 +15,35 @@ export const spreadsheetProcessor = {
     try {
       console.log(`Processing Excel file: ${file.name}, XLSX available: ${xlsxAvailable}`);
       
-      // Always try client-side extraction first
-      try {
-        console.log("Attempting client-side Excel extraction");
-        
-        if (!xlsxAvailable) {
-          console.warn("SheetJS not available for client-side Excel extraction");
-        }
-        
-        const extractedText = await fileConverter.getExcelText(file);
-        
-        if (extractedText && extractedText.trim() !== '' && !extractedText.includes('[Excel')) {
-          // Format the extracted content
-          const formattedText = spreadsheetProcessor.formatExcelContent(extractedText, file.name);
+      // First check if SheetJS is available for client-side extraction
+      if (xlsxAvailable) {
+        try {
+          console.log("Attempting client-side Excel extraction with SheetJS");
           
-          console.log(`Successfully extracted text from Excel file ${file.name}`);
+          const extractedText = await fileConverter.getExcelText(file);
           
-          return {
-            content: formattedText,
-            source: file.name
-          };
-        } else {
-          console.log("Client-side extraction returned empty or error content, trying API fallback");
+          if (extractedText && extractedText.trim() !== '' && !extractedText.includes('[Excel')) {
+            // Format the extracted content
+            const formattedText = spreadsheetProcessor.formatExcelContent(extractedText, file.name);
+            
+            console.log(`Successfully extracted text from Excel file ${file.name} using SheetJS`);
+            
+            return {
+              content: formattedText,
+              source: file.name
+            };
+          } else {
+            console.log("SheetJS extraction returned empty or error content, trying API fallback");
+          }
+        } catch (clientError) {
+          console.warn("SheetJS Excel extraction failed:", clientError);
+          // Continue to API fallback
         }
-      } catch (clientError) {
-        console.warn("Client-side Excel extraction failed:", clientError);
-        // Continue to API fallback
+      } else {
+        console.log("SheetJS is not available for client-side Excel extraction");
       }
       
-      // API fallback - only if client-side extraction failed
+      // API fallback - if client-side extraction failed or is unavailable
       const apiKey = getGrokApiKey();
       const isApiAvailable = apiKey ? await checkApiAvailability(apiKey) : false;
       
