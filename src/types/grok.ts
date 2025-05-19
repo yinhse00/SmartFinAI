@@ -7,7 +7,8 @@ export interface GrokRequestParams {
   maxTokens?: number;
   temperature?: number;
   format?: string;
-  model?: string; // Added the model property
+  model?: string;
+  metadata?: Record<string, any>;
 }
 
 export interface GrokResponse {

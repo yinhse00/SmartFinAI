@@ -1,40 +1,67 @@
 
-export type MessageContent = 
-  | string 
-  | Array<{ 
-      type: string; 
-      text?: string; 
-      image_url?: { 
-        url: string 
-      } 
-    }>;
+import { GrokRequestParams, GrokResponse } from '@/types/grok';
 
-export interface GrokChatRequestBody {
-  messages: Array<{
-    role: string;
-    content: MessageContent;
-  }>;
+export type ChatCompletionMessage = {
+  role: 'system' | 'user' | 'assistant';
+  content: string;
+};
+
+export type ChatCompletionRequest = {
   model: string;
+  messages: ChatCompletionMessage[];
   temperature?: number;
   max_tokens?: number;
   top_p?: number;
-  frequency_penalty?: number;
   presence_penalty?: number;
-  metadata?: any;
-}
+  frequency_penalty?: number;
+  metadata?: Record<string, any>;
+};
 
-// New types for the enhanced initial classification
-export interface CategoryConfidence {
+export type CategoryConfidence = {
   category: string;
-  confidence: number;  // 0-1 score
-  priority: number;    // 1-5 priority level
-}
+  confidence: number;
+  priority: number;
+};
 
-export interface InitialAssessment {
+export type InitialAssessment = {
   isRegulatoryRelated: boolean;
   categories: CategoryConfidence[];
   reasoning: string;
   suggestedContextSources?: string[];
   estimatedComplexity: 'simple' | 'moderate' | 'complex';
-  requiresParallelProcessing: boolean;
-}
+  requiresParallelProcessing?: boolean;
+  isNewListingQuery?: boolean;
+};
+
+export type SearchResult = {
+  context: string;
+  reasoning: string;
+  usedSummaryIndex?: boolean;
+  searchStrategy?: string;
+};
+
+export type EnhancedContext = {
+  context: string;
+  reasoning: string;
+  searchResults: any[];
+  usedSummaryIndex: boolean;
+};
+
+export type ApiResponseFormat = {
+  timestamp: number;
+  requestId: string;
+  status: 'success' | 'error';
+  data?: any;
+  error?: {
+    message: string;
+    code: string;
+  };
+};
+
+export type GrokModelInfo = {
+  id: string;
+  name: string;
+  description: string;
+  capabilities: string[];
+  maxTokens?: number;
+};

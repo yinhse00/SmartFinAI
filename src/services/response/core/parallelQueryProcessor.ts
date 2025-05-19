@@ -1,4 +1,3 @@
-
 import { grokApiService } from '../../api/grokApiService';
 import { InitialAssessment, CategoryConfidence } from '../../api/grok/types';
 import { contextService } from '../../regulatory/contextService';
@@ -296,6 +295,9 @@ Output ONLY a JSON object with these fields:
             priority: 2
           });
         }
+        
+        // Ensure isNewListingQuery is set
+        assessment.isNewListingQuery = true;
       } else {
         const hasListedIssuerCategory = assessment.categories.some(c => c.category === 'listed_issuer');
         if (!hasListedIssuerCategory && !isNewListingQuery) {
@@ -304,6 +306,11 @@ Output ONLY a JSON object with these fields:
             confidence: 0.7,
             priority: 2
           });
+        }
+        
+        // Ensure isNewListingQuery is set to false if not a new listing query
+        if (assessment.isNewListingQuery === undefined) {
+          assessment.isNewListingQuery = false;
         }
       }
       

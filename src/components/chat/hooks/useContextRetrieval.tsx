@@ -43,7 +43,7 @@ export const useContextRetrieval = () => {
           categories: result.assessment.categories,
           estimatedComplexity: result.assessment.estimatedComplexity,
           contexts: result.contexts,
-          isNewListingQuery: result.assessment.isNewListingQuery
+          isNewListingQuery: result.assessment.isNewListingQuery || isNewListingQuery
         };
       }
       
