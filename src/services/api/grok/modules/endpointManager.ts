@@ -1,3 +1,4 @@
+
 /**
  * Manages API endpoints and circuit breakers
  */
@@ -13,23 +14,24 @@ const circuitBreakers: {
     documentType?: string, // Track document type for specialized thresholds
     consecutiveSuccesses: number, // Track successes for auto-healing
     lastSuccess: number,
-    totalAttempts: number
+    totalAttempts: number,
+    lastReset?: number // Track when the circuit was last reset
   }
 } = {};
 
-// Adaptive thresholds based on document types
+// Adaptive thresholds based on document types - INCREASED for better resilience
 const getFailureThreshold = (documentType?: string): number => {
   // Word and Excel files may have more complex processing needs
   if (documentType === 'Word' || documentType === 'Excel') {
-    return 4; // Higher threshold for complex documents
+    return 8; // Increased from 4 to 8 for complex documents
   }
-  return 3; // Default threshold for other requests
+  return 5; // Increased from 3 to 5 for other requests
 };
 
-// Dynamic reset timeout with progressive backoff
+// Dynamic reset timeout with progressive backoff - INCREASED base timeout
 const getResetTimeout = (failures: number): number => {
-  const baseTimeout = 30000; // 30 seconds base
-  const maxTimeout = 300000; // 5 minutes max
+  const baseTimeout = 60000; // Increased from 30s to 60s base
+  const maxTimeout = 300000; // 5 minutes max (unchanged)
   // Exponential backoff with cap
   const calculatedTimeout = Math.min(baseTimeout * Math.pow(1.5, failures - 1), maxTimeout);
   return calculatedTimeout;
@@ -37,6 +39,9 @@ const getResetTimeout = (failures: number): number => {
 
 // Proxy endpoint
 const PROXY_ENDPOINT = '/api/grok';
+
+// Time threshold for automatic periodic reset attempts (20 minutes)
+const AUTO_RESET_THRESHOLD = 20 * 60 * 1000;
 
 /**
  * Reset circuit breaker for a specific endpoint
@@ -47,6 +52,7 @@ const resetCircuitBreaker = (endpoint: string) => {
     circuitBreakers[endpoint].isOpen = false;
     circuitBreakers[endpoint].lastFailure = 0;
     circuitBreakers[endpoint].consecutiveSuccesses = 0;
+    circuitBreakers[endpoint].lastReset = Date.now();
     console.log(`Reset circuit breaker for ${endpoint}`);
   }
 };
@@ -115,6 +121,19 @@ const checkAutoHealCircuit = (endpoint: string): boolean => {
     return true;
   }
   
+  // Also check for periodic reset for document endpoints that have been open too long
+  const documentType = circuitBreakers[endpoint].documentType;
+  const lastReset = circuitBreakers[endpoint].lastReset || 0;
+  
+  if (documentType && (now - lastReset > AUTO_RESET_THRESHOLD)) {
+    console.log(`Attempting periodic reset for document endpoint ${endpoint} after ${(now - lastReset) / 1000}s`);
+    circuitBreakers[endpoint].isOpen = false;
+    circuitBreakers[endpoint].lastReset = now;
+    // Reduce failure count but don't reset completely to maintain some history
+    circuitBreakers[endpoint].failures = Math.max(1, Math.floor(circuitBreakers[endpoint].failures / 2));
+    return true;
+  }
+  
   return false;
 };
 
@@ -129,7 +148,8 @@ const recordSuccess = (endpoint: string): void => {
       isOpen: false,
       consecutiveSuccesses: 1,
       lastSuccess: Date.now(),
-      totalAttempts: 1
+      totalAttempts: 1,
+      lastReset: Date.now()
     };
     return;
   }
@@ -139,8 +159,9 @@ const recordSuccess = (endpoint: string): void => {
   circuitBreakers[endpoint].totalAttempts += 1;
   
   // If we have enough consecutive successes, start healing the circuit
-  if (circuitBreakers[endpoint].isOpen && circuitBreakers[endpoint].consecutiveSuccesses >= 2) {
-    console.log(`Healing circuit for ${endpoint} after ${circuitBreakers[endpoint].consecutiveSuccesses} consecutive successes`);
+  // Changed from 2 to 1 for faster recovery
+  if (circuitBreakers[endpoint].isOpen && circuitBreakers[endpoint].consecutiveSuccesses >= 1) {
+    console.log(`Healing circuit for ${endpoint} after ${circuitBreakers[endpoint].consecutiveSuccesses} consecutive success`);
     resetCircuitBreaker(endpoint);
   }
 };
@@ -262,7 +283,8 @@ const incrementCircuitBreakerFailures = (endpoint: string, documentType?: string
       documentType,
       consecutiveSuccesses: 0,
       lastSuccess: 0,
-      totalAttempts: 1
+      totalAttempts: 1,
+      lastReset: Date.now()
     };
   } else {
     circuitBreakers[endpoint].failures += 1;
@@ -287,3 +309,4 @@ const incrementCircuitBreakerFailures = (endpoint: string, documentType?: string
 export const checkApiAvailability = async (apiKey: string): Promise<boolean> => {
   return await connectionTester.checkApiAvailability(apiKey);
 };
+

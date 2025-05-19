@@ -5,6 +5,7 @@ import { fileProcessingService } from '@/services/documents/fileProcessingServic
 import { formatExtractedContent } from '@/utils/fileContentFormatter';
 import { checkApiAvailability } from '@/services/api/grok/modules/endpointManager';
 import { getGrokApiKey } from '@/services/apiKeyService';
+import { forceResetAllCircuitBreakers } from '@/services/api/grok/modules/endpointManager';
 
 export const useFileProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -138,16 +139,22 @@ export const useFileProcessing = () => {
     }
   };
 
-  // Try to reconnect to the API
+  // Try to reconnect to the API with improved circuit breaker reset
   const tryReconnect = async (): Promise<boolean> => {
     setIsProcessing(true);
     
     toast({
       title: "Attempting to reconnect",
-      description: "Checking API connection...",
+      description: "Resetting circuit breakers and checking API connection...",
     });
     
     try {
+      // Force reset all circuit breakers first
+      forceResetAllCircuitBreakers();
+      
+      // Wait briefly to allow reset to take effect
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
       const apiKey = getGrokApiKey();
       if (!apiKey) {
         toast({
@@ -158,6 +165,7 @@ export const useFileProcessing = () => {
         return false;
       }
       
+      // Now check availability with fresh circuit breakers
       const isAvailable = await checkApiAvailability(apiKey);
       setIsOfflineMode(!isAvailable);
       
@@ -196,3 +204,4 @@ export const useFileProcessing = () => {
     tryReconnect
   };
 };
+
