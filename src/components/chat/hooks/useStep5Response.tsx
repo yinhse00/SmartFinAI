@@ -53,10 +53,12 @@ export const step5Response = async (
     // Make sure the response is never empty or undefined
     if (!result.response || result.response.trim() === '') {
       console.error('useStep5Response: Empty response in result', result);
-      if (result.completed) {
+      if (result.completed === true) {
         return {
-          ...result,
-          response: "I wasn't able to generate a complete response. Please try again."
+          completed: true,
+          response: "I wasn't able to generate a complete response. Please try again.",
+          metadata: result.metadata,
+          requiresTranslation: result.requiresTranslation
         };
       } else {
         return {
@@ -67,8 +69,21 @@ export const step5Response = async (
       }
     }
     
-    // Return the result with proper typing
-    return result as Step5Result;
+    // Return the result with proper typing - explicitly cast based on completed property
+    if (result.completed === true) {
+      return {
+        completed: true,
+        response: result.response,
+        metadata: result.metadata,
+        requiresTranslation: result.requiresTranslation
+      };
+    } else {
+      return {
+        completed: false,
+        error: result.error || new Error("Unknown error"),
+        response: result.response
+      };
+    }
   } catch (error) {
     console.error('useStep5Response: Error during execution:', error);
     return {
