@@ -1,3 +1,4 @@
+
 import { fileConverter } from '../utils/fileConverter';
 import { getGrokApiKey } from '../../../services/apiKeyService';
 import { apiClient } from '../../api/grok/apiClient';
@@ -10,16 +11,21 @@ export const spreadsheetProcessor = {
   /**
    * Extract text from Excel files using browser-compatible approach as primary method
    */
-  extractExcelText: async (file: File): Promise<{ content: string; source: string }> => {
+  extractExcelText: async (file: File, xlsxAvailable: boolean = false): Promise<{ content: string; source: string }> => {
     try {
-      console.log(`Processing Excel file: ${file.name}`);
+      console.log(`Processing Excel file: ${file.name}, XLSX available: ${xlsxAvailable}`);
       
       // Always try client-side extraction first
       try {
         console.log("Attempting client-side Excel extraction");
+        
+        if (!xlsxAvailable) {
+          console.warn("SheetJS not available for client-side Excel extraction");
+        }
+        
         const extractedText = await fileConverter.getExcelText(file);
         
-        if (extractedText && extractedText.trim() !== '') {
+        if (extractedText && extractedText.trim() !== '' && !extractedText.includes('[Excel')) {
           // Format the extracted content
           const formattedText = spreadsheetProcessor.formatExcelContent(extractedText, file.name);
           
@@ -30,7 +36,7 @@ export const spreadsheetProcessor = {
             source: file.name
           };
         } else {
-          console.log("Client-side extraction returned empty content, trying API fallback");
+          console.log("Client-side extraction returned empty or error content, trying API fallback");
         }
       } catch (clientError) {
         console.warn("Client-side Excel extraction failed:", clientError);
@@ -45,6 +51,13 @@ export const spreadsheetProcessor = {
         // Use text-based API approach for Excel
         return await spreadsheetProcessor.processExcelWithTextPrompt(file);
       } else {
+        if (!xlsxAvailable) {
+          return {
+            content: `[Excel Processing Limited: The Excel file ${file.name} could not be processed in offline mode because SheetJS is not available. Please try again when online or provide the data in another format.]`,
+            source: file.name
+          };
+        }
+        
         return {
           content: `No text content could be extracted from the Excel file ${file.name}. The file may be empty, contain only formatting, or requires online processing which is currently unavailable.`,
           source: file.name

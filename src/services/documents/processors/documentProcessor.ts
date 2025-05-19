@@ -1,3 +1,4 @@
+
 import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
@@ -41,23 +42,28 @@ export const documentProcessor = {
   /**
    * Extract text content from Word documents with improved client-side first approach
    */
-  extractWordText: async (file: File): Promise<{ content: string; source: string }> => {
+  extractWordText: async (file: File, mammothAvailable: boolean = false): Promise<{ content: string; source: string }> => {
     try {
-      console.log(`Processing Word document: ${file.name}`);
+      console.log(`Processing Word document: ${file.name}, Mammoth available: ${mammothAvailable}`);
       
       // Always try client-side extraction first
       try {
         console.log("Attempting client-side Word document extraction");
+        
+        if (!mammothAvailable) {
+          console.warn("Mammoth.js not available for client-side extraction");
+        }
+        
         const text = await documentProcessor.extractTextClientSide(file);
         
-        if (text && text.trim().length > 0) {
+        if (text && text.trim().length > 0 && !text.includes('[Document text extraction')) {
           console.log("Client-side extraction successful");
           return {
             content: text,
             source: file.name
           };
         } else {
-          console.log("Client-side extraction returned empty content, trying API fallback");
+          console.log("Client-side extraction returned empty or error content, trying API fallback");
         }
       } catch (clientError) {
         console.warn("Client-side extraction failed:", clientError);
@@ -75,20 +81,31 @@ export const documentProcessor = {
         // Last resort fallback when API is unavailable
         console.warn("Grok API unavailable, using client-side fallback for Word document");
         
-        try {
-          // Try again with basic extraction
-          const text = await documentProcessor.extractTextClientSide(file);
-          return {
-            content: `[Limited Processing Mode: API Unreachable]\n\n${text || "Document extraction limited in offline mode."}`,
-            source: file.name
-          };
-        } catch (fallbackError) {
-          console.error("All extraction methods failed:", fallbackError);
-          return {
-            content: `[Document Text Extraction Limited: The Word document '${file.name}' could not be processed. Please try again later or provide the text in another format.]`,
-            source: file.name
-          };
+        if (mammothAvailable) {
+          // If Mammoth is available but initial extraction failed, try again with more debugging
+          try {
+            console.log("Retrying extraction with Mammoth.js");
+            const reader = new FileReader();
+            const buffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+              reader.onload = () => resolve(reader.result as ArrayBuffer);
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(file);
+            });
+            
+            const text = await fileConverter.getPlainTextFromDocx(buffer);
+            return {
+              content: text,
+              source: file.name
+            };
+          } catch (mammothError) {
+            console.error("Mammoth.js extraction failed:", mammothError);
+          }
         }
+        
+        return {
+          content: `[Document Text Extraction Limited: The Word document '${file.name}' could not be processed in offline mode because Mammoth.js is not available or failed to extract content. Please try again when online or provide the text in another format.]`,
+          source: file.name
+        };
       }
     } catch (error) {
       console.error(`Error extracting Word text from ${file.name}:`, error);

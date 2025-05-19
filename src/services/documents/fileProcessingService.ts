@@ -5,23 +5,43 @@ import { documentProcessor } from './processors/documentProcessor';
 import { spreadsheetProcessor } from './processors/spreadsheetProcessor';
 
 /**
+ * Check if required document libraries are loaded
+ */
+const checkDocumentLibraries = (): { mammothAvailable: boolean, xlsxAvailable: boolean } => {
+  const mammothAvailable = typeof window !== 'undefined' && 'mammoth' in window && window.mammoth !== undefined;
+  const xlsxAvailable = typeof window !== 'undefined' && 'XLSX' in window && window.XLSX !== undefined;
+  
+  console.log("Document libraries status:", { mammothAvailable, xlsxAvailable });
+  
+  return { mammothAvailable, xlsxAvailable };
+};
+
+/**
  * Service for processing different file types and extracting text content
  */
 export const fileProcessingService = {
+  /**
+   * Check if document processing libraries are available
+   */
+  checkLibrariesAvailable: (): { mammothAvailable: boolean, xlsxAvailable: boolean } => {
+    return checkDocumentLibraries();
+  },
+  
   /**
    * Process a file and extract text content based on file type
    */
   processFile: async (file: File): Promise<{ content: string; source: string }> => {
     const fileType = fileTypeDetector.detectFileType(file);
+    const { mammothAvailable, xlsxAvailable } = checkDocumentLibraries();
     
     try {
       switch (fileType) {
         case 'pdf':
           return await documentProcessor.extractPdfText(file);
         case 'word':
-          return await documentProcessor.extractWordText(file);
+          return await documentProcessor.extractWordText(file, mammothAvailable);
         case 'excel':
-          return await spreadsheetProcessor.extractExcelText(file);
+          return await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
         case 'image':
           return await imageProcessor.extractText(file);
         default:

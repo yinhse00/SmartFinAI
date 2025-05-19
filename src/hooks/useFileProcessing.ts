@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { fileProcessingService } from '@/services/documents/fileProcessingService';
@@ -11,7 +10,40 @@ export const useFileProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [isOfflineMode, setIsOfflineMode] = useState(false);
   const [lastApiCheck, setLastApiCheck] = useState(0);
+  const [libraryStatus, setLibraryStatus] = useState<{
+    mammothAvailable: boolean;
+    xlsxAvailable: boolean;
+  }>({ mammothAvailable: false, xlsxAvailable: false });
   const { toast } = useToast();
+
+  // Check document processing libraries availability
+  useEffect(() => {
+    const checkLibraries = () => {
+      const status = fileProcessingService.checkLibrariesAvailable();
+      setLibraryStatus(status);
+      
+      if (!status.mammothAvailable) {
+        console.warn("Mammoth.js library not detected - Word document processing will be limited");
+      }
+      
+      if (!status.xlsxAvailable) {
+        console.warn("SheetJS library not detected - Excel processing will be limited");
+      }
+    };
+    
+    // Check immediately and then on window focus (in case libraries load later)
+    checkLibraries();
+    
+    const handleFocus = () => {
+      checkLibraries();
+    };
+    
+    window.addEventListener('focus', handleFocus);
+    
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
 
   // Periodically check API availability in the background
   useEffect(() => {
@@ -77,6 +109,31 @@ export const useFileProcessing = () => {
             variant: "destructive",
             duration: 6000,
           });
+          
+          // Check if libraries are available for offline processing
+          const { mammothAvailable, xlsxAvailable } = libraryStatus;
+          
+          if (!mammothAvailable && files.some(file => 
+            file.name.toLowerCase().endsWith('.docx') || 
+            file.name.toLowerCase().endsWith('.doc'))) {
+            toast({
+              title: "Word Processing Limited",
+              description: "Mammoth.js library is not available for offline Word document processing.",
+              variant: "destructive",
+              duration: 4000,
+            });
+          }
+          
+          if (!xlsxAvailable && files.some(file => 
+            file.name.toLowerCase().endsWith('.xlsx') || 
+            file.name.toLowerCase().endsWith('.xls'))) {
+            toast({
+              title: "Excel Processing Limited",
+              description: "SheetJS library is not available for offline Excel processing.",
+              variant: "destructive",
+              duration: 4000,
+            });
+          }
         }
       }
       
@@ -102,13 +159,40 @@ export const useFileProcessing = () => {
             });
           }
           
-          if ((isDocxFile || isExcelFile) && isOfflineMode) {
-            toast({
-              title: `Processing ${isDocxFile ? 'Word' : 'Excel'} document locally`,
-              description: "Using browser-based extraction in offline mode.",
-              variant: "default",
-              duration: 3000,
-            });
+          if (isDocxFile && isOfflineMode) {
+            if (!libraryStatus.mammothAvailable) {
+              toast({
+                title: "Word processing limited",
+                description: "Mammoth.js is not available for offline Word processing.",
+                variant: "default",
+                duration: 3000,
+              });
+            } else {
+              toast({
+                title: "Processing Word document locally",
+                description: "Using browser-based extraction in offline mode.",
+                variant: "default",
+                duration: 3000,
+              });
+            }
+          }
+          
+          if (isExcelFile && isOfflineMode) {
+            if (!libraryStatus.xlsxAvailable) {
+              toast({
+                title: "Excel processing limited",
+                description: "SheetJS is not available for offline Excel processing.",
+                variant: "default",
+                duration: 3000,
+              });
+            } else {
+              toast({
+                title: "Processing Excel document locally",
+                description: "Using browser-based extraction in offline mode.",
+                variant: "default",
+                duration: 3000,
+              });
+            }
           }
           
           // Process the file
@@ -228,6 +312,7 @@ export const useFileProcessing = () => {
     processFiles, 
     isProcessing, 
     isOfflineMode,
-    tryReconnect
+    tryReconnect,
+    libraryStatus
   };
 };

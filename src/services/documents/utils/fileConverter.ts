@@ -37,14 +37,17 @@ export const fileConverter = {
 
   /**
    * Basic plain text extraction from DOCX files
-   * This is a simple client-side fallback when the API is unavailable
+   * This is a client-side fallback when the API is unavailable
    */
   getPlainTextFromDocx: async (buffer: string | ArrayBuffer): Promise<string> => {
-    // If mammoth.js is available, use it
+    // Check if mammoth is available in the window
     try {
-      if (typeof window !== 'undefined' && 'mammoth' in window) {
-        // Use type assertion to tell TypeScript what mammoth is
-        const mammoth = (window as any).mammoth;
+      // Verify mammoth is properly loaded
+      if (typeof window !== 'undefined' && window.mammoth) {
+        console.log("Mammoth.js is available, using it for document extraction");
+        
+        // Convert string to ArrayBuffer if needed
+        let arrayBuffer: ArrayBuffer;
         if (typeof buffer === 'string') {
           // Convert base64 to ArrayBuffer if needed
           const base64 = buffer.split(',')[1];
@@ -53,18 +56,29 @@ export const fileConverter = {
           for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
           }
-          buffer = bytes.buffer;
+          arrayBuffer = bytes.buffer;
+        } else {
+          arrayBuffer = buffer;
         }
         
-        const result = await mammoth.extractRawText({ arrayBuffer: buffer });
-        return result.value || '';
+        // Process the document with mammoth
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        console.log("Mammoth extraction result:", result);
+        
+        if (result.value && result.value.trim() !== '') {
+          return result.value;
+        } else {
+          console.warn("Mammoth extraction returned empty content");
+          return '[Document appears to be empty or contains no extractable text]';
+        }
+      } else {
+        console.warn("Mammoth.js is not available in the window object");
+        throw new Error("Mammoth.js library not loaded");
       }
     } catch (e) {
-      console.warn('Mammoth.js extraction failed:', e);
+      console.error('Mammoth.js extraction failed:', e);
+      return '[Document text extraction failed. Please ensure the document is not corrupted and Mammoth.js is properly loaded.]';
     }
-    
-    // Fallback if mammoth isn't available or fails
-    return '[Document text extraction is limited in offline mode. Please ensure the Grok API is accessible for full functionality.]';
   },
   
   /**
@@ -138,3 +152,11 @@ export const fileConverter = {
       .trim();
   }
 };
+
+// Augment the Window interface to include mammoth
+declare global {
+  interface Window {
+    mammoth: any;
+    XLSX: any;
+  }
+}
