@@ -99,11 +99,16 @@ export const mappingValidationService = {
         return null;
       }
       
-      return data[0];
+      return data[0] as {
+        id: string;
+        title: string;
+        content: string;
+        updated_at: string;
+      };
     } catch (error) {
-      // Fix the error handling here to return null instead of an error object
+      // Return null on any error to match the function's return type
       console.error('Error retrieving listing guidance document:', error);
-      return null; // Return null for any error case to match the function return type
+      return null;
     }
   },
   
