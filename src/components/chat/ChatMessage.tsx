@@ -45,14 +45,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     if (sender !== 'bot') return 0;
     
     // For batch parts, show more initial content for better UX
-    if (isBatchPart) return 120;
+    if (isBatchPart) return 180;
     
-    // For regular messages, show the first sentence or first 60 chars
-    const firstSentenceMatch = content?.match(/^([^.!?]+[.!?])\s/);
-    if (firstSentenceMatch && firstSentenceMatch[1].length < 100) {
-      return firstSentenceMatch[1].length;
+    // Show more initial content for long messages
+    if (content && content.length > 1000) return 200;
+    
+    // For regular messages, show the first 1-2 sentences 
+    const firstTwoSentenceMatch = content?.match(/^([^.!?]+[.!?][^.!?]+[.!?])\s/);
+    if (firstTwoSentenceMatch && firstTwoSentenceMatch[1].length < 200) {
+      return firstTwoSentenceMatch[1].length;
     }
-    return 60;
+    
+    // Default to showing more characters initially
+    return 120;
   };
 
   // Debug output for empty content detection
@@ -104,6 +109,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     );
   }
   
+  // Determine if this is a continuation message that should animate differently
+  const isContinuation = isBatchPart && sender === 'bot';
+  
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
       <div className={`flex items-start gap-3 w-full ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -115,7 +123,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : translationInProgress 
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
-        } ${isBatchPart ? 'animate-fade-in' : ''}`}>
+        } ${isContinuation ? 'animate-fade-in' : ''}`}>
           {/* Bot message content with enhanced typing animation */}
           {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
@@ -125,6 +133,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               onProgress={onTypingProgress}
               renderAsHTML={true}
               initialVisibleChars={getInitialVisibleChars()}
+              typingSpeed={isBatchPart ? 60 : 45} // Faster typing for batch parts
             />
           )}
           

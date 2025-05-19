@@ -14,6 +14,7 @@ export const useBatchHandling = () => {
   const MAX_AUTO_BATCHES = 10; // Increased from 5 to 10 for better completion
   const batchCompletionTracker = useRef<Record<number, boolean>>({});
   const nextBatchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const continueCallbackRef = useRef<((query: string, options: any) => Promise<void>) | null>(null);
   
   // Clean up timeout on unmount
   useEffect(() => {
@@ -34,6 +35,9 @@ export const useBatchHandling = () => {
   };
   
   const handleBatchContinuation = (callback: (query: string, options: any) => Promise<void>) => {
+    // Save the callback for later use in auto-batching
+    continueCallbackRef.current = callback;
+    
     if (batchingPrompt) {
       batchNumber.current += 1;
       // Track this batch as not completed yet
@@ -83,9 +87,14 @@ export const useBatchHandling = () => {
         clearTimeout(nextBatchTimeoutRef.current);
       }
       
+      // Fix: Actually use the callback to continue the batch after the timeout
       nextBatchTimeoutRef.current = setTimeout(() => {
-        return { shouldContinue: true, batchNumber: batchNumber, prompt: queryText };
+        if (continueCallbackRef.current && batchingPrompt) {
+          handleBatchContinuation(continueCallbackRef.current);
+        }
       }, batchDelay);
+      
+      return { shouldContinue: true, batchNumber: batchNumber, prompt: queryText };
       
     } else if (truncated) {
       // Manual batch continuation needed

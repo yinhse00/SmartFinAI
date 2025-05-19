@@ -1,3 +1,4 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
@@ -41,10 +42,6 @@ export const useResponseProcessor = (
     // Handle batch continuations more intelligently
     if (batchInfo && batchInfo.batchNumber > 1) {
       if (batchInfo.isSeamlessBatch) {
-        // For seamless batching, don't add part numbers to the content
-        // Just keep the content as is, but mark it as a batch part
-        botMessage.isBatchPart = true;
-        
         // For seamless batching, find the previous bot message and append this content
         const updatedMessages = [...processedMessages];
         let lastBotMessageIndex = updatedMessages.length - 1;
@@ -60,7 +57,7 @@ export const useResponseProcessor = (
           
           // Only append if it's a bot message and not an error message
           if (existingBotMessage && !existingBotMessage.isError) {
-            // Combine the content
+            // Combine the content without showing part numbers
             updatedMessages[lastBotMessageIndex] = {
               ...existingBotMessage,
               content: existingBotMessage.content + botMessage.content,
@@ -100,19 +97,21 @@ export const useResponseProcessor = (
     // Show continue button if batch continuation needed and not using seamless batching
     if (botMessage.isTruncated && batchInfo && batchInfo.onContinue && !batchInfo.isSeamlessBatch) {
       const diagnosticsReasons = completenessCheck?.reasons || [];
-      const diagnosticMessage = diagnosticsReasons.length > 0
-        ? { reasons: diagnosticsReasons }
-        : { reasons: ['Response appears incomplete'] };
-
+      
       toast({
         title: `Additional information available`,
         description: "The answer continues. Click 'Continue' to see more.",
         duration: 10000,
         action: (
-          <button
-            className="ml-1 px-2 py-1 rounded bg-finance-light-blue text-finance-dark-blue hover:bg-finance-medium-blue"
+          <Button 
+            variant="outline" 
+            size="sm" 
             onClick={batchInfo.onContinue}
-          >Continue</button>
+            className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
+          >
+            <RefreshCw size={14} />
+            Continue
+          </Button>
         )
       });
     } else if (botMessage.isTruncated && completenessCheck && !batchInfo?.isSeamlessBatch) {

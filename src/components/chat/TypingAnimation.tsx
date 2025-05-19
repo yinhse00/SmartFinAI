@@ -18,7 +18,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   onComplete,
   onProgress,
   renderAsHTML = false,
-  initialVisibleChars = 60 // Show first 60 chars immediately for better responsiveness
+  initialVisibleChars = 120 // Increased from 60 to 120 for faster initial display
 }) => {
   const [displayedText, setDisplayedText] = useState('');
   const [characterIndex, setCharacterIndex] = useState(0);
@@ -30,7 +30,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   useEffect(() => {
     // Identify high-priority content (first sentence, important elements)
     const firstSentenceMatch = text.match(/^(.*?[.!?])\s/);
-    const firstSentence = firstSentenceMatch ? firstSentenceMatch[1] : text.substring(0, Math.min(100, text.length));
+    const firstSentence = firstSentenceMatch ? firstSentenceMatch[1] : text.substring(0, Math.min(150, text.length));
     
     contentPriority.current = {
       highPriority: firstSentence,
@@ -69,66 +69,70 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
     if (isPaused) return;
 
-    // Base typing speed
-    let baseDelay = 1000 / typingSpeed;
+    // Base typing speed - increased for more responsive typing
+    let baseDelay = 1000 / (typingSpeed * 1.5);
     
     // Adaptive typing speed based on content
     const currentChar = text[characterIndex] || '';
     const nextChars = text.substring(characterIndex, characterIndex + 10);
     
-    // Content-aware speed adjustments
+    // Content-aware speed adjustments - optimized for better UX
     if (['.', '!', '?'].includes(currentChar)) {
-      baseDelay *= 3; // Longer pause after sentences
+      baseDelay *= 2; // Reduced pause after sentences for better flow
     } else if ([',', ';', ':'].includes(currentChar)) {
-      baseDelay *= 1.5; // Medium pause for punctuation
+      baseDelay *= 1.2; // Shorter pause for punctuation
     } else if (currentChar === '\n' || (currentChar === ' ' && nextChars.includes('\n'))) {
-      baseDelay *= 2; // Pause at paragraph breaks
-    } else if (characterIndex < 100) {
-      baseDelay *= 0.8; // Faster at the beginning for responsiveness
-    } else if (text.length - characterIndex < 50) {
-      baseDelay *= 1.2; // Slow down slightly at the end
+      baseDelay *= 1.5; // Moderate pause at paragraph breaks
+    } else if (characterIndex < 200) {
+      baseDelay *= 0.6; // Even faster at the beginning for improved responsiveness
+    } else if (text.length - characterIndex < 100) {
+      baseDelay *= 1.1; // Slight slowdown at the end
     }
     
-    // Special content-based speed (like code blocks, lists)
+    // Special content-based speed adjustments
     if (nextChars.includes('```') || nextChars.includes('|')) {
-      baseDelay *= 0.5; // Speed through code blocks and tables
+      baseDelay *= 0.3; // Speed through code blocks and tables even more
+    } else if (nextChars.includes('*') || nextChars.includes('1.')) {
+      baseDelay *= 0.5; // Speed through list elements
     }
     
-    // Handle HTML tags specially
+    // Handle HTML tags specially with improved detection
     if (renderAsHTML) {
       if (currentChar === '<') {
         const tagEndIndex = text.indexOf('>', characterIndex);
         if (tagEndIndex > characterIndex) {
           const tagContent = text.substring(characterIndex, tagEndIndex + 1);
           
-          if (tagContent.includes('<p') || tagContent.includes('<h')) {
-            baseDelay *= 2; // Pause for paragraph tags
-          } else if (tagContent.includes('bullet-point') || tagContent.includes('<li')) {
-            baseDelay *= 1.5; // Pause for list items
-          } else if (tagContent.includes('<strong') || tagContent.includes('<b')) {
-            baseDelay *= 0.7; // Faster for emphasized text
-          }
-          
-          // Speed up tag rendering (don't need to see tags typed out character by character)
+          // Display tags immediately for smoother HTML rendering
           timerId.current = setTimeout(() => {
             setDisplayedText(text.slice(0, tagEndIndex + 1));
             setCharacterIndex(tagEndIndex + 1);
             
             // Notify progress
-            if (onProgress && characterIndex % 20 === 0) {
-              onProgress();
-            }
-          }, baseDelay);
+            if (onProgress) onProgress();
+          }, 10); // Very fast rendering for HTML tags
           
           return;
         }
       }
     }
 
-    // Normal character typing
+    // Chunk typing for better performance and smoother animation
+    const remainingLength = text.length - characterIndex;
+    let chunkSize = 1; // Default to one character at a time
+    
+    // For very long text, increase chunk size proportionally for better performance
+    if (remainingLength > 1000) {
+      chunkSize = Math.floor(remainingLength / 500); // Dynamic chunking
+    } else if (remainingLength > 500) {
+      chunkSize = 2;
+    }
+
+    // Normal character typing with chunking
     timerId.current = setTimeout(() => {
-      setDisplayedText(text.slice(0, characterIndex + 1));
-      setCharacterIndex(prev => prev + 1);
+      const nextIndex = Math.min(characterIndex + chunkSize, text.length);
+      setDisplayedText(text.slice(0, nextIndex));
+      setCharacterIndex(nextIndex);
       
       // Notify parent component of progress
       if (onProgress && characterIndex % 20 === 0) {

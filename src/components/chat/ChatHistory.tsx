@@ -1,4 +1,3 @@
-
 import React, { useRef, useEffect } from 'react';
 import { Message, ChatMessage } from './ChatMessage';
 
@@ -12,12 +11,29 @@ interface ChatHistoryProps {
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages or when messages are updated
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading]);
+  
+  // Additional scrolling effect for when message content changes
+  // This helps keep the view at the bottom during typing animation
+  const handleTypingProgress = () => {
+    if (messagesEndRef.current) {
+      // Use a more targeted approach to only scroll when needed
+      const container = messagesEndRef.current.parentElement;
+      if (container) {
+        const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 150;
+        
+        // Only auto-scroll if user is already near the bottom
+        if (isAtBottom) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     console.log('ChatHistory rendering with messages:', messages.length);
@@ -43,10 +59,34 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
   
+  // Group consecutive batch parts for better rendering
+  const groupedMessages = messages.reduce((acc: Message[][], message, index) => {
+    const prevMessage = index > 0 ? messages[index - 1] : null;
+    
+    // Start a new group if:
+    // 1. This is the first message
+    // 2. Current message is from a different sender than previous
+    // 3. Current message is not a batch part
+    // 4. Previous message is not a batch part
+    if (
+      index === 0 || 
+      message.sender !== prevMessage?.sender || 
+      !message.isBatchPart || 
+      !prevMessage?.isBatchPart
+    ) {
+      acc.push([message]);
+    } else {
+      // Add to the current group if it's a continuation
+      acc[acc.length - 1].push(message);
+    }
+    
+    return acc;
+  }, []);
+  
   return (
     <div className="h-full py-4 space-y-4 px-4 md:px-6 lg:px-8 w-full">
       {hasTruncatedMessages && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center animate-fade-in">
           <div className="text-sm text-amber-800 dark:text-amber-300">
             {lastUserMessageIsChinese 
               ? "部分回复似乎不完整。您可以重试您的查询以获取完整答案。"
@@ -69,11 +109,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
             key={message.id} 
             message={message} 
             onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
-            onTypingProgress={() => {
-              if (messagesEndRef.current) {
-                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-              }
-            }}
+            onTypingProgress={handleTypingProgress}
             isTranslating={translatingMessageIds.includes(message.id)}
           />
         ))
