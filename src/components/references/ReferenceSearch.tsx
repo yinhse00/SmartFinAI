@@ -5,10 +5,10 @@ import { Search } from 'lucide-react';
 
 interface ReferenceSearchProps {
   searchQuery: string;
-  setSearchQuery: (query: string) => void;
+  onSearch: (query: string) => void;
 }
 
-const ReferenceSearch: React.FC<ReferenceSearchProps> = ({ searchQuery, setSearchQuery }) => {
+const ReferenceSearch: React.FC<ReferenceSearchProps> = ({ searchQuery, onSearch }) => {
   return (
     <div className="relative">
       <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500 dark:text-gray-400" />
@@ -17,7 +17,7 @@ const ReferenceSearch: React.FC<ReferenceSearchProps> = ({ searchQuery, setSearc
         placeholder="Search documents..."
         className="w-[200px] sm:w-[300px] pl-8"
         value={searchQuery}
-        onChange={(e) => setSearchQuery(e.target.value)}
+        onChange={(e) => onSearch(e.target.value)}
       />
     </div>
   );

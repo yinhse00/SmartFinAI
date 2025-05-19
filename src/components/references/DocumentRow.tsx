@@ -9,10 +9,19 @@ import DocumentActions from './DocumentActions';
 
 interface DocumentRowProps {
   document: ReferenceDocument;
-  refetchDocuments: () => void;
+  isUpdating?: boolean;
+  onUpdateStart?: () => void;
+  onUpdateComplete?: () => Promise<void>;
+  refetchDocuments?: () => void;
 }
 
-const DocumentRow: React.FC<DocumentRowProps> = ({ document, refetchDocuments }) => {
+const DocumentRow: React.FC<DocumentRowProps> = ({ 
+  document, 
+  isUpdating,
+  onUpdateStart,
+  onUpdateComplete,
+  refetchDocuments 
+}) => {
   return (
     <TableRow key={document.id} className="hover:bg-gray-50 dark:hover:bg-gray-900/20">
       <TableCell className="font-medium">
@@ -26,15 +35,21 @@ const DocumentRow: React.FC<DocumentRowProps> = ({ document, refetchDocuments })
           </div>
         </div>
       </TableCell>
-      <TableCell>
+      <TableCell className="hidden md:table-cell">
         <Badge variant="outline">
           {categoryDisplayNames[document.category]}
         </Badge>
       </TableCell>
-      <TableCell>{formatFileSize(document.file_size)}</TableCell>
-      <TableCell>{formatDate(document.created_at)}</TableCell>
+      <TableCell className="hidden md:table-cell">{formatFileSize(document.file_size)}</TableCell>
+      <TableCell className="hidden sm:table-cell">{formatDate(document.created_at)}</TableCell>
       <TableCell>
-        <DocumentActions document={document} refetchDocuments={refetchDocuments} />
+        <DocumentActions 
+          document={document} 
+          refetchDocuments={refetchDocuments || (() => {})}
+          isUpdating={isUpdating}
+          onUpdateStart={onUpdateStart}
+          onUpdateComplete={onUpdateComplete}
+        />
       </TableCell>
     </TableRow>
   );
