@@ -2,10 +2,10 @@
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './workflow/step1Initial';
-import { step2ListingRules } from './workflow/step2ListingRules';
-import { step3TakeoversCode } from './workflow/step3TakeoversCode';
-import { step4Execution } from './workflow/step4Execution';
-import { step5Response } from './workflow/step5Response';
+import { step2ListingRules } from './useStep2ListingRules';
+import { step3TakeoversCode } from './useStep3TakeoversCode';
+import { step4Execution } from './useStep4Execution';
+import { step5Response } from './useStep5Response';
 import { WorkflowStep, WorkflowProcessorProps } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
