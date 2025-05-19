@@ -6,7 +6,6 @@ import { tokenManagementService } from '../modules/tokenManagementService';
 
 /**
  * Core response generation functionality with quality-focused optimizations
- * Enhanced for faster first batch delivery while maintaining response quality
  */
 export const responseGeneratorCore = {
   makeApiCall: async (requestBody: any, apiKey: string) => {
@@ -17,47 +16,22 @@ export const responseGeneratorCore = {
       const isBatchRequest = typeof requestBody.messages?.find?.(m => m.role === 'user')?.content === 'string' &&
                            requestBody.messages.find(m => m.role === 'user').content.includes('[CONTINUATION_PART_');
       
-      let batchNumber = 1;
-      if (isBatchRequest && requestBody.messages) {
-        const userMessage = requestBody.messages.find(m => m.role === 'user');
-        if (userMessage && typeof userMessage.content === 'string') {
-          const batchMatch = userMessage.content.match(/\[CONTINUATION_PART_(\d+)\]/);
-          if (batchMatch && batchMatch[1]) {
-            batchNumber = parseInt(batchMatch[1], 10);
-          }
-        }
-      }
-      
-      // Determine optimal token limit - using original high values for quality
+      // Determine optimal token limit - using original high values
       const effectiveTokenLimit = tokenManagementService.getTokenLimit({
         queryType: requestBody.queryType || 'general',
         prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
         isRetryAttempt: false,
-        isBatchRequest,
-        batchNumber
+        isBatchRequest
       });
       
       // Apply optimal token limits
       requestBody.max_tokens = requestBody.max_tokens || effectiveTokenLimit;
       
-      // For first batch delivery optimization, modify system message to prioritize critical info
-      if (batchNumber === 1 && !requestBody.metadata?.disableBatchOptimization) {
-        const systemMessage = requestBody.messages?.find?.(m => m.role === 'system');
-        if (systemMessage && typeof systemMessage.content === 'string') {
-          // Only add if not already present
-          if (!systemMessage.content.includes('FIRST_BATCH_OPTIMIZATION')) {
-            systemMessage.content += "\n\nFIRST_BATCH_OPTIMIZATION: For the first part of your response, focus on delivering the most important information first. Start with the key findings, main answer, or crucial information. Additional details, examples and explanations can follow in subsequent parts.";
-          }
-        }
-      }
-      
       // Use balanced temperature for better quality responses
       if (!requestBody.temperature) {
         requestBody.temperature = tokenManagementService.getTemperature({
           queryType: requestBody.queryType || 'general',
-          prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || '',
-          isBatchRequest,
-          batchNumber
+          prompt: requestBody.messages?.find?.(m => m.role === 'user')?.content || ''
         });
       }
       
@@ -65,11 +39,6 @@ export const responseGeneratorCore = {
       const isInternalProcessing = requestBody.metadata?.internalProcessing === true;
       if (!requestBody.model) {
         requestBody.model = isInternalProcessing ? 'grok-3-mini-beta' : 'grok-3-beta';
-      }
-      
-      // For non-batch requests, enable streaming to get faster initial display
-      if (!isBatchRequest && !requestBody.stream && batchNumber === 1) {
-        requestBody.stream = true;
       }
       
       // Forward request to API client
