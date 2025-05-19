@@ -11,9 +11,14 @@ export const spreadsheetProcessor = {
   /**
    * Extract text from Excel files using browser-compatible approach as primary method
    */
-  extractExcelText: async (file: File, xlsxAvailable: boolean = false): Promise<{ content: string; source: string }> => {
+  extractExcelText: async (file: File, xlsxAvailable: boolean = false): Promise<{ content: string; source: string; metadata?: any }> => {
     try {
       console.log(`Processing Excel file: ${file.name}, XLSX available: ${xlsxAvailable}`);
+      
+      // Detect specific mapping files
+      const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');
+      const isListedIssuerGuidance = file.name.toLowerCase().includes('guidance materials for listed issuers');
+      const isRegulatoryMapping = isListingGuidance || isListedIssuerGuidance;
       
       // First check if SheetJS is available for client-side extraction
       if (xlsxAvailable) {
@@ -28,9 +33,18 @@ export const spreadsheetProcessor = {
             
             console.log(`Successfully extracted text from Excel file ${file.name} using SheetJS`);
             
+            // Add metadata for regulatory mapping files
+            const metadata = isRegulatoryMapping ? {
+              isListingGuidance,
+              isListedIssuerGuidance,
+              isRegulatoryMapping: true,
+              purpose: isListingGuidance ? 'new_listing_guidance' : 'listed_issuer_guidance'
+            } : undefined;
+            
             return {
               content: formattedText,
-              source: file.name
+              source: file.name,
+              metadata
             };
           } else {
             console.log("SheetJS extraction returned empty or error content, trying API fallback");
@@ -49,7 +63,19 @@ export const spreadsheetProcessor = {
       
       if (isApiAvailable) {
         // Use text-based API approach for Excel
-        return await spreadsheetProcessor.processExcelWithTextPrompt(file);
+        const result = await spreadsheetProcessor.processExcelWithTextPrompt(file);
+        
+        // Add metadata for regulatory mapping files if needed
+        if (isRegulatoryMapping) {
+          result.metadata = {
+            isListingGuidance,
+            isListedIssuerGuidance,
+            isRegulatoryMapping: true,
+            purpose: isListingGuidance ? 'new_listing_guidance' : 'listed_issuer_guidance'
+          };
+        }
+        
+        return result;
       } else {
         if (!xlsxAvailable) {
           return {
@@ -107,9 +133,22 @@ export const spreadsheetProcessor = {
   /**
    * Process Excel files using text-based API approach (no image inputs)
    */
-  processExcelWithTextPrompt: async (file: File): Promise<{ content: string; source: string }> => {
+  processExcelWithTextPrompt: async (file: File): Promise<{ content: string; source: string; metadata?: any }> => {
     try {
       console.log(`Processing Excel with text-based prompt: ${file.name}`);
+      
+      // Detect specific mapping files
+      const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');
+      const isListedIssuerGuidance = file.name.toLowerCase().includes('guidance materials for listed issuers');
+      
+      // Special system prompt based on file type
+      let systemPrompt = "You are a spreadsheet data formatting assistant. Your task is to format tabular data in a clean, readable way that preserves the structure of the original spreadsheet.";
+      
+      if (isListingGuidance) {
+        systemPrompt = "You are a financial regulatory expert specializing in new listing guidance. Extract and format the key information from this Excel mapping schedule for new listing applicants.";
+      } else if (isListedIssuerGuidance) {
+        systemPrompt = "You are a financial regulatory expert specializing in listed issuer requirements. Extract and format the key information from this Excel mapping schedule containing FAQs and guidance for listed issuers.";
+      }
       
       // Try to extract some basic text first for the prompt
       let basicExtraction = "";
@@ -131,11 +170,11 @@ export const spreadsheetProcessor = {
         messages: [
           {
             role: "system", 
-            content: "You are a spreadsheet data formatting assistant. Your task is to format tabular data in a clean, readable way that preserves the structure of the original spreadsheet."
+            content: systemPrompt
           },
           {
             role: "user", 
-            content: `This is raw text data extracted from an Excel file. Please format it into a readable table structure:\n\n${basicExtraction}`
+            content: `This is raw text data extracted from an Excel file ${isListingGuidance ? 'containing mapping schedule guidance for new listing applicants' : isListedIssuerGuidance ? 'containing mapping schedule FAQs and guidance for listed issuers' : ''}. Please format it into a readable table structure, highlighting key regulatory information:\n\n${basicExtraction}`
           }
         ],
         temperature: 0.1,
@@ -157,9 +196,18 @@ export const spreadsheetProcessor = {
         // Format the result with a header
         const header = `# Content extracted from Excel file: ${file.name}\n\n`;
         
+        // Add metadata if this is a regulatory mapping file
+        const metadata = (isListingGuidance || isListedIssuerGuidance) ? {
+          isListingGuidance,
+          isListedIssuerGuidance,
+          isRegulatoryMapping: true,
+          purpose: isListingGuidance ? 'new_listing_guidance' : 'listed_issuer_guidance'
+        } : undefined;
+        
         return {
           content: header + formattedContent,
-          source: file.name
+          source: file.name,
+          metadata
         };
       } catch (apiError) {
         clearTimeout(timeoutId);

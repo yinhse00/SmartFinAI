@@ -17,6 +17,14 @@ export const useContextRetrieval = () => {
   ) => {
     console.log(`Retrieving regulatory context for query${isPreliminaryAssessment ? " (parallel assessment)" : ""}`);
     
+    // Detect if this is a new listing or listed issuer query
+    const isNewListingQuery = queryText.toLowerCase().includes('new listing') ||
+      queryText.toLowerCase().includes('ipo') ||
+      queryText.toLowerCase().includes('initial public offering') ||
+      queryText.toLowerCase().includes('listing applicant');
+      
+    console.log(`Query classified as ${isNewListingQuery ? 'NEW LISTING' : 'LISTED ISSUER'} query`);
+    
     const searchStart = Date.now();
     
     try {
@@ -34,7 +42,8 @@ export const useContextRetrieval = () => {
           contextTime,
           categories: result.assessment.categories,
           estimatedComplexity: result.assessment.estimatedComplexity,
-          contexts: result.contexts
+          contexts: result.contexts,
+          isNewListingQuery: result.assessment.isNewListingQuery
         };
       }
       
@@ -46,7 +55,8 @@ export const useContextRetrieval = () => {
           isPreliminaryAssessment,
           metadata: {
             processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
-            isInitialAssessment: isPreliminaryAssessment
+            isInitialAssessment: isPreliminaryAssessment,
+            isNewListingQuery
           }
         }
       );
@@ -84,7 +94,8 @@ export const useContextRetrieval = () => {
         contextTime,
         usedSummaryIndex,
         searchStrategy,
-        categories
+        categories,
+        isNewListingQuery
       };
     } catch (error) {
       console.error('Error retrieving regulatory context:', error);
@@ -98,7 +109,8 @@ export const useContextRetrieval = () => {
         contextTime,
         usedSummaryIndex: false,
         searchStrategy: 'failed',
-        error
+        error,
+        isNewListingQuery
       };
     }
   };

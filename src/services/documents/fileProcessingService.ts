@@ -30,25 +30,57 @@ export const fileProcessingService = {
   /**
    * Process a file and extract text content based on file type
    */
-  processFile: async (file: File): Promise<{ content: string; source: string }> => {
+  processFile: async (file: File): Promise<{ content: string; source: string; metadata?: any }> => {
     const fileType = fileTypeDetector.detectFileType(file);
     const { mammothAvailable, xlsxAvailable } = checkDocumentLibraries();
     
     console.log(`Processing file: ${file.name}, type: ${fileType}, libraries available:`, { mammothAvailable, xlsxAvailable });
     
+    // Special handling for specific mapping schedule files
+    const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');
+    const isListedIssuerGuidance = file.name.toLowerCase().includes('guidance materials for listed issuers');
+    
+    const metadata = {
+      isListingGuidance,
+      isListedIssuerGuidance,
+      isRegulatoryMapping: isListingGuidance || isListedIssuerGuidance
+    };
+    
     try {
+      let result;
       switch (fileType) {
         case 'pdf':
-          return await documentProcessor.extractPdfText(file);
+          result = await documentProcessor.extractPdfText(file);
+          break;
         case 'word':
-          return await documentProcessor.extractWordText(file, mammothAvailable);
+          result = await documentProcessor.extractWordText(file, mammothAvailable);
+          break;
         case 'excel':
-          return await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
+          result = await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
+          
+          // Add specific metadata for regulatory Excel files
+          if (metadata.isRegulatoryMapping) {
+            console.log(`Detected regulatory mapping file: ${file.name}`);
+            result.metadata = {
+              ...metadata,
+              purpose: isListingGuidance ? 'new_listing_guidance' : 'listed_issuer_guidance'
+            };
+          }
+          break;
         case 'image':
-          return await imageProcessor.extractText(file);
+          result = await imageProcessor.extractText(file);
+          break;
         default:
           return { content: `Unable to extract text from ${file.name}`, source: file.name };
       }
+      
+      // Ensure result has metadata
+      if (metadata.isRegulatoryMapping) {
+        result.metadata = result.metadata || {};
+        result.metadata = { ...result.metadata, ...metadata };
+      }
+      
+      return result;
     } catch (error) {
       console.error(`Error processing ${file.name}:`, error);
       return { 

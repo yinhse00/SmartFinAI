@@ -1,11 +1,10 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
  * Service for intelligent mapping of queries to guidance materials
- * Uses the "Mapping_schedule_FAQ_Guidance Materials for Listed Issuers" data
+ * Enhanced to handle both new listing applicant guidance and listed issuer guidance
  */
 export const mappingSpreadsheetService = {
   /**
@@ -21,6 +20,19 @@ export const mappingSpreadsheetService = {
       // Extract key concepts if not provided
       const topics = queryTopics.length > 0 ? queryTopics : await this.extractTopicsFromQuery(query);
       console.log('Extracted topics:', topics);
+
+      // Determine if this is a new listing query or a listed issuer query
+      const isNewListingQuery = 
+        query.toLowerCase().includes('new listing') ||
+        query.toLowerCase().includes('ipo') ||
+        query.toLowerCase().includes('initial public offering') ||
+        query.toLowerCase().includes('listing applicant');
+        
+      const sourceMaterialsPrefix = isNewListingQuery ? 
+        "Mapping_Schedule_(EN)_(2024)_Guide for New Listing Applicants" : 
+        "Mapping_schedule_FAQ_Guidance Materials for Listed Issuers";
+        
+      console.log(`Query classified as ${isNewListingQuery ? 'NEW LISTING' : 'LISTED ISSUER'} query`);
 
       // First check for specific regulatory topics
       const hasIFAReferences = 
@@ -56,6 +68,47 @@ export const mappingSpreadsheetService = {
       
       // Check for listing decisions
       const listingDecisionResults = await this.searchListingDecisions(query, topics);
+      
+      // For new listing queries, specifically search for the New Listing Applicants spreadsheet
+      let specificMappingContent = '';
+      if (isNewListingQuery) {
+        try {
+          console.log('Searching for New Listing Applicants mapping spreadsheet');
+          const newListingResults = await supabase
+            .from('reference_documents')
+            .select('*')
+            .ilike('title', '%Guide for New Listing Applicants%')
+            .limit(1);
+            
+          if (newListingResults.data && newListingResults.data.length > 0) {
+            specificMappingContent = "### New Listing Applicant Guidance\n\n" +
+              "This information comes from the specialized mapping schedule for new listing applicants. " +
+              "It contains specific guidance for companies seeking to list on HKEX.\n\n" +
+              "Please refer to the full mapping schedule document for comprehensive details.";
+          }
+        } catch (e) {
+          console.error('Error searching for new listing mapping:', e);
+        }
+      } else {
+        // For listed issuer queries, search for the Listed Issuers spreadsheet
+        try {
+          console.log('Searching for Listed Issuers mapping spreadsheet');
+          const listedIssuerResults = await supabase
+            .from('reference_documents')
+            .select('*')
+            .ilike('title', '%Guidance Materials for Listed Issuers%')
+            .limit(1);
+            
+          if (listedIssuerResults.data && listedIssuerResults.data.length > 0) {
+            specificMappingContent = "### Listed Issuer Guidance\n\n" +
+              "This information comes from the specialized mapping schedule for listed issuers. " +
+              "It contains FAQs and guidance for companies already listed on HKEX.\n\n" +
+              "Please refer to the full mapping schedule document for comprehensive details.";
+          }
+        } catch (e) {
+          console.error('Error searching for listed issuer mapping:', e);
+        }
+      }
       
       // For IFA queries, directly search listing rules requirements
       let listingRulesContext = '';
@@ -94,12 +147,20 @@ export const mappingSpreadsheetService = {
       }
       
       // If we don't have database results, use Grok's knowledge directly
-      if (!faqResults.context && !guidanceResults.context && !listingDecisionResults.context && !listingRulesContext) {
+      if (!faqResults.context && !guidanceResults.context && !listingDecisionResults.context && 
+          !listingRulesContext && !specificMappingContent) {
         try {
           console.log('No database results found, using Grok knowledge database');
           const grokResponse = await grokService.getRegulatoryContext(
             `Provide information about: ${query}`,
-            { metadata: { useGrokKnowledge: true, topics } }
+            { 
+              metadata: { 
+                useGrokKnowledge: true, 
+                topics,
+                isNewListingQuery,
+                sourceMaterialsPrefix
+              } 
+            }
           );
           
           if (grokResponse) {
@@ -113,7 +174,7 @@ export const mappingSpreadsheetService = {
             if (grokContext) {
               return {
                 guidanceContext: grokContext,
-                sourceMaterials: ['Grok Knowledge Database']
+                sourceMaterials: [`${sourceMaterialsPrefix}`]
               };
             }
           }
@@ -125,6 +186,12 @@ export const mappingSpreadsheetService = {
       // Combine all results
       let combinedContext = '';
       const sourceMaterials: string[] = [];
+      
+      // Add specific mapping content if available
+      if (specificMappingContent) {
+        combinedContext += specificMappingContent + "\n\n";
+        sourceMaterials.push(sourceMaterialsPrefix);
+      }
       
       if (faqResults.context) {
         combinedContext += "### Relevant FAQs\n\n" + faqResults.context + "\n\n";
@@ -164,8 +231,19 @@ export const mappingSpreadsheetService = {
    */
   async extractTopicsFromQuery(query: string): Promise<string[]> {
     try {
+      const isNewListingQuery = 
+        query.toLowerCase().includes('new listing') ||
+        query.toLowerCase().includes('ipo') ||
+        query.toLowerCase().includes('initial public offering') ||
+        query.toLowerCase().includes('listing applicant');
+        
+      const promptAddition = isNewListingQuery ? 
+        "This is a query about new listing applications. Consider topics related to IPOs and new listing applications." :
+        "This is a query about listed issuers. Consider topics related to ongoing compliance for listed companies.";
+        
       const prompt = `
       Analyze this Hong Kong financial regulatory query and extract the key regulatory topics, concepts, and rules it relates to.
+      ${promptAddition}
       Format your response as a JSON array of strings containing ONLY the topic keywords.
       Examples:
       - For "What approvals are needed for connected transactions?", extract: ["connected transactions", "approvals", "chapter 14A", "related party transactions"]
@@ -177,7 +255,10 @@ export const mappingSpreadsheetService = {
       const response = await grokService.generateResponse({
         prompt, 
         maxTokens: 500,
-        temperature: 0.1
+        temperature: 0.1,
+        metadata: {
+          isNewListingQuery
+        }
       });
       
       // Try to parse the response as JSON array

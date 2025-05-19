@@ -18,6 +18,7 @@ export const parallelQueryProcessor = {
       const systemMessage = `You are a financial query classification system. 
 Your task is to analyze financial regulatory queries and classify them into relevant categories.
 Determine if this query is regulatory-related, and if so, which specific areas it concerns.
+For listing-related queries, determine whether they relate to new listing applications or listed issuers.
 Provide confidence scores (0-1) for each potential category.
 DO NOT answer the query - ONLY classify it.`;
       
@@ -34,12 +35,15 @@ Output ONLY a JSON object with these fields:
     {"category": "takeovers_code", "confidence": 0.X, "priority": 1-5},
     {"category": "faq", "confidence": 0.X, "priority": 1-5},
     {"category": "process", "confidence": 0.X, "priority": 1-5},
-    {"category": "conversational", "confidence": 0.X, "priority": 1-5}
+    {"category": "conversational", "confidence": 0.X, "priority": 1-5},
+    {"category": "new_listing", "confidence": 0.X, "priority": 1-5},
+    {"category": "listed_issuer", "confidence": 0.X, "priority": 1-5}
   ],
   "reasoning": "Your reasoning for these classifications",
   "suggestedContextSources": ["listing_rules_chapter_X", "takeovers_code_section_Y"],
   "estimatedComplexity": "simple|moderate|complex",
-  "requiresParallelProcessing": boolean
+  "requiresParallelProcessing": boolean,
+  "isNewListingQuery": boolean
 }` 
           }
         ],
@@ -61,6 +65,25 @@ Output ONLY a JSON object with these fields:
         const jsonMatch = content.match(/\{[\s\S]*\}/);
         const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
         assessment = JSON.parse(jsonStr) as InitialAssessment;
+        
+        // Add isNewListingQuery field if not present
+        if (assessment.isNewListingQuery === undefined) {
+          const isNewListingQuery = query.toLowerCase().includes('new listing') ||
+            query.toLowerCase().includes('ipo') ||
+            query.toLowerCase().includes('initial public offering') ||
+            query.toLowerCase().includes('listing applicant');
+            
+          const newListingCategory = assessment.categories.find(c => c.category === 'new_listing');
+          const listedIssuerCategory = assessment.categories.find(c => c.category === 'listed_issuer');
+          
+          if (newListingCategory && listedIssuerCategory) {
+            // Compare confidences if both categories exist
+            assessment.isNewListingQuery = (newListingCategory.confidence > listedIssuerCategory.confidence);
+          } else {
+            assessment.isNewListingQuery = isNewListingQuery;
+          }
+        }
+        
       } catch (jsonError) {
         console.error('Error parsing classification JSON:', jsonError);
         // Fallback to basic assessment
@@ -73,7 +96,9 @@ Output ONLY a JSON object with these fields:
           ],
           reasoning: 'Failed to parse classification response',
           estimatedComplexity: 'moderate',
-          requiresParallelProcessing: false
+          requiresParallelProcessing: false,
+          isNewListingQuery: query.toLowerCase().includes('new listing') ||
+                            query.toLowerCase().includes('ipo')
         };
       }
       
@@ -89,7 +114,8 @@ Output ONLY a JSON object with these fields:
         ],
         reasoning: 'Error in classification process',
         estimatedComplexity: 'moderate',
-        requiresParallelProcessing: false
+        requiresParallelProcessing: false,
+        isNewListingQuery: false
       };
     }
   },
@@ -132,9 +158,19 @@ Output ONLY a JSON object with these fields:
             category: category.category,
             confidence: category.confidence,
             processingStage: 'parallel',
-            suggestedSources: assessment.suggestedContextSources
+            suggestedSources: assessment.suggestedContextSources,
+            isNewListingQuery: assessment.isNewListingQuery
           }
         };
+        
+        // Special handling for new listing versus listed issuer queries
+        if (category.category === 'new_listing') {
+          options.metadata.searchPattern = 'Guide for New Listing Applicants';
+          options.metadata.documentType = 'new_listing_guidance';
+        } else if (category.category === 'listed_issuer') {
+          options.metadata.searchPattern = 'Guidance Materials for Listed Issuers';
+          options.metadata.documentType = 'listed_issuer_guidance';
+        }
         
         // For FAQ queries, explicitly look for FAQ content
         if (category.category === 'faq') {
@@ -203,8 +239,15 @@ Output ONLY a JSON object with these fields:
       const categoryContext = contexts[category.category];
       if (!categoryContext) continue;
       
-      // Add category header for clarity
-      const categorySection = `\n\n### ${category.category.toUpperCase()} CONTEXT (Confidence: ${Math.round(category.confidence * 100)}%)\n${categoryContext}`;
+      // Add special note for new_listing or listed_issuer categories
+      let categoryHeader = `\n\n### ${category.category.toUpperCase()} CONTEXT (Confidence: ${Math.round(category.confidence * 100)}%)`;
+      if (category.category === 'new_listing') {
+        categoryHeader += '\n(Based on Guide for New Listing Applicants)';
+      } else if (category.category === 'listed_issuer') {
+        categoryHeader += '\n(Based on Guidance Materials for Listed Issuers)';
+      }
+      
+      const categorySection = `${categoryHeader}\n${categoryContext}`;
       
       // Check if adding this would exceed our max length
       if (totalLength + categorySection.length <= MAX_CONTEXT_LENGTH) {
@@ -237,6 +280,33 @@ Output ONLY a JSON object with these fields:
       // Step 1: Classify the query to determine processing strategy
       const assessment = await parallelQueryProcessor.classifyQuery(query);
       
+      // Detect whether query relates to new listing or listed issuer
+      const isNewListingQuery = assessment.isNewListingQuery || 
+        query.toLowerCase().includes('new listing') ||
+        query.toLowerCase().includes('ipo') ||
+        query.toLowerCase().includes('initial public offering');
+        
+      // Add specific categories if high confidence but not already present
+      if (isNewListingQuery) {
+        const hasNewListingCategory = assessment.categories.some(c => c.category === 'new_listing');
+        if (!hasNewListingCategory) {
+          assessment.categories.push({
+            category: 'new_listing',
+            confidence: 0.8,
+            priority: 2
+          });
+        }
+      } else {
+        const hasListedIssuerCategory = assessment.categories.some(c => c.category === 'listed_issuer');
+        if (!hasListedIssuerCategory && !isNewListingQuery) {
+          assessment.categories.push({
+            category: 'listed_issuer',
+            confidence: 0.7,
+            priority: 2
+          });
+        }
+      }
+      
       // Step 2: Gather contexts in parallel based on the classification
       const contexts = await parallelQueryProcessor.gatherContextsInParallel(query, assessment);
       
@@ -256,7 +326,8 @@ Output ONLY a JSON object with these fields:
           categories: [{ category: 'general', confidence: 1, priority: 1 }],
           reasoning: 'Error occurred during parallel processing',
           estimatedComplexity: 'moderate',
-          requiresParallelProcessing: false
+          requiresParallelProcessing: false,
+          isNewListingQuery: false
         },
         optimizedContext: '',
         contexts: {}
