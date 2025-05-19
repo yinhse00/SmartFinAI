@@ -54,12 +54,22 @@ export const step5Response = async (
     if (!result.response || result.response.trim() === '') {
       console.error('useStep5Response: Empty response in result', result);
       if (result.completed === true) {
-        return {
+        // Type guard ensures this is the success type
+        const successResult: Step5SuccessResult = {
           completed: true,
           response: "I wasn't able to generate a complete response. Please try again.",
-          metadata: result.metadata,
-          requiresTranslation: result.requiresTranslation
         };
+        
+        // Only add these properties if they exist in the result
+        if ('metadata' in result && result.metadata) {
+          successResult.metadata = result.metadata;
+        }
+        
+        if ('requiresTranslation' in result && result.requiresTranslation !== undefined) {
+          successResult.requiresTranslation = result.requiresTranslation;
+        }
+        
+        return successResult;
       } else {
         return {
           completed: false,
@@ -71,16 +81,27 @@ export const step5Response = async (
     
     // Return the result with proper typing - explicitly cast based on completed property
     if (result.completed === true) {
-      return {
+      // For success case
+      const successResult: Step5SuccessResult = {
         completed: true,
-        response: result.response,
-        metadata: result.metadata,
-        requiresTranslation: result.requiresTranslation
+        response: result.response
       };
+      
+      // Only add these properties if they exist in the result
+      if ('metadata' in result && result.metadata) {
+        successResult.metadata = result.metadata;
+      }
+      
+      if ('requiresTranslation' in result && result.requiresTranslation !== undefined) {
+        successResult.requiresTranslation = result.requiresTranslation;
+      }
+      
+      return successResult;
     } else {
+      // For error case
       return {
         completed: false,
-        error: result.error || new Error("Unknown error"),
+        error: ('error' in result && result.error) ? result.error : new Error("Unknown error"),
         response: result.response
       };
     }
