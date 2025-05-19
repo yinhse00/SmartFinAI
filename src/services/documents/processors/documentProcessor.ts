@@ -3,6 +3,7 @@ import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
 import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
+import { ChatCompletionMessage, ChatCompletionRequest } from '../../api/grok/types';
 
 /**
  * Processor for extracting text from document files using client-side extraction first
@@ -188,15 +189,15 @@ export const documentProcessor = {
         throw new Error('Grok API key not found');
       }
       
-      const requestBody = {
+      const requestBody: ChatCompletionRequest = {
         model: "grok-3-beta",
         messages: [
           {
-            role: "system", 
+            role: "system" as const, 
             content: `You are a document formatting assistant. The user will provide extracted text from a ${documentType} file that may have formatting issues. Your task is to clean up and format this text to make it more readable while preserving the original content and structure.`
           },
           {
-            role: "user", 
+            role: "user" as const, 
             content: `This is raw text extracted from a ${documentType} file. Please clean up any formatting issues and organize it in a clear, readable way:\n\n${textContent}`
           }
         ],
@@ -264,11 +265,11 @@ export const documentProcessor = {
         throw new Error('Grok API key not found');
       }
       
-      const requestBody = {
+      const requestBody: ChatCompletionRequest = {
         model: "grok-3-beta",
         messages: [
           {
-            role: "user", 
+            role: "user" as const, 
             content: [
               { 
                 type: "text", 
@@ -280,7 +281,7 @@ export const documentProcessor = {
                   url: base64Data 
                 } 
               }
-            ]
+            ] as any // Using type assertion for complex content structure
           }
         ],
         temperature: 0.1,

@@ -1,9 +1,16 @@
-
 import { GrokRequestParams, GrokResponse } from '@/types/grok';
+
+export type ChatCompletionMessageContent = 
+  | string 
+  | Array<{
+      type: string;
+      text?: string;
+      image_url?: { url: string };
+    }>;
 
 export type ChatCompletionMessage = {
   role: 'system' | 'user' | 'assistant';
-  content: string;
+  content: ChatCompletionMessageContent;
 };
 
 export type ChatCompletionRequest = {

@@ -3,6 +3,7 @@ import { grokApiService } from '../../api/grokApiService';
 import { generateFallbackResponse } from '../../fallbackResponseService';
 import { responseEnhancer } from '../modules/responseEnhancer';
 import { tokenManagementService } from '../modules/tokenManagementService';
+import { ChatCompletionRequest } from '../../api/grok/types';
 
 /**
  * Core response generation functionality with quality-focused optimizations
@@ -57,7 +58,7 @@ export const responseGeneratorCore = {
       const systemPrompt = 'You are a financial regulatory expert specializing in Hong Kong regulations. Provide accurate, thorough information.';
       
       // Quality-focused backup request
-      const backupRequestBody = {
+      const backupRequestBody: ChatCompletionRequest = {
         messages: [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }

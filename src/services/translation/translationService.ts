@@ -1,4 +1,3 @@
-
 /**
  * Service for handling translations
  */
@@ -6,6 +5,7 @@ import { grokApiService } from '../api/grokApiService';
 import { getGrokApiKey } from '../apiKeyService';
 import { generateFallbackResponse } from '../fallbackResponseService';
 import { useToast } from '@/hooks/use-toast';
+import { ChatCompletionRequest } from '../api/grok/types';
 
 interface TranslationParams {
   content: string;
@@ -54,7 +54,7 @@ export const translationService = {
         
         // Improved translation prompt specifically for translating from English to Chinese
         // ensuring we maintain all details and information from the original response
-        const requestBody = {
+        const requestBody: ChatCompletionRequest = {
           messages: [
             { 
               role: 'system', 
@@ -161,7 +161,7 @@ export const translationService = {
           if (isEnToCh && apiCallSuccess && lengthRatio < 0.4) {
             console.log('Attempting a second translation with modified prompt due to suspicious length ratio');
             
-            const retryRequestBody = {
+            const retryRequestBody: ChatCompletionRequest = {
               ...requestBody,
               messages: [
                 { 

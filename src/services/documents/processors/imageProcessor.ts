@@ -2,6 +2,7 @@
 import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
+import { ChatCompletionRequest } from '../../api/grok/types';
 
 /**
  * Processor for extracting text from images using Grok Vision
@@ -26,11 +27,11 @@ export const imageProcessor = {
         throw new Error('Grok API key not found');
       }
       
-      const requestBody = {
+      const requestBody: ChatCompletionRequest = {
         model: "grok-3-beta",
         messages: [
           {
-            role: "user", 
+            role: "user" as const, 
             content: [
               { 
                 type: "text", 
@@ -42,7 +43,7 @@ export const imageProcessor = {
                   url: base64Data 
                 } 
               }
-            ]
+            ] as any // Type assertion for complex content structure
           }
         ],
         temperature: 0.1,

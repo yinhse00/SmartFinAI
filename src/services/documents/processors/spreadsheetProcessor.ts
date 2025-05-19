@@ -1,8 +1,8 @@
-
 import { fileConverter } from '../utils/fileConverter';
 import { getGrokApiKey } from '../../../services/apiKeyService';
 import { apiClient } from '../../api/grok/apiClient';
 import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
+import { ChatCompletionRequest } from '../../api/grok/types';
 
 /**
  * Processor for extracting text from spreadsheet files with improved client-side processing
@@ -165,15 +165,15 @@ export const spreadsheetProcessor = {
         throw new Error('Grok API key not found');
       }
       
-      const requestBody = {
+      const requestBody: ChatCompletionRequest = {
         model: "grok-3-beta",
         messages: [
           {
-            role: "system", 
+            role: "system" as const, 
             content: systemPrompt
           },
           {
-            role: "user", 
+            role: "user" as const, 
             content: `This is raw text data extracted from an Excel file ${isListingGuidance ? 'containing mapping schedule guidance for new listing applicants' : isListedIssuerGuidance ? 'containing mapping schedule FAQs and guidance for listed issuers' : ''}. Please format it into a readable table structure, highlighting key regulatory information:\n\n${basicExtraction}`
           }
         ],
