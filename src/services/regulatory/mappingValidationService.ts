@@ -118,27 +118,34 @@ export const mappingValidationService = {
         return null;
       }
       
-      // Get the first document
-      const doc = data[0];
+      // Get the first document and validate it has the expected properties
+      const rawDoc = data[0];
       
-      // If content is available directly, use it
-      if (hasContentColumn && 'content' in doc && typeof doc.content === 'string') {
-        return {
-          id: doc.id,
-          title: doc.title,
-          content: doc.content,
-          updated_at: doc.updated_at
-        };
+      // Type guard to check we have a valid document
+      if (!rawDoc || typeof rawDoc !== 'object' || !('id' in rawDoc) || !('title' in rawDoc) || !('updated_at' in rawDoc)) {
+        console.error('Document does not have required base fields');
+        return null;
       }
+      
+      // Now we can safely check for content or file_url
+      if (hasContentColumn && 'content' in rawDoc && typeof rawDoc.content === 'string') {
+        // Document with content field
+        return {
+          id: String(rawDoc.id),
+          title: String(rawDoc.title),
+          content: rawDoc.content,
+          updated_at: String(rawDoc.updated_at)
+        };
+      } 
       // If we need to fetch content from file_url
-      else if ('file_url' in doc && typeof doc.file_url === 'string') {
-        // For now, return a placeholder for content until we implement file fetching
+      else if ('file_url' in rawDoc && typeof rawDoc.file_url === 'string') {
+        // For now, return a placeholder for content
         console.log('Found document with file_url but no content column. Using placeholder content.');
         return {
-          id: doc.id,
-          title: doc.title,
+          id: String(rawDoc.id),
+          title: String(rawDoc.title),
           content: 'Placeholder content - file content fetching not implemented',
-          updated_at: doc.updated_at
+          updated_at: String(rawDoc.updated_at)
         };
       } else {
         console.error('Document does not have required content or file_url field');
