@@ -10,10 +10,18 @@ const API_ENDPOINTS = [
   'https://api.x.ai/v1/models',  // Direct API (likely blocked by CORS)
 ];
 
-// Track connection status
+// Enhanced connection status tracking
 let lastSuccessfulEndpoint = '';
 let lastConnectionTime = 0;
-const CONNECTION_CACHE_TIME = 60000; // 1 minute
+let lastConnectionAttempt = 0;
+let connectionSuccessCount = 0;
+let connectionFailCount = 0;
+const CONNECTION_CACHE_TIME = 60000; // 1 minute for standard cache
+const CONNECTION_FAST_RETRY_TIME = 10000; // 10 seconds for quick retry after failure
+const MAX_CACHE_TIME = 300000; // 5 minutes max cache time
+
+// Background health check interval
+let healthCheckInterval: number | null = null;
 
 /**
  * Test the API connection with improved resilience
@@ -35,14 +43,23 @@ export const connectionTester = {
 
     // Check if we have a recent successful connection
     const now = Date.now();
-    if (lastSuccessfulEndpoint && (now - lastConnectionTime < CONNECTION_CACHE_TIME)) {
-      console.log(`Using cached connection status (success) from ${lastSuccessfulEndpoint}`);
+    
+    // Use shorter cache time after failures for more responsive retry
+    const effectiveCacheTime = connectionFailCount > 0 ? 
+      CONNECTION_FAST_RETRY_TIME : 
+      Math.min(CONNECTION_CACHE_TIME * (1 + connectionSuccessCount * 0.5), MAX_CACHE_TIME);
+    
+    if (lastSuccessfulEndpoint && (now - lastConnectionTime < effectiveCacheTime)) {
+      console.log(`Using cached connection status (success) from ${lastSuccessfulEndpoint}, age: ${Math.round((now - lastConnectionTime) / 1000)}s`);
       return {
         success: true,
         message: `Connection verified (cached result from ${Math.round((now - lastConnectionTime) / 1000)}s ago)`
       };
     }
 
+    // Update last attempt time
+    lastConnectionAttempt = now;
+    
     // Detect if we're in a browser environment for CORS handling
     const isBrowser = typeof window !== 'undefined';
     if (isBrowser) {
@@ -60,7 +77,8 @@ export const connectionTester = {
             'Authorization': `Bearer ${apiKey}`,
             'Accept': 'application/json',
             'Cache-Control': 'no-cache, no-store',
-            'X-Request-Source': 'browser-client'
+            'X-Request-Source': 'browser-client',
+            'X-Cache-Bust': Date.now().toString()
           }
         });
 
@@ -71,14 +89,20 @@ export const connectionTester = {
           if (data && data.data && Array.isArray(data.data) && data.data.length > 0) {
             console.log(`${endpoint === '/api/grok/models' ? 'Local proxy' : 'Direct API'} connection successful, found ${data.data.length} models`);
             
-            // Update cache
+            // Update cache and stats
             lastSuccessfulEndpoint = endpoint;
             lastConnectionTime = now;
+            connectionSuccessCount++;
+            connectionFailCount = 0;
             
             // Validate the API key
-            const keyValid = data.data.some(model => model.id && model.id.startsWith('grok'));
+            const keyValid = data.data.some((model: any) => model.id && (model.id.startsWith('grok') || model.id.includes('grok')));
             if (keyValid) {
               console.log('API key validation: Valid key found');
+              
+              // Set up background health check if not already running
+              connectionTester.startBackgroundHealthCheck();
+              
               return {
                 success: true,
                 message: `Connection successful. Found ${data.data.length} available models.`
@@ -92,6 +116,8 @@ export const connectionTester = {
             }
           } else {
             console.warn('API response received but format unexpected');
+            // This is a partial success - we got a response but not the expected format
+            connectionFailCount++;
             return {
               success: false,
               message: 'API connection established but response format was unexpected.'
@@ -108,6 +134,7 @@ export const connectionTester = {
     }
 
     // All endpoints failed
+    connectionFailCount++;
     console.error('All API endpoints failed');
     return {
       success: false,
@@ -120,111 +147,86 @@ export const connectionTester = {
     console.log('Forcefully resetting connection cache and endpoint status');
     lastSuccessfulEndpoint = '';
     lastConnectionTime = 0;
+    lastConnectionAttempt = 0;
+    
+    // Reset stats but don't zero them completely to maintain some history
+    connectionSuccessCount = Math.max(0, connectionSuccessCount - 3);
+    connectionFailCount = Math.max(0, connectionFailCount - 2);
     
     // Clear any browser caches that might be affecting API requests
-    if (typeof caches !== 'undefined') {
-      try {
-        caches.keys().then(names => {
-          names.forEach(name => {
-            console.log(`Attempting to delete cache: ${name}`);
-            caches.delete(name);
-          });
+    if (typeof window !== 'undefined') {
+      console.log('Clearing browser cache data for API endpoints');
+      // Use more aggressive cache-clearing if available in the browser
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'CLEAR_CACHE',
+          patterns: ['/api/grok', 'api.x.ai']
         });
-      } catch (e) {
-        console.warn('Unable to clear browser caches:', e);
       }
     }
   },
   
-  // Check if API is available without full testing
+  // Start a background health check
+  startBackgroundHealthCheck: () => {
+    if (healthCheckInterval) {
+      return; // Already running
+    }
+    
+    // Check every 2 minutes
+    healthCheckInterval = window.setInterval(() => {
+      const apiKey = getGrokApiKey();
+      if (!apiKey) {
+        return;
+      }
+      
+      // Only do a health check if we haven't had a recent success
+      const now = Date.now();
+      if (now - lastConnectionTime > CONNECTION_CACHE_TIME && now - lastConnectionAttempt > CONNECTION_FAST_RETRY_TIME) {
+        console.log('Running background health check for API connection');
+        connectionTester.checkApiAvailability(apiKey).catch(() => {
+          // Silent failure for background checks
+        });
+      }
+    }, 120000); // 2 minutes
+  },
+  
+  // Stop background health check
+  stopBackgroundHealthCheck: () => {
+    if (healthCheckInterval) {
+      clearInterval(healthCheckInterval);
+      healthCheckInterval = null;
+    }
+  },
+  
+  // Enhanced API availability check with improved caching
   checkApiAvailability: async (apiKey: string): Promise<boolean> => {
     console.log('Checking Grok API availability...');
     
-    // Use cached result if available
+    // Use cached result if recent
     const now = Date.now();
-    if (lastSuccessfulEndpoint && (now - lastConnectionTime < CONNECTION_CACHE_TIME)) {
+    
+    // Adaptive cache time based on recent success/failure ratio
+    let cacheDuration = CONNECTION_CACHE_TIME;
+    if (connectionFailCount > 0) {
+      // Shorter cache time after failures to allow quicker recovery
+      cacheDuration = CONNECTION_FAST_RETRY_TIME;
+    } else if (connectionSuccessCount > 3) {
+      // Longer cache time after multiple successes
+      cacheDuration = Math.min(CONNECTION_CACHE_TIME * (1 + connectionSuccessCount * 0.2), MAX_CACHE_TIME);
+    }
+    
+    if (lastSuccessfulEndpoint && (now - lastConnectionTime < cacheDuration)) {
       console.log(`Using cached API availability status (available) from ${lastSuccessfulEndpoint}`);
       return true;
     }
     
-    // Try the preferred endpoint first (local proxy)
+    // Try actual connection test
     try {
-      console.log(`Testing local proxy endpoint: /api/grok`);
-      const response = await fetch('/api/grok/models', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          // Add cache busting header to force a fresh request
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'X-Force-Fresh': Date.now().toString()
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.data && Array.isArray(data.data)) {
-          console.log(`Local proxy connection successful, found ${data.data.length} models`);
-          lastSuccessfulEndpoint = '/api/grok/models';
-          lastConnectionTime = now;
-          return true;
-        }
-      }
+      const result = await connectionTester.testApiConnection(apiKey);
+      return result.success;
     } catch (error) {
-      console.warn('Local proxy endpoint check failed:', error);
-    }
-    
-    return false;
-  },
-  
-  // Add the missing testApiKeyValidity function
-  testApiKeyValidity: async (apiKey: string): Promise<{ 
-    isValid: boolean; 
-    message: string;
-    quotaRemaining?: number;
-  }> => {
-    console.log('Testing API key validity...');
-    
-    if (!apiKey || apiKey.trim() === '') {
-      return {
-        isValid: false,
-        message: 'API key cannot be empty'
-      };
-    }
-    
-    // Basic format validation for Grok API keys
-    if (!apiKey.startsWith('xai-') || apiKey.length < 20) {
-      return {
-        isValid: false,
-        message: 'Invalid API key format. Grok API keys typically start with "xai-"'
-      };
-    }
-    
-    // Test actual connection using the key
-    try {
-      const connectionResult = await connectionTester.testApiConnection(apiKey);
-      
-      if (connectionResult.success) {
-        // Here we could add quota lookup if the API supports it
-        return {
-          isValid: true,
-          message: 'API key is valid and connection is successful',
-          quotaRemaining: undefined  // Can be implemented if API provides quota info
-        };
-      } else {
-        return {
-          isValid: false,
-          message: `API key validation failed: ${connectionResult.message}`
-        };
-      }
-    } catch (error) {
-      console.error('Error validating API key:', error);
-      return {
-        isValid: false,
-        message: error instanceof Error ? 
-          `Error validating API key: ${error.message}` : 
-          'Unknown error occurred during API key validation'
-      };
+      console.error('Error checking API availability:', error);
+      return false;
     }
   }
 };
