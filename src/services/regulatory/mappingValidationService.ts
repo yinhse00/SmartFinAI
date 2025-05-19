@@ -118,54 +118,40 @@ export const mappingValidationService = {
         return null;
       }
       
-      // Get the first document
-      const rawDoc = data[0];
+      // Using destructuring and default values to safely handle the document
+      // This completely avoids any "possibly null" TypeScript errors
+      const doc = data[0];
       
-      // Early null check - if rawDoc doesn't exist, return null
-      if (!rawDoc) {
-        console.error('Document is null or undefined');
+      if (!doc) {
         return null;
       }
       
-      // Type guard to check if we have a valid document object
-      if (typeof rawDoc !== 'object') {
-        console.error('Document is not an object');
-        return null;
-      }
-      
-      // Check if the required base properties exist
-      if (!('id' in rawDoc) || !('title' in rawDoc) || !('updated_at' in rawDoc)) {
-        console.error('Document does not have required base fields');
-        return null;
-      }
-      
-      // Now we have confirmed that the base fields exist
-      const id = String(rawDoc.id);
-      const title = String(rawDoc.title);
-      const updated_at = String(rawDoc.updated_at);
-      
-      // Create the document with base properties
-      let document = {
-        id,
-        title,
-        updated_at,
-        content: '' // Default empty content
+      // Safely extract and transform document properties with type assertion
+      const documentData = {
+        id: typeof doc.id !== 'undefined' ? String(doc.id) : '',
+        title: typeof doc.title !== 'undefined' ? String(doc.title) : '',
+        updated_at: typeof doc.updated_at !== 'undefined' ? String(doc.updated_at) : '',
+        content: ''
       };
       
-      // Check for content or file_url field
-      if (hasContentColumn && 'content' in rawDoc && typeof rawDoc.content === 'string') {
-        // Set content if available
-        document.content = rawDoc.content;
-      } else if ('file_url' in rawDoc && typeof rawDoc.file_url === 'string') {
-        // Use placeholder content if only file_url is available
-        console.log('Found document with file_url but no content column. Using placeholder content.');
-        document.content = 'Placeholder content - file content fetching not implemented';
+      // Validate required fields
+      if (!documentData.id || !documentData.title || !documentData.updated_at) {
+        console.error('Document missing required fields');
+        return null;
+      }
+      
+      // Handle content based on what's available
+      if (hasContentColumn && doc.content && typeof doc.content === 'string') {
+        documentData.content = doc.content;
+      } else if (doc.file_url && typeof doc.file_url === 'string') {
+        console.log('Using placeholder content from file_url');
+        documentData.content = 'Placeholder content - file content fetching not implemented';
       } else {
         console.error('Document does not have required content or file_url field');
         return null;
       }
       
-      return document;
+      return documentData;
     } catch (error) {
       console.error('Error retrieving listing guidance document:', error);
       return null;
