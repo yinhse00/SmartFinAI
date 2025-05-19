@@ -56,7 +56,7 @@ export const useFileProcessing = () => {
   }, [isOfflineMode, lastApiCheck, toast]);
 
   /**
-   * Process files and extract text content with improved offline handling
+   * Process files and extract text content with improved handling for Word and Excel
    */
   const processFiles = async (files: File[]): Promise<{ content: string; source: string }[]> => {
     if (files.length === 0) return [];
@@ -73,8 +73,8 @@ export const useFileProcessing = () => {
         if (!isApiAvailable) {
           toast({
             title: "Operating in Offline Mode",
-            description: "The Grok API is currently unreachable. Files will be processed with limited functionality.",
-            variant: "destructive", // This is already correct
+            description: "The Grok API is currently unreachable. Document processing will use local extraction methods.",
+            variant: "destructive",
             duration: 6000,
           });
         }
@@ -85,8 +85,35 @@ export const useFileProcessing = () => {
         description: `Extracting content from ${files.length} file(s)${isOfflineMode ? ' in offline mode' : ''}...`,
       });
       
+      // Process files in parallel with improved handling
       const results = await Promise.all(
-        files.map(file => fileProcessingService.processFile(file))
+        files.map(file => {
+          // Check file type to provide specific messaging
+          const isDocxFile = file.name.toLowerCase().endsWith('.docx') || file.name.toLowerCase().endsWith('.doc');
+          const isExcelFile = file.name.toLowerCase().endsWith('.xlsx') || file.name.toLowerCase().endsWith('.xls');
+          const isPdfFile = file.name.toLowerCase().endsWith('.pdf');
+          
+          if (isPdfFile && isOfflineMode) {
+            toast({
+              title: "PDF processing limited",
+              description: "PDF processing requires online mode for best results.",
+              variant: "default",
+              duration: 3000,
+            });
+          }
+          
+          if ((isDocxFile || isExcelFile) && isOfflineMode) {
+            toast({
+              title: `Processing ${isDocxFile ? 'Word' : 'Excel'} document locally`,
+              description: "Using browser-based extraction in offline mode.",
+              variant: "default",
+              duration: 3000,
+            });
+          }
+          
+          // Process the file
+          return fileProcessingService.processFile(file);
+        })
       );
       
       // Format each result with the appropriate header
@@ -108,14 +135,14 @@ export const useFileProcessing = () => {
         
         toast({
           title: "Limited file processing",
-          description: "Files were processed with limited functionality due to API connectivity issues.",
+          description: "Files were processed with browser-based extraction due to API connectivity issues.",
           variant: "destructive",
           duration: 5000,
         });
       } else if (isOfflineMode) {
         toast({
           title: "Offline processing complete",
-          description: `Processed ${files.length} file(s) with limited functionality.`,
+          description: `Processed ${files.length} file(s) with browser-based extraction.`,
           variant: "default"
         });
       } else {
@@ -139,7 +166,7 @@ export const useFileProcessing = () => {
     }
   };
 
-  // Try to reconnect to the API with improved circuit breaker reset
+  // Try to reconnect to the API
   const tryReconnect = async (): Promise<boolean> => {
     setIsProcessing(true);
     
@@ -204,4 +231,3 @@ export const useFileProcessing = () => {
     tryReconnect
   };
 };
-

@@ -1,12 +1,10 @@
-
 import { apiClient } from '../../api/grok/apiClient';
 import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
 import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
-import { useToast } from '@/hooks/use-toast';
 
 /**
- * Processor for extracting text from document files using Grok Vision
+ * Processor for extracting text from document files using client-side extraction first
  */
 export const documentProcessor = {
   /**
@@ -41,34 +39,53 @@ export const documentProcessor = {
   },
 
   /**
-   * Extract text content from Word documents
+   * Extract text content from Word documents with improved client-side first approach
    */
   extractWordText: async (file: File): Promise<{ content: string; source: string }> => {
     try {
       console.log(`Processing Word document: ${file.name}`);
       
-      // Check if API is available
+      // Always try client-side extraction first
+      try {
+        console.log("Attempting client-side Word document extraction");
+        const text = await documentProcessor.extractTextClientSide(file);
+        
+        if (text && text.trim().length > 0) {
+          console.log("Client-side extraction successful");
+          return {
+            content: text,
+            source: file.name
+          };
+        } else {
+          console.log("Client-side extraction returned empty content, trying API fallback");
+        }
+      } catch (clientError) {
+        console.warn("Client-side extraction failed:", clientError);
+        // Continue to API fallback
+      }
+      
+      // API-based fallback - only if client-side failed
       const apiKey = getGrokApiKey();
       const isApiAvailable = apiKey ? await checkApiAvailability(apiKey) : false;
 
       if (isApiAvailable) {
-        // Use Grok Vision for Word documents
-        return await documentProcessor.extractDocumentWithGrok(file, 'Word');
+        // Use text-based API request for Word documents
+        return await documentProcessor.extractDocumentWithTextPrompt(file, 'Word');
       } else {
-        // Fallback - client-side basic extraction for Word
+        // Last resort fallback when API is unavailable
         console.warn("Grok API unavailable, using client-side fallback for Word document");
         
         try {
-          // Try to use browser-side extraction if available
+          // Try again with basic extraction
           const text = await documentProcessor.extractTextClientSide(file);
           return {
-            content: `[Limited Processing Mode: API Unreachable]\n\n${text}`,
+            content: `[Limited Processing Mode: API Unreachable]\n\n${text || "Document extraction limited in offline mode."}`,
             source: file.name
           };
         } catch (fallbackError) {
-          console.error("Client-side fallback failed:", fallbackError);
+          console.error("All extraction methods failed:", fallbackError);
           return {
-            content: `[Document Text Extraction Limited: The Word document '${file.name}' could not be processed because the Grok API is currently unreachable. Please try again later or provide the text in another format.]`,
+            content: `[Document Text Extraction Limited: The Word document '${file.name}' could not be processed. Please try again later or provide the text in another format.]`,
             source: file.name
           };
         }
@@ -83,7 +100,7 @@ export const documentProcessor = {
   },
 
   /**
-   * Client-side document text extraction (basic fallback when API is unavailable)
+   * Client-side document text extraction (primary method now, not just fallback)
    */
   extractTextClientSide: async (file: File): Promise<string> => {
     return new Promise((resolve, reject) => {
@@ -104,7 +121,7 @@ export const documentProcessor = {
           
           // For Word documents (.docx, .doc), extract what we can
           if (file.name.endsWith('.docx') || file.name.endsWith('.doc')) {
-            // Basic extraction that works in browser
+            // Enhanced extraction that works in browser
             const text = await fileConverter.getPlainTextFromDocx(e.target.result);
             if (text) {
               resolve(text);
@@ -133,9 +150,88 @@ export const documentProcessor = {
   },
 
   /**
-   * Use Grok Vision to extract text from documents as a fallback method
+   * Use Grok API to extract text from documents using text-based prompts instead of image inputs
    */
+  extractDocumentWithTextPrompt: async (file: File, documentType: string): Promise<{ content: string; source: string }> => {
+    try {
+      console.log(`Processing ${documentType} with text-based prompt: ${file.name}`);
+      
+      // Extract text content first using client-side methods
+      let textContent = "";
+      try {
+        textContent = await documentProcessor.extractTextClientSide(file);
+      } catch (extractionError) {
+        console.warn("Could not pre-extract text:", extractionError);
+        textContent = `[Unable to pre-extract content from ${file.name}]`;
+      }
+      
+      // Prepare request for Grok API using text prompt only (no image)
+      const apiKey = getGrokApiKey();
+      if (!apiKey) {
+        throw new Error('Grok API key not found');
+      }
+      
+      const requestBody = {
+        model: "grok-3-beta",
+        messages: [
+          {
+            role: "system", 
+            content: `You are a document formatting assistant. The user will provide extracted text from a ${documentType} file that may have formatting issues. Your task is to clean up and format this text to make it more readable while preserving the original content and structure.`
+          },
+          {
+            role: "user", 
+            content: `This is raw text extracted from a ${documentType} file. Please clean up any formatting issues and organize it in a clear, readable way:\n\n${textContent}`
+          }
+        ],
+        temperature: 0.1,
+        max_tokens: 4000,
+      };
+      
+      // Call Grok API with a timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      try {
+        // Call Grok API
+        const response = await apiClient.callChatCompletions(requestBody, apiKey);
+        clearTimeout(timeoutId);
+        
+        // Extract the text content from the response
+        const formattedText = response.choices[0]?.message?.content || textContent;
+        
+        console.log(`Successfully processed text from ${documentType} ${file.name}`);
+        
+        return {
+          content: formattedText,
+          source: file.name
+        };
+      } catch (apiError) {
+        clearTimeout(timeoutId);
+        console.warn("API processing failed, using pre-extracted text:", apiError);
+        
+        // Fall back to the pre-extracted text
+        return {
+          content: textContent,
+          source: file.name
+        };
+      }
+    } catch (error) {
+      console.error(`Error in ${documentType} processing for ${file.name}:`, error);
+      
+      return {
+        content: `Error processing ${documentType} ${file.name}: ${error instanceof Error ? error.message : String(error)}`,
+        source: file.name
+      };
+    }
+  },
+
+  // We're keeping the old method for backward compatibility
   extractDocumentWithGrok: async (file: File, documentType: string): Promise<{ content: string; source: string }> => {
+    // Only used for PDF files now, so we'll redirect to text-prompt method for Word documents
+    if (documentType === 'Word') {
+      return documentProcessor.extractDocumentWithTextPrompt(file, documentType);
+    }
+    
     try {
       console.log(`Processing ${documentType} with Grok Vision: ${file.name}`);
       
