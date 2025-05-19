@@ -26,6 +26,7 @@ export const useBatchHandling = () => {
   }, []);
   
   const startBatching = (prompt: string, autoBatchMode = true) => {
+    console.log('Starting batch process with prompt:', prompt.substring(0, 50) + '...');
     setBatchingPrompt(prompt);
     batchNumber.current = 1;
     setIsBatching(false);
@@ -40,6 +41,8 @@ export const useBatchHandling = () => {
     
     if (batchingPrompt) {
       batchNumber.current += 1;
+      console.log(`Continuing with batch #${batchNumber.current}`);
+      
       // Track this batch as not completed yet
       batchCompletionTracker.current[batchNumber.current] = false;
       
@@ -50,8 +53,10 @@ export const useBatchHandling = () => {
         isBatchContinuation: true, 
         batchNumber: batchNumber.current, 
         autoBatch, 
-        isSeamlessBatch: true  // New flag to indicate this should be rendered seamlessly
+        isSeamlessBatch: true  // Flag to indicate this should be rendered seamlessly
       });
+    } else {
+      console.error('No batching prompt available for continuation');
     }
   };
   
@@ -65,6 +70,8 @@ export const useBatchHandling = () => {
     if (batchCompletionTracker.current[batchNumber] !== undefined) {
       batchCompletionTracker.current[batchNumber] = true;
     }
+    
+    console.log(`Batch ${batchNumber} result - truncated: ${truncated}, autoBatch: ${autoBatchMode}`);
     
     // More aggressive truncation detection for batch triggering
     const needsContinuation = truncated || 
@@ -87,10 +94,13 @@ export const useBatchHandling = () => {
         clearTimeout(nextBatchTimeoutRef.current);
       }
       
-      // Fix: Actually use the callback to continue the batch after the timeout
+      // CRITICAL FIX: Ensure we actually call the continuation callback
       nextBatchTimeoutRef.current = setTimeout(() => {
         if (continueCallbackRef.current && batchingPrompt) {
+          console.log(`Auto-continuing batch after ${batchDelay}ms delay`);
           handleBatchContinuation(continueCallbackRef.current);
+        } else {
+          console.error('Missing callback or prompt for auto-batch continuation');
         }
       }, batchDelay);
       

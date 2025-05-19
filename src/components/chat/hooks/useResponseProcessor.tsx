@@ -26,7 +26,7 @@ export const useResponseProcessor = (
       batchNumber: number, 
       isContinuing: boolean, 
       onContinue?: () => void,
-      isSeamlessBatch?: boolean  // New flag for seamless batching
+      isSeamlessBatch?: boolean  // Flag for seamless batching
     }
   ): Message => {
     const isUsingFallback = isFallbackResponse(apiResponse.text);
@@ -39,8 +39,12 @@ export const useResponseProcessor = (
       isUsingFallback
     ) as Message;
 
+    console.log(`Processing API response: ${apiResponse.text.substring(0, 30)}... (batch ${batchInfo?.batchNumber || 1})`);
+
     // Handle batch continuations more intelligently
     if (batchInfo && batchInfo.batchNumber > 1) {
+      console.log(`Handling batch part #${batchInfo.batchNumber}, seamless: ${batchInfo.isSeamlessBatch}`);
+      
       if (batchInfo.isSeamlessBatch) {
         // For seamless batching, find the previous bot message and append this content
         const updatedMessages = [...processedMessages];
@@ -57,6 +61,8 @@ export const useResponseProcessor = (
           
           // Only append if it's a bot message and not an error message
           if (existingBotMessage && !existingBotMessage.isError) {
+            console.log('Appending seamless batch content to existing message');
+            
             // Combine the content without showing part numbers
             updatedMessages[lastBotMessageIndex] = {
               ...existingBotMessage,
@@ -95,7 +101,7 @@ export const useResponseProcessor = (
     }
 
     // Show continue button if batch continuation needed and not using seamless batching
-    if (botMessage.isTruncated && batchInfo && batchInfo.onContinue && !batchInfo.isSeamlessBatch) {
+    if (botMessage.isTruncated && batchInfo?.onContinue && !batchInfo.isSeamlessBatch) {
       const diagnosticsReasons = completenessCheck?.reasons || [];
       
       toast({

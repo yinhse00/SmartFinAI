@@ -10,13 +10,31 @@ interface ChatHistoryProps {
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const lastMessageContentRef = useRef<string>('');
+  const lastMessageCountRef = useRef<number>(0);
 
-  // Scroll to bottom on new messages or when messages are updated
+  // Scroll to bottom on new messages
   useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    const lastMessage = messages[messages.length - 1];
+    const messageCount = messages.length;
+    
+    // Check if we have a new message or if content changed
+    if (messageCount !== lastMessageCountRef.current || 
+        (lastMessage && lastMessage.content !== lastMessageContentRef.current)) {
+      
+      // Update refs
+      lastMessageCountRef.current = messageCount;
+      if (lastMessage) {
+        lastMessageContentRef.current = lastMessage.content || '';
+      }
+      
+      // Scroll to bottom
+      if (messagesEndRef.current) {
+        console.log('Scrolling to bottom due to message change');
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }
     }
-  }, [messages, isLoading]);
+  }, [messages]);
   
   // Additional scrolling effect for when message content changes
   // This helps keep the view at the bottom during typing animation
@@ -25,10 +43,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
       // Use a more targeted approach to only scroll when needed
       const container = messagesEndRef.current.parentElement;
       if (container) {
-        const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 150;
+        const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
         
         // Only auto-scroll if user is already near the bottom
         if (isAtBottom) {
+          console.log('Scrolling during typing progress');
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
         }
       }
@@ -36,19 +55,8 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   };
 
   useEffect(() => {
-    console.log('ChatHistory rendering with messages:', messages.length);
-    
-    // Log message content for debugging
-    const validMessages = messages.filter(m => m.content || m.sender === 'user');
-    
-    if (validMessages.length < messages.length) {
-      console.log('Found', messages.length - validMessages.length, 'messages with empty content');
-    }
-    
-    if (validMessages.length > 0) {
-      console.log('First few messages:', validMessages.slice(0, 3).map(m => 
-        `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`
-      ));
+    if (messages.length > 0) {
+      console.log('ChatHistory rendering with messages:', messages.length);
     }
   }, [messages]);
 
@@ -58,30 +66,6 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   // Check if we're displaying Chinese content
   const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
-  
-  // Group consecutive batch parts for better rendering
-  const groupedMessages = messages.reduce((acc: Message[][], message, index) => {
-    const prevMessage = index > 0 ? messages[index - 1] : null;
-    
-    // Start a new group if:
-    // 1. This is the first message
-    // 2. Current message is from a different sender than previous
-    // 3. Current message is not a batch part
-    // 4. Previous message is not a batch part
-    if (
-      index === 0 || 
-      message.sender !== prevMessage?.sender || 
-      !message.isBatchPart || 
-      !prevMessage?.isBatchPart
-    ) {
-      acc.push([message]);
-    } else {
-      // Add to the current group if it's a continuation
-      acc[acc.length - 1].push(message);
-    }
-    
-    return acc;
-  }, []);
   
   return (
     <div className="h-full py-4 space-y-4 px-4 md:px-6 lg:px-8 w-full">
