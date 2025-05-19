@@ -1,46 +1,50 @@
 
-import React from 'react';
+import { useState } from 'react';
 import { ReferenceDocument } from '@/types/references';
-import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import DocumentRow from './DocumentRow';
+import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 interface DocumentsTableProps {
   documents: ReferenceDocument[];
-  refetchDocuments: () => void;
+  onValidateMapping?: () => Promise<void>;
 }
 
-const DocumentsTable: React.FC<DocumentsTableProps> = ({ documents, refetchDocuments }) => {
-  if (documents.length === 0) {
-    return (
-      <div className="py-8 text-center">
-        <p className="text-gray-500 dark:text-gray-400">
-          No documents available
-        </p>
-      </div>
-    );
-  }
+const DocumentsTable = ({ documents, onValidateMapping }: DocumentsTableProps) => {
+  const [updatingDocument, setUpdatingDocument] = useState<string | null>(null);
+
+  const handleDocumentUpdated = async () => {
+    // Document was updated or deleted, so we should check if validation status needs updating
+    if (onValidateMapping) {
+      await onValidateMapping();
+    }
+    setUpdatingDocument(null);
+  };
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Document</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Size</TableHead>
-          <TableHead>Uploaded</TableHead>
-          <TableHead>Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {documents.map((doc) => (
-          <DocumentRow 
-            key={doc.id}
-            document={doc} 
-            refetchDocuments={refetchDocuments} 
-          />
-        ))}
-      </TableBody>
-    </Table>
+    <div className="overflow-hidden rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-gray-50 dark:bg-gray-800">
+            <TableHead className="w-1/3">Document Name</TableHead>
+            <TableHead className="hidden md:table-cell">Category</TableHead>
+            <TableHead className="hidden md:table-cell">Size</TableHead>
+            <TableHead className="hidden sm:table-cell">Date</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {documents.map((document) => (
+            <DocumentRow
+              key={document.id}
+              document={document}
+              isUpdating={updatingDocument === document.id}
+              onUpdateStart={() => setUpdatingDocument(document.id)}
+              onUpdateComplete={handleDocumentUpdated}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 };
 

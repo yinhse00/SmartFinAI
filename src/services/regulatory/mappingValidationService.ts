@@ -89,8 +89,13 @@ export const mappingValidationService = {
         .order('updated_at', { ascending: false })
         .limit(1);
         
-      if (error || !data || data.length === 0) {
-        console.error('No listing guidance document found:', error);
+      if (error) {
+        console.error('Error fetching listing guidance document:', error);
+        return null;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log('No listing guidance document found in the database');
         return null;
       }
       

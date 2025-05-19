@@ -1,165 +1,98 @@
 
-import React, { useState, useCallback, useEffect } from 'react';
+import { useState } from 'react';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useQueryClient } from '@tanstack/react-query';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { RefreshCcw } from 'lucide-react';
-
-// Import our components
-import ReferenceSearch from './ReferenceSearch';
-import CategoryTabs from './CategoryTabs';
-import ReferencesSkeleton from './ReferencesSkeleton';
 import DocumentsTable from './DocumentsTable';
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from '@/components/ui/card';
+import CategoryTabs from './CategoryTabs';
+import ReferenceSearch from './ReferenceSearch';
 import DocumentsPagination from './DocumentsPagination';
-import { DocumentCategory, categoryDisplayNames } from '@/types/references';
+import ReferencesSkeleton from './ReferencesSkeleton';
 
-const ReferenceDocumentsList: React.FC = () => {
-  // Get first category key as default
-  const firstCategoryKey = Object.keys(categoryDisplayNames)[0] as DocumentCategory;
-  const [activeCategory, setActiveCategory] = useState<string>(firstCategoryKey);
+interface ReferenceDocumentsListProps {
+  onValidateMapping?: () => Promise<void>;
+}
+
+const ReferenceDocumentsList: React.FC<ReferenceDocumentsListProps> = ({ onValidateMapping }) => {
+  const [selectedCategory, setSelectedCategory] = useState<string | undefined>(undefined);
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const queryClient = useQueryClient();
-  
-  // Use our hook to fetch documents
-  const { 
-    data: documents, 
-    isLoading, 
-    error,
-    refetch,
-    isRefetching
-  } = useReferenceDocuments(activeCategory);
+  const itemsPerPage = 10;
 
-  console.log("Current documents state:", { 
-    isLoading, 
-    isRefetching, 
-    activeCategory, 
-    documentsLength: documents?.length, 
-    error 
-  });
-  
-  // Reset to page 1 when category changes or document count changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [activeCategory, documents?.length]);
+  const { data: documents, isLoading, error } = useReferenceDocuments(selectedCategory);
 
-  // Force refetch when component mounts or activeCategory changes
-  useEffect(() => {
-    console.log('Fetching documents for category:', activeCategory);
-    refetch();
-  }, [activeCategory, refetch]); 
-  
-  // Handle category change
-  const handleCategoryChange = useCallback((category: string) => {
-    console.log('Category changed to:', category);
-    setActiveCategory(category);
-    
-    // Invalidate queries to force refresh
-    queryClient.invalidateQueries({ 
-      queryKey: ['referenceDocuments'],
-      exact: false 
-    });
-  }, [queryClient]);
-  
-  // Manual refetch function
-  const handleRefetchDocuments = useCallback(() => {
-    console.log('Manual refetch triggered for category:', activeCategory);
-    
-    toast({
-      title: "Refreshing documents",
-      description: "Getting the latest documents...",
-    });
-    
-    // Invalidate cache and refetch
-    queryClient.invalidateQueries({ 
-      queryKey: ['referenceDocuments'],
-      exact: false 
-    });
-    
-    refetch().catch(err => {
-      console.error('Refetch failed:', err);
-      toast({
-        title: "Refresh Failed",
-        description: "Could not refresh document list. Please try again.",
-        variant: "destructive"
-      });
-    });
-  }, [refetch, queryClient, activeCategory]);
-  
   // Filter documents based on search query
-  const filteredDocuments = documents?.filter(doc => 
-    searchQuery === '' || 
-    doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (doc.description?.toLowerCase() || '').includes(searchQuery.toLowerCase())
+  const filteredDocuments = documents?.filter(doc => {
+    if (!searchQuery) return true;
+    const lowerCaseQuery = searchQuery.toLowerCase();
+    return (
+      doc.title.toLowerCase().includes(lowerCaseQuery) ||
+      doc.description?.toLowerCase().includes(lowerCaseQuery)
+    );
+  }) || [];
+
+  // Calculate pagination
+  const totalPages = Math.ceil(filteredDocuments.length / itemsPerPage);
+  const paginatedDocuments = filteredDocuments.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
   );
-  
-  // Sort documents by date (newest first)
-  const sortedDocuments = filteredDocuments ? 
-    [...filteredDocuments].sort((a, b) => 
-      new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    ) : [];
+
+  // Handle category change
+  const handleCategoryChange = (category: string | undefined) => {
+    setSelectedCategory(category);
+    setCurrentPage(1); // Reset to first page on category change
+  };
+
+  // Handle search
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page on search
+  };
 
   return (
-    <Card className="finance-card">
-      <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <div className="flex items-center gap-2">
-          <CardTitle className="text-lg font-medium">Knowledge Base Documents</CardTitle>
-          <Button 
-            size="icon" 
-            variant="ghost" 
-            onClick={handleRefetchDocuments}
-            disabled={isLoading || isRefetching}
-            title="Refresh documents"
-          >
-            <RefreshCcw size={16} className={isRefetching ? "animate-spin" : ""} />
-          </Button>
+    <Card className="finance-card h-full">
+      <div className="p-6 space-y-6">
+        <div className="flex justify-between items-center flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-4">
+          <CategoryTabs 
+            selectedCategory={selectedCategory} 
+            onCategoryChange={handleCategoryChange} 
+          />
+          <ReferenceSearch 
+            searchQuery={searchQuery} 
+            onSearch={handleSearch} 
+          />
         </div>
-        <ReferenceSearch searchQuery={searchQuery} setSearchQuery={setSearchQuery} />
-      </CardHeader>
-      <CardContent>
-        <CategoryTabs 
-          activeCategory={activeCategory} 
-          setActiveCategory={handleCategoryChange}
-        />
-        
-        <div className="mt-2">
-          {isLoading || isRefetching ? (
-            <ReferencesSkeleton />
-          ) : error ? (
-            <div className="py-8 text-center">
-              <p className="text-red-500">Error loading documents. Please try again.</p>
-              <Button 
-                variant="outline" 
-                className="mt-2" 
-                onClick={handleRefetchDocuments}
-              >
-                Retry
-              </Button>
-            </div>
-          ) : (
-            <>
-              <DocumentsTable 
-                documents={sortedDocuments} 
-                refetchDocuments={handleRefetchDocuments}
-              />
-              <DocumentsPagination 
-                totalCount={sortedDocuments?.length || 0} 
-                currentPage={currentPage}
-                onPageChange={setCurrentPage}
-              />
-              {sortedDocuments.length === 0 && (
-                <div className="py-8 text-center">
-                  <p className="text-gray-500 dark:text-gray-400">
-                    No documents found in this category
-                  </p>
-                </div>
-              )}
-            </>
-          )}
-        </div>
-      </CardContent>
+
+        {isLoading ? (
+          <ReferencesSkeleton />
+        ) : error ? (
+          <div className="text-center p-6 text-red-600">
+            <p>Error loading documents. Please try again later.</p>
+          </div>
+        ) : filteredDocuments.length === 0 ? (
+          <div className="text-center p-6 text-gray-500">
+            <p>No documents found. Try changing your search or category filter.</p>
+          </div>
+        ) : (
+          <>
+            <DocumentsTable 
+              documents={paginatedDocuments} 
+              onValidateMapping={onValidateMapping}
+            />
+            
+            {totalPages > 1 && (
+              <div className="pt-4">
+                <DocumentsPagination
+                  currentPage={currentPage}
+                  totalPages={totalPages}
+                  onPageChange={setCurrentPage}
+                />
+              </div>
+            )}
+          </>
+        )}
+      </div>
     </Card>
   );
 };

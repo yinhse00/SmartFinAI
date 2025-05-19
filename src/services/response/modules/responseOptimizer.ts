@@ -1,4 +1,3 @@
-
 import { analyzeFinancialResponse } from '@/utils/truncation/financialResponseAnalyzer';
 import { mappingValidationService } from '../../regulatory/mappingValidationService';
 
@@ -22,6 +21,53 @@ export const responseOptimizer = {
     // Calculate relevance score (0 to 1)
     return uniqueKeywords.length > 0 ? 
       Math.min(1, matchedKeywords.length / uniqueKeywords.length) : 0.5;
+  },
+  
+  /**
+   * Get optimized parameters based on query type and prompt content
+   */
+  getOptimizedParameters: (
+    queryType: string,
+    prompt: string
+  ): { temperature: number; maxTokens: number } => {
+    // Default parameters
+    let temperature = 0.5;
+    let maxTokens = 40000;
+    
+    // Adjust based on query type
+    switch (queryType) {
+      case 'listing_rules':
+        temperature = 0.4;
+        maxTokens = 45000;
+        break;
+      case 'takeovers':
+        temperature = 0.4;
+        maxTokens = 45000;
+        break;
+      case 'open_offer':
+      case 'rights_issue':
+        temperature = 0.35;
+        maxTokens = 50000;
+        break;
+      case 'connected_transaction':
+        temperature = 0.4;
+        maxTokens = 45000;
+        break;
+      case 'new_listing':
+        temperature = 0.3; // Lower temperature for more accuracy on new listings
+        maxTokens = 45000;
+        break;
+      default:
+        // Use defaults
+    }
+    
+    // Further adjust based on prompt complexity
+    if (prompt.length > 200) {
+      // For complex queries, increase tokens but keep temperature controlled
+      maxTokens = Math.min(60000, maxTokens * 1.2);
+    }
+    
+    return { temperature, maxTokens };
   },
   
   /**

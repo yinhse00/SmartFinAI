@@ -74,9 +74,8 @@ export const grokResponseGenerator = {
         
         // Calculate relevance score and enhance with metadata
         const relevanceScore = responseOptimizer.calculateRelevanceScore(
-          responseText, 
           enhancedParams.prompt, 
-          queryType
+          responseText
         );
         
         // Enhance response with metadata
