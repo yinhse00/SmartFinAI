@@ -13,8 +13,8 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
   const [typingIndex, setTypingIndex] = useState(0);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const previousStage = useRef(stage);
-  const typingSpeedRef = useRef({ preparing: 40, processing: 30, finalizing: 35, reviewing: 45 });
-  const pauseBeforeNewMessageRef = useRef(300);
+  const typingSpeedRef = useRef({ preparing: 20, processing: 15, finalizing: 18, reviewing: 25 }); // Faster speeds
+  const pauseBeforeNewMessageRef = useRef(200); // Reduced pause
   
   // Select message based on progress
   const messageIndex = Math.min(
@@ -52,13 +52,13 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
     // Real typing effect with natural rhythm
     if (typingIndex < targetMessage.length) {
       // Vary typing speed slightly for realism
-      const randomVariation = Math.random() * 0.5 + 0.75; // 0.75 to 1.25 multiplier
+      const randomVariation = Math.random() * 0.4 + 0.8; // 0.8 to 1.2 multiplier
       const currentChar = targetMessage[typingIndex];
       
       // Pause longer after punctuation
       const isPunctuation = ['.', ',', '!', '?', ':'].includes(currentChar);
       const typingDelay = isPunctuation 
-        ? typingSpeedRef.current[stage] * 3 * randomVariation 
+        ? typingSpeedRef.current[stage] * 2 * randomVariation 
         : typingSpeedRef.current[stage] * randomVariation;
       
       const timer = setTimeout(() => {
