@@ -26,40 +26,71 @@ export const responseFormatter = {
     // Improve formatting with proper HTML elements for better readability
     let formattedText = text;
     
-    // Replace markdown-style headers with semantic HTML elements
-    formattedText = formattedText
-      .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
-      .replace(/^##\s+(.*?)$/gm, '<h2 class="text-xl font-semibold my-3">$1</h2>')
-      .replace(/^#\s+(.*?)$/gm, '<h1 class="text-2xl font-bold my-4">$1</h1>');
+    // Check if text already contains HTML formatting
+    const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
     
-    // Replace horizontal rules with proper spacing
-    formattedText = formattedText
-      .replace(/^---+$/gm, '<div class="my-4"></div>')
-      .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
-      .replace(/^___+$/gm, '<div class="my-4"></div>');
-    
-    // Enhance inline text formatting
-    formattedText = formattedText
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
-      .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
-      .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
-    
-    // Enhanced bullet point formatting with proper spacing and structure
-    formattedText = formattedText
-      .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point my-1 ml-4 relative">$3</p>');
-    
-    // Enhance paragraphing with proper spacing
-    const paragraphs = formattedText.split(/\n\n+/);
-    formattedText = paragraphs.map(p => {
-      // Skip already formatted elements (those that start with HTML tags)
-      if (p.trim().startsWith('<')) return p;
-      
-      // Format as paragraph if it's not already HTML and isn't empty
-      if (p.trim().length > 0) {
-        return `<p class="my-2">${p.trim()}</p>`;
+    // Only apply formatting if HTML formatting is not already present
+    if (!hasHtmlFormatting) {
+      // Add executive summary wrap if not present
+      if (!formattedText.includes('<h1>Executive Summary</h1>') && 
+          !formattedText.includes('<h2>Executive Summary</h2>')) {
+        // Look for what might be an executive summary at the beginning
+        const firstParagraphEnd = formattedText.indexOf('\n\n');
+        if (firstParagraphEnd > 0 && firstParagraphEnd < 400) {
+          const executiveSummary = formattedText.substring(0, firstParagraphEnd);
+          const remainingText = formattedText.substring(firstParagraphEnd);
+          formattedText = `<h1 class="text-2xl font-bold my-4">Executive Summary</h1>\n<p class="my-2">${executiveSummary}</p>\n<h1 class="text-2xl font-bold my-4">Detailed Analysis</h1>\n${remainingText}`;
+        }
       }
-      return p;
-    }).join('\n\n');
+      
+      // Replace markdown-style headers with semantic HTML elements
+      formattedText = formattedText
+        .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
+        .replace(/^##\s+(.*?)$/gm, '<h2 class="text-xl font-semibold my-3">$1</h2>')
+        .replace(/^#\s+(.*?)$/gm, '<h1 class="text-2xl font-bold my-4">$1</h1>');
+      
+      // Replace horizontal rules with proper spacing
+      formattedText = formattedText
+        .replace(/^---+$/gm, '<div class="my-4"></div>')
+        .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
+        .replace(/^___+$/gm, '<div class="my-4"></div>');
+      
+      // Enhance inline text formatting
+      formattedText = formattedText
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
+        .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
+      
+      // Enhanced formatting for rule references
+      formattedText = formattedText
+        .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="text-finance-accent-blue">$1</strong>')
+        .replace(/(\bGuidance Letter\s+\w+-\d+\b|\bListing Decision\s+\w+-\d+\b|\bFAQ\s+\d+\.\d+\b)/g, 
+                '<strong class="text-finance-accent-green">$1</strong>');
+      
+      // Enhanced bullet point formatting with proper spacing and structure
+      formattedText = formattedText
+        .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point my-1 ml-4 relative">$3</p>');
+      
+      // Enhance paragraphing with proper spacing
+      const paragraphs = formattedText.split(/\n\n+/);
+      formattedText = paragraphs.map(p => {
+        // Skip already formatted elements (those that start with HTML tags)
+        if (p.trim().startsWith('<')) return p;
+        
+        // Format as paragraph if it's not already HTML and isn't empty
+        if (p.trim().length > 0) {
+          return `<p class="my-2">${p.trim()}</p>`;
+        }
+        return p;
+      }).join('\n\n');
+      
+      // Add section for conclusion if not present and response is long enough
+      if (!formattedText.includes('<h1>Conclusion</h1>') && 
+          !formattedText.includes('<h2>Conclusion</h2>') && 
+          formattedText.length > 1500) {
+        formattedText += '\n\n<h2 class="text-xl font-semibold my-3">Conclusion</h2>\n<p class="my-2">The above analysis provides a comprehensive overview based on the applicable Hong Kong regulatory framework. Always consult the specific rules and guidance for your particular situation.</p>';
+      }
+    }
     
     // Correct the profit test requirements for HKEX listing
     formattedText = formattedText
@@ -108,3 +139,4 @@ export const responseFormatter = {
     };
   }
 };
+

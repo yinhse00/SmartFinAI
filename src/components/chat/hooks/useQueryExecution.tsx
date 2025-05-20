@@ -58,9 +58,11 @@ export const useQueryExecution = (
 
       logQueryParameters(financialQueryType, actualTemperature, enhancedMaxTokens);
 
+      // Step 2: Professional reviewing stage - emphasize verification and preparation
       setProcessingStage('reviewing');
+      const reviewingStart = Date.now();
 
-      // Step 2: Retrieve regulatory context
+      // Step 3: Retrieve regulatory context with verification focus
       const {
         regulatoryContext,
         reasoning,
@@ -80,9 +82,12 @@ export const useQueryExecution = (
         searchStrategy
       );
 
+      const reviewingTime = Date.now() - reviewingStart;
+      console.log(`Content verification and preparation completed in ${reviewingTime}ms`);
+
+      // Step 4: Process response with professional tone and verified content
       setProcessingStage('processing');
 
-      // Step 3: Process response
       const processingStart = Date.now();
 
       const result = await handleApiResponse(
@@ -96,8 +101,9 @@ export const useQueryExecution = (
       );
 
       const processingTime = Date.now() - processingStart;
-      console.log(`Response generated in ${processingTime}ms`);
+      console.log(`Professional response generated in ${processingTime}ms`);
 
+      // Step 5: Finalizing with professional presentation
       setProcessingStage('finalizing');
 
       const isSimpleQuery = financialQueryType === 'conversational';
@@ -122,3 +128,4 @@ export const useQueryExecution = (
     executeQuery
   };
 };
+

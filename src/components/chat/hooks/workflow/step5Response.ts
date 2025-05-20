@@ -35,8 +35,29 @@ export const executeStep5 = async (
                           params.query.toLowerCase().includes('rights issue');
     
     // Create quality-focused instructions with improved formatting guidance for semantic HTML
+    // and professional tone guidance
     const enhancedInstructions = `
 IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
+
+PROFESSIONAL TONE GUIDELINES:
+- Adopt a formal, authoritative tone appropriate for financial professionals and regulatory experts
+- Use precise technical terminology and avoid colloquial language
+- Structure responses with clear sections: Introduction, Analysis, Requirements, Conclusion
+- Begin with a concise executive summary of your response
+- For definitions or key concepts, use formal language and cite specific regulatory provisions
+- When providing advice, present options and implications in a measured, objective manner
+- Conclude with clear recommendations or next steps
+- Use confidence markers appropriately (e.g., "with certainty" vs "likely" vs "possibly")
+- Format numbers consistently using financial conventions (e.g., "HK$1,000,000")
+- For tables and data, include footnotes with clarifications where appropriate
+- When referencing rules, include full citation format: "Rule X.XX of the [Regulatory Document]"
+
+VERIFICATION REQUIREMENT:
+- Verify all quotes against the provided regulatory database content
+- If directly quoting from FAQs, Guidance Letters, or Listing Decisions, ensure verbatim accuracy
+- If uncertain about exact wording, clearly indicate this (e.g., "According to the general principles of...")
+- For specific rule citations, double-check rule numbers and paragraphs for accuracy
+- Clearly distinguish between quoted regulatory text and your professional interpretation
 
 FORMATTING GUIDELINES:
 - Use semantic HTML elements for structure:
@@ -111,3 +132,4 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
     };
   }
 };
+

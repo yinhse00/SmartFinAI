@@ -28,6 +28,9 @@ export const requestBuilder = {
       systemMessage += systemMessageBuilder.buildTradingArrangementsMessage(queryType);
     }
     
+    // Add professional formatting message to all queries
+    systemMessage += systemMessageBuilder.buildProfessionalFormatMessage();
+    
     // Add database and FAQ instructions
     systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the provided database content, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
     
@@ -53,6 +56,8 @@ export const requestBuilder = {
     
     systemMessage += "\n\nSPECIAL INSTRUCTION FOR EXECUTION PROCESSES: When explaining execution processes for any corporate action or takeover offer, always include the full timeline from preparation to implementation. For Listing Rules corporate actions, include preparation phase (2-3 days), HKEX vetting (2-10 days), circular preparation (3-10 days), HKEX circular vetting (5-20 days), shareholders' approval if required, and implementation timeline. For Takeover Code offers, include SFC-specific timelines and requirements.";
     
+    systemMessage += "\n\nVERIFICATION INSTRUCTION: For any FAQ, Guidance Letter, or Listing Decision content, you MUST verify the accuracy of any quoted text against the regulatory database content provided. If directly quoting, ensure verbatim accuracy. If summarizing, clearly indicate this. If uncertain about exact wording, explicitly state that you are providing a general interpretation rather than an exact quote.";
+    
     systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Prioritize including all key points. If discussing a procedure with multiple steps, include ALL steps but explain each clearly. Format information efficiently with proper paragraphing and formatting.";
     
     return systemMessage;
@@ -76,3 +81,4 @@ export const requestBuilder = {
     return optimizedParametersBuilder.getParameters(queryType, prompt, hasContext, isSimpleQuery);
   }
 };
+

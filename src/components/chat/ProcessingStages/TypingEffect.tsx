@@ -13,7 +13,8 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
   const [typingIndex, setTypingIndex] = useState(0);
   const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const previousStage = useRef(stage);
-  const typingSpeedRef = useRef({ preparing: 40, processing: 30, finalizing: 35, reviewing: 45 });
+  // Faster typing for reviewing and finalizing stages (professional appearance)
+  const typingSpeedRef = useRef({ preparing: 40, processing: 30, finalizing: 25, reviewing: 35 });
   const pauseBeforeNewMessageRef = useRef(300);
   
   // Select message based on progress
@@ -70,11 +71,26 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
     }
   }, [isVisible, stage, progress, typedOutput, typingIndex, targetMessage, currentMessageIndex, messageIndex]);
 
+  // Professional styling for different stages
+  const getBgColorClass = () => {
+    switch(stage) {
+      case 'reviewing':
+        return 'bg-blue-50 dark:bg-blue-900/20';
+      case 'processing':
+        return 'bg-green-50 dark:bg-green-900/20';
+      case 'finalizing':
+        return 'bg-purple-50 dark:bg-purple-900/20';
+      default:
+        return 'bg-gray-50 dark:bg-gray-800';
+    }
+  };
+
   return (
-    <div className="text-sm text-gray-600 dark:text-gray-400 mt-3 p-2 bg-gray-50 dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-700 min-h-[2rem]">
+    <div className={`text-sm text-gray-600 dark:text-gray-400 mt-3 p-2 ${getBgColorClass()} rounded border border-gray-200 dark:border-gray-700 min-h-[2rem]`}>
       {typedOutput}<span className="animate-pulse inline-block w-2 h-4 ml-0.5 bg-gray-400 dark:bg-gray-500"></span>
     </div>
   );
 };
 
 export default TypingEffect;
+

@@ -136,5 +136,49 @@ export const systemMessageBuilder = {
     "- Note the discount restrictions under Rule 7.27B\n\n" +
     
     "YOUR RESPONSE WILL BE CONSIDERED INCOMPLETE AND NON-COMPLIANT IF IT LACKS ANY OF THESE ELEMENTS.";
+  },
+
+  /**
+   * NEW: Professional formatting and structure requirements for all responses
+   */
+  buildProfessionalFormatMessage(): string {
+    return `\n\nPROFESSIONAL PRESENTATION REQUIREMENTS: Structure your response professionally as follows:
+
+1. EXECUTIVE SUMMARY:
+   - Begin with a concise (2-3 sentence) summary of key points
+   - Focus on the most critical regulatory requirements or distinctions
+   - Use formal, authoritative language
+
+2. DETAILED ANALYSIS:
+   - Organize content with clear headings and subheadings
+   - Use numerical or bullet point lists for sequential steps or requirements
+   - Present comparative information in tables with proper headers
+   - Include specific rule citations in format: "Rule X.XX of [Regulatory Document]"
+
+3. PRACTICAL IMPLICATIONS:
+   - Address operational considerations for implementation
+   - Include timeline considerations where relevant
+   - Note any common compliance pitfalls
+
+4. CONCLUSION:
+   - Provide clear summary of requirements
+   - Restate key regulatory distinctions
+   - End with a definitive statement on compliance requirements
+
+PROFESSIONAL LANGUAGE REQUIREMENTS:
+- Use formal regulatory terminology consistently
+- Avoid simplified explanations or colloquial phrasings
+- For definitions, use precise technical language from regulatory sources
+- When quoting regulatory text, use exact wording and proper citations
+- Format all financial figures according to professional standards (e.g., "HK$10,000,000")
+
+VERIFICATION OF REGULATORY GUIDANCE:
+- For any FAQ, Guidance Letter, or Listing Decision references:
+  • Quote the exact text from the source document
+  • Include document reference number and publication date
+  • Specify which section or paragraph contains the information
+  • If paraphrasing, clearly indicate this is an interpretation
+`;
   }
 };
+

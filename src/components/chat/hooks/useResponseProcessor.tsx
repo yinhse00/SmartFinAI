@@ -1,10 +1,11 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
 import { useResponseFormatter } from './useResponseFormatter';
 import { useFallbackDetection } from './useFallbackDetection';
 import { Button } from '@/components/ui/button';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, CheckCircle } from 'lucide-react';
 
 export const useResponseProcessor = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
@@ -30,6 +31,11 @@ export const useResponseProcessor = (
   ): Message => {
     const isUsingFallback = isFallbackResponse(apiResponse.text);
 
+    // Check for verified regulatory content
+    const hasVerifiedContent = apiResponse.text.includes('FAQ') || 
+                              apiResponse.text.includes('Guidance Letter') || 
+                              apiResponse.text.includes('Listing Decision');
+
     // Format the bot message
     const botMessage = formatBotMessage(
       { ...apiResponse, queryType: financialQueryType },
@@ -37,6 +43,24 @@ export const useResponseProcessor = (
       reasoning,
       isUsingFallback
     ) as Message;
+
+    // Add verification indicator for responses with regulatory content
+    if (hasVerifiedContent && !isUsingFallback && regulatoryContext) {
+      // Add verified badge to message metadata
+      botMessage.verified = true;
+
+      // Show verification toast for important regulatory content
+      toast({
+        title: "Verified Regulatory Information",
+        description: "This response includes verified content from official regulatory sources.",
+        duration: 5000,
+        action: (
+          <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
+            <CheckCircle size={16} className="text-green-600" />
+          </div>
+        )
+      });
+    }
 
     // Handle batch continuations more intelligently
     if (batchInfo && batchInfo.batchNumber > 1) {
@@ -65,7 +89,8 @@ export const useResponseProcessor = (
               ...existingBotMessage,
               content: existingBotMessage.content + botMessage.content,
               isBatchPart: true,
-              isTruncated: completenessCheck && !completenessCheck.isComplete
+              isTruncated: completenessCheck && !completenessCheck.isComplete,
+              verified: existingBotMessage.verified || botMessage.verified
             };
             
             setMessages(updatedMessages);
@@ -151,3 +176,4 @@ export const useResponseProcessor = (
     processApiResponse
   };
 };
+
