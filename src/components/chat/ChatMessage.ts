@@ -16,6 +16,7 @@ export interface Message {
   originalContent?: string;
   translationInProgress?: boolean;
   metadata?: any;
+  verified?: boolean;  // Added the verified property
 }
 
 // Export the ChatMessage component from the implementation file
