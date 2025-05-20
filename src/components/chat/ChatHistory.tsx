@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect } from 'react';
 import { Message, ChatMessage } from './ChatMessage';
 
@@ -10,53 +11,28 @@ interface ChatHistoryProps {
 
 const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry, translatingMessageIds = [] }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const lastMessageContentRef = useRef<string>('');
-  const lastMessageCountRef = useRef<number>(0);
 
   // Scroll to bottom on new messages
   useEffect(() => {
-    const lastMessage = messages[messages.length - 1];
-    const messageCount = messages.length;
-    
-    // Check if we have a new message or if content changed
-    if (messageCount !== lastMessageCountRef.current || 
-        (lastMessage && lastMessage.content !== lastMessageContentRef.current)) {
-      
-      // Update refs
-      lastMessageCountRef.current = messageCount;
-      if (lastMessage) {
-        lastMessageContentRef.current = lastMessage.content || '';
-      }
-      
-      // Scroll to bottom
-      if (messagesEndRef.current) {
-        console.log('Scrolling to bottom due to message change');
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  }, [messages]);
-  
-  // Additional scrolling effect for when message content changes
-  // This helps keep the view at the bottom during typing animation
-  const handleTypingProgress = () => {
     if (messagesEndRef.current) {
-      // Use a more targeted approach to only scroll when needed
-      const container = messagesEndRef.current.parentElement;
-      if (container) {
-        const isAtBottom = container.scrollHeight - container.scrollTop <= container.clientHeight + 100;
-        
-        // Only auto-scroll if user is already near the bottom
-        if (isAtBottom) {
-          console.log('Scrolling during typing progress');
-          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-        }
-      }
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  };
+  }, [messages, isLoading]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      console.log('ChatHistory rendering with messages:', messages.length);
+    console.log('ChatHistory rendering with messages:', messages.length);
+    
+    // Log message content for debugging
+    const validMessages = messages.filter(m => m.content || m.sender === 'user');
+    
+    if (validMessages.length < messages.length) {
+      console.log('Found', messages.length - validMessages.length, 'messages with empty content');
+    }
+    
+    if (validMessages.length > 0) {
+      console.log('First few messages:', validMessages.slice(0, 3).map(m => 
+        `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`
+      ));
     }
   }, [messages]);
 
@@ -70,7 +46,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   return (
     <div className="h-full py-4 space-y-4 px-4 md:px-6 lg:px-8 w-full">
       {hasTruncatedMessages && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center animate-fade-in">
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md p-3 mb-4 flex justify-between items-center">
           <div className="text-sm text-amber-800 dark:text-amber-300">
             {lastUserMessageIsChinese 
               ? "部分回复似乎不完整。您可以重试您的查询以获取完整答案。"
@@ -93,7 +69,11 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
             key={message.id} 
             message={message} 
             onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
-            onTypingProgress={handleTypingProgress}
+            onTypingProgress={() => {
+              if (messagesEndRef.current) {
+                messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
             isTranslating={translatingMessageIds.includes(message.id)}
           />
         ))

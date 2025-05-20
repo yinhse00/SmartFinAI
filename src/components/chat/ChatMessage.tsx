@@ -40,32 +40,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   const [showOriginal, setShowOriginal] = useState(false);
   const [formattedContent, setFormattedContent] = useState('');
   
-  // Force typing to restart if content changes
-  useEffect(() => {
-    if (sender === 'bot') {
-      setIsTypingComplete(false);
-    }
-  }, [content, sender]);
-  
   // Determine initial characters to display immediately for the typing effect
   const getInitialVisibleChars = () => {
     if (sender !== 'bot') return 0;
     
     // For batch parts, show more initial content for better UX
-    if (isBatchPart) return 250;
+    if (isBatchPart) return 120;
     
-    // Show more initial content for long messages
-    if (content && content.length > 2000) return 300;
-    if (content && content.length > 1000) return 200;
-    
-    // For regular messages, show the first 1-2 sentences 
-    const firstTwoSentenceMatch = content?.match(/^([^.!?]+[.!?][^.!?]+[.!?])\s/);
-    if (firstTwoSentenceMatch && firstTwoSentenceMatch[1].length < 200) {
-      return firstTwoSentenceMatch[1].length;
+    // For regular messages, show the first sentence or first 60 chars
+    const firstSentenceMatch = content?.match(/^([^.!?]+[.!?])\s/);
+    if (firstSentenceMatch && firstSentenceMatch[1].length < 100) {
+      return firstSentenceMatch[1].length;
     }
-    
-    // Default to showing more characters initially
-    return 150;
+    return 60;
   };
 
   // Debug output for empty content detection
@@ -117,26 +104,6 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     );
   }
   
-  // Determine if this is a continuation message that should animate differently
-  const isContinuation = isBatchPart && sender === 'bot';
-  
-  // Determine typing speed based on content type
-  const getTypingSpeed = () => {
-    // Base speed - higher is faster
-    let speed = isBatchPart ? 70 : 50;
-    
-    // Adjust speed based on content length
-    if (content && content.length > 2000) return speed * 1.5;
-    if (content && content.length > 1000) return speed * 1.2;
-    
-    // Check for code blocks or tables which should display faster
-    if (content && (content.includes('```') || content.includes('|'))) {
-      return speed * 1.3;
-    }
-    
-    return speed;
-  };
-  
   return (
     <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
       <div className={`flex items-start gap-3 w-full ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
@@ -148,20 +115,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               : translationInProgress 
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
-        } ${isContinuation ? 'animate-fade-in' : ''}`}>
+        } ${isBatchPart ? 'animate-fade-in' : ''}`}>
           {/* Bot message content with enhanced typing animation */}
-          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && formattedContent && (
+          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
-              onComplete={() => {
-                console.log(`Typing animation complete for message ${id.substring(0, 6)}`);
-                setIsTypingComplete(true);
-              }} 
+              onComplete={() => setIsTypingComplete(true)} 
               onProgress={onTypingProgress}
               renderAsHTML={true}
               initialVisibleChars={getInitialVisibleChars()}
-              typingSpeed={getTypingSpeed()}
             />
           )}
           

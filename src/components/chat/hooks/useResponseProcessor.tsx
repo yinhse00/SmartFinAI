@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
@@ -26,7 +25,7 @@ export const useResponseProcessor = (
       batchNumber: number, 
       isContinuing: boolean, 
       onContinue?: () => void,
-      isSeamlessBatch?: boolean  // Flag for seamless batching
+      isSeamlessBatch?: boolean  // New flag for seamless batching
     }
   ): Message => {
     const isUsingFallback = isFallbackResponse(apiResponse.text);
@@ -39,13 +38,13 @@ export const useResponseProcessor = (
       isUsingFallback
     ) as Message;
 
-    console.log(`Processing API response: ${apiResponse.text.substring(0, 30)}... (batch ${batchInfo?.batchNumber || 1})`);
-
     // Handle batch continuations more intelligently
     if (batchInfo && batchInfo.batchNumber > 1) {
-      console.log(`Handling batch part #${batchInfo.batchNumber}, seamless: ${batchInfo.isSeamlessBatch}`);
-      
       if (batchInfo.isSeamlessBatch) {
+        // For seamless batching, don't add part numbers to the content
+        // Just keep the content as is, but mark it as a batch part
+        botMessage.isBatchPart = true;
+        
         // For seamless batching, find the previous bot message and append this content
         const updatedMessages = [...processedMessages];
         let lastBotMessageIndex = updatedMessages.length - 1;
@@ -61,9 +60,7 @@ export const useResponseProcessor = (
           
           // Only append if it's a bot message and not an error message
           if (existingBotMessage && !existingBotMessage.isError) {
-            console.log('Appending seamless batch content to existing message');
-            
-            // Combine the content without showing part numbers
+            // Combine the content
             updatedMessages[lastBotMessageIndex] = {
               ...existingBotMessage,
               content: existingBotMessage.content + botMessage.content,
@@ -101,23 +98,21 @@ export const useResponseProcessor = (
     }
 
     // Show continue button if batch continuation needed and not using seamless batching
-    if (botMessage.isTruncated && batchInfo?.onContinue && !batchInfo.isSeamlessBatch) {
+    if (botMessage.isTruncated && batchInfo && batchInfo.onContinue && !batchInfo.isSeamlessBatch) {
       const diagnosticsReasons = completenessCheck?.reasons || [];
-      
+      const diagnosticMessage = diagnosticsReasons.length > 0
+        ? { reasons: diagnosticsReasons }
+        : { reasons: ['Response appears incomplete'] };
+
       toast({
         title: `Additional information available`,
         description: "The answer continues. Click 'Continue' to see more.",
         duration: 10000,
         action: (
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <button
+            className="ml-1 px-2 py-1 rounded bg-finance-light-blue text-finance-dark-blue hover:bg-finance-medium-blue"
             onClick={batchInfo.onContinue}
-            className="flex items-center gap-1 bg-finance-light-blue/20 hover:bg-finance-light-blue/40 text-finance-dark-blue hover:text-finance-dark-blue"
-          >
-            <RefreshCw size={14} />
-            Continue
-          </Button>
+          >Continue</button>
         )
       });
     } else if (botMessage.isTruncated && completenessCheck && !batchInfo?.isSeamlessBatch) {

@@ -14,7 +14,6 @@ export const useBatchHandling = () => {
   const MAX_AUTO_BATCHES = 10; // Increased from 5 to 10 for better completion
   const batchCompletionTracker = useRef<Record<number, boolean>>({});
   const nextBatchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const continueCallbackRef = useRef<((query: string, options: any) => Promise<void>) | null>(null);
   
   // Clean up timeout on unmount
   useEffect(() => {
@@ -26,7 +25,6 @@ export const useBatchHandling = () => {
   }, []);
   
   const startBatching = (prompt: string, autoBatchMode = true) => {
-    console.log('Starting batch process with prompt:', prompt.substring(0, 50) + '...');
     setBatchingPrompt(prompt);
     batchNumber.current = 1;
     setIsBatching(false);
@@ -36,13 +34,8 @@ export const useBatchHandling = () => {
   };
   
   const handleBatchContinuation = (callback: (query: string, options: any) => Promise<void>) => {
-    // Save the callback for later use in auto-batching
-    continueCallbackRef.current = callback;
-    
     if (batchingPrompt) {
       batchNumber.current += 1;
-      console.log(`Continuing with batch #${batchNumber.current}`);
-      
       // Track this batch as not completed yet
       batchCompletionTracker.current[batchNumber.current] = false;
       
@@ -53,10 +46,8 @@ export const useBatchHandling = () => {
         isBatchContinuation: true, 
         batchNumber: batchNumber.current, 
         autoBatch, 
-        isSeamlessBatch: true  // Flag to indicate this should be rendered seamlessly
+        isSeamlessBatch: true  // New flag to indicate this should be rendered seamlessly
       });
-    } else {
-      console.error('No batching prompt available for continuation');
     }
   };
   
@@ -70,8 +61,6 @@ export const useBatchHandling = () => {
     if (batchCompletionTracker.current[batchNumber] !== undefined) {
       batchCompletionTracker.current[batchNumber] = true;
     }
-    
-    console.log(`Batch ${batchNumber} result - truncated: ${truncated}, autoBatch: ${autoBatchMode}`);
     
     // More aggressive truncation detection for batch triggering
     const needsContinuation = truncated || 
@@ -94,17 +83,9 @@ export const useBatchHandling = () => {
         clearTimeout(nextBatchTimeoutRef.current);
       }
       
-      // CRITICAL FIX: Ensure we actually call the continuation callback
       nextBatchTimeoutRef.current = setTimeout(() => {
-        if (continueCallbackRef.current && batchingPrompt) {
-          console.log(`Auto-continuing batch after ${batchDelay}ms delay`);
-          handleBatchContinuation(continueCallbackRef.current);
-        } else {
-          console.error('Missing callback or prompt for auto-batch continuation');
-        }
+        return { shouldContinue: true, batchNumber: batchNumber, prompt: queryText };
       }, batchDelay);
-      
-      return { shouldContinue: true, batchNumber: batchNumber, prompt: queryText };
       
     } else if (truncated) {
       // Manual batch continuation needed
