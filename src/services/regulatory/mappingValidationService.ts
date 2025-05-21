@@ -1,137 +1,275 @@
 
 import { supabase } from '@/integrations/supabase/client';
-import { apiClient } from '../api/grok/apiClient';
-import { getGrokApiKey } from '../apiKeyService';
-import { ChatCompletionRequest } from '../api/grok/types';
+import { grokService } from '@/services/grokService';
 
+/**
+ * Type definition for the document we expect from the database
+ */
 interface ListingGuidanceDocument {
   id: string;
   title: string;
-  content: string | null;
-  updated_at?: string;
+  content: string;
+  updated_at: string;
+  file_url?: string;
+  file_type?: string;
+  [key: string]: any; // Allow for additional properties
 }
 
+/**
+ * Service for validating responses against regulatory mapping data
+ */
 export const mappingValidationService = {
   /**
-   * Validate a response against the listing guidance mapping
+   * Validate a response against the new listing applicants guidance
    */
-  validateAgainstListingGuidance: async (
+  async validateAgainstListingGuidance(
     response: string,
     query: string
   ): Promise<{
     isValid: boolean;
-    confidence: number;
     corrections?: string;
+    confidence: number;
     sourceMaterials: string[];
-  }> => {
+  }> {
     try {
-      console.log('Validating response against listing guidance mapping');
+      console.log('Validating response against New Listing Applicants guidance');
       
-      // 1. Fetch the new listing guide document
-      const { data: guideDocument, error: fetchError } = await supabase
-        .from('reference_documents')
-        .select('id, title, content')
-        .ilike('title', '%Guide for New Listing Applicants%')
-        .limit(1)
-        .single();
+      // First retrieve the mapping guidance document
+      const guidanceDoc = await mappingValidationService.getListingGuidanceDocument();
       
-      if (fetchError || !guideDocument) {
-        console.error('Unable to find listing guidance document:', fetchError);
+      if (!guidanceDoc) {
+        console.log('No listing guidance document found for validation');
         return {
-          isValid: true, // Default to valid if we can't find the guidance
+          isValid: true, // Default to valid when we can't validate
           confidence: 0,
           sourceMaterials: []
         };
       }
       
-      // Check if we have content to validate against
-      if (!guideDocument.content) {
-        console.warn('Listing guidance document has no content to validate against');
+      console.log('Retrieved guidance document for validation');
+      
+      // Extract relevant sections from the guidance document based on the query
+      const relevantGuidance = await mappingValidationService.extractRelevantGuidance(
+        guidanceDoc.content,
+        query
+      );
+      
+      if (!relevantGuidance) {
+        console.log('No relevant guidance found for this query');
         return {
-          isValid: true,
-          confidence: 0,
-          sourceMaterials: [guideDocument.title]
+          isValid: true, // Default to valid when we don't have relevant guidance
+          confidence: 0.5,
+          sourceMaterials: [guidanceDoc.title]
         };
       }
       
-      // 2. Get the API key for validation
-      const apiKey = getGrokApiKey();
-      if (!apiKey) {
-        console.error('No API key available for response validation');
-        return {
-          isValid: true, // Default to valid if we can't validate
-          confidence: 0,
-          sourceMaterials: [guideDocument.title]
-        };
-      }
-      
-      // 3. Prepare the validation request
-      const validationRequest: ChatCompletionRequest = {
-        model: "grok-3-beta",
-        messages: [
-          {
-            role: "system",
-            content: `You are a financial regulatory validation expert. Your task is to determine if the provided answer to a question about new listing applicants is accurate according to the Hong Kong regulatory guidance mapping. 
-            You will be provided with:
-            1. The original user query
-            2. The response that needs validation
-            3. The regulatory mapping document content
-            
-            Evaluate if the response is factually accurate and complete. Do not focus on writing style, only on regulatory accuracy.
-            
-            Your output should be in this format:
-            VALID: true/false
-            CONFIDENCE: 0-100
-            CORRECTIONS: [Only if invalid, what needs to be corrected]`
-          },
-          {
-            role: "user",
-            content: `Please validate this response against the regulatory mapping document:
-            
-            USER QUERY:
-            ${query}
-            
-            RESPONSE TO VALIDATE:
-            ${response}
-            
-            REGULATORY MAPPING DOCUMENT:
-            ${guideDocument.content.substring(0, 12000)} 
-            
-            Is this response valid according to the regulatory mapping document? Provide your assessment.`
-          }
-        ],
-        temperature: 0,
-        max_tokens: 1000
-      };
-      
-      // 4. Call the validation API
-      console.log('Calling validation API');
-      const validationResponse = await apiClient.callChatCompletions(validationRequest, apiKey);
-      
-      const validationText = validationResponse.choices[0]?.message?.content || '';
-      console.log('Validation response:', validationText);
-      
-      // 5. Parse the validation result
-      const isValidMatch = validationText.match(/VALID:\s*(true|false)/i);
-      const confidenceMatch = validationText.match(/CONFIDENCE:\s*(\d+)/i);
-      const correctionsMatch = validationText.match(/CORRECTIONS:\s*(.+?)($|\n\n)/is);
-      
-      const isValid = isValidMatch ? isValidMatch[1].toLowerCase() === 'true' : true;
-      const confidence = confidenceMatch ? parseInt(confidenceMatch[1], 10) : 0;
-      const corrections = correctionsMatch ? correctionsMatch[1].trim() : undefined;
+      // Validate the response against the relevant guidance
+      const validationResult = await mappingValidationService.performValidation(
+        response,
+        relevantGuidance,
+        query
+      );
       
       return {
-        isValid,
-        confidence,
-        corrections,
-        sourceMaterials: [guideDocument.title]
+        ...validationResult,
+        sourceMaterials: [guidanceDoc.title]
       };
     } catch (error) {
-      console.error('Error validating response against listing guidance:', error);
+      console.error('Error validating against listing guidance:', error);
       return {
         isValid: true, // Default to valid on error
         confidence: 0,
         sourceMaterials: []
+      };
+    }
+  },
+  
+  /**
+   * Get the latest listing guidance document
+   */
+  async getListingGuidanceDocument(): Promise<ListingGuidanceDocument | null> {
+    try {
+      console.log('Fetching listing guidance document from the database');
+      
+      // First determine if the reference_documents table has a content column
+      const { data: schemaCheck, error: schemaError } = await supabase
+        .from('reference_documents')
+        .select('*')
+        .limit(1);
+      
+      if (schemaError) {
+        console.error('Error checking reference_documents schema:', schemaError);
+        return null;
+      }
+      
+      const hasContentColumn = schemaCheck && 
+                              schemaCheck.length > 0 && 
+                              'content' in schemaCheck[0];
+      
+      // Now query for the specific document we need
+      const { data, error } = await supabase
+        .from('reference_documents')
+        .select(hasContentColumn ? '*' : 'id, title, updated_at, file_url, file_type')
+        .ilike('title', '%Guide for New Listing Applicants%')
+        .order('updated_at', { ascending: false })
+        .limit(1);
+      
+      if (error) {
+        console.error('Error fetching listing guidance document:', error);
+        return null;
+      }
+      
+      if (!data || data.length === 0) {
+        console.log('No listing guidance document found in the database');
+        return null;
+      }
+      
+      const doc = data[0] as any;
+      
+      if (!doc) {
+        return null;
+      }
+      
+      // Construct a properly typed document object
+      const result: ListingGuidanceDocument = {
+        id: String(doc.id || ''),
+        title: String(doc.title || ''),
+        updated_at: String(doc.updated_at || ''),
+        content: ''
+      };
+      
+      // Validate required fields
+      if (!result.id || !result.title || !result.updated_at) {
+        console.error('Document missing required fields');
+        return null;
+      }
+      
+      // Handle content based on what's available
+      if (hasContentColumn && typeof doc.content === 'string') {
+        result.content = doc.content;
+      } else if (typeof doc.file_url === 'string') {
+        console.log('Using placeholder content from file_url');
+        result.content = 'Placeholder content - file content fetching not implemented';
+        // Store the file_url in case we need it later
+        result.file_url = doc.file_url;
+      } else {
+        console.error('Document does not have required content or file_url field');
+        return null;
+      }
+      
+      return result;
+    } catch (error) {
+      console.error('Error retrieving listing guidance document:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Extract relevant guidance sections based on the query
+   */
+  async extractRelevantGuidance(
+    fullGuidance: string,
+    query: string
+  ): Promise<string | null> {
+    try {
+      // Use Grok to extract relevant sections from the guidance
+      const extractionPrompt = `
+      The following text contains a regulatory mapping guide for new listing applicants.
+      Based on this query: "${query}"
+      Extract ONLY the most relevant sections from the guide that would be needed to validate 
+      a response to this query. Include all relevant rule references, requirements, and 
+      decision criteria. If nothing is relevant, respond with "No relevant guidance found."
+      `;
+      
+      const response = await grokService.generateResponse({
+        prompt: extractionPrompt,
+        regulatoryContext: fullGuidance,
+        temperature: 0.2,
+        maxTokens: 2000
+      });
+      
+      const extractedGuidance = response?.text || '';
+      
+      if (extractedGuidance.includes('No relevant guidance found') || 
+          extractedGuidance.trim().length < 50) {
+        return null;
+      }
+      
+      return extractedGuidance;
+    } catch (error) {
+      console.error('Error extracting relevant guidance:', error);
+      return null;
+    }
+  },
+  
+  /**
+   * Perform validation of response against guidance
+   */
+  async performValidation(
+    response: string,
+    relevantGuidance: string,
+    query: string
+  ): Promise<{
+    isValid: boolean;
+    corrections?: string;
+    confidence: number;
+  }> {
+    try {
+      // Use Grok to validate the response against the guidance
+      const validationPrompt = `
+      You are a regulatory validation expert. Compare a response to a financial regulatory query against 
+      the official guidance document to check accuracy.
+      
+      Query: "${query}"
+      
+      Relevant guidance from official document:
+      ${relevantGuidance}
+      
+      Response to validate:
+      ${response.substring(0, 4000)} ${response.length > 4000 ? '... (truncated for validation)' : ''}
+      
+      Evaluate the response and provide:
+      1. Whether it's accurate based on the guidance (true/false)
+      2. Confidence level in your assessment (0-1)
+      3. Any significant corrections needed
+      
+      Format as JSON: {"isValid": boolean, "confidence": number, "corrections": "string or null"}
+      `;
+      
+      const validationResponse = await grokService.generateResponse({
+        prompt: validationPrompt,
+        temperature: 0.1,
+        maxTokens: 1000
+      });
+      
+      // Extract JSON from the response
+      const validationText = validationResponse?.text || '';
+      const jsonMatch = validationText.match(/\{[\s\S]*\}/);
+      
+      if (jsonMatch) {
+        try {
+          const validation = JSON.parse(jsonMatch[0]);
+          return {
+            isValid: validation.isValid === true,
+            corrections: validation.corrections || undefined,
+            confidence: typeof validation.confidence === 'number' ? 
+              validation.confidence : 0.5
+          };
+        } catch (parseError) {
+          console.error('Error parsing validation JSON:', parseError);
+        }
+      }
+      
+      // Default response if parsing fails
+      return {
+        isValid: true,
+        confidence: 0.5
+      };
+    } catch (error) {
+      console.error('Error performing validation:', error);
+      return {
+        isValid: true,
+        confidence: 0
       };
     }
   }

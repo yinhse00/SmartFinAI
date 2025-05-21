@@ -1,88 +1,79 @@
 
-import { useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
-import { DocumentCategory } from '@/types/references';
+import { useState, useCallback } from 'react';
+import { toast } from '@/hooks/use-toast';
+import { uploadFilesToSupabase } from '@/utils/referenceUploadUtils';
 import { FileWithError } from './useFileSelection';
 
-interface UploadOptions {
-  files: FileWithError[];
-  category: DocumentCategory;
-  description: string;
-}
-
-interface UseReferenceUploadOptions {
-  onComplete?: () => void;
-}
-
-export const useReferenceUpload = (options: UseReferenceUploadOptions = {}) => {
-  const { toast } = useToast();
+export function useReferenceUpload(files: FileWithError[], category: string, description: string, validateFiles: () => boolean, onSuccess?: () => void) {
   const [isUploading, setIsUploading] = useState(false);
-  const [uploadError, setUploadError] = useState('');
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
-  const uploadFiles = async ({ files, category, description }: UploadOptions) => {
-    setIsUploading(true);
-    setUploadError('');
-    
-    try {
-      if (files.length === 0) {
-        throw new Error('No files selected');
-      }
-      
-      // Process each file
-      for (const file of files) {
-        const fileExt = file.name.split('.').pop()?.toLowerCase();
-        const fileType = file.type || `application/${fileExt}`;
-        
-        // Create temporary URL for file preview
-        const fileUrl = URL.createObjectURL(file);
-        
-        // Insert reference document record
-        const { error } = await supabase
-          .from('reference_documents')
-          .insert({
-            title: file.name,
-            description,
-            category,
-            file_path: file.name,
-            file_url: fileUrl,
-            file_type: fileType,
-            file_size: file.size
-          });
-        
-        if (error) {
-          throw new Error(`Upload error: ${error.message}`);
-        }
-      }
-      
+  const handleUpload = useCallback(async () => {
+    setUploadError(null);
+
+    if (files.length === 0) {
       toast({
-        title: "Upload Successful",
-        description: `${files.length} document${files.length > 1 ? 's' : ''} uploaded successfully.`,
+        title: "No files selected",
+        description: "Please select at least one file to upload.",
+        variant: "destructive",
       });
-      
-      if (options.onComplete) {
-        options.onComplete();
+      return;
+    }
+
+    if (!category) {
+      toast({
+        title: "Category required",
+        description: "Please select a category for the documents.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!validateFiles()) {
+      toast({
+        title: "Invalid files",
+        description: "Please remove invalid files before uploading.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      const result = await uploadFilesToSupabase(files, category, description);
+
+      if (result.success) {
+        toast({
+          title: "Upload successful",
+          description: result.message,
+        });
+        if (onSuccess) onSuccess();
+      } else {
+        setUploadError(result.message);
+        toast({
+          title: "Upload failed",
+          description: result.message,
+          variant: "destructive",
+        });
       }
     } catch (error) {
-      console.error('Upload error:', error);
-      const message = error instanceof Error ? error.message : 'Unknown upload error';
-      
-      setUploadError(message);
-      
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+      setUploadError(errorMessage);
       toast({
-        title: "Upload Failed",
-        description: message,
-        variant: "destructive"
+        title: "Upload error",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
       });
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [files, category, description, validateFiles, onSuccess]);
 
   return {
     isUploading,
     uploadError,
     setUploadError,
-    uploadFiles
+    handleUpload,
   };
-};
+}
