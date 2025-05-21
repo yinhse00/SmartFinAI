@@ -1,47 +1,37 @@
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { ThemeProvider } from './components/theme-provider';
+import { Toaster } from '@/components/ui/toaster';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { ThemeProvider } from "@/components/theme-provider";
+import Index from './pages';
+import Chat from './pages/Chat';
+import Database from './pages/Database';
+import Documents from './pages/Documents';
+import Timetable from './pages/Timetable';
+import History from './pages/History';
+import NotFound from './pages/NotFound';
+import References from './pages/References';
+import AnnouncementVetting from './pages/AnnouncementVetting';
 
-// Import pages
-import Chat from "./pages/Chat";
-import References from "./pages/References";
-import NotFound from "./pages/NotFound";
-import Database from "./pages/Database";
-
-// Create a client
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5000,
-      retry: 1,
-    },
-  },
-});
-
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="finance-grok-theme">
-      <TooltipProvider>
+function App() {
+  return (
+    <Router>
+      <ThemeProvider>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/chat" element={<Chat />} />
+          <Route path="/database" element={<Database />} />
+          <Route path="/documents" element={<Documents />} />
+          <Route path="/references" element={<References />} />
+          <Route path="/vetting" element={<AnnouncementVetting />} />
+          <Route path="/timetable" element={<Timetable />} />
+          <Route path="/history" element={<History />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
         <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            {/* Redirect home to chat */}
-            <Route path="/" element={<Navigate to="/chat" replace />} />
-            <Route path="/chat" element={<Chat />} />
-            <Route path="/references" element={<References />} />
-            <Route path="/database" element={<Database />} />
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+      </ThemeProvider>
+    </Router>
+  );
+}
 
 export default App;

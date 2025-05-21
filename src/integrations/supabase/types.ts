@@ -9,6 +9,78 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      announcement_pre_vetting_requirements: {
+        Row: {
+          created_at: string
+          description: string | null
+          exemptions: string | null
+          headline_category: string
+          id: string
+          is_vetting_required: boolean
+          priority: number | null
+          rule_reference: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          exemptions?: string | null
+          headline_category: string
+          id?: string
+          is_vetting_required?: boolean
+          priority?: number | null
+          rule_reference?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          exemptions?: string | null
+          headline_category?: string
+          id?: string
+          is_vetting_required?: boolean
+          priority?: number | null
+          rule_reference?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      announcement_vetting_status: {
+        Row: {
+          announcement_title: string
+          comments: string | null
+          created_at: string
+          headline_category: string
+          id: string
+          is_vetting_required: boolean
+          status: string | null
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_title: string
+          comments?: string | null
+          created_at?: string
+          headline_category: string
+          id?: string
+          is_vetting_required: boolean
+          status?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_title?: string
+          comments?: string | null
+          created_at?: string
+          headline_category?: string
+          id?: string
+          is_vetting_required?: boolean
+          status?: string | null
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       interpretation_guidance: {
         Row: {
           applicable_rules: string[] | null

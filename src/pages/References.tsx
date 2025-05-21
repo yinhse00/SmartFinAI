@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, InfoIcon, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Clock, InfoIcon, ShieldCheck, CheckSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { grokService } from '@/services/grokService';
 
@@ -87,6 +87,15 @@ const References = () => {
               Mapping Validated
             </Badge>
           )}
+          
+          <Button 
+            onClick={() => navigate('/vetting')}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <CheckSquare className="h-4 w-4" />
+            Announcement Vetting
+          </Button>
           
           <Button 
             onClick={() => navigate('/timetable')}
