@@ -2,177 +2,110 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
 import FileDropZone from './FileDropZone';
 import FileList from './FileList';
 import MetadataForm from './MetadataForm';
-import { useFileSelection } from './hooks/useFileSelection';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { AlertCircle } from 'lucide-react';
+import { useFileSelection, allowedExtensions } from './hooks/useFileSelection';
 import { useReferenceUpload } from './hooks/useReferenceUpload';
-import { DocumentCategory, categoryDisplayNames } from '@/types/references';
-import { mappingExcelProcessor } from '@/services/regulatory/mappingExcelProcessor';
-import { Badge } from '@/components/ui/badge';
-import { CheckCircle, AlertTriangle } from 'lucide-react';
 
 interface ReferenceUploaderProps {
   onUploadComplete?: () => void;
 }
 
-const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
-  const { toast } = useToast();
-  const { selectedFiles, addFiles, removeFile, clearFiles } = useFileSelection();
-  const [category, setCategory] = useState<DocumentCategory>('guidance');
+const ReferenceUploader: React.FC<ReferenceUploaderProps> = ({ onUploadComplete }) => {
+  const {
+    files,
+    setFiles,
+    handleFileChange,
+    removeFile,
+    validateFiles,
+  } = useFileSelection();
+  const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
-  const [isUploading, setIsUploading] = useState(false);
-  const [mappingResult, setMappingResult] = useState<{
-    success?: boolean;
-    message?: string;
-  } | null>(null);
-  
-  const { uploadFiles } = useReferenceUpload({
-    onComplete: () => {
-      clearFiles();
-      setDescription('');
-      if (onUploadComplete) {
-        onUploadComplete();
-      }
-    }
-  });
 
-  const handleUpload = async () => {
-    setIsUploading(true);
-    setMappingResult(null);
-    
-    try {
-      // Check if any file is a mapping schedule Excel
-      const mappingFile = selectedFiles.find(file => 
-        file.name.toLowerCase().includes('mapping_schedule') &&
-        (file.name.toLowerCase().includes('.xlsx') || file.name.toLowerCase().includes('.xls'))
-      );
-      
-      if (mappingFile) {
-        // Special handling for mapping schedule files
-        const result = await mappingExcelProcessor.processExcelFile(mappingFile);
-        
-        if (result.success) {
-          toast({
-            title: "Mapping Schedule Processed",
-            description: `Successfully processed ${mappingFile.name}`,
-            variant: "default",
-          });
-          
-          setMappingResult({
-            success: true,
-            message: "Mapping schedule processed successfully"
-          });
-          
-          // Remove the mapping file from the selected files
-          removeFile(mappingFile.name);
-          
-          // Call onUploadComplete to refresh the document list
-          if (onUploadComplete) {
-            onUploadComplete();
-          }
-        } else {
-          toast({
-            title: "Error Processing Mapping Schedule",
-            description: result.error || "Unknown error",
-            variant: "destructive",
-          });
-          
-          setMappingResult({
-            success: false,
-            message: result.error || "Failed to process mapping schedule"
-          });
-        }
-      }
-      
-      // Upload remaining files if any
-      if (selectedFiles.length > 0) {
-        await uploadFiles({
-          files: selectedFiles,
-          category,
-          description
-        });
-      }
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast({
-        title: "Upload Failed",
-        description: error instanceof Error ? error.message : "Unknown error occurred",
-        variant: "destructive",
-      });
-    } finally {
-      setIsUploading(false);
+  const {
+    isUploading,
+    uploadError,
+    setUploadError,
+    handleUpload,
+  } = useReferenceUpload(
+    files,
+    category,
+    description,
+    validateFiles,
+    () => {
+      setFiles([]);
+      setCategory('');
+      setDescription('');
+      if (onUploadComplete) onUploadComplete();
     }
-  };
+  );
+
+  // Check for invalid files
+  const hasInvalidFiles = !validateFiles();
 
   return (
-    <Card className="h-full">
+    <Card className="finance-card">
       <CardHeader>
-        <CardTitle>Upload Reference Documents</CardTitle>
+        <CardTitle className="text-xl font-semibold">Upload References</CardTitle>
         <CardDescription>
-          Add regulatory materials to enhance SmartFinAI's knowledge
+          Add regulatory documents, guidance notes, or precedent cases to enhance the system's knowledge base.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <FileDropZone onFilesAdded={addFiles} />
-        
-        {mappingResult && (
-          <div className={`mt-4 p-3 rounded-md ${mappingResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-            <div className="flex items-center gap-2">
-              {mappingResult.success 
-                ? <CheckCircle className="text-green-600 h-5 w-5" /> 
-                : <AlertTriangle className="text-red-600 h-5 w-5" />
-              }
-              <span className={mappingResult.success ? 'text-green-700' : 'text-red-700'}>
-                {mappingResult.message}
-              </span>
-            </div>
-          </div>
+      <CardContent className="space-y-6">
+        <FileDropZone 
+          onFileChange={handleFileChange} 
+          isUploading={isUploading}
+          allowedExtensions={allowedExtensions}
+        />
+
+        <FileList 
+          files={files} 
+          onRemoveFile={removeFile}
+          disabled={isUploading} 
+          allowedExtensions={allowedExtensions}
+        />
+
+        {uploadError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Upload failed</AlertTitle>
+            <AlertDescription>
+              {uploadError}
+              {uploadError.includes('bucket does not exist') && (
+                <p className="mt-2 text-sm">
+                  This application requires a Supabase storage bucket named 'references'. 
+                  Please ask your administrator to set up the required storage bucket.
+                </p>
+              )}
+            </AlertDescription>
+          </Alert>
         )}
-        
-        {selectedFiles.length > 0 && (
-          <div className="mt-4">
-            <h3 className="text-sm font-medium mb-2">Selected Files</h3>
-            <FileList files={selectedFiles} onRemove={removeFile} />
-          </div>
-        )}
-        
-        <div className="mt-6">
-          <MetadataForm
-            category={category}
-            setCategory={setCategory}
-            description={description}
-            setDescription={setDescription}
-          />
-        </div>
-        
-        {/* Special handling for mapping files */}
-        {selectedFiles.some(file => 
-          file.name.toLowerCase().includes('mapping_schedule') &&
-          (file.name.toLowerCase().includes('.xlsx') || file.name.toLowerCase().includes('.xls'))
-        ) && (
-          <div className="mt-4 bg-blue-50 p-3 rounded-md border border-blue-200">
-            <Badge variant="outline" className="bg-blue-100 text-blue-800">
-              Mapping Schedule Detected
-            </Badge>
-            <p className="text-sm text-blue-700 mt-2">
-              This appears to be a regulatory mapping file. 
-              It will be processed with special handling to optimize response validation.
-            </p>
-          </div>
-        )}
+
+        <MetadataForm 
+          category={category}
+          setCategory={setCategory}
+          description={description}
+          setDescription={setDescription}
+          isUploading={isUploading}
+        />
       </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={clearFiles} disabled={selectedFiles.length === 0 || isUploading}>
-          Clear
-        </Button>
+      <CardFooter className="flex justify-end">
         <Button 
           onClick={handleUpload} 
-          disabled={selectedFiles.length === 0 || isUploading}
-          className="bg-finance-accent-blue hover:bg-finance-dark-blue"
+          className="bg-finance-medium-blue hover:bg-finance-dark-blue"
+          disabled={isUploading || files.length === 0 || !category || !validateFiles()}
         >
-          {isUploading ? 'Processing...' : 'Upload'}
+          {isUploading ? (
+            <>
+              <span className="mr-2">Uploading...</span>
+              <div className="h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></div>
+            </>
+          ) : (
+            <>Upload References</>
+          )}
         </Button>
       </CardFooter>
     </Card>
@@ -180,3 +113,4 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
 };
 
 export default ReferenceUploader;
+
