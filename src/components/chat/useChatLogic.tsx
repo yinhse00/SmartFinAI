@@ -31,8 +31,15 @@ export const useChatLogic = () => {
   // Input state management
   const { input, setInput, lastQuery, setLastQuery } = useInputState();
   
-  // Reference documents
-  const { data: referenceDocuments = [] } = useReferenceDocuments();
+  // Reference documents - wrap in try-catch to handle possible missing QueryClientProvider
+  let referenceDocuments = [];
+  try {
+    const { data = [] } = useReferenceDocuments();
+    referenceDocuments = data;
+  } catch (error) {
+    console.error("Failed to load reference documents:", error);
+    // Use empty array as fallback
+  }
   
   // Language state management
   const { lastInputWasChinese, checkIsChineseInput } = useLanguageState();

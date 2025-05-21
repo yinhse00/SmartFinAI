@@ -7,7 +7,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, InfoIcon, ShieldCheck } from 'lucide-react';
+import { CalendarDays, InfoIcon, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { grokService } from '@/services/grokService';
 
