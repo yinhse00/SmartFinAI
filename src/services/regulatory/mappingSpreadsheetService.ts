@@ -15,6 +15,11 @@ interface MappingGuidanceDocument {
   metadata?: any;
 }
 
+interface GuidanceSearchResult {
+  guidanceContext: string;
+  sourceMaterials: string[];
+}
+
 export const mappingSpreadsheetService = {
   /**
    * Validates a response against the listing guidance mapping data
@@ -154,6 +159,117 @@ export const mappingSpreadsheetService = {
     } catch (error) {
       console.error('Error extracting relevant guidance:', error);
       return null;
+    }
+  },
+
+  /**
+   * Extract topics from a query for guidance lookups
+   */
+  extractTopicsFromQuery: async (query: string): Promise<string[]> => {
+    try {
+      console.log('Extracting topics from query:', query);
+      
+      // Simple keyword extraction - in production, this would use NLP
+      const keywords = extractKeywords(query);
+      
+      // Filter out common words and short terms
+      const topics = keywords.filter(keyword => 
+        keyword.length > 3 && !commonWords.has(keyword.toLowerCase())
+      );
+      
+      console.log('Extracted topics:', topics);
+      return topics;
+    } catch (error) {
+      console.error('Error extracting topics from query:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Find relevant guidance materials based on query and topics
+   */
+  findRelevantGuidance: async (query: string, topics: string[]): Promise<GuidanceSearchResult> => {
+    try {
+      console.log('Finding relevant guidance for topics:', topics);
+      
+      if (!topics || topics.length === 0) {
+        return {
+          guidanceContext: "No specific guidance materials found.",
+          sourceMaterials: []
+        };
+      }
+      
+      // Search for guidance documents related to the topics
+      const { data: guidanceDocs, error } = await supabase
+        .from('reference_documents')
+        .select('id, title, content, metadata')
+        .eq('category', 'guidance')
+        .order('created_at', { ascending: false });
+      
+      if (error || !guidanceDocs || guidanceDocs.length === 0) {
+        console.log('No guidance documents found or error occurred:', error);
+        return {
+          guidanceContext: "No specific guidance materials found.",
+          sourceMaterials: []
+        };
+      }
+      
+      // Filter documents by relevance to topics
+      const relevantDocs = guidanceDocs.filter(doc => {
+        const docContent = doc.content || '';
+        return topics.some(topic => 
+          docContent.toLowerCase().includes(topic.toLowerCase()) || 
+          (doc.title && doc.title.toLowerCase().includes(topic.toLowerCase()))
+        );
+      });
+      
+      if (relevantDocs.length === 0) {
+        return {
+          guidanceContext: "No specific guidance materials found.",
+          sourceMaterials: []
+        };
+      }
+      
+      // Extract relevant sections from documents
+      const relevantSections: string[] = [];
+      const sourceMaterials: string[] = [];
+      
+      for (const doc of relevantDocs) {
+        if (!doc.content) continue;
+        
+        // Add document title to sources
+        if (doc.title && !sourceMaterials.includes(doc.title)) {
+          sourceMaterials.push(doc.title);
+        }
+        
+        // Extract relevant sections from each document
+        const sections = doc.content.split(/\n{2,}/);
+        const relevantDocsContent = sections.filter(section => 
+          topics.some(topic => section.toLowerCase().includes(topic.toLowerCase()))
+        );
+        
+        if (relevantDocsContent.length > 0) {
+          relevantSections.push(
+            `--- From ${doc.title} ---\n` + 
+            relevantDocsContent.join('\n\n')
+          );
+        }
+      }
+      
+      const combinedContext = relevantSections.length > 0 
+        ? relevantSections.join('\n\n\n')
+        : "No specific guidance materials found.";
+        
+      return {
+        guidanceContext: combinedContext,
+        sourceMaterials
+      };
+    } catch (error) {
+      console.error('Error finding relevant guidance:', error);
+      return {
+        guidanceContext: "Error retrieving guidance materials.",
+        sourceMaterials: []
+      };
     }
   }
 };
