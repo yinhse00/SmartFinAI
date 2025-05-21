@@ -68,6 +68,7 @@ export type Database = {
       reference_documents: {
         Row: {
           category: string
+          content: string | null
           created_at: string
           description: string | null
           file_path: string
@@ -75,10 +76,12 @@ export type Database = {
           file_type: string | null
           file_url: string
           id: string
+          metadata: Json | null
           title: string
         }
         Insert: {
           category: string
+          content?: string | null
           created_at?: string
           description?: string | null
           file_path: string
@@ -86,10 +89,12 @@ export type Database = {
           file_type?: string | null
           file_url: string
           id?: string
+          metadata?: Json | null
           title: string
         }
         Update: {
           category?: string
+          content?: string | null
           created_at?: string
           description?: string | null
           file_path?: string
@@ -97,6 +102,7 @@ export type Database = {
           file_type?: string | null
           file_url?: string
           id?: string
+          metadata?: Json | null
           title?: string
         }
         Relationships: []

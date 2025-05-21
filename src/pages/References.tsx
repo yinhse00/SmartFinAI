@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import ReferenceUploader from '@/components/references/ReferenceUploader';
 import ReferenceDocumentsList from '@/components/references/ReferenceDocumentsList';
@@ -35,10 +35,7 @@ const References = () => {
     try {
       setValidationStatus({ status: 'checking' });
       
-      // This would normally be a real check against the database
-      // For now, we'll simulate it
-      const { data, error } = await grokService.validateMappingDocuments?.() || 
-        { data: { isValid: true, message: "Mapping documents validated successfully." }, error: null };
+      const { data, error } = await grokService.validateMappingDocuments();
       
       if (error) {
         setValidationStatus({ 
@@ -69,9 +66,9 @@ const References = () => {
   };
 
   // Run validation check on component mount
-  useState(() => {
+  useEffect(() => {
     checkMappingValidation();
-  });
+  }, []);
 
   return (
     <MainLayout>
