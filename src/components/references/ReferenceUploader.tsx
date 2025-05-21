@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import FileDropZone from './FileDropZone';
 import FileList from './FileList';
 import MetadataForm from './MetadataForm';
@@ -87,7 +87,7 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
       }
       
       // Upload remaining files if any
-      if (selectedFiles.length > 0) {
+      if (selectedFiles && selectedFiles.length > 0) {
         await uploadFiles({
           files: selectedFiles,
           category,
@@ -131,9 +131,8 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
           </div>
         )}
         
-        {selectedFiles.length > 0 && (
+        {selectedFiles && selectedFiles.length > 0 && (
           <div className="mt-4">
-            <h3 className="text-sm font-medium mb-2">Selected Files</h3>
             <FileList files={selectedFiles} onRemove={removeFile} disabled={isUploading} />
           </div>
         )}
@@ -144,11 +143,12 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
             setCategory={(value) => setCategory(value as DocumentCategory)}
             description={description}
             setDescription={setDescription}
+            isUploading={isUploading}
           />
         </div>
         
         {/* Special handling for mapping files */}
-        {selectedFiles.some(file => 
+        {selectedFiles && selectedFiles.some(file => 
           file.name.toLowerCase().includes('mapping_schedule') &&
           (file.name.toLowerCase().includes('.xlsx') || file.name.toLowerCase().includes('.xls'))
         ) && (
@@ -164,12 +164,12 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
         )}
       </CardContent>
       <CardFooter className="flex justify-between">
-        <Button variant="outline" onClick={clearFiles} disabled={selectedFiles.length === 0 || isUploading}>
+        <Button variant="outline" onClick={clearFiles} disabled={!selectedFiles || selectedFiles.length === 0 || isUploading}>
           Clear
         </Button>
         <Button 
           onClick={handleUpload} 
-          disabled={selectedFiles.length === 0 || isUploading}
+          disabled={!selectedFiles || selectedFiles.length === 0 || isUploading}
           className="bg-finance-accent-blue hover:bg-finance-dark-blue"
         >
           {isUploading ? 'Processing...' : 'Upload'}
