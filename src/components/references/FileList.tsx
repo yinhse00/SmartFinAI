@@ -1,21 +1,19 @@
+
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { FileText, FileType, X, AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-
-interface FileWithError extends File {
-  error?: string;
-}
+import { FileWithError } from './hooks/useFileSelection';
 
 interface FileListProps {
   files: FileWithError[];
-  onRemoveFile: (index: number) => void;
+  onRemove: (fileName: string) => void;
   disabled?: boolean;
 }
 
 const FileList: React.FC<FileListProps & { allowedExtensions?: string[] }> = ({
   files,
-  onRemoveFile,
+  onRemove,
   disabled = false,
   allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'],
 }) => {
@@ -76,7 +74,7 @@ const FileList: React.FC<FileListProps & { allowedExtensions?: string[] }> = ({
                   size="icon" 
                   onClick={(e) => {
                     e.stopPropagation();
-                    onRemoveFile(index);
+                    onRemove(file.name);
                   }}
                   disabled={disabled}
                 >

@@ -8,47 +8,38 @@ export interface FileWithError extends File {
 export const allowedExtensions = ['pdf', 'docx', 'txt', 'xlsx', 'xls'];
 
 export function useFileSelection() {
-  const [files, setFiles] = useState<FileWithError[]>([]);
+  const [selectedFiles, setSelectedFiles] = useState<FileWithError[]>([]);
 
-  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = Array.from(e.target.files) as FileWithError[];
-
-      const validatedFiles = newFiles.map(file => {
-        const fileExt = file.name.split('.').pop()?.toLowerCase();
-
-        if (!allowedExtensions.includes(fileExt || '')) {
-          return { ...file, error: 'Invalid file type. PDF, DOCX, TXT, XLSX, XLS' };
-        }
-
-        if (file.size > 20971520) {
-          return { ...file, error: 'File exceeds 20MB limit' };
-        }
-
-        return file;
-      });
-
-      setFiles(prev => [...prev, ...validatedFiles]);
-    }
-  }, []);
-
-  const removeFile = useCallback((index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
-  }, []);
-
-  const validateFiles = useCallback(() => {
-    const invalidFiles = files.filter(file => {
+  const addFiles = useCallback((newFiles: FileList | File[]) => {
+    const filesToAdd = Array.from(newFiles).map(file => {
       const fileExt = file.name.split('.').pop()?.toLowerCase();
-      return !allowedExtensions.includes(fileExt || '') || file.size > 20971520;
+      
+      if (!allowedExtensions.includes(fileExt || '')) {
+        return { ...file, error: 'Invalid file type' };
+      }
+      
+      if (file.size > 20971520) { // 20MB
+        return { ...file, error: 'File exceeds 20MB limit' };
+      }
+      
+      return file as FileWithError;
     });
-    return invalidFiles.length === 0;
-  }, [files]);
+
+    setSelectedFiles(prev => [...prev, ...filesToAdd]);
+  }, []);
+
+  const removeFile = useCallback((fileName: string) => {
+    setSelectedFiles(prev => prev.filter(file => file.name !== fileName));
+  }, []);
+
+  const clearFiles = useCallback(() => {
+    setSelectedFiles([]);
+  }, []);
 
   return {
-    files,
-    setFiles,
-    handleFileChange,
+    selectedFiles,
+    addFiles,
     removeFile,
-    validateFiles,
+    clearFiles,
   };
 }

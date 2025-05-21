@@ -8,7 +8,7 @@ import FileList from './FileList';
 import MetadataForm from './MetadataForm';
 import { useFileSelection } from './hooks/useFileSelection';
 import { useReferenceUpload } from './hooks/useReferenceUpload';
-import { DocumentCategory, categoryDisplayNames } from '@/types/references';
+import { DocumentCategory } from '@/types/references';
 import { mappingExcelProcessor } from '@/services/regulatory/mappingExcelProcessor';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertTriangle } from 'lucide-react';
@@ -115,7 +115,7 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <FileDropZone onFilesAdded={addFiles} />
+        <FileDropZone onFilesAdded={addFiles} isUploading={isUploading} />
         
         {mappingResult && (
           <div className={`mt-4 p-3 rounded-md ${mappingResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
@@ -134,14 +134,14 @@ const ReferenceUploader = ({ onUploadComplete }: ReferenceUploaderProps) => {
         {selectedFiles.length > 0 && (
           <div className="mt-4">
             <h3 className="text-sm font-medium mb-2">Selected Files</h3>
-            <FileList files={selectedFiles} onRemove={removeFile} />
+            <FileList files={selectedFiles} onRemove={removeFile} disabled={isUploading} />
           </div>
         )}
         
         <div className="mt-6">
           <MetadataForm
             category={category}
-            setCategory={setCategory}
+            setCategory={(value) => setCategory(value as DocumentCategory)}
             description={description}
             setDescription={setDescription}
           />
