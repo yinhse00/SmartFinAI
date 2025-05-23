@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import ReferenceUploader from '@/components/references/ReferenceUploader';
 import ReferenceDocumentsList from '@/components/references/ReferenceDocumentsList';
@@ -7,13 +7,17 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
-import { CalendarDays, Clock, InfoIcon, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Clock, InfoIcon, ShieldCheck, Database } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { grokService } from '@/services/grokService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import VettingRequirementsProcessor from '@/components/vetting/VettingRequirementsProcessor';
+import VettingRequirementsViewer from '@/components/timetable/VettingRequirementsViewer';
 
 const References = () => {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState('documents');
   const [validationStatus, setValidationStatus] = useState<{
     status: 'idle' | 'checking' | 'valid' | 'invalid';
     message?: string;
@@ -28,6 +32,14 @@ const References = () => {
     
     // When documents change, check for validation status
     checkMappingValidation();
+  };
+  
+  // When vetting requirements are processed, refresh the data
+  const handleVettingProcessed = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['vettingRequirements'],
+      exact: false
+    });
   };
   
   // Check if the mapping files are present and valid
@@ -69,9 +81,9 @@ const References = () => {
   };
 
   // Run validation check on component mount
-  useState(() => {
+  useEffect(() => {
     checkMappingValidation();
-  });
+  }, []);
 
   return (
     <MainLayout>
@@ -114,8 +126,11 @@ const References = () => {
             <li className="mt-1 flex items-center"><span className="font-semibold">"Mapping_schedule_FAQ_Guidance Materials for Listed Issuers"</span>
               <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-800 border-blue-200">Medium Priority</Badge>
             </li>
+            <li className="mt-1 flex items-center"><span className="font-semibold">"Guide on pre-vetting requirements and selection of headline categories for announcements"</span>
+              <Badge variant="outline" className="ml-2 bg-purple-50 text-purple-800 border-purple-200">New</Badge>
+            </li>
           </ul>
-          <p className="mt-2">The system will now validate responses against these files to ensure accuracy.</p>
+          <p className="mt-2">The system will now validate responses against these files to ensure accuracy and determine vetting requirements for announcements.</p>
           
           {validationStatus.status === 'invalid' && (
             <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-red-700">
@@ -124,15 +139,33 @@ const References = () => {
           )}
         </AlertDescription>
       </Alert>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
-          <ReferenceDocumentsList onValidateMapping={checkMappingValidation} />
-        </div>
-        <div>
-          <ReferenceUploader onUploadComplete={handleDocumentsChanged} />
-        </div>
-      </div>
+
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+          <TabsTrigger value="documents">Reference Documents</TabsTrigger>
+          <TabsTrigger value="vetting">Vetting Requirements</TabsTrigger>
+        </TabsList>
+        <TabsContent value="documents" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <ReferenceDocumentsList onValidateMapping={checkMappingValidation} />
+            </div>
+            <div>
+              <ReferenceUploader onUploadComplete={handleDocumentsChanged} />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="vetting" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <VettingRequirementsViewer />
+            </div>
+            <div>
+              <VettingRequirementsProcessor onProcessComplete={handleVettingProcessed} />
+            </div>
+          </div>
+        </TabsContent>
+      </Tabs>
     </MainLayout>
   );
 };
