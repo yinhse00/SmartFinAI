@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import ReferenceUploader from '@/components/references/ReferenceUploader';
@@ -13,6 +12,8 @@ import { grokService } from '@/services/grokService';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VettingRequirementsProcessor from '@/components/vetting/VettingRequirementsProcessor';
 import VettingRequirementsViewer from '@/components/timetable/VettingRequirementsViewer';
+import MappingScheduleProcessor from '@/components/mapping/MappingScheduleProcessor';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const References = () => {
   const queryClient = useQueryClient();
@@ -38,6 +39,18 @@ const References = () => {
   const handleVettingProcessed = () => {
     queryClient.invalidateQueries({
       queryKey: ['vettingRequirements'],
+      exact: false
+    });
+  };
+  
+  // When mapping schedule is processed, refresh the data
+  const handleMappingProcessed = () => {
+    queryClient.invalidateQueries({
+      queryKey: ['regulatoryFAQs'],
+      exact: false
+    });
+    queryClient.invalidateQueries({
+      queryKey: ['interpretationGuidance'],
       exact: false
     });
   };
@@ -118,7 +131,7 @@ const References = () => {
         <InfoIcon className="h-4 w-4 text-blue-600" />
         <AlertTitle className="text-blue-800">Special Excel Files Supported</AlertTitle>
         <AlertDescription className="text-blue-700">
-          <p>The system now supports two types of regulatory Excel files with enhanced validation:</p>
+          <p>The system now supports three types of regulatory Excel files with enhanced validation:</p>
           <ul className="list-disc ml-6 mt-2">
             <li className="flex items-center"><span className="font-semibold">"Mapping_Schedule_(EN)_(2024)_Guide for New Listing Applicants"</span> 
               <Badge variant="outline" className="ml-2 bg-yellow-50 text-yellow-800 border-yellow-200">High Priority</Badge>
@@ -141,9 +154,10 @@ const References = () => {
       </Alert>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid w-full md:w-[400px] grid-cols-2">
+        <TabsList className="grid w-full md:w-[600px] grid-cols-3">
           <TabsTrigger value="documents">Reference Documents</TabsTrigger>
           <TabsTrigger value="vetting">Vetting Requirements</TabsTrigger>
+          <TabsTrigger value="mapping">Mapping Schedule</TabsTrigger>
         </TabsList>
         <TabsContent value="documents" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -162,6 +176,28 @@ const References = () => {
             </div>
             <div>
               <VettingRequirementsProcessor onProcessComplete={handleVettingProcessed} />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="mapping" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="space-y-4">
+                <Card className="finance-card">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">Mapping Schedule Data</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      This section displays the extracted FAQs and guidance materials from the mapping schedule. 
+                      Use the processor on the right to parse and populate the data.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            <div>
+              <MappingScheduleProcessor onProcessComplete={handleMappingProcessed} />
             </div>
           </div>
         </TabsContent>
