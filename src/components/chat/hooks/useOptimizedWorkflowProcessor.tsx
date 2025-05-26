@@ -57,13 +57,14 @@ export const useOptimizedWorkflowProcessor = ({
       setMessages(updatedMessages);
       
       // Create assistant message placeholder with streaming content
+      const assistantMessageId = (Date.now() + 1).toString();
       const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: assistantMessageId,
         isUser: false,
         content: 'Processing your request...',
         timestamp: new Date(),
         isError: false,
-        metadata: { isStreaming: true }
+        metadata: {}
       };
       
       setMessages([...updatedMessages, assistantMessage]);
@@ -75,7 +76,7 @@ export const useOptimizedWorkflowProcessor = ({
       streamingResponse.onUpdate((content) => {
         setMessages(prevMessages => {
           const newMessages = [...prevMessages];
-          const assistantIndex = newMessages.findIndex(m => m.id === assistantMessage.id);
+          const assistantIndex = newMessages.findIndex(m => m.id === assistantMessageId);
           if (assistantIndex !== -1) {
             newMessages[assistantIndex] = {
               ...newMessages[assistantIndex],
@@ -147,7 +148,7 @@ export const useOptimizedWorkflowProcessor = ({
         // Handle translations if needed
         if (step5Result.requiresTranslation) {
           const finalMessages = [...updatedMessages];
-          const assistantIndex = finalMessages.findIndex(m => m.id === assistantMessage.id);
+          const assistantIndex = finalMessages.findIndex(m => m.id === assistantMessageId);
           if (assistantIndex !== -1) {
             manageTranslations(finalMessages, assistantIndex);
           }
@@ -167,7 +168,7 @@ export const useOptimizedWorkflowProcessor = ({
       
       setMessages(prevMessages => {
         const newMessages = [...prevMessages];
-        const assistantIndex = newMessages.findIndex(m => m.id === assistantMessage.id);
+        const assistantIndex = newMessages.findIndex(m => m.id.includes('assistant'));
         if (assistantIndex !== -1) {
           newMessages[assistantIndex] = {
             ...newMessages[assistantIndex],

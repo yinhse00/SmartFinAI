@@ -3,6 +3,22 @@ import { contextSearchOrchestrator } from './contextSearchOrchestrator';
 import { mappingSpreadsheetService } from '../mappingSpreadsheetService';
 import { summaryIndexService } from '../../database/summaryIndexService';
 
+interface ContextResult {
+  context: string;
+  reasoning: string;
+}
+
+interface GuidanceResult {
+  guidanceContext: string;
+  sourceMaterials: any[];
+}
+
+interface SummaryResult {
+  found: boolean;
+  content: string;
+  sourceIds: string[];
+}
+
 /**
  * Service for parallel context retrieval to improve performance
  */
@@ -19,34 +35,39 @@ export const parallelContextService = {
         // Main regulatory context search
         contextSearchOrchestrator.executeComprehensiveSearch(query).catch(err => {
           console.warn('Main context search failed:', err);
-          return { context: '', reasoning: 'Main search failed' };
+          return { context: '', reasoning: 'Main search failed' } as ContextResult;
         }),
         
         // Guidance materials lookup
         mappingSpreadsheetService.findRelevantGuidance(query, []).catch(err => {
           console.warn('Guidance lookup failed:', err);
-          return { guidanceContext: '', sourceMaterials: [] };
+          return { guidanceContext: '', sourceMaterials: [] } as GuidanceResult;
         }),
         
         // Summary index search for quick hits
         summaryIndexService.findRelevantSummary(query).catch(err => {
           console.warn('Summary search failed:', err);
-          return { found: false, content: '', sourceIds: [] };
+          return { found: false, content: '', sourceIds: [] } as SummaryResult;
         })
       ];
       
       // Wait for all parallel operations to complete
       const [mainContext, guidanceResult, summaryResult] = await Promise.all(contextPromises);
       
-      // Combine results
-      let combinedContext = mainContext.context || '';
+      // Type-safe property access
+      const mainContextTyped = mainContext as ContextResult;
+      const guidanceResultTyped = guidanceResult as GuidanceResult;
+      const summaryResultTyped = summaryResult as SummaryResult;
       
-      if (guidanceResult.guidanceContext && guidanceResult.guidanceContext !== "No specific guidance materials found.") {
-        combinedContext += "\n\n--- Guidance Materials ---\n\n" + guidanceResult.guidanceContext;
+      // Combine results
+      let combinedContext = mainContextTyped.context || '';
+      
+      if (guidanceResultTyped.guidanceContext && guidanceResultTyped.guidanceContext !== "No specific guidance materials found.") {
+        combinedContext += "\n\n--- Guidance Materials ---\n\n" + guidanceResultTyped.guidanceContext;
       }
       
-      if (summaryResult.found && summaryResult.content) {
-        combinedContext += "\n\n--- Quick Reference ---\n\n" + summaryResult.content;
+      if (summaryResultTyped.found && summaryResultTyped.content) {
+        combinedContext += "\n\n--- Quick Reference ---\n\n" + summaryResultTyped.content;
       }
       
       const processingTime = Date.now() - startTime;
@@ -54,9 +75,9 @@ export const parallelContextService = {
       
       return {
         context: combinedContext,
-        reasoning: mainContext.reasoning || 'Parallel context retrieval',
-        guidanceContext: guidanceResult.guidanceContext,
-        sourceMaterials: guidanceResult.sourceMaterials || [],
+        reasoning: mainContextTyped.reasoning || 'Parallel context retrieval',
+        guidanceContext: guidanceResultTyped.guidanceContext,
+        sourceMaterials: guidanceResultTyped.sourceMaterials || [],
         processingTime,
         usedParallelProcessing: true
       };

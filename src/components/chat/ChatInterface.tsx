@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
@@ -49,6 +50,7 @@ const ChatInterface: React.FC = () => {
     input,
     setInput,
     lastQuery,
+    setLastQuery,
     handleSend,
     handleKeyDown,
     processQuery,
@@ -81,6 +83,19 @@ const ChatInterface: React.FC = () => {
     isSimplifiedChinese 
   } = useLanguageDetection(messages, input);
   
+  // Use optimized workflow processor instead of regular one
+  const { 
+    isLoading, 
+    processingStage, 
+    executeOptimizedWorkflow 
+  } = useOptimizedWorkflowProcessor({
+    messages,
+    setMessages,
+    setLastQuery,
+    isGrokApiKeySet,
+    setApiKeyDialogOpen
+  });
+
   // Translation functionality for Chinese inputs
   const { translatingMessageIds } = useMessageTranslator({
     messages,
@@ -101,19 +116,6 @@ const ChatInterface: React.FC = () => {
       });
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
-  
-  // Use optimized workflow processor instead of regular one
-  const { 
-    isLoading, 
-    processingStage, 
-    executeOptimizedWorkflow 
-  } = useOptimizedWorkflowProcessor({
-    messages,
-    setMessages,
-    setLastQuery,
-    isGrokApiKeySet,
-    setApiKeyDialogOpen
-  });
 
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
@@ -157,9 +159,6 @@ const ChatInterface: React.FC = () => {
     await executeOptimizedWorkflow(query);
   };
 
-  // Map workflow step to processing stage
-  const processingStageMapped = mapWorkflowToProcessingStage(currentStep);
-
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
@@ -194,7 +193,7 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          currentStep={processingStageMapped}
+          currentStep={processingStage}
           stepProgress={processingStage}
         />
       </div>
