@@ -17,7 +17,6 @@ export type Database = {
           headline_category: string
           id: string
           is_vetting_required: boolean
-          priority: number | null
           rule_reference: string | null
           updated_at: string
         }
@@ -28,7 +27,6 @@ export type Database = {
           headline_category: string
           id?: string
           is_vetting_required?: boolean
-          priority?: number | null
           rule_reference?: string | null
           updated_at?: string
         }
@@ -39,44 +37,7 @@ export type Database = {
           headline_category?: string
           id?: string
           is_vetting_required?: boolean
-          priority?: number | null
           rule_reference?: string | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      announcement_vetting_status: {
-        Row: {
-          announcement_title: string
-          comments: string | null
-          created_at: string
-          headline_category: string
-          id: string
-          is_vetting_required: boolean
-          status: string | null
-          submitted_at: string
-          updated_at: string
-        }
-        Insert: {
-          announcement_title: string
-          comments?: string | null
-          created_at?: string
-          headline_category: string
-          id?: string
-          is_vetting_required: boolean
-          status?: string | null
-          submitted_at?: string
-          updated_at?: string
-        }
-        Update: {
-          announcement_title?: string
-          comments?: string | null
-          created_at?: string
-          headline_category?: string
-          id?: string
-          is_vetting_required?: boolean
-          status?: string | null
-          submitted_at?: string
           updated_at?: string
         }
         Relationships: []
@@ -140,9 +101,7 @@ export type Database = {
       reference_documents: {
         Row: {
           category: string
-          content: string | null
           created_at: string
-          description: string | null
           file_path: string
           file_size: number | null
           file_type: string | null
@@ -153,9 +112,7 @@ export type Database = {
         }
         Insert: {
           category: string
-          content?: string | null
           created_at?: string
-          description?: string | null
           file_path: string
           file_size?: number | null
           file_type?: string | null
@@ -166,9 +123,7 @@ export type Database = {
         }
         Update: {
           category?: string
-          content?: string | null
           created_at?: string
-          description?: string | null
           file_path?: string
           file_size?: number | null
           file_type?: string | null
