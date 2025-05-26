@@ -57,12 +57,6 @@ interface ChatMessageProps {
   isTranslating?: boolean;
 }
 
-// Simple table detection and formatting function
-const detectAndFormatTables = (content: string): string => {
-  // Basic implementation - just return the content for now
-  return content;
-};
-
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onRetry,
