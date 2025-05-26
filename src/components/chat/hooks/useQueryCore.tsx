@@ -1,7 +1,6 @@
 
 import { useToast } from '@/hooks/use-toast';
 import { Message } from '../ChatMessage';
-import { useQueryLogger } from './useQueryLogger';
 
 /**
  * Core functionality for query execution
@@ -18,7 +17,7 @@ export const useQueryCore = (
     const userMessage: Message = {
       id: Date.now().toString(),
       content: queryText,
-      sender: 'user',
+      isUser: true,
       timestamp: new Date(),
     };
     
@@ -33,7 +32,7 @@ export const useQueryCore = (
     const fallbackMessage: Message = {
       id: Date.now().toString(),
       content: "I'm sorry, something went wrong. Please try again in a moment.",
-      sender: 'bot',
+      isUser: false,
       timestamp: new Date(),
       isError: true
     };

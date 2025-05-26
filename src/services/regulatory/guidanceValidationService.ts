@@ -3,312 +3,258 @@ import { supabase } from '@/integrations/supabase/client';
 
 export interface GuidanceMatch {
   id: string;
-  type: 'faq' | 'guidance';
   title: string;
   content: string;
-  relevanceScore: number;
+  type: 'faq' | 'guidance';
+  relevance: number;
+  source: string;
+  relatedProvisions?: string[];
   applicableRules?: string[];
   guidanceNumber?: string;
-  sourceDocumentId?: string;
 }
 
 export interface GuidanceValidation {
   hasRelevantGuidance: boolean;
   matches: GuidanceMatch[];
-  totalMatches: number;
   confidence: number;
+  searchStrategy: string;
 }
 
 /**
- * Service for validating responses against regulatory FAQs and interpretation guidance
+ * Service for validating regulatory guidance and FAQs
  */
 export const guidanceValidationService = {
   /**
-   * Search for relevant FAQs and guidance based on query
+   * Search for relevant FAQs and guidance documents
    */
-  findRelevantGuidance: async (query: string, maxResults: number = 5): Promise<GuidanceValidation> => {
+  searchRelevantGuidance: async (query: string): Promise<GuidanceValidation> => {
     try {
-      console.log('Searching for relevant regulatory guidance and FAQs');
+      console.log('Searching for relevant guidance and FAQs...');
       
       const searchTerms = extractSearchTerms(query);
-      console.log('Search terms extracted:', searchTerms);
+      const matches: GuidanceMatch[] = [];
       
-      // Search FAQs and guidance in parallel
-      const [faqResults, guidanceResults] = await Promise.all([
-        searchRegulatoryFAQs(searchTerms, Math.ceil(maxResults / 2)),
-        searchInterpretationGuidance(searchTerms, Math.ceil(maxResults / 2))
-      ]);
+      // Search FAQs
+      const faqMatches = await searchFAQs(searchTerms);
+      matches.push(...faqMatches);
       
-      // Combine and sort by relevance
-      const allMatches = [...faqResults, ...guidanceResults]
-        .sort((a, b) => b.relevanceScore - a.relevanceScore)
-        .slice(0, maxResults);
+      // Search interpretation guidance
+      const guidanceMatches = await searchInterpretationGuidance(searchTerms);
+      matches.push(...guidanceMatches);
       
-      const confidence = calculateGuidanceConfidence(allMatches, query);
+      // Sort by relevance
+      matches.sort((a, b) => b.relevance - a.relevance);
+      
+      const hasRelevantGuidance = matches.length > 0;
+      const confidence = hasRelevantGuidance ? 
+        Math.min(0.9, Math.max(...matches.map(m => m.relevance))) : 0;
+      
+      console.log(`Found ${matches.length} relevant guidance documents`);
       
       return {
-        hasRelevantGuidance: allMatches.length > 0,
-        matches: allMatches,
-        totalMatches: faqResults.length + guidanceResults.length,
-        confidence
+        hasRelevantGuidance,
+        matches: matches.slice(0, 10), // Limit to top 10
+        confidence,
+        searchStrategy: 'combined_faq_guidance'
       };
     } catch (error) {
-      console.error('Error finding relevant guidance:', error);
+      console.error('Error searching guidance:', error);
       return {
         hasRelevantGuidance: false,
         matches: [],
-        totalMatches: 0,
-        confidence: 0
+        confidence: 0,
+        searchStrategy: 'error'
       };
     }
   },
 
   /**
-   * Validate a response against existing guidance
+   * Validate a response against guidance documents
    */
   validateResponseAgainstGuidance: async (
     response: string, 
-    query: string
+    query: string, 
+    guidanceMatches: GuidanceMatch[]
   ): Promise<{
     isConsistent: boolean;
-    conflictingGuidance: GuidanceMatch[];
-    supportingGuidance: GuidanceMatch[];
+    inconsistencies: string[];
     confidence: number;
   }> => {
     try {
-      console.log('Validating response against existing guidance');
+      console.log('Validating response against guidance documents...');
       
-      const guidanceValidation = await guidanceValidationService.findRelevantGuidance(query, 10);
-      
-      if (!guidanceValidation.hasRelevantGuidance) {
+      if (guidanceMatches.length === 0) {
         return {
           isConsistent: true,
-          conflictingGuidance: [],
-          supportingGuidance: [],
-          confidence: 0.5 // Neutral when no guidance exists
+          inconsistencies: [],
+          confidence: 0.5
         };
       }
       
-      // Analyze consistency (simplified implementation)
-      const supportingGuidance: GuidanceMatch[] = [];
-      const conflictingGuidance: GuidanceMatch[] = [];
+      const inconsistencies: string[] = [];
       
-      for (const guidance of guidanceValidation.matches) {
-        const consistency = analyzeConsistency(response, guidance.content);
-        
-        if (consistency > 0.7) {
-          supportingGuidance.push(guidance);
-        } else if (consistency < 0.3) {
-          conflictingGuidance.push(guidance);
+      // Simple validation - check for contradictions
+      for (const match of guidanceMatches) {
+        const contradiction = findContradictions(response, match.content);
+        if (contradiction) {
+          inconsistencies.push(`Potential inconsistency with ${match.type}: ${contradiction}`);
         }
       }
       
-      const isConsistent = conflictingGuidance.length === 0;
-      const confidence = calculateValidationConfidence(supportingGuidance, conflictingGuidance);
+      const isConsistent = inconsistencies.length === 0;
+      const confidence = isConsistent ? 0.8 : 0.3;
+      
+      console.log(`Guidance validation completed. Consistent: ${isConsistent}`);
       
       return {
         isConsistent,
-        conflictingGuidance,
-        supportingGuidance,
+        inconsistencies,
         confidence
       };
     } catch (error) {
-      console.error('Error validating response against guidance:', error);
+      console.error('Error validating against guidance:', error);
       return {
-        isConsistent: true,
-        conflictingGuidance: [],
-        supportingGuidance: [],
+        isConsistent: false,
+        inconsistencies: ['Error during validation'],
         confidence: 0
       };
-    }
-  },
-
-  /**
-   * Get specific guidance by ID
-   */
-  getGuidanceById: async (id: string, type: 'faq' | 'guidance'): Promise<GuidanceMatch | null> => {
-    try {
-      const tableName = type === 'faq' ? 'regulatory_faqs' : 'interpretation_guidance';
-      
-      const { data, error } = await supabase
-        .from(tableName)
-        .select('*')
-        .eq('id', id)
-        .single();
-      
-      if (error || !data) {
-        return null;
-      }
-      
-      if (type === 'faq') {
-        return {
-          id: data.id,
-          type: 'faq',
-          title: data.question,
-          content: data.answer,
-          relevanceScore: 1.0,
-          applicableRules: data.related_provisions,
-          sourceDocumentId: data.source_document_id
-        };
-      } else {
-        return {
-          id: data.id,
-          type: 'guidance',
-          title: data.title,
-          content: data.content,
-          relevanceScore: 1.0,
-          applicableRules: data.applicable_rules,
-          guidanceNumber: data.guidance_number,
-          sourceDocumentId: data.source_document_id
-        };
-      }
-    } catch (error) {
-      console.error('Error fetching guidance by ID:', error);
-      return null;
     }
   }
 };
 
 /**
- * Search regulatory FAQs
+ * Search FAQs table
  */
-async function searchRegulatoryFAQs(searchTerms: string[], maxResults: number): Promise<GuidanceMatch[]> {
+async function searchFAQs(searchTerms: string[]): Promise<GuidanceMatch[]> {
+  const matches: GuidanceMatch[] = [];
+  
   try {
-    let query = supabase
+    const { data, error } = await supabase
       .from('regulatory_faqs')
-      .select('*');
-    
-    // Build search conditions
-    const searchConditions = searchTerms.map(term => 
-      `question.ilike.%${term}%,answer.ilike.%${term}%`
-    ).join(',');
-    
-    if (searchConditions) {
-      query = query.or(searchConditions);
-    }
-    
-    const { data, error } = await query.limit(maxResults);
+      .select('*')
+      .limit(20);
     
     if (error) {
       console.error('Error searching FAQs:', error);
-      return [];
+      return matches;
     }
     
-    return (data || []).map(faq => ({
-      id: faq.id,
-      type: 'faq' as const,
-      title: faq.question,
-      content: faq.answer,
-      relevanceScore: calculateRelevanceScore(searchTerms, faq.question + ' ' + faq.answer),
-      applicableRules: faq.related_provisions,
-      sourceDocumentId: faq.source_document_id
-    }));
+    if (data) {
+      for (const item of data) {
+        const relevance = calculateRelevance(searchTerms, item.question + ' ' + item.answer);
+        if (relevance > 0.3) {
+          matches.push({
+            id: item.id,
+            title: item.question,
+            content: item.answer,
+            type: 'faq',
+            relevance,
+            source: 'regulatory_faqs',
+            relatedProvisions: item.related_provisions || []
+          });
+        }
+      }
+    }
   } catch (error) {
-    console.error('Error in searchRegulatoryFAQs:', error);
-    return [];
+    console.error('Error in searchFAQs:', error);
   }
+  
+  return matches;
 }
 
 /**
- * Search interpretation guidance
+ * Search interpretation guidance table
  */
-async function searchInterpretationGuidance(searchTerms: string[], maxResults: number): Promise<GuidanceMatch[]> {
+async function searchInterpretationGuidance(searchTerms: string[]): Promise<GuidanceMatch[]> {
+  const matches: GuidanceMatch[] = [];
+  
   try {
-    let query = supabase
+    const { data, error } = await supabase
       .from('interpretation_guidance')
-      .select('*');
-    
-    // Build search conditions
-    const searchConditions = searchTerms.map(term => 
-      `title.ilike.%${term}%,content.ilike.%${term}%`
-    ).join(',');
-    
-    if (searchConditions) {
-      query = query.or(searchConditions);
-    }
-    
-    const { data, error } = await query.limit(maxResults);
+      .select('*')
+      .limit(20);
     
     if (error) {
-      console.error('Error searching interpretation guidance:', error);
-      return [];
+      console.error('Error searching guidance:', error);
+      return matches;
     }
     
-    return (data || []).map(guidance => ({
-      id: guidance.id,
-      type: 'guidance' as const,
-      title: guidance.title,
-      content: guidance.content,
-      relevanceScore: calculateRelevanceScore(searchTerms, guidance.title + ' ' + guidance.content),
-      applicableRules: guidance.applicable_rules,
-      guidanceNumber: guidance.guidance_number,
-      sourceDocumentId: guidance.source_document_id
-    }));
+    if (data) {
+      for (const item of data) {
+        const relevance = calculateRelevance(searchTerms, item.title + ' ' + item.content);
+        if (relevance > 0.3) {
+          matches.push({
+            id: item.id,
+            title: item.title,
+            content: item.content,
+            type: 'guidance',
+            relevance,
+            source: 'interpretation_guidance',
+            applicableRules: item.applicable_rules || [],
+            guidanceNumber: item.guidance_number || ''
+          });
+        }
+      }
+    }
   } catch (error) {
     console.error('Error in searchInterpretationGuidance:', error);
-    return [];
   }
+  
+  return matches;
 }
 
 /**
- * Extract meaningful search terms from query
+ * Extract search terms from query
  */
 function extractSearchTerms(query: string): string[] {
-  const stopWords = new Set(['the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'could', 'should', 'may', 'might', 'must', 'can', 'shall']);
-  
-  return query
-    .toLowerCase()
-    .replace(/[^\w\s]/g, ' ')
+  const terms = query.toLowerCase()
     .split(/\s+/)
-    .filter(term => term.length > 2 && !stopWords.has(term))
-    .slice(0, 10); // Limit to top 10 terms
+    .filter(term => term.length > 2)
+    .filter(term => !['the', 'and', 'but', 'for', 'are', 'with'].includes(term));
+  
+  return [...new Set(terms)];
 }
 
 /**
- * Calculate relevance score based on term matching
+ * Calculate relevance score
  */
-function calculateRelevanceScore(searchTerms: string[], content: string): number {
-  const contentLower = content.toLowerCase();
-  const matchedTerms = searchTerms.filter(term => contentLower.includes(term));
-  return matchedTerms.length / searchTerms.length;
+function calculateRelevance(searchTerms: string[], content: string): number {
+  const lowerContent = content.toLowerCase();
+  let score = 0;
+  
+  for (const term of searchTerms) {
+    if (lowerContent.includes(term)) {
+      score += 0.1;
+    }
+  }
+  
+  return Math.min(1.0, score);
 }
 
 /**
- * Analyze consistency between response and guidance (simplified)
+ * Find contradictions between response and guidance
  */
-function analyzeConsistency(response: string, guidance: string): number {
-  // This is a simplified implementation
-  // In a real system, you might use NLP or ML models for better analysis
-  const responseWords = new Set(response.toLowerCase().split(/\s+/));
-  const guidanceWords = new Set(guidance.toLowerCase().split(/\s+/));
+function findContradictions(response: string, guidance: string): string | null {
+  // Simple contradiction detection
+  const responseWords = response.toLowerCase().split(/\s+/);
+  const guidanceWords = guidance.toLowerCase().split(/\s+/);
   
-  const intersection = new Set([...responseWords].filter(word => guidanceWords.has(word)));
-  const union = new Set([...responseWords, ...guidanceWords]);
+  // Look for opposite keywords
+  const contradictionPairs = [
+    ['required', 'not required'],
+    ['mandatory', 'optional'],
+    ['must', 'may'],
+    ['shall', 'should']
+  ];
   
-  return intersection.size / union.size;
-}
-
-/**
- * Calculate guidance confidence
- */
-function calculateGuidanceConfidence(matches: GuidanceMatch[], query: string): number {
-  if (matches.length === 0) return 0;
+  for (const [positive, negative] of contradictionPairs) {
+    const hasPositiveInResponse = responseWords.includes(positive);
+    const hasNegativeInGuidance = guidanceWords.includes(negative);
+    
+    if (hasPositiveInResponse && hasNegativeInGuidance) {
+      return `Response suggests '${positive}' but guidance indicates '${negative}'`;
+    }
+  }
   
-  const avgRelevance = matches.reduce((sum, match) => sum + match.relevanceScore, 0) / matches.length;
-  const countFactor = Math.min(matches.length / 5, 1); // Normalize based on expected max results
-  
-  return avgRelevance * countFactor;
-}
-
-/**
- * Calculate validation confidence
- */
-function calculateValidationConfidence(supportingGuidance: GuidanceMatch[], conflictingGuidance: GuidanceMatch[]): number {
-  const totalGuidance = supportingGuidance.length + conflictingGuidance.length;
-  if (totalGuidance === 0) return 0.5;
-  
-  const supportRatio = supportingGuidance.length / totalGuidance;
-  const conflictPenalty = conflictingGuidance.length * 0.2;
-  
-  return Math.max(0, Math.min(1, supportRatio - conflictPenalty));
+  return null;
 }

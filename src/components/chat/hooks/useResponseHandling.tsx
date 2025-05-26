@@ -85,7 +85,7 @@ export const useResponseHandling = (
           }),
           ...(enhancedContext?.guidanceValidation?.hasRelevantGuidance && {
             relevantGuidance: enhancedContext.guidanceValidation.matches.length,
-            guidanceTypes: enhancedContext.guidanceValidation.matches.map(m => m.type)
+            guidanceTypes: enhancedContext.guidanceValidation.matches.map((m: any) => m.type)
           })
         }
       };

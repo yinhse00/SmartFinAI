@@ -1,9 +1,27 @@
 
+import React, { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { RefreshCw } from 'lucide-react';
+import TypingAnimation from './TypingAnimation';
+import ValidationStatusIndicator from './ValidationStatusIndicator';
+
 export interface Message {
   id: string;
   content: string;
   isUser: boolean;
   timestamp: Date;
+  sender?: 'user' | 'bot' | 'system';
+  references?: string[];
+  isError?: boolean;
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  originalContent?: string;
+  translationInProgress?: boolean;
   metadata?: {
     financialQueryType?: string;
     reasoning?: string;
@@ -27,37 +45,46 @@ export interface Message {
   };
 }
 
+interface ChatMessageProps {
+  message: Message;
+  onRetry?: () => void;
+  onTypingProgress?: (progress: number) => void;
+  isTranslating?: boolean;
+}
+
+// Simple table detection and formatting function
+const detectAndFormatTables = (content: string): string => {
+  // Basic implementation - just return the content for now
+  return content;
+};
+
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onRetry,
   onTypingProgress,
   isTranslating = false
 }) => {
-  const {
-    sender,
-    content,
-    references,
-    isError,
-    isUsingFallback,
-    reasoning,
-    queryType,
-    isTruncated,
-    isBatchPart,
-    originalContent,
-    translationInProgress,
-    id
-  } = message;
+  // Use consistent property names - prefer 'isUser' over 'sender'
+  const isUserMessage = message.isUser ?? (message.sender === 'user');
+  const isBot = !isUserMessage;
+  const content = message.content || '';
+  const references = message.references || [];
+  const isError = message.isError || message.metadata?.isError;
+  const isTruncated = message.isTruncated || message.metadata?.isTruncated;
+  const translationInProgress = message.translationInProgress;
+  const originalContent = message.originalContent;
+  const id = message.id;
   
-  const [isTypingComplete, setIsTypingComplete] = useState(sender === 'user');
+  const [isTypingComplete, setIsTypingComplete] = useState(isUserMessage);
   const [showOriginal, setShowOriginal] = useState(false);
   const [formattedContent, setFormattedContent] = useState('');
   
   // Determine initial characters to display immediately for the typing effect
   const getInitialVisibleChars = () => {
-    if (sender !== 'bot') return 0;
+    if (isUserMessage) return 0;
     
     // For batch parts, show more initial content for better UX
-    if (isBatchPart) return 120;
+    if (message.isBatchPart) return 120;
     
     // For regular messages, show the first sentence or first 60 chars
     const firstSentenceMatch = content?.match(/^([^.!?]+[.!?])\s/);
@@ -69,10 +96,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
 
   // Debug output for empty content detection
   useEffect(() => {
-    if (sender === 'bot' && (!content || content.trim() === '')) {
+    if (isBot && (!content || content.trim() === '')) {
       console.error(`Empty message content detected for bot message ID: ${id}`, message);
     }
-  }, [id, sender, content, message]);
+  }, [id, isBot, content, message]);
 
   // Process content when message changes or when toggling between original/translated
   useEffect(() => {
@@ -81,17 +108,17 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
     // Format tables and process markdown in the content
-    if (sender === 'bot') {
+    if (isBot) {
       const formatted = detectAndFormatTables(displayContent);
       setFormattedContent(formatted);
     } else {
       // For user messages, no formatting needed
       setFormattedContent(displayContent);
     }
-  }, [content, originalContent, showOriginal, sender]);
+  }, [content, originalContent, showOriginal, isBot]);
 
   // Only show error for empty content if it's actually an error AND processing is complete
-  if ((!content || content.trim() === '') && sender === 'bot' && !isTranslating && !translationInProgress && isError) {
+  if ((!content || content.trim() === '') && isBot && !isTranslating && !translationInProgress && isError) {
     return (
       <div className="flex justify-start mb-4 w-full">
         <Card className="p-3 rounded-lg bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300 w-full">
@@ -117,19 +144,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   }
   
   return (
-    <div className={`flex ${sender === 'user' ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
-      <div className={`flex items-start gap-3 w-full ${sender === 'user' ? 'flex-row-reverse' : ''}`}>
+    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
+      <div className={`flex items-start gap-3 w-full ${isUserMessage ? 'flex-row-reverse' : ''}`}>
         <Card className={`p-3 rounded-lg w-full ${
-          sender === 'user' 
+          isUserMessage 
             ? 'bg-finance-medium-blue text-white' 
             : isError 
               ? 'bg-red-50 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300' 
               : translationInProgress 
                 ? 'bg-gray-50 dark:bg-gray-800 opacity-70' 
                 : 'bg-gray-50 dark:bg-gray-800'
-        } ${isBatchPart ? 'animate-fade-in' : ''}`}>
+        } ${message.isBatchPart ? 'animate-fade-in' : ''}`}>
           {/* Bot message content with enhanced typing animation */}
-          {sender === 'bot' && !isTypingComplete && !isTranslating && !translationInProgress && (
+          {isBot && !isTypingComplete && !isTranslating && !translationInProgress && (
             <TypingAnimation 
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
@@ -141,14 +168,14 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* User message content or bot message when translation is in progress or typing is complete */}
-          {(sender === 'user' || isTranslating || translationInProgress || (sender === 'bot' && isTypingComplete)) && (
-            <div className={`${sender === 'user' ? 'text-right' : 'text-left'} ${sender === 'bot' ? 'chat-content' : ''}`}>
-              {translationInProgress && sender === 'bot' ? (
+          {(isUserMessage || isTranslating || translationInProgress || (isBot && isTypingComplete)) && (
+            <div className={`${isUserMessage ? 'text-right' : 'text-left'} ${isBot ? 'chat-content' : ''}`}>
+              {translationInProgress && isBot ? (
                 <div className="flex flex-col gap-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
                   <div className="opacity-60" dangerouslySetInnerHTML={{ __html: formattedContent }} />
                 </div>
-              ) : sender === 'user' ? (
+              ) : isUserMessage ? (
                 <div className="whitespace-pre-line">{formattedContent}</div>
               ) : (
                 <div dangerouslySetInnerHTML={{ __html: formattedContent }} />
@@ -156,8 +183,19 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             </div>
           )}
           
+          {/* Validation Status Indicator for bot messages */}
+          {isBot && isTypingComplete && !isTranslating && !translationInProgress && message.metadata && (
+            <ValidationStatusIndicator
+              validation={message.metadata.validation}
+              vettingRequired={message.metadata.vettingRequired}
+              vettingCategory={message.metadata.vettingCategory}
+              relevantGuidance={message.metadata.relevantGuidance}
+              guidanceTypes={message.metadata.guidanceTypes}
+            />
+          )}
+          
           {/* Toggle original/translated content option for bot messages */}
-          {sender === 'bot' && originalContent && isTypingComplete && !isTranslating && !translationInProgress && (
+          {isBot && originalContent && isTypingComplete && !isTranslating && !translationInProgress && (
             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="ghost" 
@@ -171,7 +209,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           )}
           
           {/* Truncated message retry button */}
-          {isTruncated && sender === 'bot' && onRetry && isTypingComplete && !isTranslating && !translationInProgress && (
+          {isTruncated && isBot && onRetry && isTypingComplete && !isTranslating && !translationInProgress && (
             <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-700">
               <Button 
                 variant="outline" 
