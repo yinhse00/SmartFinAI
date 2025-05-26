@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { WorkflowStep } from './hooks/workflow/types';
-import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check } from 'lucide-react';
+import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 
 interface InlineProcessingOverlayProps {
@@ -11,7 +11,7 @@ interface InlineProcessingOverlayProps {
   isVisible: boolean;
 }
 
-// Map processing stages to workflow steps
+// Enhanced mapping with better accuracy
 const mapProcessingToWorkflow = (step: 'preparing' | 'processing' | 'finalizing' | 'reviewing'): WorkflowStep => {
   switch (step) {
     case 'preparing': return 'initial';
@@ -22,22 +22,22 @@ const mapProcessingToWorkflow = (step: 'preparing' | 'processing' | 'finalizing'
   }
 };
 
-// Map processing stage text to workflow steps more accurately
+// Enhanced text-based mapping with cache and optimization indicators
 const mapProcessingTextToWorkflow = (stepProgress: string): WorkflowStep => {
   if (!stepProgress) return 'initial';
   
   const stage = stepProgress.toLowerCase();
   
-  if (stage.includes('analyzing') || stage.includes('cached') || stage.includes('preparing')) {
+  if (stage.includes('cache') || stage.includes('analyzing') || stage.includes('preparing')) {
     return 'initial';
-  } else if (stage.includes('regulatory context') || stage.includes('guidance') || stage.includes('gathering')) {
+  } else if (stage.includes('regulatory context') || stage.includes('guidance') || stage.includes('gathering') || stage.includes('quality scoring')) {
     return 'listingRules';
-  } else if (stage.includes('searching for relevant') || stage.includes('listing decisions')) {
+  } else if (stage.includes('fast path') || stage.includes('intelligent search') || stage.includes('patterns')) {
     return 'takeoversCode';
-  } else if (stage.includes('generating') || stage.includes('detailed response') || stage.includes('response')) {
+  } else if (stage.includes('generating') || stage.includes('response') || stage.includes('comprehensive')) {
     return 'response';
-  } else if (stage.includes('complete') || stage.includes('ready')) {
-    return 'complete';
+  } else if (stage.includes('validating') || stage.includes('complete') || stage.includes('ready') || stage.includes('quality')) {
+    return 'execution';
   }
   
   return 'initial';
@@ -51,8 +51,9 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
 }) => {
   const [progressValue, setProgressValue] = useState(15);
   const [displayStep, setDisplayStep] = useState<WorkflowStep>('initial');
+  const [isOptimized, setIsOptimized] = useState(false);
   
-  // Calculate progress and determine display step
+  // Enhanced progress calculation and step determination
   useEffect(() => {
     if (!isVisible) return;
     
@@ -60,10 +61,14 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
     
     const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
     
+    // Check for optimization indicators
+    const optimizationKeywords = ['cache', 'fast path', 'cached', 'similarity', 'quality scoring'];
+    setIsOptimized(optimizationKeywords.some(keyword => stepProgress.toLowerCase().includes(keyword)));
+    
     // Determine the actual workflow step to display
     let actualStep: WorkflowStep;
     
-    // First, try to map from processing text for more accuracy
+    // Prioritize text-based mapping for more accuracy
     if (stepProgress) {
       actualStep = mapProcessingTextToWorkflow(stepProgress);
     } else if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
@@ -76,44 +81,48 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
     
     const stepIndex = steps.indexOf(actualStep);
     
-    // Calculate progress percentage based on step
+    // Enhanced progress calculation with optimization bonuses
     let baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 90);
     
-    // Add some dynamic progress within each step
+    // Add progress bonuses for optimization features
     if (stepProgress) {
-      if (stepProgress.includes('complete') || stepProgress.includes('ready')) {
-        baseProgress = 95;
-      } else if (stepProgress.includes('generating')) {
+      if (stepProgress.includes('cached') || stepProgress.includes('cache')) {
+        baseProgress = Math.max(baseProgress, 85); // Cache hits are fast
+      } else if (stepProgress.includes('fast path')) {
         baseProgress = Math.max(baseProgress, 70);
-      } else if (stepProgress.includes('searching')) {
-        baseProgress = Math.max(baseProgress, 50);
+      } else if (stepProgress.includes('quality scoring')) {
+        baseProgress = Math.max(baseProgress, 60);
+      } else if (stepProgress.includes('generating')) {
+        baseProgress = Math.max(baseProgress, 75);
+      } else if (stepProgress.includes('complete') || stepProgress.includes('ready')) {
+        baseProgress = 95;
       }
     }
     
-    // Animate progress smoothly
+    // Smooth progress animation
     setProgressValue(Math.min(95, baseProgress));
   }, [currentStep, stepProgress, isVisible]);
   
   if (!isVisible) return null;
   
-  // Get appropriate step labels based on language
+  // Enhanced step labels with optimization indicators
   const stepLabels = isChineseInterface ? {
-    initial: '初步分析',
-    listingRules: '上市规则搜索',
-    takeoversCode: '收购守则搜索',
-    execution: '执行程序搜索',
+    initial: isOptimized ? '智能分析' : '初步分析',
+    listingRules: isOptimized ? '智能搜索上市规则' : '上市规则搜索',
+    takeoversCode: isOptimized ? '快速路径处理' : '收购守则搜索',
+    execution: isOptimized ? '质量验证' : '执行程序搜索',
     response: '生成回复',
     complete: '已完成'
   } : {
-    initial: 'Initial Analysis',
-    listingRules: 'Listing Rules Search',
-    takeoversCode: 'Takeovers Code Search',
-    execution: 'Execution Process Search',
+    initial: isOptimized ? 'Smart Analysis' : 'Initial Analysis',
+    listingRules: isOptimized ? 'Intelligent Context Search' : 'Listing Rules Search',
+    takeoversCode: isOptimized ? 'Fast Path Processing' : 'Takeovers Code Search',
+    execution: isOptimized ? 'Quality Validation' : 'Execution Process Search',
     response: 'Generating Response',
     complete: 'Complete'
   };
 
-  // Step status determination
+  // Enhanced step status determination
   const getStepStatus = (step: WorkflowStep) => {
     const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
     const currentIndex = steps.indexOf(displayStep);
@@ -124,7 +133,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
     return 'pending';
   };
 
-  // Step icon mapping
+  // Enhanced step icon mapping with optimization indicators
   const StepIcon = ({ step }: { step: WorkflowStep }) => {
     const status = getStepStatus(step);
     
@@ -132,34 +141,46 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
       return <Check className="h-5 w-5 text-green-500" />;
     }
     
+    const iconClass = status === 'active' 
+      ? `h-5 w-5 ${isOptimized ? 'text-orange-500' : 'text-blue-500'} animate-pulse` 
+      : 'h-5 w-5 text-gray-400';
+    
     switch (step) {
       case 'initial':
-        return <Brain className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return isOptimized ? <Zap className={iconClass} /> : <Brain className={iconClass} />;
       case 'listingRules':
-        return <Database className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return <Database className={iconClass} />;
       case 'takeoversCode':
-        return <Database className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return isOptimized ? <Zap className={iconClass} /> : <Database className={iconClass} />;
       case 'execution':
-        return <ListChecks className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return <ListChecks className={iconClass} />;
       case 'response':
-        return <MessagesSquare className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return <MessagesSquare className={iconClass} />;
       case 'complete':
         return <Check className="h-5 w-5 text-green-500" />;
       default:
-        return <Loader2 className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+        return <Loader2 className={iconClass} />;
     }
   };
   
   return (
     <div className="bg-white dark:bg-gray-900 rounded-lg shadow-md p-4 mb-4 border border-gray-200 dark:border-gray-700 w-full animate-fade-in">
       <div className="flex items-center justify-center mb-4">
-        <Loader2 className="h-6 w-6 text-blue-500 animate-spin mr-2" />
+        <Loader2 className={`h-6 w-6 ${isOptimized ? 'text-orange-500' : 'text-blue-500'} animate-spin mr-2`} />
         <h2 className="text-xl font-semibold">
           {isChineseInterface ? '正在处理您的请求' : 'Processing Your Request'}
+          {isOptimized && (
+            <span className="ml-2 text-sm text-orange-500 font-normal">
+              {isChineseInterface ? '(优化模式)' : '(Optimized)'}
+            </span>
+          )}
         </h2>
       </div>
       
-      <Progress value={progressValue} className="h-2 bg-gray-200 dark:bg-gray-700 mb-4" />
+      <Progress 
+        value={progressValue} 
+        className={`h-2 mb-4 ${isOptimized ? 'bg-orange-100 dark:bg-orange-900' : 'bg-gray-200 dark:bg-gray-700'}`} 
+      />
       
       <div className="space-y-4 mb-4">
         {(['initial', 'listingRules', 'takeoversCode', 'execution', 'response'] as WorkflowStep[]).map((step) => {
@@ -169,7 +190,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
               key={step}
               className={`flex items-center transition-all duration-300 ${
                 status === 'active' 
-                  ? 'text-blue-600 dark:text-blue-400' 
+                  ? `${isOptimized ? 'text-orange-600 dark:text-orange-400' : 'text-blue-600 dark:text-blue-400'}` 
                   : status === 'complete'
                   ? 'text-green-600 dark:text-green-400'
                   : 'text-gray-400'
@@ -186,7 +207,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
               </div>
               {status === 'active' && (
                 <div className="ml-2">
-                  <div className="h-2 w-2 rounded-full bg-blue-500 animate-ping" />
+                  <div className={`h-2 w-2 rounded-full ${isOptimized ? 'bg-orange-500' : 'bg-blue-500'} animate-ping`} />
                 </div>
               )}
             </div>
@@ -196,8 +217,12 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
       
       <p className="text-center text-sm text-gray-500">
         {isChineseInterface 
-          ? '我们正在分析您的问题，这可能需要几秒钟时间...'
-          : 'We are analyzing your query, this may take a few seconds...'}
+          ? isOptimized 
+            ? '我们正在使用优化算法快速分析您的问题...'
+            : '我们正在分析您的问题，这可能需要几秒钟时间...'
+          : isOptimized
+            ? 'We are using optimized algorithms to quickly analyze your query...'
+            : 'We are analyzing your query, this may take a few seconds...'}
       </p>
     </div>
   );

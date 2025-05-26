@@ -5,10 +5,10 @@ import { useInputState } from './hooks/useInputState';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { useBatchHandling } from './hooks/useBatchHandling';
 import { useLanguageState } from './hooks/useLanguageState';
-import { useWorkflowProcessor } from './hooks/useWorkflowProcessor';
+import { useOptimizedWorkflowProcessor } from './hooks/useOptimizedWorkflowProcessor';
 
 /**
- * Main hook that orchestrates chat functionality with the new structured workflow
+ * Enhanced main hook that orchestrates chat functionality with optimized workflow
  */
 export const useChatLogic = () => {
   // Message state management
@@ -47,13 +47,13 @@ export const useChatLogic = () => {
     startBatching
   } = useBatchHandling();
 
-  // New workflow processor implementing the structured steps
+  // Enhanced optimized workflow processor with improved state management
   const {
     isLoading,
+    processingStage,
     currentStep,
-    stepProgress,
-    executeWorkflow
-  } = useWorkflowProcessor({
+    executeOptimizedWorkflow
+  } = useOptimizedWorkflowProcessor({
     messages,
     setMessages,
     setLastQuery,
@@ -61,10 +61,10 @@ export const useChatLogic = () => {
     setApiKeyDialogOpen
   });
 
-  // Handle sending messages
+  // Handle sending messages with enhanced processing
   const handleSend = () => {
     checkIsChineseInput(input);
-    executeWorkflow(input);
+    executeOptimizedWorkflow(input);
     setInput('');
   };
   
@@ -75,19 +75,18 @@ export const useChatLogic = () => {
     }
   };
   
-  // Handle batch continuation
+  // Handle batch continuation with optimized workflow
   const handleContinueBatch = async () => {
-    // Create a Promise-returning function that wraps executeWorkflow
     await continueBatch(async (query) => {
       checkIsChineseInput(query);
-      await executeWorkflow(query);
+      await executeOptimizedWorkflow(query);
     });
   };
   
-  // Handle retrying queries
+  // Handle retrying queries with optimization
   const retryLastQuery = () => {
     if (lastQuery) {
-      executeWorkflow(`${lastQuery} [RETRY_ATTEMPT]`);
+      executeOptimizedWorkflow(`${lastQuery} [RETRY_ATTEMPT]`);
     }
   };
 
@@ -110,14 +109,14 @@ export const useChatLogic = () => {
     setInput,
     lastQuery,
 
-    // Query processing
+    // Enhanced query processing with optimization
     isLoading,
     handleSend,
     handleKeyDown,
-    processQuery: executeWorkflow,  // Renamed for backward compatibility
+    processQuery: executeOptimizedWorkflow,  // Unified optimized processor
     retryLastQuery,
     currentStep,
-    stepProgress,
+    stepProgress: processingStage, // Use the enhanced processing stage
 
     // Batch handling
     isBatching,

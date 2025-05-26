@@ -5,8 +5,6 @@ import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useMessageTranslator } from './translation/MessageTranslator';
-import { useOptimizedWorkflowProcessor } from './hooks/useOptimizedWorkflowProcessor';
-import { useWorkflowStageMapping } from './hooks/useWorkflowStageMapping';
 import { useFileHandling } from './hooks/useFileHandling';
 import ApiConnectionStatus from './ApiConnectionStatus';
 
@@ -30,11 +28,11 @@ const ChatInterface: React.FC = () => {
     retryLastQuery,
     isBatching,
     currentBatchNumber,
-    handleContinueBatch
+    handleContinueBatch,
+    isLoading,
+    currentStep,
+    stepProgress
   } = useChatLogic();
-
-  // Add local state for setLastQuery since it's missing from useChatLogic
-  const [localLastQuery, setLocalLastQuery] = useState('');
 
   // Language detection for input and messages
   const { 
@@ -42,22 +40,6 @@ const ChatInterface: React.FC = () => {
     isTraditionalChinese, 
     isSimplifiedChinese 
   } = useLanguageDetection(messages, input);
-
-  // Use optimized workflow processor instead of regular one
-  const { 
-    isLoading, 
-    processingStage, 
-    executeOptimizedWorkflow 
-  } = useOptimizedWorkflowProcessor({
-    messages,
-    setMessages,
-    setLastQuery: setLocalLastQuery,
-    isGrokApiKeySet,
-    setApiKeyDialogOpen
-  });
-
-  // Workflow stage mapping - now properly connected to actual processing stage
-  const { getCurrentStep } = useWorkflowStageMapping({ processingStage });
   
   // Translation functionality for Chinese inputs
   const { translatingMessageIds } = useMessageTranslator({
@@ -68,7 +50,7 @@ const ChatInterface: React.FC = () => {
     isLoading
   });
 
-  // File handling functionality
+  // File handling functionality - now using processQuery from useChatLogic
   const {
     attachedFiles,
     handleFileSelect,
@@ -81,7 +63,7 @@ const ChatInterface: React.FC = () => {
   } = useFileHandling({
     input,
     setInput,
-    executeOptimizedWorkflow,
+    executeOptimizedWorkflow: processQuery, // Use the unified processor
     lastUserMessageIsChinese
   });
 
@@ -119,8 +101,8 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          currentStep={getCurrentStep()}
-          stepProgress={processingStage}
+          currentStep={currentStep}
+          stepProgress={stepProgress}
         />
       </div>
       
