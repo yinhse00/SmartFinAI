@@ -15,11 +15,32 @@ interface InlineProcessingOverlayProps {
 const mapProcessingToWorkflow = (step: 'preparing' | 'processing' | 'finalizing' | 'reviewing'): WorkflowStep => {
   switch (step) {
     case 'preparing': return 'initial';
-    case 'processing': return 'execution';
+    case 'processing': return 'listingRules';
     case 'finalizing': return 'response';
-    case 'reviewing': return 'listingRules';
+    case 'reviewing': return 'execution';
     default: return 'initial';
   }
+};
+
+// Map processing stage text to workflow steps more accurately
+const mapProcessingTextToWorkflow = (stepProgress: string): WorkflowStep => {
+  if (!stepProgress) return 'initial';
+  
+  const stage = stepProgress.toLowerCase();
+  
+  if (stage.includes('analyzing') || stage.includes('cached') || stage.includes('preparing')) {
+    return 'initial';
+  } else if (stage.includes('regulatory context') || stage.includes('guidance') || stage.includes('gathering')) {
+    return 'listingRules';
+  } else if (stage.includes('searching for relevant') || stage.includes('listing decisions')) {
+    return 'takeoversCode';
+  } else if (stage.includes('generating') || stage.includes('detailed response') || stage.includes('response')) {
+    return 'response';
+  } else if (stage.includes('complete') || stage.includes('ready')) {
+    return 'complete';
+  }
+  
+  return 'initial';
 };
 
 const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({ 
@@ -29,62 +50,51 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
   isVisible
 }) => {
   const [progressValue, setProgressValue] = useState(15);
+  const [displayStep, setDisplayStep] = useState<WorkflowStep>('initial');
   
-  // Calculate progress based on current step and processing stage
+  // Calculate progress and determine display step
   useEffect(() => {
     if (!isVisible) return;
     
+    console.log('InlineProcessingOverlay - currentStep:', currentStep, 'stepProgress:', stepProgress);
+    
     const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
     
-    // Map the current step to a workflow step
-    let workflowStep: WorkflowStep;
-    if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
-      workflowStep = mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing');
+    // Determine the actual workflow step to display
+    let actualStep: WorkflowStep;
+    
+    // First, try to map from processing text for more accuracy
+    if (stepProgress) {
+      actualStep = mapProcessingTextToWorkflow(stepProgress);
+    } else if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
+      actualStep = mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing');
     } else {
-      workflowStep = currentStep as WorkflowStep;
+      actualStep = currentStep as WorkflowStep;
     }
     
-    // Determine step based on processing stage text
+    setDisplayStep(actualStep);
+    
+    const stepIndex = steps.indexOf(actualStep);
+    
+    // Calculate progress percentage based on step
+    let baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 90);
+    
+    // Add some dynamic progress within each step
     if (stepProgress) {
-      if (stepProgress.includes('Analyzing') || stepProgress.includes('cached')) {
-        workflowStep = 'initial';
-      } else if (stepProgress.includes('regulatory context') || stepProgress.includes('guidance')) {
-        workflowStep = 'listingRules';
-      } else if (stepProgress.includes('Generating')) {
-        workflowStep = 'response';
+      if (stepProgress.includes('complete') || stepProgress.includes('ready')) {
+        baseProgress = 95;
+      } else if (stepProgress.includes('generating')) {
+        baseProgress = Math.max(baseProgress, 70);
+      } else if (stepProgress.includes('searching')) {
+        baseProgress = Math.max(baseProgress, 50);
       }
     }
     
-    const stepIndex = steps.indexOf(workflowStep);
-    
-    // Calculate progress percentage based on step
-    const baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 85);
-    
     // Animate progress smoothly
-    const targetProgress = baseProgress;
-    setProgressValue(targetProgress);
+    setProgressValue(Math.min(95, baseProgress));
   }, [currentStep, stepProgress, isVisible]);
   
   if (!isVisible) return null;
-  
-  // Get the actual workflow step for display
-  let displayStep: WorkflowStep;
-  if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
-    displayStep = mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing');
-  } else {
-    displayStep = currentStep as WorkflowStep;
-  }
-  
-  // Override display step based on processing stage content
-  if (stepProgress) {
-    if (stepProgress.includes('Analyzing') || stepProgress.includes('cached')) {
-      displayStep = 'initial';
-    } else if (stepProgress.includes('regulatory context') || stepProgress.includes('guidance')) {
-      displayStep = 'listingRules';
-    } else if (stepProgress.includes('Generating')) {
-      displayStep = 'response';
-    }
-  }
   
   // Get appropriate step labels based on language
   const stepLabels = isChineseInterface ? {
@@ -133,6 +143,8 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
         return <ListChecks className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
       case 'response':
         return <MessagesSquare className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
+      case 'complete':
+        return <Check className="h-5 w-5 text-green-500" />;
       default:
         return <Loader2 className={`h-5 w-5 ${status === 'active' ? 'text-blue-500 animate-pulse' : 'text-gray-400'}`} />;
     }

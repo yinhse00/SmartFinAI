@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface WorkflowStageMappingProps {
   processingStage: string;
@@ -9,29 +9,42 @@ interface WorkflowStageMappingProps {
  * Hook to handle workflow stage mapping and conversion
  */
 export const useWorkflowStageMapping = ({ processingStage }: WorkflowStageMappingProps) => {
-  // Convert processingStage string to proper type
-  const getCurrentStep = (): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
-    if (!processingStage) return 'preparing';
-    
-    // Map string values to proper types
-    switch (processingStage.toLowerCase()) {
-      case 'preparing':
-      case 'checking cached responses...':
-      case 'analyzing your query...':
-        return 'preparing';
-      case 'processing':
-      case 'gathering regulatory context...':
-      case 'generating response...':
-      case 'searching for relevant guidance and listing decisions':
-        return 'processing';
-      case 'finalizing':
-      case 'generating detailed response...':
-        return 'finalizing';
-      case 'reviewing':
-        return 'reviewing';
-      default:
-        return 'preparing';
+  const [currentWorkflowStep, setCurrentWorkflowStep] = useState<'preparing' | 'processing' | 'finalizing' | 'reviewing'>('preparing');
+
+  // Convert processingStage string to proper workflow step
+  useEffect(() => {
+    if (!processingStage) {
+      setCurrentWorkflowStep('preparing');
+      return;
     }
+    
+    console.log('Processing stage changed to:', processingStage);
+    
+    // Map string values to proper workflow steps with more specific matching
+    const stage = processingStage.toLowerCase();
+    
+    if (stage.includes('analyzing') || stage.includes('cached') || stage.includes('preparing')) {
+      setCurrentWorkflowStep('preparing');
+    } else if (stage.includes('regulatory context') || stage.includes('guidance') || stage.includes('searching for relevant')) {
+      setCurrentWorkflowStep('processing');
+    } else if (stage.includes('generating') || stage.includes('detailed response')) {
+      setCurrentWorkflowStep('finalizing');
+    } else if (stage.includes('reviewing') || stage.includes('validating') || stage.includes('checking')) {
+      setCurrentWorkflowStep('reviewing');
+    } else {
+      // Default based on content
+      if (stage.includes('processing') || stage.includes('gathering')) {
+        setCurrentWorkflowStep('processing');
+      } else if (stage.includes('response') || stage.includes('generating')) {
+        setCurrentWorkflowStep('finalizing');
+      } else {
+        setCurrentWorkflowStep('preparing');
+      }
+    }
+  }, [processingStage]);
+
+  const getCurrentStep = (): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
+    return currentWorkflowStep;
   };
 
   return {

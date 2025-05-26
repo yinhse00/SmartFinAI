@@ -46,6 +46,7 @@ export const useOptimizedWorkflowProcessor = ({
     
     try {
       // Step 1: Initial Analysis
+      console.log('Starting workflow - Step 1: Initial Analysis');
       setProcessingStage('Analyzing your query...');
       
       // Add user message
@@ -91,6 +92,7 @@ export const useOptimizedWorkflowProcessor = ({
       });
       
       // Step 2: Check cache first for quick responses
+      console.log('Step 2: Checking cache');
       setProcessingStage('Checking cached responses...');
       const cachedResult = smartCacheService.get(query, 'regulatory');
       
@@ -98,12 +100,18 @@ export const useOptimizedWorkflowProcessor = ({
         console.log('Using cached response for faster processing');
         streamingResponse.setContent(cachedResult.response);
         streamingResponse.complete();
-        setIsLoading(false);
-        setProcessingStage('');
+        
+        // Show completion stage briefly before clearing
+        setProcessingStage('Response ready');
+        setTimeout(() => {
+          setIsLoading(false);
+          setProcessingStage('');
+        }, 1000);
         return;
       }
       
       // Step 3: Parallel context retrieval
+      console.log('Step 3: Gathering regulatory context');
       setProcessingStage('Gathering regulatory context...');
       streamingResponse.appendContent('\n\nGathering regulatory context...');
       
@@ -116,6 +124,7 @@ export const useOptimizedWorkflowProcessor = ({
       });
       
       // Step 4: Prepare parameters for response generation
+      console.log('Step 4: Searching for relevant guidance');
       setProcessingStage('Searching for relevant guidance and listing decisions');
       const params = {
         query,
@@ -128,12 +137,14 @@ export const useOptimizedWorkflowProcessor = ({
       };
       
       // Step 5: Generate response with streaming updates
+      console.log('Step 5: Generating detailed response');
       setProcessingStage('Generating detailed response...');
       streamingResponse.setContent('Generating detailed response...');
       
       const step5Result = await step5Response(
         params,
         (progress) => {
+          console.log('Step 5 progress:', progress);
           setProcessingStage(progress);
           streamingResponse.setContent(`Generating response: ${progress}`);
         },
@@ -164,6 +175,14 @@ export const useOptimizedWorkflowProcessor = ({
       
       streamingResponse.complete();
       
+      // Show completion stage briefly before clearing
+      console.log('Workflow completed successfully');
+      setProcessingStage('Response complete');
+      setTimeout(() => {
+        setIsLoading(false);
+        setProcessingStage('');
+      }, 1500);
+      
     } catch (error) {
       console.error('Optimized workflow error:', error);
       
@@ -183,7 +202,8 @@ export const useOptimizedWorkflowProcessor = ({
         }
         return newMessages;
       });
-    } finally {
+      
+      // Clear processing state on error
       setIsLoading(false);
       setProcessingStage('');
     }
