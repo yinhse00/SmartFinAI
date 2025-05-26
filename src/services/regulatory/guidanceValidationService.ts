@@ -69,35 +69,56 @@ export const guidanceValidationService = {
   },
 
   /**
+   * Find relevant guidance - alias for searchRelevantGuidance
+   */
+  findRelevantGuidance: async (query: string, limit: number = 10): Promise<GuidanceValidation> => {
+    const result = await guidanceValidationService.searchRelevantGuidance(query);
+    return {
+      ...result,
+      matches: result.matches.slice(0, limit)
+    };
+  },
+
+  /**
    * Validate a response against guidance documents
    */
   validateResponseAgainstGuidance: async (
     response: string, 
     query: string, 
-    guidanceMatches: GuidanceMatch[]
+    guidanceMatches?: GuidanceMatch[]
   ): Promise<{
     isConsistent: boolean;
     inconsistencies: string[];
     confidence: number;
+    conflictingGuidance: string[];
   }> => {
     try {
       console.log('Validating response against guidance documents...');
       
-      if (guidanceMatches.length === 0) {
+      let matches = guidanceMatches;
+      if (!matches) {
+        const guidanceResult = await guidanceValidationService.searchRelevantGuidance(query);
+        matches = guidanceResult.matches;
+      }
+      
+      if (matches.length === 0) {
         return {
           isConsistent: true,
           inconsistencies: [],
-          confidence: 0.5
+          confidence: 0.5,
+          conflictingGuidance: []
         };
       }
       
       const inconsistencies: string[] = [];
+      const conflictingGuidance: string[] = [];
       
       // Simple validation - check for contradictions
-      for (const match of guidanceMatches) {
+      for (const match of matches) {
         const contradiction = findContradictions(response, match.content);
         if (contradiction) {
           inconsistencies.push(`Potential inconsistency with ${match.type}: ${contradiction}`);
+          conflictingGuidance.push(match.title);
         }
       }
       
@@ -109,14 +130,16 @@ export const guidanceValidationService = {
       return {
         isConsistent,
         inconsistencies,
-        confidence
+        confidence,
+        conflictingGuidance
       };
     } catch (error) {
       console.error('Error validating against guidance:', error);
       return {
         isConsistent: false,
         inconsistencies: ['Error during validation'],
-        confidence: 0
+        confidence: 0,
+        conflictingGuidance: []
       };
     }
   }

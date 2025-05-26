@@ -45,7 +45,7 @@ export const enhancedContextService = {
         // Guidance validation check
         guidanceValidationService.findRelevantGuidance(query, 5).catch(error => {
           console.error('Error finding relevant guidance:', error);
-          return { hasRelevantGuidance: false, matches: [], totalMatches: 0, confidence: 0 };
+          return { hasRelevantGuidance: false, matches: [], confidence: 0, searchStrategy: 'error' };
         })
       ]);
       
@@ -80,7 +80,7 @@ export const enhancedContextService = {
       return {
         regulatoryContext: basicContext,
         vettingInfo: { isRequired: false, confidence: 0 },
-        guidanceValidation: { hasRelevantGuidance: false, matches: [], totalMatches: 0, confidence: 0 },
+        guidanceValidation: { hasRelevantGuidance: false, matches: [], confidence: 0, searchStrategy: 'fallback' },
         contextMetadata: {
           hasVettingRequirements: false,
           hasRelevantGuidance: false,
@@ -175,7 +175,11 @@ export const enhancedContextService = {
       
       // Check guidance consistency
       if (enhancedContext.guidanceValidation.hasRelevantGuidance) {
-        const guidanceValidation = await guidanceValidationService.validateResponseAgainstGuidance(response, query);
+        const guidanceValidation = await guidanceValidationService.validateResponseAgainstGuidance(
+          response, 
+          query, 
+          enhancedContext.guidanceValidation.matches
+        );
         guidanceConsistency = guidanceValidation.isConsistent;
         
         if (guidanceValidation.conflictingGuidance.length > 0) {

@@ -23,7 +23,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
     console.log('ChatHistory rendering with messages:', messages.length);
     
     // Log message content for debugging
-    const validMessages = messages.filter(m => m.content || m.sender === 'user');
+    const validMessages = messages.filter(m => m.content || !m.isUser);
     
     if (validMessages.length < messages.length) {
       console.log('Found', messages.length - validMessages.length, 'messages with empty content');
@@ -31,7 +31,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
     
     if (validMessages.length > 0) {
       console.log('First few messages:', validMessages.slice(0, 3).map(m => 
-        `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`
+        `${m.isUser ? 'user' : 'bot'}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`
       ));
     }
   }, [messages]);
@@ -40,7 +40,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
   const hasTruncatedMessages = messages.some(message => message.isTruncated);
   
   // Check if we're displaying Chinese content
-  const lastUserMessage = [...messages].reverse().find(m => m.sender === 'user');
+  const lastUserMessage = [...messages].reverse().find(m => m.isUser);
   const lastUserMessageIsChinese = lastUserMessage?.content && /[\u4e00-\u9fa5]/.test(lastUserMessage.content);
   
   return (
@@ -68,7 +68,7 @@ const ChatHistory: React.FC<ChatHistoryProps> = ({ messages, isLoading, onRetry,
           <ChatMessage 
             key={message.id} 
             message={message} 
-            onRetry={onRetry && message.sender === 'bot' ? onRetry : undefined}
+            onRetry={onRetry && !message.isUser ? onRetry : undefined}
             onTypingProgress={() => {
               if (messagesEndRef.current) {
                 messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
