@@ -13,6 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import VettingRequirementsProcessor from '@/components/vetting/VettingRequirementsProcessor';
 import VettingRequirementsViewer from '@/components/timetable/VettingRequirementsViewer';
 import MappingScheduleProcessor from '@/components/mapping/MappingScheduleProcessor';
+import NewListingScheduleProcessor from '@/components/mapping/NewListingScheduleProcessor';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const References = () => {
@@ -154,10 +155,11 @@ const References = () => {
       </Alert>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-        <TabsList className="grid w-full md:w-[600px] grid-cols-3">
+        <TabsList className="grid w-full md:w-[800px] grid-cols-4">
           <TabsTrigger value="documents">Reference Documents</TabsTrigger>
           <TabsTrigger value="vetting">Vetting Requirements</TabsTrigger>
-          <TabsTrigger value="mapping">Mapping Schedule</TabsTrigger>
+          <TabsTrigger value="mapping">Listed Issuers</TabsTrigger>
+          <TabsTrigger value="new-listing">New Listing</TabsTrigger>
         </TabsList>
         <TabsContent value="documents" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -185,11 +187,11 @@ const References = () => {
               <div className="space-y-4">
                 <Card className="finance-card">
                   <CardHeader>
-                    <CardTitle className="text-xl font-semibold">Mapping Schedule Data</CardTitle>
+                    <CardTitle className="text-xl font-semibold">Listed Issuers Mapping Schedule</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <p className="text-gray-600 dark:text-gray-300">
-                      This section displays the extracted FAQs and guidance materials from the mapping schedule. 
+                      This section displays the extracted FAQs and guidance materials from the mapping schedule for listed issuers. 
                       Use the processor on the right to parse and populate the data.
                     </p>
                   </CardContent>
@@ -198,6 +200,28 @@ const References = () => {
             </div>
             <div>
               <MappingScheduleProcessor onProcessComplete={handleMappingProcessed} />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="new-listing" className="mt-4">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2">
+              <div className="space-y-4">
+                <Card className="finance-card">
+                  <CardHeader>
+                    <CardTitle className="text-xl font-semibold">New Listing Applicants Mapping Schedule</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-600 dark:text-gray-300">
+                      This section displays the extracted requirements and guidance for new listing applicants. 
+                      Use the processor on the right to parse the new listing applicants mapping schedule.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+            <div>
+              <NewListingScheduleProcessor onProcessComplete={handleMappingProcessed} />
             </div>
           </div>
         </TabsContent>

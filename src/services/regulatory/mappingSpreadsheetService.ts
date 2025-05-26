@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -27,7 +26,9 @@ export const mappingSpreadsheetService = {
         query.toLowerCase().includes('new listing') ||
         query.toLowerCase().includes('ipo') ||
         query.toLowerCase().includes('initial public offering') ||
-        query.toLowerCase().includes('listing applicant');
+        query.toLowerCase().includes('listing applicant') ||
+        query.toLowerCase().includes('listing application') ||
+        query.toLowerCase().includes('pre-listing');
         
       const sourceMaterialsPrefix = isNewListingQuery ? 
         "Mapping_Schedule_(EN)_(2024)_Guide for New Listing Applicants" : 
@@ -61,11 +62,11 @@ export const mappingSpreadsheetService = {
         console.log('Enhanced search topics for IFA query:', uniqueTopics);
       }
 
+      // Search for guidance materials with type-specific filtering
+      const guidanceResults = await this.searchGuidanceMaterials(query, topics, isNewListingQuery);
+      
       // First check for exact matches in regulatory_faqs table
       const faqResults = await this.searchFAQs(query, topics);
-      
-      // Then check for matches in guidance materials
-      const guidanceResults = await this.searchGuidanceMaterials(query, topics);
       
       // Check for listing decisions
       const listingDecisionResults = await this.searchListingDecisions(query, topics);
@@ -84,7 +85,7 @@ export const mappingSpreadsheetService = {
           if (newListingResults.data && newListingResults.data.length > 0) {
             specificMappingContent = "### New Listing Applicant Guidance\n\n" +
               "This information comes from the specialized mapping schedule for new listing applicants. " +
-              "It contains specific guidance for companies seeking to list on HKEX.\n\n" +
+              "It contains specific requirements and criteria for companies seeking to list on HKEX.\n\n" +
               "Please refer to the full mapping schedule document for comprehensive details.";
           }
         } catch (e) {
@@ -236,7 +237,9 @@ export const mappingSpreadsheetService = {
         query.toLowerCase().includes('new listing') ||
         query.toLowerCase().includes('ipo') ||
         query.toLowerCase().includes('initial public offering') ||
-        query.toLowerCase().includes('listing applicant');
+        query.toLowerCase().includes('listing applicant') ||
+        query.toLowerCase().includes('listing application') ||
+        query.toLowerCase().includes('pre-listing');
         
       const promptAddition = isNewListingQuery ? 
         "This is a query about new listing applications. Consider topics related to IPOs and new listing applications." :
@@ -326,15 +329,64 @@ export const mappingSpreadsheetService = {
   
   /**
    * Search for relevant guidance materials based on query and topics
+   * Enhanced to distinguish between new listing and listed issuer guidance
    */
-  async searchGuidanceMaterials(query: string, topics: string[]): Promise<{ context: string; sources: string[] }> {
+  async searchGuidanceMaterials(query: string, topics: string[], isNewListingQuery: boolean = false): Promise<{ context: string; sources: string[] }> {
     try {
-      // First try to find direct matches in guidance materials
-      const results = await supabase
+      // Build search query with preference for document type
+      let guidanceQuery = supabase
         .from('interpretation_guidance')
         .select('title, content, guidance_number, source_document_id')
         .or(topics.map(topic => `content.ilike.%${topic}%`).join(','))
-        .limit(3);
+        .limit(5);
+
+      // If we know the query type, prefer guidance from the appropriate source
+      if (isNewListingQuery) {
+        // First try to get new listing guidance
+        const newListingResults = await supabase
+          .from('interpretation_guidance')
+          .select('title, content, guidance_number, source_document_id, reference_documents!inner(title)')
+          .or(topics.map(topic => `content.ilike.%${topic}%`).join(','))
+          .ilike('reference_documents.title', '%Guide for New Listing Applicants%')
+          .limit(3);
+          
+        if (newListingResults.data && newListingResults.data.length > 0) {
+          const formattedGuidance = newListingResults.data.map(guide => 
+            `New Listing Guidance ${guide.guidance_number}: ${guide.title}\n${guide.content.substring(0, 300)}${guide.content.length > 300 ? '...' : ''}`
+          ).join('\n\n');
+          
+          return {
+            context: formattedGuidance,
+            sources: newListingResults.data
+              .filter(guide => guide.source_document_id)
+              .map(guide => `New Listing Guidance ${guide.guidance_number}`)
+          };
+        }
+      } else {
+        // Prefer listed issuer guidance
+        const listedIssuerResults = await supabase
+          .from('interpretation_guidance')
+          .select('title, content, guidance_number, source_document_id, reference_documents!inner(title)')
+          .or(topics.map(topic => `content.ilike.%${topic}%`).join(','))
+          .ilike('reference_documents.title', '%Guidance Materials for Listed Issuers%')
+          .limit(3);
+          
+        if (listedIssuerResults.data && listedIssuerResults.data.length > 0) {
+          const formattedGuidance = listedIssuerResults.data.map(guide => 
+            `Listed Issuer Guidance ${guide.guidance_number}: ${guide.title}\n${guide.content.substring(0, 300)}${guide.content.length > 300 ? '...' : ''}`
+          ).join('\n\n');
+          
+          return {
+            context: formattedGuidance,
+            sources: listedIssuerResults.data
+              .filter(guide => guide.source_document_id)
+              .map(guide => `Listed Issuer Guidance ${guide.guidance_number}`)
+          };
+        }
+      }
+      
+      // Fallback to general search if type-specific search didn't return results
+      const results = await guidanceQuery;
       
       if (results.error) {
         throw results.error;
