@@ -50,7 +50,6 @@ const ChatInterface: React.FC = () => {
     input,
     setInput,
     lastQuery,
-    setLastQuery,
     handleSend,
     handleKeyDown,
     processQuery,
@@ -59,6 +58,9 @@ const ChatInterface: React.FC = () => {
     currentBatchNumber,
     handleContinueBatch
   } = useChatLogic();
+
+  // Add local state for setLastQuery since it's missing from useChatLogic
+  const [localLastQuery, setLocalLastQuery] = useState('');
 
   const { toast } = useToast();
   const { 
@@ -91,7 +93,7 @@ const ChatInterface: React.FC = () => {
   } = useOptimizedWorkflowProcessor({
     messages,
     setMessages,
-    setLastQuery,
+    setLastQuery: setLocalLastQuery,
     isGrokApiKeySet,
     setApiKeyDialogOpen
   });
@@ -159,6 +161,28 @@ const ChatInterface: React.FC = () => {
     await executeOptimizedWorkflow(query);
   };
 
+  // Convert processingStage string to proper type
+  const getCurrentStep = (): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
+    if (!processingStage) return 'preparing';
+    
+    // Map string values to proper types
+    switch (processingStage.toLowerCase()) {
+      case 'preparing':
+      case 'checking cached responses...':
+        return 'preparing';
+      case 'processing':
+      case 'gathering regulatory context...':
+      case 'generating response...':
+        return 'processing';
+      case 'finalizing':
+        return 'finalizing';
+      case 'reviewing':
+        return 'reviewing';
+      default:
+        return 'preparing';
+    }
+  };
+
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
@@ -193,8 +217,8 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          currentStep={processingStage}
-          stepProgress={processingStage}
+          currentStep={getCurrentStep()}
+          stepProgress={getCurrentStep()}
         />
       </div>
       
