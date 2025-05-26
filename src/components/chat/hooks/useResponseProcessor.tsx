@@ -4,6 +4,7 @@ import { GrokResponse } from '@/types/grok';
 import { Message } from '../ChatMessage';
 import { useResponseFormatter } from './useResponseFormatter';
 import { useFallbackDetection } from './useFallbackDetection';
+import { responseValidator } from '@/services/regulatory/responseValidator';
 import { Button } from '@/components/ui/button';
 import { RefreshCw, CheckCircle } from 'lucide-react';
 
@@ -31,14 +32,27 @@ export const useResponseProcessor = (
   ): Message => {
     const isUsingFallback = isFallbackResponse(apiResponse.text);
 
-    // Check for verified regulatory content
-    const hasVerifiedContent = apiResponse.text.includes('FAQ') || 
-                              apiResponse.text.includes('Guidance Letter') || 
-                              apiResponse.text.includes('Listing Decision');
+    // Validate and clean response content to remove invalid references
+    const cleanedResponseText = responseValidator.cleanResponseContent(
+      apiResponse.text, 
+      [] // Pass source materials if available
+    );
 
-    // Format the bot message
+    // Update the API response with cleaned content
+    const cleanedApiResponse = {
+      ...apiResponse,
+      text: cleanedResponseText
+    };
+
+    // Check for verified regulatory content
+    const hasVerifiedContent = cleanedResponseText.includes('FAQ') || 
+                              cleanedResponseText.includes('Guidance') || 
+                              cleanedResponseText.includes('Listing Rule') ||
+                              regulatoryContext?.length > 0;
+
+    // Format the bot message with cleaned content
     const botMessage = formatBotMessage(
-      { ...apiResponse, queryType: financialQueryType },
+      { ...cleanedApiResponse, queryType: financialQueryType },
       regulatoryContext,
       reasoning,
       isUsingFallback
@@ -176,4 +190,3 @@ export const useResponseProcessor = (
     processApiResponse
   };
 };
-

@@ -5,10 +5,12 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 /**
  * Service for intelligent mapping of queries to guidance materials
  * Enhanced to handle both new listing applicant guidance and listed issuer guidance
+ * Restricted to database content only - no AI supplementation
  */
 export const mappingSpreadsheetService = {
   /**
    * Find relevant guidance and listing decisions based on query concepts
+   * Now restricted to database content only
    */
   async findRelevantGuidance(query: string, queryTopics: string[] = []): Promise<{
     guidanceContext: string;
@@ -148,44 +150,7 @@ export const mappingSpreadsheetService = {
         }
       }
       
-      // If we don't have database results, use Grok's knowledge directly
-      if (!faqResults.context && !guidanceResults.context && !listingDecisionResults.context && 
-          !listingRulesContext && !specificMappingContent) {
-        try {
-          console.log('No database results found, using Grok knowledge database');
-          const grokResponse = await grokService.getRegulatoryContext(
-            `Provide information about: ${query}`,
-            { 
-              metadata: { 
-                useGrokKnowledge: true, 
-                topics,
-                isNewListingQuery,
-                sourceMaterialsPrefix
-              } 
-            }
-          );
-          
-          if (grokResponse) {
-            let grokContext = '';
-            if (typeof grokResponse === 'string') {
-              grokContext = grokResponse;
-            } else if (typeof grokResponse === 'object' && grokResponse.context) {
-              grokContext = grokResponse.context;
-            }
-            
-            if (grokContext) {
-              return {
-                guidanceContext: grokContext,
-                sourceMaterials: [`${sourceMaterialsPrefix}`]
-              };
-            }
-          }
-        } catch (e) {
-          console.error('Error using Grok knowledge database:', e);
-        }
-      }
-      
-      // Combine all results
+      // Combine all database results
       let combinedContext = '';
       const sourceMaterials: string[] = [];
       
@@ -215,14 +180,23 @@ export const mappingSpreadsheetService = {
         sourceMaterials.push("Listing Rules Chapter 14");
       }
       
+      // If no database results found, explicitly state this without AI fallback
+      if (!combinedContext.trim()) {
+        console.log('No database results found - not using AI fallback');
+        return {
+          guidanceContext: "No specific guidance materials found in the regulatory database.",
+          sourceMaterials: []
+        };
+      }
+      
       return {
-        guidanceContext: combinedContext || "No specific guidance materials found.",
+        guidanceContext: combinedContext,
         sourceMaterials: [...new Set(sourceMaterials)] // Remove duplicates
       };
     } catch (error) {
       console.error('Error in findRelevantGuidance:', error);
       return {
-        guidanceContext: "Error retrieving guidance materials.",
+        guidanceContext: "Error retrieving guidance materials from database.",
         sourceMaterials: []
       };
     }

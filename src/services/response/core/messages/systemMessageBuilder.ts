@@ -139,7 +139,7 @@ export const systemMessageBuilder = {
   },
 
   /**
-   * NEW: Professional formatting and structure requirements for all responses
+   * Professional formatting and structure requirements for all responses
    */
   buildProfessionalFormatMessage(): string {
     return `\n\nPROFESSIONAL PRESENTATION REQUIREMENTS: Structure your response professionally as follows:
@@ -172,13 +172,16 @@ PROFESSIONAL LANGUAGE REQUIREMENTS:
 - When quoting regulatory text, use exact wording and proper citations
 - Format all financial figures according to professional standards (e.g., "HK$10,000,000")
 
-VERIFICATION OF REGULATORY GUIDANCE:
-- For any FAQ, Guidance Letter, or Listing Decision references:
-  • Quote the exact text from the source document
-  • Include document reference number and publication date
-  • Specify which section or paragraph contains the information
-  • If paraphrasing, clearly indicate this is an interpretation
+DATABASE CONTENT VERIFICATION REQUIREMENTS:
+- For any regulatory document references, ONLY cite materials that exist in the database
+- For FAQs, Guidance Documents, or regulatory provisions:
+  • Quote exact text from the database sources when available
+  • Include document reference numbers and sources only if they exist in the database
+  • If paraphrasing database content, clearly indicate this is an interpretation
+  • If no database content is available for a topic, explicitly state "No specific guidance materials found in the regulatory database"
+- Do NOT generate placeholder document codes or reference numbers
+- Do NOT create fictitious regulatory document citations
+- Only reference actual database entries and legitimate regulatory sources
 `;
   }
 };
-
