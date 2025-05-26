@@ -65,11 +65,11 @@ export const useResponseHandling = (
         metadata: {
           financialQueryType,
           reasoning,
-          processingTime: response.metadata?.processingTime || 0,
-          model: response.metadata?.model || 'grok-3-beta',
-          temperature: response.metadata?.temperature || 0.5,
-          maxTokens: response.metadata?.maxTokens || 15000,
-          isTruncated: response.metadata?.isTruncated || response.metadata?.responseWasTruncated || false,
+          processingTime: 0, // Default value since response structure may not have this
+          model: 'grok-3-beta', // Default model
+          temperature: 0.5, // Default temperature
+          maxTokens: 15000, // Default max tokens
+          isTruncated: false, // Default to false, will be updated if needed
           ...(validationResult && {
             validation: {
               isValid: validationResult.isValid,
@@ -90,11 +90,20 @@ export const useResponseHandling = (
         }
       };
 
+      // Check if response has truncation indicators
+      const isTruncated = responseText.includes('[NOTE: Response has been truncated') ||
+                         responseText.includes('...') ||
+                         (response.metadata && 'responseWasTruncated' in response.metadata && response.metadata.responseWasTruncated);
+
+      if (isTruncated && assistantMessage.metadata) {
+        assistantMessage.metadata.isTruncated = true;
+      }
+
       setMessages([...updatedMessages, assistantMessage]);
       
       return {
         success: true,
-        isTruncated: response.metadata?.isTruncated || response.metadata?.responseWasTruncated || false,
+        isTruncated: isTruncated,
         validationResult
       };
     } catch (error) {
