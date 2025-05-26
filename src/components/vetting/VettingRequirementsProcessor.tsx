@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
-import { announcementVettingService } from '@/services/vetting/announcementVettingService';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -17,6 +17,7 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
   const [isProcessing, setIsProcessing] = useState(false);
   const [processed, setProcessed] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [processingResult, setProcessingResult] = useState<any>(null);
   
   // Get reference documents
   const { data: documents, isLoading } = useReferenceDocuments();
@@ -25,35 +26,54 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
   const vettingGuideDoc = documents?.find(doc => 
     doc.title.toLowerCase().includes('pre-vetting') && 
     doc.title.toLowerCase().includes('guide') && 
-    doc.title.toLowerCase().includes('announcement')
+    doc.title.toLowerCase().includes('announcement') &&
+    doc.title.includes('2025.5.23')
   );
   
   const processVettingGuide = async () => {
     if (!vettingGuideDoc) {
-      setError('Vetting guide document not found. Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements.xls" file.');
+      setError('Vetting guide document not found. Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements (2025.5.23).xls" file.');
       return;
     }
     
     setIsProcessing(true);
     setError(null);
+    setProcessingResult(null);
     
     try {
-      const success = await announcementVettingService.parseAndUpdateVettingRequirements(vettingGuideDoc.id);
-      if (success) {
+      console.log('Calling Edge Function to parse Excel file...');
+      
+      const { data, error } = await supabase.functions.invoke('parse-vetting-requirements', {
+        body: { fileId: vettingGuideDoc.id }
+      });
+      
+      if (error) {
+        console.error('Edge Function error:', error);
+        throw new Error(error.message || 'Failed to process the vetting requirements document');
+      }
+      
+      if (data.success) {
         setProcessed(true);
+        setProcessingResult(data);
         toast({
           title: "Vetting requirements updated",
-          description: "Successfully processed the vetting requirements document.",
+          description: `Successfully processed ${data.count} vetting requirements from the Excel file.`,
         });
         if (onProcessComplete) {
           onProcessComplete();
         }
       } else {
-        setError("Failed to process the vetting requirements document. Please try again or check the console for errors.");
+        throw new Error(data.error || 'Unknown error occurred during processing');
       }
     } catch (err) {
       console.error('Error processing vetting guide:', err);
-      setError(`Processing error: ${err instanceof Error ? err.message : String(err)}`);
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(`Processing error: ${errorMessage}`);
+      toast({
+        title: "Processing failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsProcessing(false);
     }
@@ -79,12 +99,24 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
               </AlertDescription>
             </Alert>
             
-            {processed && (
+            {processed && processingResult && (
               <Alert className="bg-green-50 border-green-200">
                 <CheckCircle className="h-4 w-4 text-green-600" />
                 <AlertTitle className="text-green-800">Processing complete</AlertTitle>
                 <AlertDescription className="text-green-700">
-                  Successfully processed the vetting requirements document.
+                  Successfully processed {processingResult.count} vetting requirements from the Excel file.
+                  {processingResult.requirements && (
+                    <div className="mt-2">
+                      <span className="font-semibold">Sample categories processed:</span>
+                      <ul className="list-disc list-inside mt-1">
+                        {processingResult.requirements.slice(0, 3).map((req: any, index: number) => (
+                          <li key={index} className="text-sm">
+                            {req.headline_category} - {req.is_vetting_required ? 'Pre-vetting required' : 'Post-vetting only'}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </AlertDescription>
               </Alert>
             )}
@@ -94,7 +126,7 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Document not found</AlertTitle>
             <AlertDescription>
-              Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements.xls" file to the References section.
+              Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements (2025.5.23).xls" file to the References section.
             </AlertDescription>
           </Alert>
         )}
@@ -115,10 +147,10 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
         >
           {isProcessing ? (
             <>
-              <span className="mr-2">Processing...</span>
+              <span className="mr-2">Processing Excel File...</span>
               <Loader2 className="h-4 w-4 animate-spin" />
             </>
-          ) : processed ? 'Reprocess Document' : 'Process Vetting Guide'}
+          ) : processed ? 'Reprocess Excel File' : 'Parse Excel File to Database'}
         </Button>
       </CardFooter>
     </Card>

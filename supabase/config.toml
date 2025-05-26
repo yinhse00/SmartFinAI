@@ -1,1 +1,5 @@
+
 project_id = "petoxjdikxxugbrzajpj"
+
+[functions.parse-vetting-requirements]
+verify_jwt = false
