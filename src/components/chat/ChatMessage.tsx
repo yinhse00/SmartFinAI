@@ -122,10 +122,10 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [content, originalContent, showOriginal, isBot]);
 
-  // Fix the onTypingProgress callback to handle optional parameter - make it compatible
-  const handleTypingProgress = (progress: number) => {
+  // Handle typing progress callback properly
+  const handleTypingProgress = () => {
     if (onTypingProgress) {
-      onTypingProgress(progress);
+      onTypingProgress(0); // Pass a default value since TypingAnimation doesn't provide progress
     }
   };
 
@@ -173,7 +173,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
               onComplete={() => setIsTypingComplete(true)} 
-              onProgress={onTypingProgress}
+              onProgress={handleTypingProgress}
               renderAsHTML={true}
               initialVisibleChars={getInitialVisibleChars()}
             />

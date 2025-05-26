@@ -65,11 +65,11 @@ export const useResponseHandling = (
         metadata: {
           financialQueryType,
           reasoning,
-          processingTime: response.processingTime || 0,
-          model: response.model || 'grok-3-beta',
-          temperature: response.temperature || 0.5,
-          maxTokens: response.maxTokens || 15000,
-          isTruncated: response.isTruncated || false,
+          processingTime: response.metadata?.processingTime || 0,
+          model: response.metadata?.model || 'grok-3-beta',
+          temperature: response.metadata?.temperature || 0.5,
+          maxTokens: response.metadata?.maxTokens || 15000,
+          isTruncated: response.metadata?.isTruncated || response.metadata?.responseWasTruncated || false,
           ...(validationResult && {
             validation: {
               isValid: validationResult.isValid,
@@ -94,7 +94,7 @@ export const useResponseHandling = (
       
       return {
         success: true,
-        isTruncated: response.isTruncated || false,
+        isTruncated: response.metadata?.isTruncated || response.metadata?.responseWasTruncated || false,
         validationResult
       };
     } catch (error) {
