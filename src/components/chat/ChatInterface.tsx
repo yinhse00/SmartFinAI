@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
@@ -13,6 +12,7 @@ import { useMessageTranslator } from './translation/MessageTranslator';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import ProcessingOverlay from './ProcessingOverlay';
 import { WorkflowStep } from './hooks/workflow/types';
+import { useOptimizedWorkflowProcessor } from './hooks/useOptimizedWorkflowProcessor';
 
 // Map workflow steps to processing stages
 const mapWorkflowToProcessingStage = (
@@ -49,13 +49,10 @@ const ChatInterface: React.FC = () => {
     input,
     setInput,
     lastQuery,
-    isLoading,
     handleSend,
     handleKeyDown,
     processQuery,
     retryLastQuery,
-    currentStep,
-    stepProgress,
     isBatching,
     currentBatchNumber,
     handleContinueBatch
@@ -105,6 +102,19 @@ const ChatInterface: React.FC = () => {
     }
   }, [isOfflineMode, hasAttachedFiles, toast]);
   
+  // Use optimized workflow processor instead of regular one
+  const { 
+    isLoading, 
+    processingStage, 
+    executeOptimizedWorkflow 
+  } = useOptimizedWorkflowProcessor({
+    messages,
+    setMessages,
+    setLastQuery,
+    isGrokApiKeySet,
+    setApiKeyDialogOpen
+  });
+
   // Modified send handler that processes files before sending the message
   const handleSendWithFiles = async () => {
     if (hasAttachedFiles) {
@@ -124,8 +134,8 @@ const ChatInterface: React.FC = () => {
         const separator = input ? '\n\n' : '';
         const enrichedInput = input + separator + extractedContent;
         
-        // Process the combined query
-        processQuery(enrichedInput);
+        // Use optimized workflow for faster processing
+        await executeOptimizedWorkflow(enrichedInput);
         
         // Clear the files and input after sending
         clearAttachedFiles();
@@ -133,12 +143,22 @@ const ChatInterface: React.FC = () => {
       }
     } else {
       // Normal send without files
-      handleSend();
+      handleSendMessage();
     }
   };
 
+  const handleSendMessage = async () => {
+    if (!input.trim() || isLoading) return;
+    
+    const query = input.trim();
+    setInput('');
+    
+    // Use optimized workflow for faster processing
+    await executeOptimizedWorkflow(query);
+  };
+
   // Map workflow step to processing stage
-  const processingStage = mapWorkflowToProcessingStage(currentStep);
+  const processingStageMapped = mapWorkflowToProcessingStage(currentStep);
 
   return (
     <>
@@ -174,8 +194,8 @@ const ChatInterface: React.FC = () => {
           isOfflineMode={isOfflineMode}
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
-          currentStep={processingStage}
-          stepProgress={stepProgress}
+          currentStep={processingStageMapped}
+          stepProgress={processingStage}
         />
       </div>
       
