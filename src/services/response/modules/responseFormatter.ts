@@ -31,18 +31,6 @@ export const responseFormatter = {
     
     // Only apply formatting if HTML formatting is not already present
     if (!hasHtmlFormatting) {
-      // Add executive summary wrap if not present
-      if (!formattedText.includes('<h1>Executive Summary</h1>') && 
-          !formattedText.includes('<h2>Executive Summary</h2>')) {
-        // Look for what might be an executive summary at the beginning
-        const firstParagraphEnd = formattedText.indexOf('\n\n');
-        if (firstParagraphEnd > 0 && firstParagraphEnd < 400) {
-          const executiveSummary = formattedText.substring(0, firstParagraphEnd);
-          const remainingText = formattedText.substring(firstParagraphEnd);
-          formattedText = `<h1 class="text-2xl font-bold my-4">Executive Summary</h1>\n<p class="my-2">${executiveSummary}</p>\n<h1 class="text-2xl font-bold my-4">Detailed Analysis</h1>\n${remainingText}`;
-        }
-      }
-      
       // Replace markdown-style headers with semantic HTML elements
       formattedText = formattedText
         .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
@@ -55,21 +43,30 @@ export const responseFormatter = {
         .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
         .replace(/^___+$/gm, '<div class="my-4"></div>');
       
-      // Enhance inline text formatting
+      // Enhanced inline text formatting - RESTORE BOLD KEYWORDS
       formattedText = formattedText
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Bold text
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>') // Bold text with styling
         .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
         .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
       
-      // Enhanced formatting for rule references
+      // Enhanced formatting for rule references - RESTORE BOLD REGULATORY TERMS
       formattedText = formattedText
-        .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="text-finance-accent-blue">$1</strong>')
+        .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="font-bold text-finance-accent-blue">$1</strong>')
         .replace(/(\bGuidance Letter\s+\w+-\d+\b|\bListing Decision\s+\w+-\d+\b|\bFAQ\s+\d+\.\d+\b)/g, 
-                '<strong class="text-finance-accent-green">$1</strong>');
+                '<strong class="font-bold text-finance-accent-green">$1</strong>')
+        .replace(/(\bHK\$[\d,]+(?:\.\d+)?\s*(?:million|billion)?\b)/g, '<strong class="font-bold">$1</strong>') // Financial amounts
+        .replace(/(\b(?:independent shareholders|connected transaction|aggregation|whitewash|takeover|substantial shareholder)\b)/gi, 
+                '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>'); // Key financial terms
       
-      // Enhanced bullet point formatting with proper spacing and structure
+      // Enhanced bullet point formatting - RESTORE BULLET POINTS
       formattedText = formattedText
-        .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<p class="bullet-point my-1 ml-4 relative">$3</p>');
+        .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li class="my-1 ml-4">$3</li>');
+      
+      // Wrap consecutive bullet points in ul tags
+      formattedText = formattedText.replace(
+        /(<li class="my-1 ml-4">.*?<\/li>)(\s*<li class="my-1 ml-4">.*?<\/li>)*/gs,
+        '<ul class="list-disc pl-6 my-3">$&</ul>'
+      );
       
       // Enhance paragraphing with proper spacing
       const paragraphs = formattedText.split(/\n\n+/);
@@ -79,7 +76,7 @@ export const responseFormatter = {
         
         // Format as paragraph if it's not already HTML and isn't empty
         if (p.trim().length > 0) {
-          return `<p class="my-2">${p.trim()}</p>`;
+          return `<p class="my-2 leading-relaxed">${p.trim()}</p>`;
         }
         return p;
       }).join('\n\n');
@@ -139,4 +136,3 @@ export const responseFormatter = {
     };
   }
 };
-

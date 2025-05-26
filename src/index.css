@@ -1,4 +1,4 @@
-
+@import url('./styles/table.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

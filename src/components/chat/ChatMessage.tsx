@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -6,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCw } from 'lucide-react';
 import TypingAnimation from './TypingAnimation';
 import ValidationStatusIndicator from './ValidationStatusIndicator';
+import detectAndFormatTables from '@/utils/tableFormatter';
 
 export interface Message {
   id: string;
@@ -112,7 +112,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     const safeContent = content || "";
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
-    // Format tables and process markdown in the content
+    // Format tables and process content properly
     if (isBot) {
       const formatted = detectAndFormatTables(displayContent);
       setFormattedContent(formatted);
