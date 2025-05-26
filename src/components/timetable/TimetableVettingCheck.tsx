@@ -25,8 +25,13 @@ const TimetableVettingCheck: React.FC<TimetableVettingCheckProps> = ({
         setIsVettingRequired(required);
         
         if (required) {
-          const exemptionText = await getVettingExemptions(headlineCategory);
-          setExemptions(exemptionText);
+          const exemptionResult = await getVettingExemptions(headlineCategory);
+          // Handle both string and array cases
+          if (Array.isArray(exemptionResult)) {
+            setExemptions(exemptionResult.join(', '));
+          } else {
+            setExemptions(exemptionResult);
+          }
         }
       } catch (error) {
         console.error("Error checking vetting requirements:", error);

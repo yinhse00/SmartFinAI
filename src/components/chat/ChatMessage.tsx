@@ -122,8 +122,12 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [content, originalContent, showOriginal, isBot]);
 
-  // Fix the onTypingProgress callback to handle optional parameter
-  const handleTypingProgress = onTypingProgress ? (progress: number) => onTypingProgress(progress) : undefined;
+  // Fix the onTypingProgress callback to handle optional parameter - make it compatible
+  const handleTypingProgress = (progress: number) => {
+    if (onTypingProgress) {
+      onTypingProgress(progress);
+    }
+  };
 
   // Only show error for empty content if it's actually an error AND processing is complete
   if ((!content || content.trim() === '') && isBot && !isTranslating && !translationInProgress && isError) {
