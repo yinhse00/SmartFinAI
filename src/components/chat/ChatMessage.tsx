@@ -173,7 +173,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
               onComplete={() => setIsTypingComplete(true)} 
-              onProgress={handleTypingProgress}
+              onProgress={onTypingProgress}
               renderAsHTML={true}
               initialVisibleChars={getInitialVisibleChars()}
             />
