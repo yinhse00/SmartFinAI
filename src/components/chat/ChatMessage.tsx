@@ -22,6 +22,7 @@ export interface Message {
   isBatchPart?: boolean;
   originalContent?: string;
   translationInProgress?: boolean;
+  isTranslated?: boolean;
   metadata?: {
     financialQueryType?: string;
     reasoning?: string;
@@ -31,6 +32,9 @@ export interface Message {
     maxTokens?: number;
     isTruncated?: boolean;
     isError?: boolean;
+    translation?: string;
+    guidanceMaterialsUsed?: boolean;
+    sourceMaterials?: string[];
     validation?: {
       isValid: boolean;
       vettingConsistency: boolean;
@@ -43,6 +47,7 @@ export interface Message {
     relevantGuidance?: number;
     guidanceTypes?: string[];
   };
+  verified?: boolean;
 }
 
 interface ChatMessageProps {
@@ -117,6 +122,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
     }
   }, [content, originalContent, showOriginal, isBot]);
 
+  // Fix the onTypingProgress callback to handle optional parameter
+  const handleTypingProgress = onTypingProgress ? (progress: number) => onTypingProgress(progress) : undefined;
+
   // Only show error for empty content if it's actually an error AND processing is complete
   if ((!content || content.trim() === '') && isBot && !isTranslating && !translationInProgress && isError) {
     return (
@@ -161,7 +169,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
               text={formattedContent} 
               className="whitespace-pre-line text-left chat-content" 
               onComplete={() => setIsTypingComplete(true)} 
-              onProgress={onTypingProgress}
+              onProgress={handleTypingProgress}
               renderAsHTML={true}
               initialVisibleChars={getInitialVisibleChars()}
             />

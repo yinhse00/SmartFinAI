@@ -15,6 +15,7 @@ export interface Message {
   isBatchPart?: boolean;
   originalContent?: string;
   translationInProgress?: boolean;
+  isTranslated?: boolean;
   metadata?: {
     financialQueryType?: string;
     reasoning?: string;
@@ -24,6 +25,9 @@ export interface Message {
     maxTokens?: number;
     isTruncated?: boolean;
     isError?: boolean;
+    translation?: string;
+    guidanceMaterialsUsed?: boolean;
+    sourceMaterials?: string[];
     validation?: {
       isValid: boolean;
       vettingConsistency: boolean;

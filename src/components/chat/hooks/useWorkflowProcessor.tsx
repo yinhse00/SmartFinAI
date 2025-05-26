@@ -50,7 +50,7 @@ export const useWorkflowProcessor = ({
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
-        sender: 'user',
+        isUser: true,
         content: query,
         timestamp: new Date()
       };
@@ -61,7 +61,7 @@ export const useWorkflowProcessor = ({
       // Create assistant message placeholder
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
-        sender: 'bot',
+        isUser: false,
         content: '',  // Initially empty, will be populated later
         timestamp: new Date(),
         isError: false,
@@ -164,7 +164,7 @@ export const useWorkflowProcessor = ({
           };
           
           setMessages(finalMessages);
-          console.log('Messages after update:', finalMessages.map(m => `${m.sender}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`));
+          console.log('Messages after update:', finalMessages.map(m => `${m.isUser ? 'user' : 'bot'}: ${m.content ? m.content.substring(0, 30) + '...' : '[EMPTY]'}`));
           
           // Handle translations if needed
           if (step5Result.requiresTranslation) {
@@ -176,7 +176,7 @@ export const useWorkflowProcessor = ({
           // Add a new message if we couldn't find the original - with guaranteed content
           const newAssistantMessage: Message = {
             id: (Date.now() + 2).toString(),
-            sender: 'bot',
+            isUser: false,
             content: step5Result.response || "I wasn't able to generate a proper response. Please try again.",
             timestamp: new Date(),
             metadata: {
@@ -194,7 +194,7 @@ export const useWorkflowProcessor = ({
         // Handle empty response case with a clear error message
         const errorMessage: Message = {
           id: (Date.now() + 2).toString(),
-          sender: 'bot',
+          isUser: false,
           content: "I'm sorry, I couldn't generate a proper response. Please try again.",
           timestamp: new Date(),
           isError: true
@@ -224,7 +224,7 @@ export const useWorkflowProcessor = ({
       
       const updatedMessages = [...messages];
       const assistantIndex = updatedMessages.findIndex(
-        (m) => m.sender === 'bot' && !m.content
+        (m) => !m.isUser && !m.content
       );
       
       if (assistantIndex !== -1) {
@@ -239,7 +239,7 @@ export const useWorkflowProcessor = ({
         // If we can't find the bot message, add a new one
         const errorMsg: Message = {
           id: Date.now().toString(),
-          sender: 'bot',
+          isUser: false,
           content: errorMessage,
           timestamp: new Date(),
           isError: true
