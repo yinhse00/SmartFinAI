@@ -24,7 +24,7 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Starting enhanced Excel parsing with SheetJS library...');
+    console.log('Starting comprehensive Excel parsing to extract ALL data...');
     
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
@@ -62,8 +62,8 @@ serve(async (req) => {
     // Convert blob to ArrayBuffer for Excel parsing
     const arrayBuffer = await fileBlob.arrayBuffer()
     
-    // Parse Excel content using enhanced SheetJS implementation
-    const requirements = await parseExcelWithEnhancedSheetJS(arrayBuffer)
+    // Parse Excel content with comprehensive data extraction
+    const requirements = await parseCompleteExcelData(arrayBuffer)
     
     if (requirements.length === 0) {
       throw new Error('No vetting requirements extracted from the Excel file. Please check the file format and content.')
@@ -71,7 +71,7 @@ serve(async (req) => {
 
     console.log(`Successfully parsed ${requirements.length} vetting requirements from Excel file`);
 
-    // Clear existing data and insert new data in a transaction-like approach
+    // Clear existing data and insert new data
     const { error: deleteError } = await supabase
       .from('announcement_pre_vetting_requirements')
       .delete()
@@ -84,8 +84,8 @@ serve(async (req) => {
 
     console.log('Cleared existing data, inserting new requirements...');
 
-    // Insert new requirements in batches to handle large datasets
-    const batchSize = 100;
+    // Insert new requirements in batches
+    const batchSize = 50;
     let insertedCount = 0;
     
     for (let i = 0; i < requirements.length; i += batchSize) {
@@ -111,7 +111,7 @@ serve(async (req) => {
         success: true,
         message: `Successfully processed ${requirements.length} vetting requirements from ${documents.title}`,
         count: requirements.length,
-        requirements: requirements.slice(0, 15), // Return first 15 as sample
+        requirements: requirements.slice(0, 10), // Return first 10 as sample
         summary: {
           totalRecords: requirements.length,
           requiringVetting: requirements.filter(r => r.is_vetting_required).length,
@@ -119,8 +119,8 @@ serve(async (req) => {
         },
         processingDetails: {
           fileSize: fileBlob.size,
-          extractionMethod: 'Enhanced SheetJS with comprehensive parsing',
-          dataValidation: 'Complete with field mapping and cleaning'
+          extractionMethod: 'Complete SheetJS parsing with comprehensive data extraction',
+          dataValidation: 'Full field mapping and data cleaning applied'
         }
       }),
       {
@@ -130,16 +130,12 @@ serve(async (req) => {
     )
 
   } catch (error) {
-    console.error('Enhanced Excel parsing error:', error);
+    console.error('Excel parsing error:', error);
     return new Response(
       JSON.stringify({
         success: false,
         error: error.message,
-        details: 'Check the Edge Function logs for more information',
-        troubleshooting: {
-          suggestion: 'Verify the Excel file format and ensure it contains the expected vetting requirements data',
-          expectedStructure: 'Columns should include: Headline Category, Pre-vetting Requirement, Rule Reference, Exemptions'
-        }
+        details: 'Check the Edge Function logs for more information'
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -149,74 +145,37 @@ serve(async (req) => {
   }
 })
 
-async function parseExcelWithEnhancedSheetJS(arrayBuffer: ArrayBuffer): Promise<VettingRequirement[]> {
+async function parseCompleteExcelData(arrayBuffer: ArrayBuffer): Promise<VettingRequirement[]> {
   try {
-    console.log('Starting enhanced Excel parsing with comprehensive data extraction...');
+    console.log('Starting complete Excel data extraction...');
     
-    // Parse the Excel workbook with enhanced options
+    // Parse the Excel workbook
     const workbook = XLSX.read(new Uint8Array(arrayBuffer), { 
       type: 'array',
       cellDates: true,
       cellNF: false,
       cellText: false,
-      raw: false,
-      codepage: 65001 // UTF-8 for better character support
+      raw: false
     });
     
-    console.log('Workbook parsed successfully. Sheet names:', workbook.SheetNames);
+    console.log('Workbook parsed. Sheet names:', workbook.SheetNames);
     
-    // Find the worksheet containing vetting requirements data
+    // Find the main data sheet
     let targetWorksheet = null;
     let targetSheetName = '';
     
-    // Look for sheets with vetting-related content
+    // Look for the main data sheet (usually the first substantial one)
     for (const sheetName of workbook.SheetNames) {
       console.log(`Examining sheet: ${sheetName}`);
       const worksheet = workbook.Sheets[sheetName];
+      const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
       
-      // Convert a small portion to check content
-      const testRange = { s: { c: 0, r: 0 }, e: { c: 10, r: 20 } }; // First 10 columns, 20 rows
-      const testData = XLSX.utils.sheet_to_json(worksheet, { 
-        header: 1,
-        range: testRange,
-        defval: '',
-        raw: false
-      }) as string[][];
-      
-      // Look for vetting-related keywords in the sheet
-      const hasVettingContent = testData.some(row => 
-        row.some(cell => {
-          const cellText = String(cell || '').toLowerCase();
-          return cellText.includes('vetting') || 
-                 cellText.includes('headline') || 
-                 cellText.includes('category') || 
-                 cellText.includes('announcement') ||
-                 cellText.includes('pre-vetting') ||
-                 cellText.includes('requirement');
-        })
-      );
-      
-      if (hasVettingContent) {
+      // Check if sheet has substantial content (more than 20 rows and at least 2 columns)
+      if (range.e.r > 20 && range.e.c >= 1) {
         targetWorksheet = worksheet;
         targetSheetName = sheetName;
-        console.log(`Found target sheet with vetting content: ${sheetName}`);
+        console.log(`Using sheet: ${sheetName} with ${range.e.r + 1} rows and ${range.e.c + 1} columns`);
         break;
-      }
-    }
-    
-    // If no specific sheet found, use the first substantial sheet
-    if (!targetWorksheet) {
-      for (const sheetName of workbook.SheetNames) {
-        const worksheet = workbook.Sheets[sheetName];
-        const range = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:A1');
-        
-        // Check if sheet has substantial content
-        if (range.e.r > 10 && range.e.c > 1) {
-          targetWorksheet = worksheet;
-          targetSheetName = sheetName;
-          console.log(`Using first substantial sheet: ${sheetName}`);
-          break;
-        }
       }
     }
     
@@ -224,52 +183,52 @@ async function parseExcelWithEnhancedSheetJS(arrayBuffer: ArrayBuffer): Promise<
       throw new Error('No suitable worksheet found in the Excel file');
     }
     
-    // Convert the entire worksheet to JSON for comprehensive analysis
-    const fullData = XLSX.utils.sheet_to_json(targetWorksheet, { 
+    // Convert the entire worksheet to JSON array
+    const jsonData = XLSX.utils.sheet_to_json(targetWorksheet, { 
       header: 1,
       defval: '',
       raw: false,
       blankrows: false
     }) as string[][];
     
-    console.log(`Sheet contains ${fullData.length} rows of data`);
+    console.log(`Sheet contains ${jsonData.length} rows of data`);
     
-    // Advanced header detection and column mapping
-    const columnMapping = detectColumnsAndHeaders(fullData);
+    // Find the header row and column indices
+    const columnMapping = findHeaderRowAndColumns(jsonData);
     console.log('Detected column mapping:', columnMapping);
     
     if (columnMapping.headerRowIndex === -1) {
       throw new Error('Could not identify header row in the Excel file');
     }
     
-    // Extract and process all data rows
+    // Extract all data rows
     const requirements: VettingRequirement[] = [];
     const startRow = columnMapping.headerRowIndex + 1;
     
-    console.log(`Processing data from row ${startRow} to ${fullData.length}`);
+    console.log(`Processing data from row ${startRow} to ${jsonData.length}`);
     
-    for (let i = startRow; i < fullData.length; i++) {
-      const row = fullData[i];
+    for (let i = startRow; i < jsonData.length; i++) {
+      const row = jsonData[i];
       if (!row || row.length === 0) continue;
       
       // Extract and clean the headline category
-      const categoryText = extractAndCleanText(row[columnMapping.categoryColumn]);
-      if (!categoryText || categoryText.length < 2) continue;
+      const categoryText = cleanText(row[columnMapping.categoryColumn]);
+      if (!categoryText || categoryText.length < 3) continue;
       
-      // Skip obvious header or separator rows
+      // Skip header-like rows
       if (isHeaderOrSeparatorRow(categoryText)) continue;
       
       // Extract vetting requirement
-      const vettingText = extractAndCleanText(row[columnMapping.vettingColumn]);
-      const isVettingRequired = parseVettingRequirement(vettingText);
+      const vettingText = cleanText(row[columnMapping.vettingColumn]);
+      const isVettingRequired = determineVettingRequirement(vettingText);
       
-      // Extract additional fields
+      // Extract additional fields if available
       const ruleReference = columnMapping.referenceColumn >= 0 ? 
-        extractAndCleanText(row[columnMapping.referenceColumn]) : undefined;
+        cleanText(row[columnMapping.referenceColumn]) : undefined;
       const exemptions = columnMapping.exemptionsColumn >= 0 ? 
-        extractAndCleanText(row[columnMapping.exemptionsColumn]) : undefined;
+        cleanText(row[columnMapping.exemptionsColumn]) : undefined;
       const description = columnMapping.descriptionColumn >= 0 ? 
-        extractAndCleanText(row[columnMapping.descriptionColumn]) : undefined;
+        cleanText(row[columnMapping.descriptionColumn]) : undefined;
       
       const requirement: VettingRequirement = {
         headline_category: categoryText,
@@ -281,20 +240,15 @@ async function parseExcelWithEnhancedSheetJS(arrayBuffer: ArrayBuffer): Promise<
       
       requirements.push(requirement);
       
-      // Log every 20th entry for monitoring
-      if (requirements.length % 20 === 0) {
+      // Log progress every 50 entries
+      if (requirements.length % 50 === 0) {
         console.log(`Processed ${requirements.length} requirements so far...`);
       }
     }
     
     console.log(`Successfully extracted ${requirements.length} vetting requirements`);
     
-    // Validate extracted data
-    if (requirements.length === 0) {
-      throw new Error('No valid vetting requirements found in the Excel file');
-    }
-    
-    // Log sample of extracted data for verification
+    // Log sample of extracted data
     console.log('Sample extracted requirements:');
     requirements.slice(0, 5).forEach((req, index) => {
       console.log(`${index + 1}. ${req.headline_category} - ${req.is_vetting_required ? 'Vetting Required' : 'No Vetting'}`);
@@ -303,12 +257,12 @@ async function parseExcelWithEnhancedSheetJS(arrayBuffer: ArrayBuffer): Promise<
     return requirements;
     
   } catch (error) {
-    console.error('Error in enhanced Excel parsing:', error);
-    throw new Error(`Failed to parse Excel file with enhanced SheetJS: ${error.message}`);
+    console.error('Error in complete Excel parsing:', error);
+    throw new Error(`Failed to parse Excel file: ${error.message}`);
   }
 }
 
-function detectColumnsAndHeaders(data: string[][]): {
+function findHeaderRowAndColumns(data: string[][]): {
   headerRowIndex: number;
   categoryColumn: number;
   vettingColumn: number;
@@ -323,8 +277,8 @@ function detectColumnsAndHeaders(data: string[][]): {
   let exemptionsColumn = -1;
   let descriptionColumn = -1;
   
-  // Search for header row in first 25 rows
-  for (let i = 0; i < Math.min(25, data.length); i++) {
+  // Search for header row in first 30 rows
+  for (let i = 0; i < Math.min(30, data.length); i++) {
     const row = data[i];
     if (!row || row.length < 2) continue;
     
@@ -333,8 +287,8 @@ function detectColumnsAndHeaders(data: string[][]): {
       const cellText = String(row[j] || '').toLowerCase().trim();
       
       // Detect category column
-      if ((cellText.includes('headline') && cellText.includes('category')) ||
-          (cellText.includes('announcement') && cellText.includes('type')) ||
+      if (cellText.includes('headline') && cellText.includes('category') ||
+          cellText.includes('announcement') && cellText.includes('type') ||
           cellText.includes('category') ||
           cellText === 'headline category') {
         categoryColumn = j;
@@ -343,15 +297,17 @@ function detectColumnsAndHeaders(data: string[][]): {
       
       // Detect vetting requirement column
       if (cellText.includes('pre-vetting') || 
-          (cellText.includes('vetting') && cellText.includes('requirement')) ||
+          cellText.includes('vetting') && cellText.includes('requirement') ||
           cellText.includes('pre vetting') ||
-          cellText === 'pre-vetting requirement') {
+          cellText === 'pre-vetting requirement' ||
+          cellText.includes('y/n') ||
+          cellText.includes('yes/no')) {
         vettingColumn = j;
         headerRowIndex = i;
       }
       
       // Detect reference column
-      if ((cellText.includes('rule') && cellText.includes('reference')) ||
+      if (cellText.includes('rule') && cellText.includes('reference') ||
           cellText.includes('reference') ||
           cellText.includes('rule no')) {
         referenceColumn = j;
@@ -378,15 +334,15 @@ function detectColumnsAndHeaders(data: string[][]): {
     }
   }
   
-  // Fallback column assignment if specific headers not found
+  // Fallback if specific headers not found
   if (headerRowIndex === -1 && data.length > 0) {
     console.log('Using fallback column assignment');
     headerRowIndex = 0;
     categoryColumn = 0;
     vettingColumn = 1;
-    referenceColumn = 2;
-    exemptionsColumn = 3;
-    descriptionColumn = 4;
+    referenceColumn = data[0].length > 2 ? 2 : -1;
+    exemptionsColumn = data[0].length > 3 ? 3 : -1;
+    descriptionColumn = data[0].length > 4 ? 4 : -1;
   }
   
   return {
@@ -399,12 +355,12 @@ function detectColumnsAndHeaders(data: string[][]): {
   };
 }
 
-function extractAndCleanText(cell: any): string {
+function cleanText(cell: any): string {
   if (cell === null || cell === undefined) return '';
   
   const text = String(cell).trim();
   
-  // Remove common Excel artifacts
+  // Remove common Excel artifacts and normalize
   return text
     .replace(/^\"|\"$/g, '') // Remove surrounding quotes
     .replace(/\s+/g, ' ') // Normalize whitespace
@@ -412,14 +368,14 @@ function extractAndCleanText(cell: any): string {
     .trim();
 }
 
-function parseVettingRequirement(vettingText: string): boolean {
+function determineVettingRequirement(vettingText: string): boolean {
   if (!vettingText) return false;
   
   const text = vettingText.toLowerCase().trim();
   
   // Positive indicators for vetting required
-  const positiveKeywords = ['yes', 'y', 'required', 'pre-vetting', 'pre vetting', 'mandatory', 'needed'];
-  const negativeKeywords = ['no', 'n', 'not required', 'not applicable', 'na', 'n/a', 'none', 'nil'];
+  const positiveKeywords = ['yes', 'y', 'required', 'pre-vetting', 'pre vetting', 'mandatory', 'needed', 'applicable'];
+  const negativeKeywords = ['no', 'n', 'not required', 'not applicable', 'na', 'n/a', 'none', 'nil', 'exempt'];
   
   // Check for positive indicators first
   if (positiveKeywords.some(keyword => text.includes(keyword))) {
