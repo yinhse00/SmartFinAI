@@ -11,7 +11,7 @@ interface InlineProcessingOverlayProps {
   isVisible: boolean;
 }
 
-// Map processing stages to workflow steps if needed
+// Map processing stages to workflow steps
 const mapProcessingToWorkflow = (step: 'preparing' | 'processing' | 'finalizing' | 'reviewing'): WorkflowStep => {
   switch (step) {
     case 'preparing': return 'initial';
@@ -30,46 +30,61 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
 }) => {
   const [progressValue, setProgressValue] = useState(15);
   
-  // Calculate progress based on current step
+  // Calculate progress based on current step and processing stage
   useEffect(() => {
     if (!isVisible) return;
     
     const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
-    const workflowStep = typeof currentStep === 'string' && 
-      ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep) 
-      ? mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing') 
-      : currentStep as WorkflowStep;
+    
+    // Map the current step to a workflow step
+    let workflowStep: WorkflowStep;
+    if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
+      workflowStep = mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing');
+    } else {
+      workflowStep = currentStep as WorkflowStep;
+    }
+    
+    // Determine step based on processing stage text
+    if (stepProgress) {
+      if (stepProgress.includes('Analyzing') || stepProgress.includes('cached')) {
+        workflowStep = 'initial';
+      } else if (stepProgress.includes('regulatory context') || stepProgress.includes('guidance')) {
+        workflowStep = 'listingRules';
+      } else if (stepProgress.includes('Generating')) {
+        workflowStep = 'response';
+      }
+    }
     
     const stepIndex = steps.indexOf(workflowStep);
     
     // Calculate progress percentage based on step
-    const baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 90);
+    const baseProgress = Math.max(15, (stepIndex / (steps.length - 1)) * 85);
     
     // Animate progress smoothly
     const targetProgress = baseProgress;
-    let currentProgress = progressValue;
-    
-    const animateProgress = () => {
-      if (currentProgress < targetProgress) {
-        currentProgress += 0.5;
-        setProgressValue(currentProgress);
-        
-        if (currentProgress < targetProgress) {
-          requestAnimationFrame(animateProgress);
-        }
-      }
-    };
-    
-    requestAnimationFrame(animateProgress);
-  }, [currentStep, isVisible, progressValue]);
+    setProgressValue(targetProgress);
+  }, [currentStep, stepProgress, isVisible]);
   
   if (!isVisible) return null;
   
-  // Handle both WorkflowStep and processing stage formats
-  const workflowStep = typeof currentStep === 'string' && 
-    ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep) 
-    ? mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing') 
-    : currentStep as WorkflowStep;
+  // Get the actual workflow step for display
+  let displayStep: WorkflowStep;
+  if (typeof currentStep === 'string' && ['preparing', 'processing', 'finalizing', 'reviewing'].includes(currentStep)) {
+    displayStep = mapProcessingToWorkflow(currentStep as 'preparing' | 'processing' | 'finalizing' | 'reviewing');
+  } else {
+    displayStep = currentStep as WorkflowStep;
+  }
+  
+  // Override display step based on processing stage content
+  if (stepProgress) {
+    if (stepProgress.includes('Analyzing') || stepProgress.includes('cached')) {
+      displayStep = 'initial';
+    } else if (stepProgress.includes('regulatory context') || stepProgress.includes('guidance')) {
+      displayStep = 'listingRules';
+    } else if (stepProgress.includes('Generating')) {
+      displayStep = 'response';
+    }
+  }
   
   // Get appropriate step labels based on language
   const stepLabels = isChineseInterface ? {
@@ -91,7 +106,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
   // Step status determination
   const getStepStatus = (step: WorkflowStep) => {
     const steps: WorkflowStep[] = ['initial', 'listingRules', 'takeoversCode', 'execution', 'response', 'complete'];
-    const currentIndex = steps.indexOf(workflowStep);
+    const currentIndex = steps.indexOf(displayStep);
     const stepIndex = steps.indexOf(step);
     
     if (stepIndex < currentIndex) return 'complete';
@@ -153,7 +168,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
               </div>
               <div className="flex-1">
                 <p className="font-medium">{stepLabels[step]}</p>
-                {status === 'active' && (
+                {status === 'active' && stepProgress && (
                   <p className="text-sm opacity-80">{stepProgress}</p>
                 )}
               </div>

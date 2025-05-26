@@ -43,9 +43,6 @@ const ChatInterface: React.FC = () => {
     isSimplifiedChinese 
   } = useLanguageDetection(messages, input);
 
-  // Workflow stage mapping
-  const { getCurrentStep } = useWorkflowStageMapping();
-  
   // Use optimized workflow processor instead of regular one
   const { 
     isLoading, 
@@ -59,6 +56,9 @@ const ChatInterface: React.FC = () => {
     setApiKeyDialogOpen
   });
 
+  // Workflow stage mapping - now properly connected to actual processing stage
+  const { getCurrentStep } = useWorkflowStageMapping({ processingStage });
+  
   // Translation functionality for Chinese inputs
   const { translatingMessageIds } = useMessageTranslator({
     messages,
@@ -120,7 +120,7 @@ const ChatInterface: React.FC = () => {
           onTryReconnect={tryReconnect}
           translatingMessageIds={translatingMessageIds}
           currentStep={getCurrentStep()}
-          stepProgress={getCurrentStep()}
+          stepProgress={processingStage}
         />
       </div>
       

@@ -45,6 +45,9 @@ export const useOptimizedWorkflowProcessor = ({
     setLastQuery(query);
     
     try {
+      // Step 1: Initial Analysis
+      setProcessingStage('Analyzing your query...');
+      
       // Add user message
       const userMessage: Message = {
         id: Date.now().toString(),
@@ -87,7 +90,7 @@ export const useOptimizedWorkflowProcessor = ({
         });
       });
       
-      // Check cache first for quick responses
+      // Step 2: Check cache first for quick responses
       setProcessingStage('Checking cached responses...');
       const cachedResult = smartCacheService.get(query, 'regulatory');
       
@@ -96,10 +99,11 @@ export const useOptimizedWorkflowProcessor = ({
         streamingResponse.setContent(cachedResult.response);
         streamingResponse.complete();
         setIsLoading(false);
+        setProcessingStage('');
         return;
       }
       
-      // Parallel context retrieval (no artificial delays)
+      // Step 3: Parallel context retrieval
       setProcessingStage('Gathering regulatory context...');
       streamingResponse.appendContent('\n\nGathering regulatory context...');
       
@@ -111,7 +115,8 @@ export const useOptimizedWorkflowProcessor = ({
         }
       });
       
-      // Prepare parameters for response generation
+      // Step 4: Prepare parameters for response generation
+      setProcessingStage('Searching for relevant guidance and listing decisions');
       const params = {
         query,
         regulatoryContext: contextResult.context,
@@ -122,8 +127,8 @@ export const useOptimizedWorkflowProcessor = ({
         optimized: true
       };
       
-      // Generate response with streaming updates
-      setProcessingStage('Generating response...');
+      // Step 5: Generate response with streaming updates
+      setProcessingStage('Generating detailed response...');
       streamingResponse.setContent('Generating detailed response...');
       
       const step5Result = await step5Response(

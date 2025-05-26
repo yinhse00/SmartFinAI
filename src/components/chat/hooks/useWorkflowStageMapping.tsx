@@ -1,12 +1,14 @@
 
 import { useState } from 'react';
 
+interface WorkflowStageMappingProps {
+  processingStage: string;
+}
+
 /**
  * Hook to handle workflow stage mapping and conversion
  */
-export const useWorkflowStageMapping = () => {
-  const [processingStage, setProcessingStage] = useState('');
-
+export const useWorkflowStageMapping = ({ processingStage }: WorkflowStageMappingProps) => {
   // Convert processingStage string to proper type
   const getCurrentStep = (): 'preparing' | 'processing' | 'finalizing' | 'reviewing' => {
     if (!processingStage) return 'preparing';
@@ -15,12 +17,15 @@ export const useWorkflowStageMapping = () => {
     switch (processingStage.toLowerCase()) {
       case 'preparing':
       case 'checking cached responses...':
+      case 'analyzing your query...':
         return 'preparing';
       case 'processing':
       case 'gathering regulatory context...':
       case 'generating response...':
+      case 'searching for relevant guidance and listing decisions':
         return 'processing';
       case 'finalizing':
+      case 'generating detailed response...':
         return 'finalizing';
       case 'reviewing':
         return 'reviewing';
@@ -30,8 +35,6 @@ export const useWorkflowStageMapping = () => {
   };
 
   return {
-    processingStage,
-    setProcessingStage,
     getCurrentStep
   };
 };
