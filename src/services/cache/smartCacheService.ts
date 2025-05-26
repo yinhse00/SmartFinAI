@@ -25,7 +25,7 @@ class SmartCacheService {
   /**
    * Get cached result if available and not expired
    */
-  get(query: string, category: string = 'general'): any | null {
+  get(query: string, category: string = 'general', duration?: number): any | null {
     const key = this.generateCacheKey(query, category);
     const entry = this.cache.get(key);
     
@@ -33,8 +33,11 @@ class SmartCacheService {
       return null;
     }
     
+    // Use custom duration if provided, otherwise use default
+    const expiration = duration || this.CACHE_EXPIRATION;
+    
     // Check if expired
-    if (Date.now() - entry.timestamp > this.CACHE_EXPIRATION) {
+    if (Date.now() - entry.timestamp > expiration) {
       this.cache.delete(key);
       return null;
     }
@@ -44,9 +47,9 @@ class SmartCacheService {
   }
   
   /**
-   * Store result in cache
+   * Store result in cache with optional custom duration
    */
-  set(query: string, data: any, category: string = 'general'): void {
+  set(query: string, data: any, category: string = 'general', duration?: number): void {
     const key = this.generateCacheKey(query, category);
     
     // Clean old entries if cache is full
@@ -60,6 +63,21 @@ class SmartCacheService {
       queryHash: key,
       category
     });
+  }
+  
+  /**
+   * Get all cache keys for a specific category
+   */
+  getAllKeys(category?: string): string[] {
+    const keys: string[] = [];
+    for (const [key, entry] of this.cache.entries()) {
+      if (!category || entry.category === category) {
+        // Extract the original query from the key (remove category prefix)
+        const originalQuery = key.includes(':') ? key.split(':').slice(1).join(':') : key;
+        keys.push(originalQuery);
+      }
+    }
+    return keys;
   }
   
   /**

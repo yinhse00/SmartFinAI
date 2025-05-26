@@ -33,6 +33,33 @@ export const useOptimizedWorkflowProcessor = ({
   const { lastInputWasChinese } = useLanguageState();
   const { manageTranslations } = useTranslationManager();
   
+  // Helper method to check query similarity (simplified version)
+  const isSimilarQuery = (query1: string, query2: string): boolean => {
+    const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    const words1 = normalize(query1).split(/\s+/);
+    const words2 = normalize(query2).split(/\s+/);
+    
+    const commonWords = words1.filter(word => words2.includes(word));
+    const similarity = commonWords.length / Math.max(words1.length, words2.length);
+    
+    return similarity > 0.6; // 60% similarity threshold
+  };
+
+  // Helper method to identify simple queries for fast path
+  const isSimpleQuery = (query: string): boolean => {
+    const simplePatterns = [
+      /^what is/i,
+      /^define/i,
+      /^meaning of/i,
+      /^\w+\s+definition/i,
+      /^how to calculate/i,
+      /^when is/i,
+      /^where can I find/i
+    ];
+    
+    return simplePatterns.some(pattern => pattern.test(query)) || query.length < 50;
+  };
+  
   /**
    * Enhanced workflow with improved caching and state management
    */
@@ -105,7 +132,7 @@ export const useOptimizedWorkflowProcessor = ({
         // Simple similarity check - in a real implementation, this would use semantic embeddings
         const cacheKeys = smartCacheService.getAllKeys('regulatory');
         for (const key of cacheKeys) {
-          if (this.isSimilarQuery(query, key)) {
+          if (key && isSimilarQuery(query, key)) {
             cachedResult = smartCacheService.get(key, 'regulatory');
             console.log('Found similar cached query:', key);
             break;
@@ -115,8 +142,10 @@ export const useOptimizedWorkflowProcessor = ({
       
       if (cachedResult) {
         console.log('Using cached response for faster processing');
-        streamingResponse.setContent(cachedResult.response);
-        streamingResponse.complete();
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent(cachedResult.response);
+          streamingResponse.complete();
+        }
         
         // Enhanced completion sequence
         setCurrentStep('finalizing');
@@ -138,7 +167,9 @@ export const useOptimizedWorkflowProcessor = ({
       console.log('Step 3: Enhanced parallel context retrieval');
       setCurrentStep('processing');
       setProcessingStage('Gathering regulatory context with quality scoring...');
-      streamingResponse.appendContent('\n\nGathering enhanced regulatory context...');
+      if (streamingResponse && typeof streamingResponse.appendContent === 'function') {
+        streamingResponse.appendContent('\n\nGathering enhanced regulatory context...');
+      }
       
       const contextResult = await parallelContextService.getContextInParallel(query, {
         isPreliminaryAssessment: false,
@@ -155,8 +186,8 @@ export const useOptimizedWorkflowProcessor = ({
       setProcessingStage('Applying intelligent search patterns and fast paths...');
       
       // Check if this is a simple query that can use fast path
-      const isSimpleQuery = this.isSimpleQuery(query);
-      if (isSimpleQuery) {
+      const isSimple = isSimpleQuery(query);
+      if (isSimple) {
         console.log('Using fast path for simple query');
         setProcessingStage('Using fast path for quick response...');
       }
@@ -169,28 +200,34 @@ export const useOptimizedWorkflowProcessor = ({
         skipSequentialSearches: true,
         isRegulatoryRelated: Boolean(contextResult.context),
         optimized: true,
-        useFastPath: isSimpleQuery
+        useFastPath: isSimple
       };
       
       // Step 5: Enhanced response generation with progressive delivery
       console.log('Step 5: Enhanced response generation');
       setCurrentStep('finalizing');
       setProcessingStage('Generating high-quality response...');
-      streamingResponse.setContent('Generating comprehensive response...');
+      if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+        streamingResponse.setContent('Generating comprehensive response...');
+      }
       
       const step5Result = await step5Response(
         params,
         (progress) => {
           console.log('Step 5 progress:', progress);
           setProcessingStage(progress);
-          streamingResponse.setContent(`Generating response: ${progress}`);
+          if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+            streamingResponse.setContent(`Generating response: ${progress}`);
+          }
         },
         lastInputWasChinese
       );
       
       // Update with final response
-      if (step5Result && step5Result.response) {
-        streamingResponse.setContent(step5Result.response);
+      if (step5Result?.response) {
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent(step5Result.response);
+        }
         
         // Enhanced cache storage with longer duration (2 hours)
         smartCacheService.set(query, {
@@ -211,10 +248,14 @@ export const useOptimizedWorkflowProcessor = ({
           }
         }
       } else {
-        streamingResponse.setContent("I wasn't able to generate a proper response. Please try again.");
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent("I wasn't able to generate a proper response. Please try again.");
+        }
       }
       
-      streamingResponse.complete();
+      if (streamingResponse && typeof streamingResponse.complete === 'function') {
+        streamingResponse.complete();
+      }
       
       // Enhanced completion sequence with proper state management
       console.log('Workflow completed successfully');
@@ -259,33 +300,6 @@ export const useOptimizedWorkflowProcessor = ({
       setProcessingStage('');
       setCurrentStep('preparing');
     }
-  };
-
-  // Helper method to check query similarity (simplified version)
-  const isSimilarQuery = (query1: string, query2: string): boolean => {
-    const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
-    const words1 = normalize(query1).split(/\s+/);
-    const words2 = normalize(query2).split(/\s+/);
-    
-    const commonWords = words1.filter(word => words2.includes(word));
-    const similarity = commonWords.length / Math.max(words1.length, words2.length);
-    
-    return similarity > 0.6; // 60% similarity threshold
-  };
-
-  // Helper method to identify simple queries for fast path
-  const isSimpleQuery = (query: string): boolean => {
-    const simplePatterns = [
-      /^what is/i,
-      /^define/i,
-      /^meaning of/i,
-      /^\w+\s+definition/i,
-      /^how to calculate/i,
-      /^when is/i,
-      /^where can I find/i
-    ];
-    
-    return simplePatterns.some(pattern => pattern.test(query)) || query.length < 50;
   };
 
   return {
