@@ -1,178 +1,76 @@
 
-import { useState } from 'react';
-import { grokService } from '@/services/grokService';
-import { useToast } from '@/hooks/use-toast';
-import { parallelQueryProcessor } from '@/services/response/core/parallelQueryProcessor';
-
-// Cache for context retrieval
-const contextCache = new Map<string, {
-  result: any,
-  timestamp: number
-}>();
-
-// Cache expiration time (10 minutes)
-const CACHE_EXPIRATION_MS = 10 * 60 * 1000;
+import { enhancedContextService } from '@/services/regulatory/context/enhancedContextService';
 
 export const useContextRetrieval = () => {
-  const { toast } = useToast();
-  const [lastRegulationSearchTime, setLastRegulationSearchTime] = useState<number>(0);
-
-  /**
-   * Enhanced regulatory context retrieval using parallel processing with caching
-   */
   const retrieveRegulatoryContext = async (
     queryText: string,
-    isPreliminaryAssessment: boolean = false
+    isFaqQuery: boolean
   ) => {
-    console.log(`Retrieving regulatory context for query${isPreliminaryAssessment ? " (parallel assessment)" : ""}`);
-    
-    // Generate cache key from query text
-    const cacheKey = queryText.toLowerCase().substring(0, 100);
-    
-    // Check cache first for faster response
-    const cachedContext = contextCache.get(cacheKey);
-    if (cachedContext && (Date.now() - cachedContext.timestamp < CACHE_EXPIRATION_MS)) {
-      console.log('Using cached regulatory context');
-      // Return cached result with cache hit metadata
-      return {
-        ...cachedContext.result,
-        cacheHit: true,
-        cacheAge: Math.round((Date.now() - cachedContext.timestamp) / 1000)
-      };
-    }
-    
-    // Detect if this is a new listing or listed issuer query
-    const isNewListingQuery = queryText.toLowerCase().includes('new listing') ||
-      queryText.toLowerCase().includes('ipo') ||
-      queryText.toLowerCase().includes('initial public offering') ||
-      queryText.toLowerCase().includes('listing applicant');
-      
-    console.log(`Query classified as ${isNewListingQuery ? 'NEW LISTING' : 'LISTED ISSUER'} query`);
-    
-    const searchStart = Date.now();
+    const contextStart = Date.now();
     
     try {
-      // For preliminary assessment, use our enhanced parallel approach
-      if (isPreliminaryAssessment) {
-        console.log('Using parallel query processing for comprehensive assessment');
-        const result = await parallelQueryProcessor.processQueryInParallel(queryText);
-        
-        const contextTime = Date.now() - searchStart;
-        console.log(`Parallel context retrieval completed in ${contextTime}ms`);
-        
-        // Cache the result
-        const resultToCache = {
-          regulatoryContext: result.optimizedContext,
-          reasoning: result.assessment.reasoning,
-          contextTime,
-          categories: result.assessment.categories,
-          estimatedComplexity: result.assessment.estimatedComplexity,
-          contexts: result.contexts,
-          isNewListingQuery: result.assessment.isNewListingQuery || isNewListingQuery
-        };
-        
-        contextCache.set(cacheKey, {
-          result: resultToCache,
-          timestamp: Date.now()
-        });
-        
-        return resultToCache;
-      }
+      console.log('Retrieving enhanced regulatory context...');
       
-      // For non-preliminary assessments, call the regular context service
-      // which now has integrated parallel processing capabilities
-      const contextResponse = await grokService.getRegulatoryContext(
-        queryText, 
-        {
-          isPreliminaryAssessment,
-          metadata: {
-            processingStage: isPreliminaryAssessment ? 'preliminary' : 'main',
-            isInitialAssessment: isPreliminaryAssessment,
-            isNewListingQuery
+      // Use enhanced context service for comprehensive context gathering
+      const enhancedContext = await enhancedContextService.getEnhancedContext(
+        queryText,
+        { 
+          isPreliminaryAssessment: false,
+          metadata: { 
+            isFaqQuery,
+            useParallelProcessing: true
           }
         }
       );
-
-      let regulatoryContext = '';
-      let reasoning = '';
-      let usedSummaryIndex = false;
-      let searchStrategy = 'direct';
-      let categories = [];
       
-      if (contextResponse) {
-        if (typeof contextResponse === 'string') {
-          regulatoryContext = contextResponse;
-        } else if (typeof contextResponse === 'object') {
-          regulatoryContext = contextResponse.context || contextResponse.regulatoryContext || '';
-          reasoning = contextResponse.reasoning || '';
-          usedSummaryIndex = contextResponse.usedSummaryIndex || false;
-          searchStrategy = contextResponse.searchStrategy || 'direct';
-          categories = contextResponse.categories || [];
-        }
-      }
-
-      const contextTime = Date.now() - searchStart;
-      console.log(`Context retrieval completed in ${contextTime}ms`);
-
-      if (regulatoryContext.trim() === '') {
-        console.log('No specific regulatory context found for the query');
-      } else {
-        console.log('Found relevant regulatory context');
+      const contextTime = Date.now() - contextStart;
+      
+      // Format the context for Grok
+      const formattedContext = enhancedContextService.formatEnhancedContextForGrok(enhancedContext);
+      
+      // Create reasoning that includes validation information
+      let reasoning = 'Enhanced regulatory context retrieved';
+      
+      if (enhancedContext.vettingInfo.isRequired) {
+        reasoning += ` with vetting requirements (${enhancedContext.vettingInfo.headlineCategory || 'applicable'})`;
       }
       
-      // Create result object
-      const result = {
-        regulatoryContext,
-        reasoning,
-        contextTime,
-        usedSummaryIndex,
-        searchStrategy,
-        categories,
-        isNewListingQuery
-      };
-      
-      // Cache the result if we have content
-      if (regulatoryContext.trim() !== '') {
-        contextCache.set(cacheKey, {
-          result,
-          timestamp: Date.now()
-        });
-        
-        // Limit cache size
-        if (contextCache.size > 25) {
-          // Delete oldest entry
-          const oldestKey = Array.from(contextCache.keys())[0];
-          contextCache.delete(oldestKey);
-        }
+      if (enhancedContext.guidanceValidation.hasRelevantGuidance) {
+        reasoning += ` and ${enhancedContext.guidanceValidation.matches.length} relevant guidance document(s)`;
       }
       
-      return result;
-    } catch (error) {
-      console.error('Error retrieving regulatory context:', error);
+      // Determine search strategy used
+      const searchStrategy = enhancedContext.contextMetadata.sources.join(' + ');
       
-      const contextTime = Date.now() - searchStart;
-      console.log(`Context retrieval failed after ${contextTime}ms`);
+      console.log(`Enhanced context retrieved in ${contextTime}ms`);
+      console.log(`Sources: ${searchStrategy}`);
+      console.log(`Vetting required: ${enhancedContext.vettingInfo.isRequired}`);
+      console.log(`Guidance matches: ${enhancedContext.guidanceValidation.matches.length}`);
       
       return {
-        regulatoryContext: '',
-        reasoning: `Error retrieving context: ${error instanceof Error ? error.message : String(error)}`,
+        regulatoryContext: formattedContext,
+        reasoning,
         contextTime,
         usedSummaryIndex: false,
-        searchStrategy: 'failed',
-        error,
-        isNewListingQuery
+        searchStrategy,
+        enhancedContext // Pass through for later use in validation
+      };
+    } catch (error) {
+      console.error('Error in enhanced context retrieval:', error);
+      
+      // Fallback to basic context
+      const basicContext = '';
+      return {
+        regulatoryContext: basicContext,
+        reasoning: 'Enhanced context retrieval failed, using fallback',
+        contextTime: Date.now() - contextStart,
+        usedSummaryIndex: false,
+        searchStrategy: 'fallback'
       };
     }
   };
 
-  // Function to manually clear the context cache
-  const clearContextCache = () => {
-    contextCache.clear();
-    console.log('Context cache cleared');
-  };
-
   return {
-    retrieveRegulatoryContext,
-    clearContextCache
+    retrieveRegulatoryContext
   };
 };

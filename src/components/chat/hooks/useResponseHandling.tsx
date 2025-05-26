@@ -1,166 +1,128 @@
 
-import { useToast } from '@/hooks/use-toast';
-import { grokService } from '@/services/grokService';
+import { useState } from 'react';
 import { Message } from '../ChatMessage';
-import { useErrorHandling } from './useErrorHandling';
-import { useResponseAnalysis } from './useResponseAnalysis';
-import { useFallbackDetection } from './useFallbackDetection';
-import { GrokResponse } from '@/types/grok';
-import { useTokenManagement } from './useTokenManagement';
-import { useResponseProcessor } from './useResponseProcessor';
+import { grokService } from '@/services/grokService';
+import { safelyExtractText } from '@/services/utils/responseUtils';
+import { enhancedContextService } from '@/services/regulatory/context/enhancedContextService';
 
 export const useResponseHandling = (
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>,
   retryLastQuery: () => void,
   isGrokApiKeySet: boolean
 ) => {
-  const { toast } = useToast();
-  const { handleApiError, handleFallbackResponse } = useErrorHandling();
-  const { analyzeResponseCompleteness, isQuerySimple } = useResponseAnalysis();
-  const { isFallbackResponse } = useFallbackDetection();
-  const { enhanceTokenLimits } = useTokenManagement();
-  const { processApiResponse } = useResponseProcessor(setMessages, retryLastQuery);
+  const [isValidating, setIsValidating] = useState(false);
 
   const handleApiResponse = async (
-    queryText: string,
+    query: string,
     responseParams: any,
-    regulatoryContext: string | undefined,
-    reasoning: string | undefined,
+    regulatoryContext: string,
+    reasoning: string,
     financialQueryType: string,
-    processedMessages: Message[],
-    batchInfo?: { batchNumber: number, isContinuing: boolean, onContinue?: () => void }
+    updatedMessages: Message[],
+    batchInfo?: { batchNumber: number, isContinuing: boolean },
+    enhancedContext?: any // Added enhanced context parameter
   ) => {
     try {
-      console.log('Calling API for SmartFinAI response');
-      const apiCallStartTime = Date.now();
+      console.log('Generating response with enhanced validation...');
+      
+      // Generate the response
+      const response = await grokService.generateResponse({
+        ...responseParams,
+        prompt: query,
+        regulatoryContext
+      });
 
-      const isSimpleQuery = isQuerySimple(queryText);
-      const isAggregationQuery = queryText.toLowerCase().includes('aggregate') ||
-        queryText.toLowerCase().includes('rule 7.19a');
-
-      // Enhanced token limits without sacrificing quality
-      let enhancedParams = enhanceTokenLimits(
-        queryText,
-        responseParams,
-        isSimpleQuery,
-        isAggregationQuery
-      );
-
-      // For batch continuations, add specific instructions to continue from previous part
-      if (batchInfo && batchInfo.isContinuing && batchInfo.batchNumber > 1) {
-        const batchPromptAddition = `\n\nIMPORTANT: This is a continuation (Part ${batchInfo.batchNumber}). Continue directly from where the previous response ended WITHOUT repeating information. If there was a list, table, or explanation that was cut off, CONTINUE it directly. DO NOT summarize or restate what was covered in previous parts. DO NOT include introductory phrases like "Continuing from the previous part".`;
-        
-        enhancedParams.prompt = (enhancedParams.prompt || queryText) + batchPromptAddition;
-        
-        // For batch continuation, reduce typical intro text in system message
-        if (enhancedParams.systemMessage) {
-          enhancedParams.systemMessage += "\n\nCRITICAL INSTRUCTION: This is a continuation request. Continue directly where the previous response was cut off. Do not repeat information, do not summarize previous content, and do not include phrases like 'As I was saying' or 'To continue'. Just pick up exactly where the previous response ended.";
-        }
-      } else if (!batchInfo && enhancedParams.prompt) {
-        // For initial responses that might need batching, add instruction to be concise
-        enhancedParams.prompt += " IMPORTANT: Provide a concise but COMPLETE response. Prioritize including all key information rather than details. If the response needs to be split into multiple parts, focus on the most important information in this first part.";
+      const responseText = safelyExtractText(response);
+      
+      if (!responseText) {
+        throw new Error('No response text generated');
       }
 
-      // OPTIMIZATION: Always use grok-3-beta model for highest quality
-      if (!enhancedParams.model) {
-        enhancedParams.model = 'grok-3-beta';
-      }
-
-      // Set higher token limits for all requests
-      if (!enhancedParams.maxTokens || enhancedParams.maxTokens < 10000) {
-        enhancedParams.maxTokens = isSimpleQuery ? 10000 : 20000;
-      }
-
-      const isProduction = !window.location.href.includes('localhost') &&
-        !window.location.href.includes('127.0.0.1');
-      console.log("Current environment:", isProduction ? "production" : "development");
-
-      let apiResponse: GrokResponse;
-      try {
-        apiResponse = await grokService.generateResponse(enhancedParams);
-        const apiCallDuration = Date.now() - apiCallStartTime;
-        console.log(`API call completed in ${apiCallDuration}ms`);
-      } catch (error) {
-        console.error("Initial API call failed:", error);
-        const errorMessage = handleApiError(error, processedMessages);
-        setMessages([...processedMessages, errorMessage]);
-        return errorMessage;
-      }
-
-      const isUsingFallback = isFallbackResponse(apiResponse.text);
-
-      if (isUsingFallback) {
-        console.log("Fallback response detected");
-        handleFallbackResponse(isGrokApiKeySet);
-        if (apiResponse.metadata) {
-          apiResponse.metadata.isBackupResponse = true;
-        } else {
-          apiResponse.metadata = { isBackupResponse: true };
+      // Perform enhanced validation if enhanced context is available
+      let validationResult = null;
+      if (enhancedContext) {
+        setIsValidating(true);
+        try {
+          validationResult = await enhancedContextService.validateResponseAgainstEnhancedContext(
+            responseText,
+            query,
+            enhancedContext
+          );
+          console.log('Response validation completed:', validationResult);
+        } catch (validationError) {
+          console.error('Error during response validation:', validationError);
+        } finally {
+          setIsValidating(false);
         }
       }
 
-      const completenessCheck = analyzeResponseCompleteness(
-        apiResponse.text,
-        financialQueryType,
-        queryText,
-        isSimpleQuery
-      );
-
-      console.log(`Response completeness check - Complete: ${completenessCheck.isComplete}`);
-
-      // Add batch part to our extended API response
-      const apiResponseWithBatch = {
-        ...apiResponse,
-        // Add this property for internal use only - won't be part of the GrokResponse type
-        batchPart: batchInfo?.batchNumber
+      // Create the assistant message with validation metadata
+      const assistantMessage: Message = {
+        id: Date.now().toString(),
+        content: responseText,
+        isUser: false,
+        timestamp: new Date(),
+        metadata: {
+          financialQueryType,
+          reasoning,
+          processingTime: response.metadata?.processingTime || 0,
+          model: response.metadata?.model || 'grok-3-beta',
+          temperature: response.metadata?.temperature || 0.5,
+          maxTokens: response.metadata?.maxTokens || 15000,
+          isTruncated: response.metadata?.isTruncated || false,
+          ...(validationResult && {
+            validation: {
+              isValid: validationResult.isValid,
+              vettingConsistency: validationResult.vettingConsistency,
+              guidanceConsistency: validationResult.guidanceConsistency,
+              validationNotes: validationResult.validationNotes,
+              confidence: validationResult.confidence
+            }
+          }),
+          ...(enhancedContext?.vettingInfo?.isRequired && {
+            vettingRequired: true,
+            vettingCategory: enhancedContext.vettingInfo.headlineCategory
+          }),
+          ...(enhancedContext?.guidanceValidation?.hasRelevantGuidance && {
+            relevantGuidance: enhancedContext.guidanceValidation.matches.length,
+            guidanceTypes: enhancedContext.guidanceValidation.matches.map(m => m.type)
+          })
+        }
       };
 
-      if (!completenessCheck.isComplete) {
-        console.log("Response appears incomplete, marking as truncated");
-
-        apiResponseWithBatch.metadata = {
-          ...apiResponseWithBatch.metadata,
-          responseCompleteness: {
-            isComplete: false,
-            confidence: completenessCheck.financialAnalysis?.confidence || 'medium',
-            reasons: completenessCheck.reasons
-          }
-        };
-
-        // Only add this note if it's not a batch continuation
-        if (!batchInfo || batchInfo.batchNumber <= 1) {
-          apiResponseWithBatch.text += "\n\n[NOTE: This response may be incomplete. You can try the 'Continue' button for the next part.]";
-        }
-
-        // Proactively handle batch continuation
-        if (batchInfo && batchInfo.onContinue) {
-          toast({
-            title: `Part ${batchInfo.batchNumber} delivered`,
-            description: "The answer is not yet complete. Click 'Continue' for the next part of the response.",
-            duration: 8000,
-          });
-        }
-      }
-
-      return processApiResponse(
-        apiResponseWithBatch,
-        processedMessages,
-        regulatoryContext,
-        reasoning,
-        financialQueryType,
-        completenessCheck,
-        batchInfo
-      );
-
+      setMessages([...updatedMessages, assistantMessage]);
+      
+      return {
+        success: true,
+        isTruncated: response.metadata?.isTruncated || false,
+        validationResult
+      };
     } catch (error) {
-      console.error("Unhandled error in response handling:", error);
-      const errorMessage = handleApiError(error, processedMessages);
-      setMessages([...processedMessages, errorMessage]);
-      return errorMessage;
+      console.error('Error in enhanced response handling:', error);
+      
+      const errorMessage: Message = {
+        id: Date.now().toString(),
+        content: `I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        isUser: false,
+        timestamp: new Date(),
+        metadata: {
+          isError: true,
+          financialQueryType,
+          reasoning: 'Error occurred during processing'
+        }
+      };
+
+      setMessages([...updatedMessages, errorMessage]);
+      
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
     }
   };
 
   return {
-    handleApiResponse
+    handleApiResponse,
+    isValidating
   };
 };

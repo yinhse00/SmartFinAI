@@ -1,103 +1,227 @@
 
-import { contextSearchOrchestrator } from './contextSearchOrchestrator';
-import { faqSearchService } from './faqSearchService';
+import { contextService } from '../contextService';
+import { announcementVettingService, VettingCheck } from '../../vetting/announcementVettingService';
+import { guidanceValidationService, GuidanceValidation } from '../guidanceValidationService';
 
-// Cache for FAQ context
-const faqCache = new Map<string, {
-  result: any,
-  timestamp: number
-}>();
-
-// Cache expiration (15 minutes)
-const FAQ_CACHE_EXPIRATION = 15 * 60 * 1000;
+export interface EnhancedContext {
+  regulatoryContext: string;
+  vettingInfo: VettingCheck;
+  guidanceValidation: GuidanceValidation;
+  contextMetadata: {
+    hasVettingRequirements: boolean;
+    hasRelevantGuidance: boolean;
+    processingTime: number;
+    sources: string[];
+  };
+}
 
 /**
- * Specialized service for enhanced regulatory context with reasoning
+ * Enhanced context service that includes vetting and guidance validation
  */
 export const enhancedContextService = {
   /**
-   * Enhanced regulatory context retrieval with specialized financial semantic search
-   * This is used by the comprehensive context service
+   * Get comprehensive regulatory context with vetting and guidance checks
    */
-  getRegulatoryContextWithReasoning: async (query: string) => {
+  getEnhancedContext: async (
+    query: string,
+    options?: { isPreliminaryAssessment?: boolean, metadata?: any }
+  ): Promise<EnhancedContext> => {
+    const startTime = Date.now();
+    
     try {
-      console.group('Retrieving Specialized Financial Context');
-      console.log('Original Query:', query);
+      console.log('Getting enhanced regulatory context with vetting and guidance checks');
       
-      // Generate cache key
-      const cacheKey = query.toLowerCase().substring(0, 100);
-      
-      // Check cache first for faster response
-      const cachedContext = faqCache.get(cacheKey);
-      if (cachedContext && (Date.now() - cachedContext.timestamp < FAQ_CACHE_EXPIRATION)) {
-        console.log('Using cached context');
-        console.groupEnd();
-        return {
-          ...cachedContext.result,
-          cacheHit: true,
-          cacheAge: Math.round((Date.now() - cachedContext.timestamp) / 1000)
-        };
-      }
-      
-      // Check if this might be FAQ related
-      const isFaqQuery = query.toLowerCase().includes('faq') || 
-                         query.toLowerCase().includes('continuing obligation') ||
-                         Boolean(query.match(/\b10\.4\b/));
-                         
-      if (isFaqQuery) {
-        console.log('Detected FAQ/continuing obligations query, prioritizing relevant documents');
-        // Try to get FAQ context first for better performance
-        const faqResponse = await faqSearchService.getFaqContext(query);
+      // Run all context gathering in parallel for optimal performance
+      const [regulatoryContext, vettingInfo, guidanceValidation] = await Promise.all([
+        // Original regulatory context
+        contextService.getRegulatoryContext(query, options),
         
-        // If FAQ context was found, cache and return it immediately
-        if (faqResponse.context) {
-          // Cache the result
-          faqCache.set(cacheKey, {
-            result: faqResponse,
-            timestamp: Date.now()
-          });
-          
-          // Limit cache size
-          if (faqCache.size > 20) {
-            const oldestKey = Array.from(faqCache.keys())[0];
-            faqCache.delete(oldestKey);
-          }
-          
-          console.groupEnd();
-          return faqResponse;
-        }
-      }
+        // Vetting requirements check
+        announcementVettingService.getVettingInfo(query).catch(error => {
+          console.error('Error getting vetting info:', error);
+          return { isRequired: false, confidence: 0 };
+        }),
+        
+        // Guidance validation check
+        guidanceValidationService.findRelevantGuidance(query, 5).catch(error => {
+          console.error('Error finding relevant guidance:', error);
+          return { hasRelevantGuidance: false, matches: [], totalMatches: 0, confidence: 0 };
+        })
+      ]);
       
-      // For all other queries, use the comprehensive search orchestrator
-      const result = await contextSearchOrchestrator.executeComprehensiveSearch(query);
+      const processingTime = Date.now() - startTime;
       
-      // Cache the result
-      faqCache.set(cacheKey, {
-        result,
-        timestamp: Date.now()
-      });
+      // Collect sources
+      const sources = ['regulatory-database'];
+      if (vettingInfo.isRequired) sources.push('vetting-requirements');
+      if (guidanceValidation.hasRelevantGuidance) sources.push('regulatory-guidance');
       
-      // Limit cache size
-      if (faqCache.size > 20) {
-        const oldestKey = Array.from(faqCache.keys())[0];
-        faqCache.delete(oldestKey);
-      }
+      console.log(`Enhanced context gathered in ${processingTime}ms`);
+      console.log(`Vetting required: ${vettingInfo.isRequired}`);
+      console.log(`Relevant guidance found: ${guidanceValidation.hasRelevantGuidance}`);
       
-      console.groupEnd();
-      return result;
-    } catch (error) {
-      console.error('Error retrieving specialized financial context:', error);
-      console.groupEnd();
       return {
-        context: 'Error fetching financial regulatory context',
-        reasoning: 'Unable to search specialized financial database due to an unexpected error.'
+        regulatoryContext,
+        vettingInfo,
+        guidanceValidation,
+        contextMetadata: {
+          hasVettingRequirements: vettingInfo.isRequired,
+          hasRelevantGuidance: guidanceValidation.hasRelevantGuidance,
+          processingTime,
+          sources
+        }
+      };
+    } catch (error) {
+      console.error('Error in enhanced context service:', error);
+      
+      // Fallback to basic context
+      const basicContext = await contextService.getRegulatoryContext(query, options);
+      
+      return {
+        regulatoryContext: basicContext,
+        vettingInfo: { isRequired: false, confidence: 0 },
+        guidanceValidation: { hasRelevantGuidance: false, matches: [], totalMatches: 0, confidence: 0 },
+        contextMetadata: {
+          hasVettingRequirements: false,
+          hasRelevantGuidance: false,
+          processingTime: Date.now() - startTime,
+          sources: ['regulatory-database']
+        }
       };
     }
   },
-  
-  // Function to manually clear the FAQ context cache
-  clearFaqCache: () => {
-    faqCache.clear();
-    console.log('FAQ context cache cleared');
+
+  /**
+   * Format enhanced context for Grok response generation
+   */
+  formatEnhancedContextForGrok: (enhancedContext: EnhancedContext): string => {
+    let formattedContext = enhancedContext.regulatoryContext;
+    
+    // Add vetting information if applicable
+    if (enhancedContext.vettingInfo.isRequired) {
+      formattedContext += '\n\n[VETTING REQUIREMENTS]\n';
+      formattedContext += `This announcement requires pre-vetting by the Exchange.\n`;
+      
+      if (enhancedContext.vettingInfo.headlineCategory) {
+        formattedContext += `Headline Category: ${enhancedContext.vettingInfo.headlineCategory}\n`;
+      }
+      
+      if (enhancedContext.vettingInfo.description) {
+        formattedContext += `Description: ${enhancedContext.vettingInfo.description}\n`;
+      }
+      
+      if (enhancedContext.vettingInfo.exemptions) {
+        formattedContext += `Exemptions: ${enhancedContext.vettingInfo.exemptions}\n`;
+      }
+      
+      if (enhancedContext.vettingInfo.ruleReference) {
+        formattedContext += `Rule Reference: ${enhancedContext.vettingInfo.ruleReference}\n`;
+      }
+    }
+    
+    // Add relevant guidance if found
+    if (enhancedContext.guidanceValidation.hasRelevantGuidance) {
+      formattedContext += '\n\n[RELEVANT REGULATORY GUIDANCE]\n';
+      
+      enhancedContext.guidanceValidation.matches.forEach((match, index) => {
+        formattedContext += `\n${index + 1}. ${match.type.toUpperCase()}: ${match.title}\n`;
+        formattedContext += `${match.content}\n`;
+        
+        if (match.applicableRules && match.applicableRules.length > 0) {
+          formattedContext += `Applicable Rules: ${match.applicableRules.join(', ')}\n`;
+        }
+        
+        if (match.guidanceNumber) {
+          formattedContext += `Guidance Number: ${match.guidanceNumber}\n`;
+        }
+      });
+    }
+    
+    return formattedContext;
+  },
+
+  /**
+   * Validate response against enhanced context
+   */
+  validateResponseAgainstEnhancedContext: async (
+    response: string,
+    query: string,
+    enhancedContext: EnhancedContext
+  ): Promise<{
+    isValid: boolean;
+    vettingConsistency: boolean;
+    guidanceConsistency: boolean;
+    validationNotes: string[];
+    confidence: number;
+  }> => {
+    try {
+      console.log('Validating response against enhanced context');
+      
+      const validationNotes: string[] = [];
+      let vettingConsistency = true;
+      let guidanceConsistency = true;
+      
+      // Check vetting consistency
+      if (enhancedContext.vettingInfo.isRequired) {
+        const mentionsVetting = response.toLowerCase().includes('vetting') || 
+                              response.toLowerCase().includes('pre-vetting') ||
+                              response.toLowerCase().includes('exchange approval');
+        
+        if (!mentionsVetting) {
+          vettingConsistency = false;
+          validationNotes.push('Response should mention pre-vetting requirement');
+        }
+      }
+      
+      // Check guidance consistency
+      if (enhancedContext.guidanceValidation.hasRelevantGuidance) {
+        const guidanceValidation = await guidanceValidationService.validateResponseAgainstGuidance(response, query);
+        guidanceConsistency = guidanceValidation.isConsistent;
+        
+        if (guidanceValidation.conflictingGuidance.length > 0) {
+          validationNotes.push(`Response conflicts with ${guidanceValidation.conflictingGuidance.length} guidance document(s)`);
+        }
+      }
+      
+      const isValid = vettingConsistency && guidanceConsistency;
+      const confidence = calculateOverallConfidence(
+        enhancedContext.vettingInfo.confidence,
+        enhancedContext.guidanceValidation.confidence,
+        vettingConsistency,
+        guidanceConsistency
+      );
+      
+      return {
+        isValid,
+        vettingConsistency,
+        guidanceConsistency,
+        validationNotes,
+        confidence
+      };
+    } catch (error) {
+      console.error('Error validating response against enhanced context:', error);
+      return {
+        isValid: true, // Default to valid on error
+        vettingConsistency: true,
+        guidanceConsistency: true,
+        validationNotes: ['Validation error occurred'],
+        confidence: 0
+      };
+    }
   }
 };
+
+/**
+ * Calculate overall validation confidence
+ */
+function calculateOverallConfidence(
+  vettingConfidence: number,
+  guidanceConfidence: number,
+  vettingConsistency: boolean,
+  guidanceConsistency: boolean
+): number {
+  const consistencyBonus = (vettingConsistency ? 0.2 : -0.3) + (guidanceConsistency ? 0.2 : -0.3);
+  const avgConfidence = (vettingConfidence + guidanceConfidence) / 2;
+  
+  return Math.max(0, Math.min(1, avgConfidence + consistencyBonus));
+}

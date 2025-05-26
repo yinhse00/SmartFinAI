@@ -20,12 +20,12 @@ export const useQueryExecution = (
 ) => {
   const { toast } = useToast();
   const { logQueryStart, logContextInfo, logQueryParameters, finishLogging } = useQueryLogger();
-  const { handleApiResponse } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
+  const { handleApiResponse, isValidating } = useResponseHandling(setMessages, retryLastQuery, isGrokApiKeySet);
   const { createUserMessage, handleProcessingError } = useQueryCore(setMessages, isGrokApiKeySet, setApiKeyDialogOpen);
   const { retrieveRegulatoryContext } = useContextRetrieval();
   const { prepareQuery } = useQueryPreparation();
 
-  // The main execution function
+  // The main execution function with enhanced validation
   const executeQuery = async (
     queryText: string,
     batchInfo?: { batchNumber: number, isContinuing: boolean },
@@ -62,13 +62,14 @@ export const useQueryExecution = (
       setProcessingStage('reviewing');
       const reviewingStart = Date.now();
 
-      // Step 3: Retrieve regulatory context with verification focus
+      // Step 3: Retrieve enhanced regulatory context with vetting and guidance validation
       const {
         regulatoryContext,
         reasoning,
         contextTime,
         usedSummaryIndex,
-        searchStrategy
+        searchStrategy,
+        enhancedContext // This now includes vetting and guidance info
       } = await retrieveRegulatoryContext(
         queryText,
         Boolean(isFaqQuery)
@@ -83,9 +84,9 @@ export const useQueryExecution = (
       );
 
       const reviewingTime = Date.now() - reviewingStart;
-      console.log(`Content verification and preparation completed in ${reviewingTime}ms`);
+      console.log(`Enhanced content verification and preparation completed in ${reviewingTime}ms`);
 
-      // Step 4: Process response with professional tone and verified content
+      // Step 4: Process response with professional tone and enhanced validation
       setProcessingStage('processing');
 
       const processingStart = Date.now();
@@ -97,18 +98,39 @@ export const useQueryExecution = (
         reasoning,
         financialQueryType || 'unspecified',
         updatedMessages,
-        batchInfo
+        batchInfo,
+        enhancedContext // Pass enhanced context for validation
       );
 
       const processingTime = Date.now() - processingStart;
-      console.log(`Professional response generated in ${processingTime}ms`);
+      console.log(`Enhanced professional response generated in ${processingTime}ms`);
 
-      // Step 5: Finalizing with professional presentation
+      // Step 5: Finalizing with professional presentation and validation display
       setProcessingStage('finalizing');
 
       const isSimpleQuery = financialQueryType === 'conversational';
       const finalizingTime = isSimpleQuery ? 150 : 250;
       await new Promise(resolve => setTimeout(resolve, finalizingTime));
+
+      // Show validation results if available
+      if (result.validationResult && !result.validationResult.isValid) {
+        toast({
+          title: "Response Validation Notice",
+          description: `Response validation identified potential issues: ${result.validationResult.validationNotes.join(', ')}`,
+          variant: "default",
+          duration: 5000,
+        });
+      }
+
+      // Show vetting requirement notice if applicable
+      if (enhancedContext?.vettingInfo?.isRequired) {
+        toast({
+          title: "Vetting Requirement Detected",
+          description: `This type of announcement requires pre-vetting by the Exchange`,
+          variant: "default",
+          duration: 4000,
+        });
+      }
 
       finishLogging();
 
@@ -125,7 +147,7 @@ export const useQueryExecution = (
   };
 
   return {
-    executeQuery
+    executeQuery,
+    isValidating
   };
 };
-

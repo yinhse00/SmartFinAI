@@ -1,8 +1,8 @@
-import { supabase } from "@/integrations/supabase/client";
-import { spreadsheetProcessor } from "@/services/documents/processors/spreadsheetProcessor";
-import { toast } from "@/components/ui/use-toast";
+
+import { supabase } from '@/integrations/supabase/client';
 
 export interface VettingRequirement {
+  id: string;
   headlineCategory: string;
   isVettingRequired: boolean;
   description?: string;
@@ -10,19 +10,110 @@ export interface VettingRequirement {
   ruleReference?: string;
 }
 
+export interface VettingCheck {
+  isRequired: boolean;
+  headlineCategory?: string;
+  description?: string;
+  exemptions?: string;
+  ruleReference?: string;
+  confidence: number;
+}
+
 /**
- * Service for managing announcement vetting requirements
+ * Service for checking announcement pre-vetting requirements
  */
 export const announcementVettingService = {
   /**
-   * Fetch vetting requirements from the database
+   * Check if vetting is required for a specific headline category
+   */
+  checkVettingRequired: async (headlineCategory: string): Promise<boolean> => {
+    try {
+      console.log(`Checking vetting requirement for headline category: ${headlineCategory}`);
+      
+      const { data, error } = await supabase
+        .from('announcement_pre_vetting_requirements')
+        .select('is_vetting_required')
+        .ilike('headline_category', `%${headlineCategory}%`)
+        .limit(1)
+        .single();
+      
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error('Error checking vetting requirement:', error);
+        return false;
+      }
+      
+      return data?.is_vetting_required || false;
+    } catch (error) {
+      console.error('Error in checkVettingRequired:', error);
+      return false;
+    }
+  },
+
+  /**
+   * Get detailed vetting information for an announcement query
+   */
+  getVettingInfo: async (query: string): Promise<VettingCheck> => {
+    try {
+      console.log('Analyzing query for vetting requirements');
+      
+      // Extract potential headline categories from the query
+      const potentialCategories = extractHeadlineCategories(query);
+      
+      if (potentialCategories.length === 0) {
+        return {
+          isRequired: false,
+          confidence: 0
+        };
+      }
+      
+      // Check each potential category
+      for (const category of potentialCategories) {
+        const { data, error } = await supabase
+          .from('announcement_pre_vetting_requirements')
+          .select('*')
+          .ilike('headline_category', `%${category}%`)
+          .limit(1);
+        
+        if (error) {
+          console.error('Error fetching vetting info:', error);
+          continue;
+        }
+        
+        if (data && data.length > 0) {
+          const requirement = data[0];
+          return {
+            isRequired: requirement.is_vetting_required,
+            headlineCategory: requirement.headline_category,
+            description: requirement.description,
+            exemptions: requirement.exemptions,
+            ruleReference: requirement.rule_reference,
+            confidence: calculateConfidence(category, requirement.headline_category)
+          };
+        }
+      }
+      
+      return {
+        isRequired: false,
+        confidence: 0
+      };
+    } catch (error) {
+      console.error('Error in getVettingInfo:', error);
+      return {
+        isRequired: false,
+        confidence: 0
+      };
+    }
+  },
+
+  /**
+   * Get all vetting requirements
    */
   getVettingRequirements: async (): Promise<VettingRequirement[]> => {
     try {
       const { data, error } = await supabase
         .from('announcement_pre_vetting_requirements')
         .select('*')
-        .order('headline_category', { ascending: true });
+        .order('headline_category');
       
       if (error) {
         console.error('Error fetching vetting requirements:', error);
@@ -30,238 +121,91 @@ export const announcementVettingService = {
       }
       
       return data.map(item => ({
+        id: item.id,
         headlineCategory: item.headline_category,
         isVettingRequired: item.is_vetting_required,
-        description: item.description || undefined,
-        exemptions: item.exemptions || undefined,
-        ruleReference: item.rule_reference || undefined
+        description: item.description,
+        exemptions: item.exemptions,
+        ruleReference: item.rule_reference
       }));
     } catch (error) {
-      console.error('Failed to fetch vetting requirements:', error);
+      console.error('Error in getVettingRequirements:', error);
       return [];
     }
   },
-  
+
   /**
-   * Check if a specific headline category requires vetting
+   * Get vetting exemptions for a specific category
    */
-  checkVettingRequired: async (headlineCategory: string): Promise<boolean> => {
-    try {
-      const { data, error } = await supabase
-        .from('announcement_pre_vetting_requirements')
-        .select('is_vetting_required')
-        .eq('headline_category', headlineCategory)
-        .single();
-      
-      if (error) {
-        console.error(`Error checking vetting requirement for ${headlineCategory}:`, error);
-        // Default to requiring vetting if we can't determine
-        return true;
-      }
-      
-      return data.is_vetting_required;
-    } catch (error) {
-      console.error(`Failed to check vetting for ${headlineCategory}:`, error);
-      // Default to requiring vetting if we can't determine
-      return true;
-    }
-  },
-  
-  /**
-   * Get vetting exemptions for a headline category
-   */
-  getVettingExemptions: async (headlineCategory: string): Promise<string | undefined> => {
+  getVettingExemptions: async (headlineCategory: string): Promise<string[]> => {
     try {
       const { data, error } = await supabase
         .from('announcement_pre_vetting_requirements')
         .select('exemptions')
-        .eq('headline_category', headlineCategory)
+        .ilike('headline_category', `%${headlineCategory}%`)
+        .limit(1)
         .single();
       
-      if (error || !data) {
-        console.error(`Error fetching exemptions for ${headlineCategory}:`, error);
-        return undefined;
-      }
-      
-      return data.exemptions || undefined;
-    } catch (error) {
-      console.error(`Failed to get exemptions for ${headlineCategory}:`, error);
-      return undefined;
-    }
-  },
-  
-  /**
-   * Get all headline categories
-   */
-  getHeadlineCategories: async (): Promise<string[]> => {
-    try {
-      const { data, error } = await supabase
-        .from('announcement_pre_vetting_requirements')
-        .select('headline_category')
-        .order('headline_category', { ascending: true });
-      
-      if (error) {
-        console.error('Error fetching headline categories:', error);
+      if (error || !data?.exemptions) {
         return [];
       }
       
-      return data.map(item => item.headline_category);
+      // Parse exemptions - assuming they're stored as comma-separated or newline-separated
+      return data.exemptions
+        .split(/[,\n]/)
+        .map(exemption => exemption.trim())
+        .filter(exemption => exemption.length > 0);
     } catch (error) {
-      console.error('Failed to fetch headline categories:', error);
+      console.error('Error fetching vetting exemptions:', error);
       return [];
-    }
-  },
-  
-  /**
-   * Parse and update vetting requirements from an Excel file
-   */
-  parseAndUpdateVettingRequirements: async (fileId: string): Promise<boolean> => {
-    try {
-      // Get the file data
-      const { data: fileData, error: fileError } = await supabase
-        .from('reference_documents')
-        .select('*')
-        .eq('id', fileId)
-        .single();
-      
-      if (fileError || !fileData) {
-        console.error('Error getting file data:', fileError);
-        return false;
-      }
-      
-      // Download the file
-      const { data: fileBlob, error: downloadError } = await supabase
-        .storage
-        .from('references')
-        .download(fileData.file_path);
-      
-      if (downloadError || !fileBlob) {
-        console.error('Error downloading file:', downloadError);
-        return false;
-      }
-      
-      // Convert blob to file
-      const file = new File([fileBlob], fileData.title, { type: fileData.file_type || 'application/vnd.ms-excel' });
-      
-      // Use the spreadsheet processor to extract content
-      const { content } = await spreadsheetProcessor.extractExcelText(file, true);
-      
-      // Parse the content
-      const requirements = announcementVettingService.parseVettingRequirementsFromContent(content);
-      
-      if (requirements.length === 0) {
-        console.error('No vetting requirements extracted from file');
-        return false;
-      }
-      
-      // Update the database with extracted requirements
-      return await announcementVettingService.saveVettingRequirements(requirements);
-    } catch (error) {
-      console.error('Error parsing vetting requirements:', error);
-      return false;
-    }
-  },
-  
-  /**
-   * Parse vetting requirements from Excel content
-   */
-  parseVettingRequirementsFromContent: (content: string): VettingRequirement[] => {
-    try {
-      const requirements: VettingRequirement[] = [];
-      
-      // Split content by lines
-      const lines = content.split('\n').filter(line => line.trim() !== '');
-      
-      // Find the header line index
-      let headerIndex = -1;
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i].toLowerCase();
-        if (line.includes('headline category') && 
-            line.includes('pre-vetting requirement') && 
-            (line.includes('yes/no') || line.includes('y/n'))) {
-          headerIndex = i;
-          break;
-        }
-      }
-      
-      if (headerIndex === -1) {
-        console.warn('Could not find header row in Excel content');
-        return [];
-      }
-      
-      // Process data rows
-      for (let i = headerIndex + 1; i < lines.length; i++) {
-        const line = lines[i].trim();
-        if (!line) continue;
-        
-        const columns = line.split('\t');
-        if (columns.length < 2) continue;
-        
-        const headlineCategory = columns[0].trim();
-        if (!headlineCategory) continue;
-        
-        // Check for vetting requirement (yes/no)
-        const vettingRequiredText = columns[1].trim().toLowerCase();
-        const isVettingRequired = vettingRequiredText.includes('yes') || vettingRequiredText === 'y';
-        
-        // Extract additional information if available
-        const ruleReference = columns.length > 2 ? columns[2]?.trim() : undefined;
-        const exemptions = columns.length > 3 ? columns[3]?.trim() : undefined;
-        const description = columns.length > 4 ? columns[4]?.trim() : undefined;
-        
-        requirements.push({
-          headlineCategory,
-          isVettingRequired,
-          ruleReference: ruleReference || undefined,
-          exemptions: exemptions || undefined,
-          description: description || undefined
-        });
-      }
-      
-      return requirements;
-    } catch (error) {
-      console.error('Error parsing vetting content:', error);
-      return [];
-    }
-  },
-  
-  /**
-   * Save vetting requirements to the database
-   */
-  saveVettingRequirements: async (requirements: VettingRequirement[]): Promise<boolean> => {
-    try {
-      if (requirements.length === 0) {
-        console.warn('No requirements to save');
-        return false;
-      }
-      
-      // Convert requirements to database format
-      const dbRecords = requirements.map(req => ({
-        headline_category: req.headlineCategory,
-        is_vetting_required: req.isVettingRequired,
-        rule_reference: req.ruleReference,
-        exemptions: req.exemptions,
-        description: req.description
-      }));
-      
-      // Upsert records (update if exists, insert if not)
-      const { error } = await supabase
-        .from('announcement_pre_vetting_requirements')
-        .upsert(dbRecords, {
-          onConflict: 'headline_category',
-          ignoreDuplicates: false
-        });
-      
-      if (error) {
-        console.error('Error updating vetting requirements:', error);
-        return false;
-      }
-      
-      console.log(`Successfully updated ${requirements.length} vetting requirements`);
-      return true;
-    } catch (error) {
-      console.error('Failed to save vetting requirements:', error);
-      return false;
     }
   }
 };
+
+/**
+ * Extract potential headline categories from query text
+ */
+function extractHeadlineCategories(query: string): string[] {
+  const categories: string[] = [];
+  const lowerQuery = query.toLowerCase();
+  
+  // Common announcement categories
+  const categoryKeywords = [
+    'acquisition', 'disposal', 'merger', 'takeover', 'transaction',
+    'rights issue', 'placing', 'subscription', 'share issue',
+    'dividend', 'distribution', 'spin-off', 'demerger',
+    'change in shareholding', 'discloseable transaction', 'connected transaction',
+    'very substantial acquisition', 'very substantial disposal',
+    'major transaction', 'notifiable transaction',
+    'director appointment', 'director resignation', 'management change',
+    'profit warning', 'profit update', 'trading update',
+    'suspension', 'resumption', 'delisting',
+    'restructuring', 'reorganization', 'scheme of arrangement'
+  ];
+  
+  for (const keyword of categoryKeywords) {
+    if (lowerQuery.includes(keyword)) {
+      categories.push(keyword);
+    }
+  }
+  
+  return categories;
+}
+
+/**
+ * Calculate confidence score for category matching
+ */
+function calculateConfidence(queryCategory: string, dbCategory: string): number {
+  const query = queryCategory.toLowerCase();
+  const db = dbCategory.toLowerCase();
+  
+  if (query === db) return 1.0;
+  if (db.includes(query) || query.includes(db)) return 0.8;
+  
+  // Simple word overlap calculation
+  const queryWords = query.split(' ');
+  const dbWords = db.split(' ');
+  const commonWords = queryWords.filter(word => dbWords.includes(word));
+  
+  return commonWords.length / Math.max(queryWords.length, dbWords.length);
+}

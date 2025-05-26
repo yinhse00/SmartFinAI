@@ -1,18 +1,30 @@
 
-import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import TypingAnimation from './TypingAnimation';
-import { Message } from './ChatMessage';
-import detectAndFormatTables from '@/utils/tableFormatter';
-
-interface ChatMessageProps {
-  message: Message;
-  onRetry?: () => void;
-  onTypingProgress?: () => void;
-  isTranslating?: boolean;
+export interface Message {
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
+  metadata?: {
+    financialQueryType?: string;
+    reasoning?: string;
+    processingTime?: number;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    isTruncated?: boolean;
+    isError?: boolean;
+    validation?: {
+      isValid: boolean;
+      vettingConsistency: boolean;
+      guidanceConsistency: boolean;
+      validationNotes: string[];
+      confidence: number;
+    };
+    vettingRequired?: boolean;
+    vettingCategory?: string;
+    relevantGuidance?: number;
+    guidanceTypes?: string[];
+  };
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
