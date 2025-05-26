@@ -8,13 +8,6 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
-interface FAQEntry {
-  question: string;
-  answer: string;
-  related_provisions?: string[];
-  source_document_id: string;
-}
-
 interface GuidanceEntry {
   title: string;
   content: string;
@@ -67,11 +60,11 @@ serve(async (req) => {
     const arrayBuffer = await fileBlob.arrayBuffer()
     
     // Parse Excel content
-    const { faqs, guidance } = await parseExcelMapping(arrayBuffer, documents.id)
+    const guidance = await parseExcelMapping(arrayBuffer, documents.id)
     
-    console.log(`Extracted ${faqs.length} FAQs and ${guidance.length} guidance entries`);
+    console.log(`Extracted ${guidance.length} guidance entries`);
 
-    if (faqs.length === 0 && guidance.length === 0) {
+    if (guidance.length === 0) {
       throw new Error('No data extracted from the Excel file. Please check the file format and content.')
     }
 
@@ -79,29 +72,24 @@ serve(async (req) => {
     await clearExistingData(supabase, documents.id);
 
     // Insert new data
-    let insertedFAQs = 0;
     let insertedGuidance = 0;
-
-    if (faqs.length > 0) {
-      insertedFAQs = await insertFAQs(supabase, faqs);
-    }
 
     if (guidance.length > 0) {
       insertedGuidance = await insertGuidance(supabase, guidance);
     }
 
-    console.log(`Successfully inserted ${insertedFAQs} FAQs and ${insertedGuidance} guidance entries`);
+    console.log(`Successfully inserted ${insertedGuidance} guidance entries`);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: `Successfully processed mapping schedule from ${documents.title}`,
         data: {
-          totalFAQs: faqs.length,
+          totalFAQs: 0,
           totalGuidance: guidance.length,
-          insertedFAQs,
+          insertedFAQs: 0,
           insertedGuidance,
-          sampleFAQs: faqs.slice(0, 3),
+          sampleFAQs: [],
           sampleGuidance: guidance.slice(0, 3)
         }
       }),
@@ -127,10 +115,7 @@ serve(async (req) => {
   }
 })
 
-async function parseExcelMapping(arrayBuffer: ArrayBuffer, sourceDocumentId: string): Promise<{
-  faqs: FAQEntry[];
-  guidance: GuidanceEntry[];
-}> {
+async function parseExcelMapping(arrayBuffer: ArrayBuffer, sourceDocumentId: string): Promise<GuidanceEntry[]> {
   console.log('Starting Excel mapping parsing...');
   
   const workbook = XLSX.read(new Uint8Array(arrayBuffer), { 
@@ -143,7 +128,6 @@ async function parseExcelMapping(arrayBuffer: ArrayBuffer, sourceDocumentId: str
   
   console.log('Workbook parsed. Sheet names:', workbook.SheetNames);
   
-  const faqs: FAQEntry[] = [];
   const guidance: GuidanceEntry[] = [];
   
   // Process each sheet
@@ -162,14 +146,13 @@ async function parseExcelMapping(arrayBuffer: ArrayBuffer, sourceDocumentId: str
     
     console.log(`Sheet "${sheetName}" contains ${jsonData.length} rows`);
     
-    // Based on the logs, this is a mapping table with FAQ references, not actual FAQs
-    // Let's parse it as guidance entries instead
+    // Parse the mapping table
     const sheetEntries = parseMappingTable(jsonData, sourceDocumentId);
     guidance.push(...sheetEntries);
     console.log(`Extracted ${sheetEntries.length} mapping entries from ${sheetName}`);
   }
   
-  return { faqs, guidance };
+  return guidance;
 }
 
 function parseMappingTable(data: string[][], sourceDocumentId: string): GuidanceEntry[] {
@@ -177,88 +160,106 @@ function parseMappingTable(data: string[][], sourceDocumentId: string): Guidance
   
   console.log('Parsing mapping table data...');
   
-  // Look for the header row - should contain columns like FAQ Number, Topics, etc.
-  let headerRow = -1;
-  let faqNumberCol = -1;
-  let topicsCol = -1;
-  let subTopicsCol = -1;
-  let particularsCol = -1;
-  let mbRulesCol = -1;
-  let gemRulesCol = -1;
+  // Look for the header row that contains our expected columns
+  let headerRowIndex = -1;
+  let columnMapping: { [key: string]: number } = {};
   
-  // Find header row
+  // Search for header row by looking for key column names
   for (let i = 0; i < Math.min(10, data.length); i++) {
     const row = data[i];
     if (!row || row.length < 5) continue;
     
-    console.log(`Checking row ${i} for headers:`, row);
+    // Check if this row contains header-like content
+    const cellTexts = row.map(cell => String(cell || '').toLowerCase().trim());
     
-    for (let j = 0; j < row.length; j++) {
-      const cellText = String(row[j] || '').toLowerCase().trim();
+    // Look for key columns
+    const faqNumberIndex = cellTexts.findIndex(text => 
+      text.includes('faq number') || text.includes('faq')
+    );
+    const topicsIndex = cellTexts.findIndex(text => 
+      text.includes('topics') && !text.includes('sub')
+    );
+    const particularsIndex = cellTexts.findIndex(text => 
+      text.includes('particulars')
+    );
+    
+    if (faqNumberIndex >= 0 && (topicsIndex >= 0 || particularsIndex >= 0)) {
+      headerRowIndex = i;
+      columnMapping = {
+        faqNumber: faqNumberIndex,
+        topics: topicsIndex >= 0 ? topicsIndex : -1,
+        particulars: particularsIndex >= 0 ? particularsIndex : -1,
+        subTopics: cellTexts.findIndex(text => text.includes('sub-topics') || text.includes('subtopics')),
+        mbRules: cellTexts.findIndex(text => text.includes('mb listing') || (text.includes('listing') && text.includes('rules'))),
+        gemRules: cellTexts.findIndex(text => text.includes('gem listing') || text.includes('gem')),
+        releaseDate: cellTexts.findIndex(text => text.includes('release date') || text.includes('date'))
+      };
       
-      if (cellText.includes('faq number') || cellText.includes('faq')) {
-        faqNumberCol = j;
-      }
-      if (cellText.includes('topics') && !cellText.includes('sub')) {
-        topicsCol = j;
-      }
-      if (cellText.includes('sub-topics') || cellText.includes('subtopics')) {
-        subTopicsCol = j;
-      }
-      if (cellText.includes('particulars')) {
-        particularsCol = j;
-      }
-      if (cellText.includes('mb listing') || (cellText.includes('listing') && cellText.includes('rules'))) {
-        mbRulesCol = j;
-      }
-      if (cellText.includes('gem listing') || cellText.includes('gem')) {
-        gemRulesCol = j;
-      }
-    }
-    
-    // If we found key columns, this is likely the header row
-    if (faqNumberCol >= 0 && topicsCol >= 0) {
-      headerRow = i;
-      console.log(`Found header row at ${i}: FAQ=${faqNumberCol}, Topics=${topicsCol}, SubTopics=${subTopicsCol}, Particulars=${particularsCol}`);
+      console.log(`Found header row at index ${i} with column mapping:`, columnMapping);
       break;
     }
   }
   
-  if (headerRow === -1) {
-    console.warn('Could not find header row, trying alternative parsing...');
-    return [];
+  if (headerRowIndex === -1) {
+    console.warn('Could not find valid header row');
+    return entries;
   }
   
-  // Process data rows
-  for (let i = headerRow + 1; i < data.length; i++) {
+  // Process data rows starting after the header
+  for (let i = headerRowIndex + 1; i < data.length; i++) {
     const row = data[i];
     if (!row || row.length === 0) continue;
     
     try {
-      const faqNumber = cleanText(row[faqNumberCol]);
-      const topics = cleanText(row[topicsCol]);
-      const subTopics = subTopicsCol >= 0 ? cleanText(row[subTopicsCol]) : '';
-      const particulars = particularsCol >= 0 ? cleanText(row[particularsCol]) : '';
-      const mbRules = mbRulesCol >= 0 ? cleanText(row[mbRulesCol]) : '';
-      const gemRules = gemRulesCol >= 0 ? cleanText(row[gemRulesCol]) : '';
+      // Extract data using column mapping
+      const faqNumber = cleanText(row[columnMapping.faqNumber]);
+      const topics = columnMapping.topics >= 0 ? cleanText(row[columnMapping.topics]) : '';
+      const particulars = columnMapping.particulars >= 0 ? cleanText(row[columnMapping.particulars]) : '';
+      const subTopics = columnMapping.subTopics >= 0 ? cleanText(row[columnMapping.subTopics]) : '';
+      const mbRules = columnMapping.mbRules >= 0 ? cleanText(row[columnMapping.mbRules]) : '';
+      const gemRules = columnMapping.gemRules >= 0 ? cleanText(row[columnMapping.gemRules]) : '';
+      const releaseDate = columnMapping.releaseDate >= 0 ? cleanText(row[columnMapping.releaseDate]) : '';
       
-      // Skip rows without meaningful content
-      if (!faqNumber || (!topics && !particulars)) continue;
+      // Skip empty or invalid rows
+      if (!faqNumber || faqNumber.length < 2) continue;
+      if (faqNumber.toLowerCase().includes('faq number') || faqNumber === '#') continue;
+      if (faqNumber.toLowerCase().includes('withdrawn')) continue;
       
-      // Skip header-like rows
-      if (faqNumber.toLowerCase().includes('faq number') || 
-          faqNumber === '#' || 
-          faqNumber.length < 2) continue;
-      
-      // Build content from available fields
+      // Build meaningful content from available data
       let content = '';
-      if (particulars) content += `Particulars: ${particulars}\n`;
-      if (topics) content += `Topic: ${topics}\n`;
-      if (subTopics) content += `Sub-topic: ${subTopics}\n`;
-      if (mbRules) content += `Main Board Rules: ${mbRules}\n`;
-      if (gemRules) content += `GEM Rules: ${gemRules}\n`;
+      let title = '';
       
-      if (!content.trim()) continue;
+      if (particulars && particulars.trim() !== '') {
+        title = particulars;
+        content += `Topic: ${particulars}\n`;
+      } else if (topics && topics.trim() !== '') {
+        title = topics;
+        content += `Topic: ${topics}\n`;
+      } else {
+        title = `FAQ ${faqNumber}`;
+        content += `FAQ Number: ${faqNumber}\n`;
+      }
+      
+      if (topics && topics !== title) {
+        content += `Category: ${topics}\n`;
+      }
+      if (subTopics) {
+        content += `Sub-category: ${subTopics}\n`;
+      }
+      if (mbRules) {
+        content += `Main Board Rules: ${mbRules}\n`;
+      }
+      if (gemRules) {
+        content += `GEM Rules: ${gemRules}\n`;
+      }
+      if (releaseDate) {
+        content += `First Release Date: ${releaseDate}\n`;
+      }
+      
+      // Ensure we have meaningful content
+      if (!content.trim()) {
+        content = `FAQ ${faqNumber} - Please refer to the original mapping schedule for details.`;
+      }
       
       // Extract applicable rules
       const applicableRules: string[] = [];
@@ -269,19 +270,30 @@ function parseMappingTable(data: string[][], sourceDocumentId: string): Guidance
         applicableRules.push(...extractRuleNumbers(gemRules));
       }
       
-      const title = topics || `FAQ ${faqNumber}`;
-      
-      entries.push({
-        title: title,
+      const entry: GuidanceEntry = {
+        title: title.trim(),
         content: content.trim(),
         guidance_number: faqNumber,
-        applicable_rules: applicableRules.length > 0 ? applicableRules : undefined,
         source_document_id: sourceDocumentId
-      });
+      };
+      
+      if (applicableRules.length > 0) {
+        entry.applicable_rules = applicableRules;
+      }
+      
+      if (releaseDate && isValidDate(releaseDate)) {
+        entry.issue_date = parseDate(releaseDate);
+      }
+      
+      entries.push(entry);
       
       // Log first few entries for debugging
-      if (entries.length <= 3) {
-        console.log(`Entry ${entries.length}: ${title} - ${content.substring(0, 100)}...`);
+      if (entries.length <= 5) {
+        console.log(`Entry ${entries.length}:`, {
+          title: entry.title,
+          guidance_number: entry.guidance_number,
+          content_preview: entry.content.substring(0, 100) + '...'
+        });
       }
       
     } catch (error) {
@@ -290,7 +302,7 @@ function parseMappingTable(data: string[][], sourceDocumentId: string): Guidance
     }
   }
   
-  console.log(`Parsed ${entries.length} mapping entries`);
+  console.log(`Successfully parsed ${entries.length} guidance entries`);
   return entries;
 }
 
@@ -318,17 +330,45 @@ function cleanText(cell: any): string {
     .trim();
 }
 
+function isValidDate(dateStr: string): boolean {
+  if (!dateStr) return false;
+  
+  // Check for common date patterns
+  const datePatterns = [
+    /^\d{1,2}\/\d{1,2}\/\d{2,4}$/,  // MM/DD/YY or MM/DD/YYYY
+    /^\d{1,2}-\d{1,2}-\d{2,4}$/,   // MM-DD-YY or MM-DD-YYYY
+    /^\d{4}-\d{1,2}-\d{1,2}$/      // YYYY-MM-DD
+  ];
+  
+  return datePatterns.some(pattern => pattern.test(dateStr));
+}
+
+function parseDate(dateStr: string): string {
+  if (!dateStr) return '';
+  
+  try {
+    // Handle various date formats
+    let parsedDate: Date;
+    
+    if (dateStr.includes('/')) {
+      const [month, day, year] = dateStr.split('/');
+      const fullYear = year.length === 2 ? `20${year}` : year;
+      parsedDate = new Date(`${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`);
+    } else if (dateStr.includes('-')) {
+      parsedDate = new Date(dateStr);
+    } else {
+      return '';
+    }
+    
+    return parsedDate.toISOString().split('T')[0]; // Return YYYY-MM-DD format
+  } catch (error) {
+    console.warn(`Failed to parse date: ${dateStr}`, error);
+    return '';
+  }
+}
+
 async function clearExistingData(supabase: any, sourceDocumentId: string) {
   console.log('Clearing existing data for source document:', sourceDocumentId);
-  
-  const { error: faqError } = await supabase
-    .from('regulatory_faqs')
-    .delete()
-    .eq('source_document_id', sourceDocumentId);
-  
-  if (faqError) {
-    console.error('Error clearing existing FAQs:', faqError);
-  }
   
   const { error: guidanceError } = await supabase
     .from('interpretation_guidance')
@@ -340,31 +380,6 @@ async function clearExistingData(supabase: any, sourceDocumentId: string) {
   }
 }
 
-async function insertFAQs(supabase: any, faqs: FAQEntry[]): Promise<number> {
-  console.log(`Inserting ${faqs.length} FAQs...`);
-  
-  const batchSize = 50;
-  let inserted = 0;
-  
-  for (let i = 0; i < faqs.length; i += batchSize) {
-    const batch = faqs.slice(i, i + batchSize);
-    
-    const { error } = await supabase
-      .from('regulatory_faqs')
-      .insert(batch);
-    
-    if (error) {
-      console.error('Error inserting FAQ batch:', error);
-      throw new Error(`Failed to insert FAQ batch: ${error.message}`);
-    }
-    
-    inserted += batch.length;
-    console.log(`Inserted FAQ batch ${Math.floor(i / batchSize) + 1}, total: ${inserted}`);
-  }
-  
-  return inserted;
-}
-
 async function insertGuidance(supabase: any, guidance: GuidanceEntry[]): Promise<number> {
   console.log(`Inserting ${guidance.length} guidance entries...`);
   
@@ -374,17 +389,20 @@ async function insertGuidance(supabase: any, guidance: GuidanceEntry[]): Promise
   for (let i = 0; i < guidance.length; i += batchSize) {
     const batch = guidance.slice(i, i + batchSize);
     
+    console.log(`Inserting batch ${Math.floor(i / batchSize) + 1}: entries ${i + 1} to ${Math.min(i + batchSize, guidance.length)}`);
+    
     const { error } = await supabase
       .from('interpretation_guidance')
       .insert(batch);
     
     if (error) {
       console.error('Error inserting guidance batch:', error);
+      console.error('Failed batch data:', batch);
       throw new Error(`Failed to insert guidance batch: ${error.message}`);
     }
     
     inserted += batch.length;
-    console.log(`Inserted guidance batch ${Math.floor(i / batchSize) + 1}, total: ${inserted}`);
+    console.log(`Successfully inserted batch, total inserted: ${inserted}`);
   }
   
   return inserted;
