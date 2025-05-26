@@ -1,4 +1,3 @@
-
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import * as XLSX from 'https://esm.sh/xlsx@0.18.5'
@@ -162,6 +161,12 @@ async function parseExcelMapping(arrayBuffer: ArrayBuffer, sourceDocumentId: str
     
     console.log(`Sheet "${sheetName}" contains ${jsonData.length} rows`);
     
+    // Debug: Log first few rows to understand structure
+    console.log('First 5 rows of data:');
+    for (let i = 0; i < Math.min(5, jsonData.length); i++) {
+      console.log(`Row ${i}:`, jsonData[i]);
+    }
+    
     // Determine sheet type and parse accordingly
     const sheetType = determineSheetType(jsonData, sheetName);
     console.log(`Sheet type determined: ${sheetType}`);
@@ -194,19 +199,23 @@ function determineSheetType(data: string[][], sheetName: string): 'faq' | 'guida
     return 'guidance';
   }
   
-  // Check headers for FAQ patterns
-  for (let i = 0; i < Math.min(5, data.length); i++) {
+  // Check headers and content for FAQ patterns
+  for (let i = 0; i < Math.min(10, data.length); i++) {
     const row = data[i];
     if (!row || row.length === 0) continue;
     
     const rowText = row.join(' ').toLowerCase();
+    console.log(`Row ${i} text for analysis:`, rowText.substring(0, 200));
     
+    // Look for FAQ patterns
     if ((rowText.includes('question') && rowText.includes('answer')) ||
         (rowText.includes('q') && rowText.includes('a')) ||
-        rowText.includes('faq')) {
+        rowText.includes('faq') ||
+        rowText.includes('frequently asked')) {
       return 'faq';
     }
     
+    // Look for guidance patterns
     if (rowText.includes('guidance') || 
         rowText.includes('interpretation') ||
         (rowText.includes('title') && rowText.includes('content'))) {
@@ -220,15 +229,159 @@ function determineSheetType(data: string[][], sheetName: string): 'faq' | 'guida
 function parseFAQSheet(data: string[][], sourceDocumentId: string): FAQEntry[] {
   const faqs: FAQEntry[] = [];
   
-  // Find header row and column positions
+  // Enhanced column finding with more flexible matching
   const columnMapping = findFAQColumns(data);
   
   if (columnMapping.questionCol === -1 || columnMapping.answerCol === -1) {
-    console.warn('Could not identify FAQ columns');
+    console.warn('Could not identify FAQ columns with standard detection, trying alternative approach');
+    
+    // Try alternative column detection
+    const altMapping = findFAQColumnsAlternative(data);
+    if (altMapping.questionCol >= 0 && altMapping.answerCol >= 0) {
+      console.log('Alternative column detection successful:', altMapping);
+      return parseFAQData(data, altMapping, sourceDocumentId);
+    }
+    
+    console.warn('Both standard and alternative FAQ column detection failed');
     return faqs;
   }
   
   console.log('FAQ column mapping:', columnMapping);
+  return parseFAQData(data, columnMapping, sourceDocumentId);
+}
+
+function findFAQColumns(data: string[][]): {
+  headerRow: number;
+  questionCol: number;
+  answerCol: number;
+  provisionsCol: number;
+} {
+  for (let i = 0; i < Math.min(15, data.length); i++) {
+    const row = data[i];
+    if (!row || row.length < 2) continue;
+    
+    let questionCol = -1;
+    let answerCol = -1;
+    let provisionsCol = -1;
+    
+    for (let j = 0; j < row.length; j++) {
+      const cellText = String(row[j] || '').toLowerCase().trim();
+      console.log(`Checking cell [${i}][${j}]: "${cellText}"`);
+      
+      // More flexible question column detection
+      if (questionCol === -1 && (
+        cellText.includes('question') || 
+        cellText === 'q' || 
+        cellText.includes('query') ||
+        cellText.includes('faq') ||
+        cellText.includes('題目') || // Chinese for question
+        cellText.includes('問題') || // Chinese for question
+        cellText.includes('問') // Short Chinese for question
+      )) {
+        questionCol = j;
+        console.log(`Found question column at ${j}: "${cellText}"`);
+      }
+      
+      // More flexible answer column detection
+      if (answerCol === -1 && (
+        cellText.includes('answer') || 
+        cellText === 'a' || 
+        cellText.includes('response') ||
+        cellText.includes('reply') ||
+        cellText.includes('解答') || // Chinese for answer
+        cellText.includes('答案') || // Chinese for answer
+        cellText.includes('答') // Short Chinese for answer
+      )) {
+        answerCol = j;
+        console.log(`Found answer column at ${j}: "${cellText}"`);
+      }
+      
+      if (provisionsCol === -1 && (
+        cellText.includes('provision') || 
+        cellText.includes('rule') || 
+        cellText.includes('reference') ||
+        cellText.includes('regulation')
+      )) {
+        provisionsCol = j;
+      }
+    }
+    
+    if (questionCol >= 0 && answerCol >= 0) {
+      console.log(`Found FAQ columns at row ${i}: Q=${questionCol}, A=${answerCol}`);
+      return {
+        headerRow: i,
+        questionCol,
+        answerCol,
+        provisionsCol
+      };
+    }
+  }
+  
+  return {
+    headerRow: -1,
+    questionCol: -1,
+    answerCol: -1,
+    provisionsCol: -1
+  };
+}
+
+function findFAQColumnsAlternative(data: string[][]): {
+  headerRow: number;
+  questionCol: number;
+  answerCol: number;
+  provisionsCol: number;
+} {
+  // Alternative strategy: look for columns with actual Q&A content
+  console.log('Trying alternative FAQ column detection based on content patterns');
+  
+  for (let i = 0; i < Math.min(20, data.length); i++) {
+    const row = data[i];
+    if (!row || row.length < 2) continue;
+    
+    // Look for content that looks like questions and answers
+    for (let j = 0; j < row.length - 1; j++) {
+      const cell1 = String(row[j] || '').trim();
+      const cell2 = String(row[j + 1] || '').trim();
+      
+      // Check if this looks like a Q&A pair
+      if (cell1.length > 10 && cell2.length > 10) {
+        const isQuestion = cell1.includes('?') || 
+                          cell1.toLowerCase().includes('what') ||
+                          cell1.toLowerCase().includes('how') ||
+                          cell1.toLowerCase().includes('when') ||
+                          cell1.toLowerCase().includes('where') ||
+                          cell1.toLowerCase().includes('why') ||
+                          cell1.toLowerCase().includes('can') ||
+                          cell1.toLowerCase().includes('should') ||
+                          cell1.toLowerCase().includes('must') ||
+                          cell1.toLowerCase().includes('will');
+        
+        if (isQuestion) {
+          console.log(`Found potential Q&A pair at row ${i}, cols ${j}-${j+1}`);
+          console.log(`Question sample: "${cell1.substring(0, 100)}..."`);
+          console.log(`Answer sample: "${cell2.substring(0, 100)}..."`);
+          
+          return {
+            headerRow: Math.max(0, i - 1),
+            questionCol: j,
+            answerCol: j + 1,
+            provisionsCol: j + 2 < row.length ? j + 2 : -1
+          };
+        }
+      }
+    }
+  }
+  
+  return {
+    headerRow: -1,
+    questionCol: -1,
+    answerCol: -1,
+    provisionsCol: -1
+  };
+}
+
+function parseFAQData(data: string[][], columnMapping: any, sourceDocumentId: string): FAQEntry[] {
+  const faqs: FAQEntry[] = [];
   
   // Process data rows
   for (let i = columnMapping.headerRow + 1; i < data.length; i++) {
@@ -238,7 +391,12 @@ function parseFAQSheet(data: string[][], sourceDocumentId: string): FAQEntry[] {
     const question = cleanText(row[columnMapping.questionCol]);
     const answer = cleanText(row[columnMapping.answerCol]);
     
-    if (!question || !answer || question.length < 5 || answer.length < 5) continue;
+    // More lenient validation - require some content but not strict length
+    if (!question || !answer || question.length < 3 || answer.length < 3) continue;
+    
+    // Skip if question or answer looks like a header
+    if (question.toLowerCase().includes('question') && question.length < 20) continue;
+    if (answer.toLowerCase().includes('answer') && answer.length < 20) continue;
     
     // Extract related provisions if available
     const relatedProvisions = columnMapping.provisionsCol >= 0 ? 
@@ -250,6 +408,11 @@ function parseFAQSheet(data: string[][], sourceDocumentId: string): FAQEntry[] {
       related_provisions: relatedProvisions,
       source_document_id: sourceDocumentId
     });
+    
+    // Log first few FAQs for debugging
+    if (faqs.length <= 3) {
+      console.log(`FAQ ${faqs.length}: Q="${question.substring(0, 100)}..." A="${answer.substring(0, 100)}..."`);
+    }
   }
   
   return faqs;
@@ -294,66 +457,6 @@ function parseGuidanceSheet(data: string[][], sourceDocumentId: string): Guidanc
   }
   
   return guidance;
-}
-
-function findFAQColumns(data: string[][]): {
-  headerRow: number;
-  questionCol: number;
-  answerCol: number;
-  provisionsCol: number;
-} {
-  for (let i = 0; i < Math.min(10, data.length); i++) {
-    const row = data[i];
-    if (!row || row.length < 2) continue;
-    
-    let questionCol = -1;
-    let answerCol = -1;
-    let provisionsCol = -1;
-    
-    for (let j = 0; j < row.length; j++) {
-      const cellText = String(row[j] || '').toLowerCase().trim();
-      
-      if (questionCol === -1 && (
-        cellText.includes('question') || 
-        cellText === 'q' || 
-        cellText.includes('query')
-      )) {
-        questionCol = j;
-      }
-      
-      if (answerCol === -1 && (
-        cellText.includes('answer') || 
-        cellText === 'a' || 
-        cellText.includes('response')
-      )) {
-        answerCol = j;
-      }
-      
-      if (provisionsCol === -1 && (
-        cellText.includes('provision') || 
-        cellText.includes('rule') || 
-        cellText.includes('reference')
-      )) {
-        provisionsCol = j;
-      }
-    }
-    
-    if (questionCol >= 0 && answerCol >= 0) {
-      return {
-        headerRow: i,
-        questionCol,
-        answerCol,
-        provisionsCol
-      };
-    }
-  }
-  
-  return {
-    headerRow: -1,
-    questionCol: -1,
-    answerCol: -1,
-    provisionsCol: -1
-  };
 }
 
 function findGuidanceColumns(data: string[][]): {
