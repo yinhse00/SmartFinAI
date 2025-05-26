@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -369,7 +370,7 @@ export const mappingSpreadsheetService = {
       // For now, simulate with reference_documents that contain listing decisions
       const results = await supabase
         .from('reference_documents')
-        .select('title, description, file_path')
+        .select('title, file_path')
         .ilike('category', '%listing decision%')
         .or(topics.map(topic => `title.ilike.%${topic}%`).join(','))
         .limit(3);
@@ -382,9 +383,9 @@ export const mappingSpreadsheetService = {
         return { context: '', sources: [] };
       }
       
-      // Format the listing decisions
+      // Format the listing decisions without using description field
       const formattedDecisions = results.data.map(decision => 
-        `Listing Decision: ${decision.title}\n${decision.description || 'No description available'}`
+        `Listing Decision: ${decision.title}\nFile: ${decision.file_path}`
       ).join('\n\n');
       
       return {

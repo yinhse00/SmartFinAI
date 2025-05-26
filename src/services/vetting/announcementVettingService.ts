@@ -1,4 +1,3 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { spreadsheetProcessor } from "@/services/documents/processors/spreadsheetProcessor";
 import { toast } from "@/components/ui/use-toast";
@@ -9,7 +8,6 @@ export interface VettingRequirement {
   description?: string;
   exemptions?: string;
   ruleReference?: string;
-  priority?: number;
 }
 
 /**
@@ -36,8 +34,7 @@ export const announcementVettingService = {
         isVettingRequired: item.is_vetting_required,
         description: item.description || undefined,
         exemptions: item.exemptions || undefined,
-        ruleReference: item.rule_reference || undefined,
-        priority: item.priority || undefined
+        ruleReference: item.rule_reference || undefined
       }));
     } catch (error) {
       console.error('Failed to fetch vetting requirements:', error);
@@ -244,8 +241,7 @@ export const announcementVettingService = {
         is_vetting_required: req.isVettingRequired,
         rule_reference: req.ruleReference,
         exemptions: req.exemptions,
-        description: req.description,
-        priority: req.priority || null
+        description: req.description
       }));
       
       // Upsert records (update if exists, insert if not)
