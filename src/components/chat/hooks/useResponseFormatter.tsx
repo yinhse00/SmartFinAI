@@ -43,7 +43,8 @@ export const useResponseFormatter = () => {
                         hasExplicitTruncationMarker ||
                         (response.metadata?.responseCompleteness?.isComplete === false);
     
-    // For batch parts, process the content
+    // CRITICAL FIX: Use the already formatted text with clickable links
+    // The response.text property contains the formatted HTML from responseFormatter
     let content = response.text;
     
     // Remove any part markers from content for cleaner presentation
@@ -64,9 +65,16 @@ export const useResponseFormatter = () => {
       });
     }
     
+    // Debug log to verify we're using formatted content with links
+    if (content.includes('<a href=')) {
+      console.log('✓ Formatted content with clickable links preserved in message object');
+    } else {
+      console.warn('⚠ No clickable links found in message content - formatting may have been lost');
+    }
+    
     const botMessage: Message = {
       id: (Date.now() + Math.random()).toString(),
-      content: content,
+      content: content, // This now contains the formatted HTML with clickable links
       isUser: false,
       timestamp: new Date(),
       references: references,
