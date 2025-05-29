@@ -28,7 +28,8 @@ class EcmService {
         Return as structured analysis focusing on Hong Kong secondary fundraising market.
       `;
 
-      const response = await grokService.generateResponse(marketPrompt, {
+      const response = await grokService.generateResponse({
+        prompt: marketPrompt,
         regulatoryContext: '',
         guidanceContext: '',
         sourceMaterials: [],
@@ -38,7 +39,7 @@ class EcmService {
       });
 
       // Parse the response into structured format
-      const content = response.content || '';
+      const content = response.text || '';
       
       return {
         marketConditions: this.extractSection(content, 'market sentiment') || 'Neutral market conditions',
@@ -94,7 +95,8 @@ class EcmService {
         Focus on Hong Kong market specifics and regulatory compliance.
       `;
 
-      const response = await grokService.generateResponse(structuringPrompt, {
+      const response = await grokService.generateResponse({
+        prompt: structuringPrompt,
         regulatoryContext: '',
         guidanceContext: '',
         sourceMaterials: [],
@@ -103,7 +105,7 @@ class EcmService {
         optimized: true
       });
 
-      const content = response.content || '';
+      const content = response.text || '';
 
       return {
         recommended_structure: this.extractSection(content, 'deal structure') || 'Private placement recommended',
