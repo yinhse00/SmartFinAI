@@ -77,9 +77,9 @@ This timetable has been enhanced to consider requirements from uploaded referenc
 /**
  * Get execution process template based on query type - now with business day calculations
  */
-function getExecutionProcessTemplate(type: string, query: string): string {
+async function getExecutionProcessTemplate(type: string, query: string): Promise<string> {
   // Use dynamic business day calculation for execution processes
-  return generateDynamicTimetable(type);
+  return await generateDynamicTimetable(type);
 }
 
 /**

@@ -57,7 +57,7 @@ export const executeStep4 = async (params: any, setStepProgress: (progress: stri
     // If it's an execution/timetable query, use dynamic business day calculation
     if (isExecutionQuery) {
       // Generate dynamic timetable with business day calculations
-      const dynamicTimetable = generateDynamicTimetable(processType);
+      const dynamicTimetable = await generateDynamicTimetable(processType);
       
       // Enhance with additional regulatory context if available
       const enhancementQuery = `
