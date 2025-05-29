@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { 
@@ -29,10 +30,10 @@ class EcmService {
 
       const response = await grokService.generateResponse({
         prompt: marketPrompt,
-        sourceMaterials: [],
-        skipSequentialSearches: true,
-        isRegulatoryRelated: false,
-        optimized: true
+        temperature: 0.3,
+        metadata: {
+          queryType: 'market_intelligence'
+        }
       });
 
       // Parse the response into structured format
@@ -94,10 +95,13 @@ class EcmService {
 
       const response = await grokService.generateResponse({
         prompt: structuringPrompt,
-        sourceMaterials: [],
-        skipSequentialSearches: true,
-        isRegulatoryRelated: true,
-        optimized: true
+        regulatoryContext: 'Hong Kong ECM deal structuring',
+        temperature: 0.2,
+        metadata: {
+          queryType: 'deal_structuring',
+          dealSize: request.funding_amount,
+          sector: issuer?.sector
+        }
       });
 
       const content = response.text || '';

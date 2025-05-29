@@ -1,3 +1,4 @@
+
 import { useToast } from '@/hooks/use-toast';
 import { ecmService } from '@/services/ecm/ecmService';
 import { grokService } from '@/services/grokService';
@@ -92,10 +93,11 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      sourceMaterials: [],
-      skipSequentialSearches: true,
-      isRegulatoryRelated: true,
-      optimized: true
+      temperature: 0.3,
+      metadata: {
+        queryType: 'deal_structuring',
+        isRegulatoryRelated: true
+      }
     });
 
     return response.text;
@@ -125,10 +127,11 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      sourceMaterials: [],
-      skipSequentialSearches: true,
-      isRegulatoryRelated: false,
-      optimized: true
+      temperature: 0.3,
+      metadata: {
+        queryType: 'investor_matching',
+        isRegulatoryRelated: false
+      }
     });
 
     return response.text;
@@ -160,10 +163,11 @@ export const useEcmProcessor = () => {
 
       const response = await grokService.generateResponse({
         prompt: ecmPrompt,
-        sourceMaterials: [],
-        skipSequentialSearches: true,
-        isRegulatoryRelated: false,
-        optimized: true
+        temperature: 0.3,
+        metadata: {
+          queryType: 'market_intelligence',
+          marketData: marketIntelligence
+        }
       });
 
       return response.text;
@@ -197,10 +201,12 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      sourceMaterials: [],
-      skipSequentialSearches: true,
-      isRegulatoryRelated: true,
-      optimized: true
+      regulatoryContext: 'Hong Kong ECM regulatory compliance',
+      temperature: 0.2,
+      metadata: {
+        queryType: 'regulatory_compliance',
+        isRegulatoryRelated: true
+      }
     });
 
     return response.text;
@@ -232,10 +238,11 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      sourceMaterials: [],
-      skipSequentialSearches: true,
-      isRegulatoryRelated: false,
-      optimized: true
+      temperature: 0.3,
+      metadata: {
+        queryType: 'pricing_guidance',
+        isRegulatoryRelated: false
+      }
     });
 
     return response.text;
@@ -259,10 +266,12 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      sourceMaterials: [],
-      skipSequentialSearches: true,
-      isRegulatoryRelated: true,
-      optimized: true
+      regulatoryContext: 'Hong Kong ECM general guidance',
+      temperature: 0.3,
+      metadata: {
+        queryType: 'general_ecm',
+        isRegulatoryRelated: true
+      }
     });
 
     return response.text;
