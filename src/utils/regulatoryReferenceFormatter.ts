@@ -21,23 +21,26 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
   const references: ExtractedReference[] = [];
   
   // Enhanced Listing Rules references (Rule X.XX, Chapter X)
-  const listingRulePattern = /\b(?:Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*)|Chapter\s+(\d+[A-Z]?))\b/gi;
+  // More comprehensive pattern to catch various formats
+  const listingRulePattern = /\b(?:Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))?)|Chapter\s+(\d+[A-Z]?)|Listing\s+Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))?))\b/gi;
   let match;
   
   while ((match = listingRulePattern.exec(text)) !== null) {
-    const isRule = match[1] !== undefined;
-    const identifier = match[1] || match[2];
-    references.push({
-      text: match[0],
-      type: isRule ? 'listing_rule' : 'chapter',
-      identifier: identifier,
-      startIndex: match.index,
-      endIndex: match.index + match[0].length
-    });
+    const isRule = match[1] !== undefined || match[3] !== undefined;
+    const identifier = match[1] || match[2] || match[3];
+    if (identifier) {
+      references.push({
+        text: match[0],
+        type: isRule ? 'listing_rule' : 'chapter',
+        identifier: identifier,
+        startIndex: match.index,
+        endIndex: match.index + match[0].length
+      });
+    }
   }
   
-  // Takeovers Code references
-  const takeoversPattern = /\b(?:Rule|Section)\s+(\d+(?:\.\d+)*)\s+of\s+(?:the\s+)?(?:Takeovers\s+Code|Code\s+on\s+Takeovers)/gi;
+  // Takeovers Code references - enhanced pattern
+  const takeoversPattern = /\b(?:Rule|Section)\s+(\d+(?:\.\d+)*)\s+of\s+(?:the\s+)?(?:Takeovers\s+Code|Code\s+on\s+Takeovers|Codes\s+on\s+Takeovers)/gi;
   while ((match = takeoversPattern.exec(text)) !== null) {
     references.push({
       text: match[0],
@@ -48,31 +51,37 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
     });
   }
   
-  // FAQ references
-  const faqPattern = /\bFAQ\s+(?:Series\s+)?(\d+(?:\.\d+)*)\b/gi;
+  // FAQ references - enhanced pattern
+  const faqPattern = /\b(?:FAQ\s+(?:Series\s+)?(\d+(?:\.\d+)*)|Frequently\s+Asked\s+Questions?\s+(\d+(?:\.\d+)*))\b/gi;
   while ((match = faqPattern.exec(text)) !== null) {
-    references.push({
-      text: match[0],
-      type: 'faq',
-      identifier: match[1],
-      startIndex: match.index,
-      endIndex: match.index + match[0].length
-    });
+    const identifier = match[1] || match[2];
+    if (identifier) {
+      references.push({
+        text: match[0],
+        type: 'faq',
+        identifier: identifier,
+        startIndex: match.index,
+        endIndex: match.index + match[0].length
+      });
+    }
   }
   
-  // Guidance Letter references
-  const guidancePattern = /\b(?:Guidance\s+Letter\s+|GL)([A-Z]{1,3}-\d+)\b/gi;
+  // Guidance Letter references - enhanced pattern
+  const guidancePattern = /\b(?:Guidance\s+Letter\s+([A-Z]{1,3}-\d+)|GL\s*[-:]?\s*([A-Z]{1,3}-\d+))\b/gi;
   while ((match = guidancePattern.exec(text)) !== null) {
-    references.push({
-      text: match[0],
-      type: 'guidance_letter',
-      identifier: match[1],
-      startIndex: match.index,
-      endIndex: match.index + match[0].length
-    });
+    const identifier = match[1] || match[2];
+    if (identifier) {
+      references.push({
+        text: match[0],
+        type: 'guidance_letter',
+        identifier: identifier,
+        startIndex: match.index,
+        endIndex: match.index + match[0].length
+      });
+    }
   }
   
-  // Listing Decision references
+  // Listing Decision references - enhanced pattern
   const listingDecisionPattern = /\b(?:LD|Listing\s+Decision)\s*[:\-]?\s*([A-Z]{1,3}[-\s]\d+[-\s]\d+)\b/gi;
   while ((match = listingDecisionPattern.exec(text)) !== null) {
     references.push({
@@ -84,6 +93,11 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
     });
   }
   
+  // Debug logging for reference detection
+  if (references.length > 0) {
+    console.log(`Extracted ${references.length} regulatory references:`, references.map(r => `${r.text} (${r.type})`));
+  }
+  
   // Sort by startIndex to process in order
   return references.sort((a, b) => a.startIndex - b.startIndex);
 };
@@ -93,10 +107,18 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
  */
 export const enhanceWithClickableLinks = (text: string): string => {
   // Don't modify HTML content that already has links
-  if (text.includes('</a>') || text.includes('<a ')) return text;
+  if (text.includes('</a>') || text.includes('<a ')) {
+    console.log('Text already contains links, skipping enhancement');
+    return text;
+  }
   
   const references = extractRuleReferences(text);
-  if (references.length === 0) return text;
+  if (references.length === 0) {
+    console.log('No regulatory references found in text');
+    return text;
+  }
+  
+  console.log(`Enhancing ${references.length} references with clickable links`);
   
   let enhancedText = text;
   let offset = 0;
@@ -107,13 +129,15 @@ export const enhanceWithClickableLinks = (text: string): string => {
     const mapping = mapReference(ref.type, ref.identifier, ref.text);
     
     if (mapping) {
-      // Create clickable link with same styling as current bold references
-      const linkHtml = `<a href="${mapping.url}" target="_blank" rel="noopener noreferrer" class="font-bold text-finance-accent-blue hover:text-finance-accent-green transition-colors cursor-pointer underline decoration-dotted underline-offset-2">${ref.text}</a>`;
+      // Create clickable link with enhanced styling
+      const linkHtml = `<a href="${mapping.url}" target="_blank" rel="noopener noreferrer" class="font-bold text-finance-accent-blue hover:text-finance-accent-green transition-colors cursor-pointer underline decoration-dotted underline-offset-2 hover:decoration-solid">${ref.text}</a>`;
       
       enhancedText = 
         enhancedText.slice(0, ref.startIndex) + 
         linkHtml + 
         enhancedText.slice(ref.endIndex);
+        
+      console.log(`Created clickable link for: ${ref.text} -> ${mapping.url}`);
     } else {
       // Fallback to bold styling for unmapped references
       const boldHtml = `<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">${ref.text}</strong>`;
@@ -122,6 +146,8 @@ export const enhanceWithClickableLinks = (text: string): string => {
         enhancedText.slice(0, ref.startIndex) + 
         boldHtml + 
         enhancedText.slice(ref.endIndex);
+        
+      console.log(`No URL mapping found for: ${ref.text}, applied bold styling`);
     }
   }
   

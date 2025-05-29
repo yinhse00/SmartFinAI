@@ -82,7 +82,17 @@ export const responseFormatter = {
     }
     
     // Apply clickable links to regulatory references AFTER other formatting
+    // This is the key step that should make references clickable
+    console.log('Applying clickable links to regulatory references...');
+    const textBeforeLinkEnhancement = formattedText;
     formattedText = enhanceWithClickableLinks(formattedText);
+    
+    // Debug log to verify links were added
+    if (textBeforeLinkEnhancement !== formattedText) {
+      console.log('Successfully enhanced text with clickable links');
+    } else {
+      console.log('No changes made during link enhancement - check if references were detected');
+    }
     
     // Correct the profit test requirements for HKEX listing
     formattedText = formattedText
