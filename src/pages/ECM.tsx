@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -49,7 +48,7 @@ const ECMPlatform: React.FC = () => {
     return matchesSearch && matchesStatus;
   });
 
-  const handleCreateDeal = async (dealData: Partial<EcmDeal>) => {
+  const handleCreateDeal = async (dealData: { deal_name: string; deal_type: string; deal_status?: string; currency?: string }) => {
     try {
       await createDealMutation.mutateAsync(dealData);
       toast({

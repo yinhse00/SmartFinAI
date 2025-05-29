@@ -91,8 +91,7 @@ export const useEcmProcessor = () => {
       Focus on practical, actionable advice for Hong Kong secondary fundraising.
     `;
 
-    const response = await grokService.generateResponse({
-      query: ecmPrompt,
+    const response = await grokService.generateResponse(ecmPrompt, {
       regulatoryContext: '',
       guidanceContext: '',
       sourceMaterials: [],
@@ -101,7 +100,7 @@ export const useEcmProcessor = () => {
       optimized: true
     });
 
-    return response.response;
+    return response.content;
   };
 
   const processInvestorMatchingQuery = async (query: string): Promise<string> => {
@@ -126,8 +125,7 @@ export const useEcmProcessor = () => {
       Provide practical guidance for Hong Kong ECM investor targeting.
     `;
 
-    const response = await grokService.generateResponse({
-      query: ecmPrompt,
+    const response = await grokService.generateResponse(ecmPrompt, {
       regulatoryContext: '',
       guidanceContext: '',
       sourceMaterials: [],
@@ -136,7 +134,7 @@ export const useEcmProcessor = () => {
       optimized: true
     });
 
-    return response.response;
+    return response.content;
   };
 
   const processMarketIntelligenceQuery = async (query: string): Promise<string> => {
@@ -163,8 +161,7 @@ export const useEcmProcessor = () => {
         Provide actionable insights for ECM execution in Hong Kong.
       `;
 
-      const response = await grokService.generateResponse({
-        query: ecmPrompt,
+      const response = await grokService.generateResponse(ecmPrompt, {
         regulatoryContext: '',
         guidanceContext: '',
         sourceMaterials: [],
@@ -173,7 +170,7 @@ export const useEcmProcessor = () => {
         optimized: true
       });
 
-      return response.response;
+      return response.content;
     } catch (error) {
       return await processGeneralEcmQuery(query);
     }
@@ -202,8 +199,7 @@ export const useEcmProcessor = () => {
       Ensure accuracy with current Hong Kong financial regulations.
     `;
 
-    const response = await grokService.generateResponse({
-      query: ecmPrompt,
+    const response = await grokService.generateResponse(ecmPrompt, {
       regulatoryContext: '',
       guidanceContext: '',
       sourceMaterials: [],
@@ -212,7 +208,7 @@ export const useEcmProcessor = () => {
       optimized: true
     });
 
-    return response.response;
+    return response.content;
   };
 
   const processPricingGuidanceQuery = async (query: string): Promise<string> => {
@@ -239,8 +235,7 @@ export const useEcmProcessor = () => {
       Provide practical pricing recommendations for Hong Kong ECM transactions.
     `;
 
-    const response = await grokService.generateResponse({
-      query: ecmPrompt,
+    const response = await grokService.generateResponse(ecmPrompt, {
       regulatoryContext: '',
       guidanceContext: '',
       sourceMaterials: [],
@@ -249,7 +244,7 @@ export const useEcmProcessor = () => {
       optimized: true
     });
 
-    return response.response;
+    return response.content;
   };
 
   const processGeneralEcmQuery = async (query: string): Promise<string> => {
@@ -268,8 +263,7 @@ export const useEcmProcessor = () => {
       Provide practical, actionable advice specific to the Hong Kong ECM market.
     `;
 
-    const response = await grokService.generateResponse({
-      query: ecmPrompt,
+    const response = await grokService.generateResponse(ecmPrompt, {
       regulatoryContext: '',
       guidanceContext: '',
       sourceMaterials: [],
@@ -278,7 +272,7 @@ export const useEcmProcessor = () => {
       optimized: true
     });
 
-    return response.response;
+    return response.content;
   };
 
   return {

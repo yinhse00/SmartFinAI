@@ -2,211 +2,33 @@
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { 
+  EcmIssuer, 
+  EcmInvestor, 
+  EcmDeal, 
   DealStructuringRequest, 
-  DealStructuringRecommendation, 
-  InvestorMatchingRequest, 
-  InvestorMatchingResult,
-  EcmDeal,
-  EcmInvestor 
+  DealStructuringRecommendation,
+  InvestorMatchingRequest,
+  InvestorMatchingResult
 } from '@/types/ecm';
 
-/**
- * ECM Service - Core business logic for Equity Capital Markets platform
- */
-export const ecmService = {
-  /**
-   * AI-powered deal structuring recommendations
-   */
-  generateDealStructuring: async (request: DealStructuringRequest): Promise<DealStructuringRecommendation> => {
-    console.log('Generating deal structuring recommendations for:', request);
-    
-    try {
-      // Get issuer information
-      const { data: issuer } = await supabase
-        .from('ecm_issuers')
-        .select('*')
-        .eq('id', request.issuer_id)
-        .single();
-      
-      // Get current market data
-      const { data: marketData } = await supabase
-        .from('ecm_market_data')
-        .select('*')
-        .order('data_date', { ascending: false })
-        .limit(1)
-        .single();
-      
-      // Prepare AI prompt for deal structuring
-      const prompt = `
-        As a Hong Kong ECM expert, recommend optimal deal structure for:
-        
-        Issuer: ${issuer?.company_name} (${issuer?.stock_code})
-        Sector: ${issuer?.sector}
-        Market Cap: HKD ${issuer?.market_cap?.toLocaleString()}
-        
-        Funding Requirements:
-        - Amount: ${request.currency || 'HKD'} ${request.funding_amount.toLocaleString()}
-        - Use of Proceeds: ${request.use_of_proceeds}
-        - Timeline: ${request.timeline || 'Standard'}
-        - ESG Requirements: ${request.esg_requirements ? 'Yes' : 'No'}
-        
-        Current Market Conditions:
-        - HSI: ${marketData?.hang_seng_index}
-        - Market Sentiment: ${marketData?.market_sentiment}
-        - Market Volatility: ${marketData?.market_volatility}%
-        - Recent ECM Activity: ${marketData?.secondary_fundraising_count} deals
-        
-        Please provide:
-        1. Recommended deal structure and type
-        2. Pricing strategy and methodology
-        3. Execution timeline and key milestones
-        4. Regulatory requirements and approvals needed
-        5. Market conditions analysis and timing considerations
-        6. Key risk factors and mitigation strategies
-        7. Investor targeting and allocation strategy
-        8. ESG considerations (if applicable)
-        9. Confidence score (0-100)
-        
-        Focus on Hong Kong regulations, HKEX listing rules, and Stock Connect implications.
-      `;
-      
-      const response = await grokService.generateResponse({
-        query: prompt,
-        regulatoryContext: '',
-        guidanceContext: '',
-        sourceMaterials: [],
-        skipSequentialSearches: true,
-        isRegulatoryRelated: true,
-        optimized: true
-      });
-      
-      // Parse AI response into structured recommendation
-      return parseStructuringRecommendation(response.response);
-      
-    } catch (error) {
-      console.error('Error generating deal structuring:', error);
-      throw new Error('Failed to generate deal structuring recommendations');
-    }
-  },
+class EcmService {
   
   /**
-   * AI-powered investor matching
+   * Get market intelligence and current conditions
    */
-  matchInvestors: async (request: InvestorMatchingRequest): Promise<InvestorMatchingResult[]> => {
-    console.log('Matching investors for deal:', request);
-    
+  async getMarketIntelligence() {
     try {
-      // Get deal information
-      const { data: deal } = await supabase
-        .from('ecm_deals')
-        .select(`
-          *,
-          ecm_issuers (*)
-        `)
-        .eq('id', request.deal_id)
-        .single();
-      
-      // Get all potential investors
-      const { data: investors } = await supabase
-        .from('ecm_investors')
-        .select('*')
-        .eq('kyc_status', 'approved');
-      
-      if (!investors) return [];
-      
-      // AI-powered matching algorithm
-      const matchingPrompt = `
-        As a Hong Kong ECM expert, analyze investor compatibility for:
+      const marketPrompt = `
+        Provide current Hong Kong equity capital markets intelligence including:
+        1. Market sentiment and conditions
+        2. ECM activity levels
+        3. Key recommendations for issuers
+        4. Current risk factors
         
-        Deal: ${deal?.deal_name}
-        Type: ${deal?.deal_type}
-        Size: ${request.deal_size.toLocaleString()} ${deal?.currency}
-        Issuer: ${deal?.ecm_issuers?.company_name}
-        Sector: ${deal?.ecm_issuers?.sector}
-        ESG: ${request.esg_focused ? 'ESG-focused' : 'Conventional'}
-        
-        For each investor, provide:
-        1. Match score (0-1)
-        2. Compatibility factors
-        3. Recommended allocation percentage
-        4. Contact priority (high/medium/low)
-        5. Engagement strategy
-        
-        Consider: investment size fit, sector preferences, ESG alignment, regulatory classification, geographic focus.
+        Return as structured analysis focusing on Hong Kong secondary fundraising market.
       `;
-      
-      // Calculate matches for each investor
-      const matches: InvestorMatchingResult[] = [];
-      
-      for (const investor of investors.slice(0, 10)) { // Limit to top 10 for demo
-        const matchScore = calculateInvestorMatch(investor, deal, request);
-        
-        if (matchScore > 0.3) { // Only include matches above 30%
-          matches.push({
-            investor,
-            match_score: matchScore,
-            compatibility_factors: getCompatibilityFactors(investor, deal, request),
-            recommended_allocation: calculateRecommendedAllocation(matchScore, request.deal_size),
-            contact_priority: matchScore > 0.8 ? 'high' : matchScore > 0.6 ? 'medium' : 'low',
-            engagement_strategy: generateEngagementStrategy(investor, deal)
-          });
-        }
-      }
-      
-      return matches.sort((a, b) => b.match_score - a.match_score);
-      
-    } catch (error) {
-      console.error('Error matching investors:', error);
-      throw new Error('Failed to match investors');
-    }
-  },
-  
-  /**
-   * Market intelligence and analysis
-   */
-  getMarketIntelligence: async (): Promise<{
-    marketConditions: string;
-    ecmActivity: string;
-    recommendations: string[];
-    riskFactors: string[];
-  }> => {
-    try {
-      const { data: marketData } = await supabase
-        .from('ecm_market_data')
-        .select('*')
-        .order('data_date', { ascending: false })
-        .limit(7); // Last 7 days
-      
-      const { data: recentDeals } = await supabase
-        .from('ecm_deals')
-        .select('*')
-        .gte('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString())
-        .order('created_at', { ascending: false });
-      
-      const prompt = `
-        Analyze current Hong Kong ECM market conditions:
-        
-        Recent Market Data:
-        ${marketData?.map(d => 
-          `${d.data_date}: HSI ${d.hang_seng_index}, Sentiment ${d.market_sentiment}, Vol ${d.market_volatility}%`
-        ).join('\n')}
-        
-        Recent ECM Activity:
-        ${recentDeals?.map(d => 
-          `${d.deal_type}: ${d.currency} ${d.target_amount?.toLocaleString()} - ${d.deal_status}`
-        ).join('\n')}
-        
-        Provide:
-        1. Overall market conditions assessment
-        2. ECM activity analysis and trends
-        3. Strategic recommendations for issuers
-        4. Key risk factors to monitor
-        
-        Focus on Hong Kong market dynamics, regulatory environment, and cross-border flows.
-      `;
-      
-      const response = await grokService.generateResponse({
-        query: prompt,
+
+      const response = await grokService.generateResponse(marketPrompt, {
         regulatoryContext: '',
         guidanceContext: '',
         sourceMaterials: [],
@@ -214,144 +36,294 @@ export const ecmService = {
         isRegulatoryRelated: false,
         optimized: true
       });
+
+      // Parse the response into structured format
+      const content = response.content || '';
       
-      return parseMarketIntelligence(response.response);
-      
+      return {
+        marketConditions: this.extractSection(content, 'market sentiment') || 'Neutral market conditions',
+        ecmActivity: this.extractSection(content, 'ECM activity') || 'Moderate activity levels',
+        recommendations: this.extractRecommendations(content),
+        riskFactors: this.extractRiskFactors(content),
+        lastUpdated: new Date().toISOString()
+      };
     } catch (error) {
       console.error('Error getting market intelligence:', error);
-      throw new Error('Failed to get market intelligence');
+      return {
+        marketConditions: 'Unable to retrieve current market conditions',
+        ecmActivity: 'Market data temporarily unavailable',
+        recommendations: ['Monitor market conditions', 'Consider timing flexibility'],
+        riskFactors: ['Market volatility', 'Regulatory changes'],
+        lastUpdated: new Date().toISOString()
+      };
     }
   }
-};
 
-// Helper functions
-function calculateInvestorMatch(investor: EcmInvestor, deal: any, request: InvestorMatchingRequest): number {
-  let score = 0;
-  
-  // Size fit (30% weight)
-  if (investor.deal_size_min && investor.deal_size_max) {
-    if (request.deal_size >= investor.deal_size_min && request.deal_size <= investor.deal_size_max) {
-      score += 0.3;
-    } else if (request.deal_size >= investor.deal_size_min * 0.8 && request.deal_size <= investor.deal_size_max * 1.2) {
-      score += 0.15;
+  /**
+   * Structure a deal based on requirements
+   */
+  async structureDeal(request: DealStructuringRequest): Promise<DealStructuringRecommendation> {
+    try {
+      // Get issuer information
+      const { data: issuer } = await supabase
+        .from('ecm_issuers')
+        .select('*')
+        .eq('id', request.issuer_id)
+        .single();
+
+      const structuringPrompt = `
+        As a Hong Kong ECM expert, structure an optimal deal for:
+        
+        Company: ${issuer?.company_name || 'Listed Company'}
+        Sector: ${issuer?.sector || 'Not specified'}
+        Funding Amount: ${request.currency || 'HKD'} ${request.funding_amount.toLocaleString()}
+        Use of Proceeds: ${request.use_of_proceeds}
+        Timeline: ${request.timeline || 'Standard'}
+        ESG Requirements: ${request.esg_requirements ? 'Yes' : 'No'}
+        
+        Provide comprehensive deal structuring recommendation including:
+        1. Optimal deal structure and type
+        2. Pricing strategy and methodology
+        3. Execution timeline with milestones
+        4. Regulatory requirements and approvals
+        5. Market conditions analysis
+        6. Risk factors and mitigation
+        7. Investor targeting strategy
+        8. ESG considerations if applicable
+        
+        Focus on Hong Kong market specifics and regulatory compliance.
+      `;
+
+      const response = await grokService.generateResponse(structuringPrompt, {
+        regulatoryContext: '',
+        guidanceContext: '',
+        sourceMaterials: [],
+        skipSequentialSearches: true,
+        isRegulatoryRelated: true,
+        optimized: true
+      });
+
+      const content = response.content || '';
+
+      return {
+        recommended_structure: this.extractSection(content, 'deal structure') || 'Private placement recommended',
+        deal_type: this.determineDealType(content, request.funding_amount),
+        pricing_strategy: this.extractSection(content, 'pricing') || 'Book building approach',
+        timeline_estimate: this.extractSection(content, 'timeline') || '4-6 weeks execution',
+        regulatory_requirements: this.extractList(content, 'regulatory'),
+        market_conditions_analysis: this.extractSection(content, 'market conditions') || 'Favorable conditions',
+        risk_factors: this.extractList(content, 'risk'),
+        investor_targeting_strategy: this.extractSection(content, 'investor targeting') || 'Institutional focus',
+        esg_considerations: request.esg_requirements ? this.extractSection(content, 'ESG') : undefined,
+        confidence_score: 0.85
+      };
+    } catch (error) {
+      console.error('Error structuring deal:', error);
+      throw new Error('Failed to structure deal');
     }
-  } else {
-    score += 0.1; // Partial score if size ranges not specified
   }
-  
-  // Sector preference (25% weight)
-  if (investor.sector_preferences && deal?.ecm_issuers?.sector) {
-    if (investor.sector_preferences.includes(deal.ecm_issuers.sector)) {
-      score += 0.25;
+
+  /**
+   * Match investors for a specific deal
+   */
+  async matchInvestors(request: InvestorMatchingRequest): Promise<InvestorMatchingResult[]> {
+    try {
+      // Get investors from database
+      const { data: investors } = await supabase
+        .from('ecm_investors')
+        .select('*')
+        .order('total_investment_amount', { ascending: false });
+
+      if (!investors || investors.length === 0) {
+        return [];
+      }
+
+      const matches: InvestorMatchingResult[] = [];
+
+      // Simple matching algorithm based on deal characteristics
+      for (const investor of investors.slice(0, 10)) {
+        const matchScore = this.calculateMatchScore(investor as EcmInvestor, request);
+        const compatibilityFactors = this.getCompatibilityFactors(investor as EcmInvestor, request);
+        
+        if (matchScore > 0.3) { // Only include reasonable matches
+          matches.push({
+            investor: investor as EcmInvestor,
+            match_score: matchScore,
+            compatibility_factors: compatibilityFactors,
+            recommended_allocation: this.calculateAllocation(investor as EcmInvestor, request.deal_size),
+            contact_priority: matchScore > 0.7 ? 'high' : matchScore > 0.5 ? 'medium' : 'low',
+            engagement_strategy: this.getEngagementStrategy(investor as EcmInvestor, matchScore)
+          });
+        }
+      }
+
+      return matches.sort((a, b) => b.match_score - a.match_score);
+    } catch (error) {
+      console.error('Error matching investors:', error);
+      return [];
     }
-  } else {
-    score += 0.1; // Partial score if sectors not specified
   }
-  
-  // ESG alignment (20% weight)
-  if (request.esg_focused === investor.esg_focused) {
-    score += 0.2;
-  } else {
-    score += 0.05;
+
+  // Helper methods for parsing AI responses
+  private extractSection(content: string, keyword: string): string | undefined {
+    const lines = content.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].toLowerCase().includes(keyword.toLowerCase())) {
+        // Return the next few lines as the section content
+        return lines.slice(i, i + 3).join(' ').trim();
+      }
+    }
+    return undefined;
   }
-  
-  // Deal type compatibility (15% weight)
-  const institutionalTypes = ['institutional', 'sovereign', 'pension'];
-  if (institutionalTypes.includes(investor.investor_type)) {
-    score += 0.15;
-  } else if (investor.investor_type === 'hnw' && request.deal_size < 100000000) {
-    score += 0.1;
+
+  private extractRecommendations(content: string): string[] {
+    const recommendations = [];
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      if (line.includes('recommend') || line.includes('suggest') || line.includes('•') || line.includes('-')) {
+        const cleaned = line.replace(/[•\-]/g, '').trim();
+        if (cleaned.length > 10) {
+          recommendations.push(cleaned);
+        }
+      }
+    }
+    
+    return recommendations.slice(0, 5); // Limit to 5 recommendations
   }
-  
-  // Stock Connect eligibility (10% weight)
-  if (investor.stock_connect_eligible) {
-    score += 0.1;
+
+  private extractRiskFactors(content: string): string[] {
+    const risks = [];
+    const lines = content.split('\n');
+    
+    for (const line of lines) {
+      if (line.toLowerCase().includes('risk') || line.toLowerCase().includes('challenge')) {
+        const cleaned = line.replace(/[•\-]/g, '').trim();
+        if (cleaned.length > 10) {
+          risks.push(cleaned);
+        }
+      }
+    }
+    
+    return risks.slice(0, 5); // Limit to 5 risk factors
   }
-  
-  return Math.min(score, 1); // Cap at 1.0
+
+  private extractList(content: string, keyword: string): string[] {
+    const items = [];
+    const lines = content.split('\n');
+    let inSection = false;
+    
+    for (const line of lines) {
+      if (line.toLowerCase().includes(keyword.toLowerCase())) {
+        inSection = true;
+        continue;
+      }
+      
+      if (inSection && (line.includes('•') || line.includes('-') || line.includes('1.') || line.includes('2.'))) {
+        const cleaned = line.replace(/[•\-\d\.]/g, '').trim();
+        if (cleaned.length > 5) {
+          items.push(cleaned);
+        }
+      }
+      
+      if (inSection && line.trim() === '') {
+        break; // End of section
+      }
+    }
+    
+    return items.slice(0, 5);
+  }
+
+  private determineDealType(content: string, amount: number): string {
+    const contentLower = content.toLowerCase();
+    
+    if (contentLower.includes('rights issue') || contentLower.includes('rights offering')) {
+      return 'rights_issue';
+    } else if (contentLower.includes('private placement')) {
+      return 'private_placement';
+    } else if (contentLower.includes('convertible')) {
+      return 'convertible_bond';
+    } else if (contentLower.includes('follow-on') || contentLower.includes('follow on')) {
+      return 'follow_on';
+    } else if (amount > 1000000000) { // > 1B, likely institutional
+      return 'private_placement';
+    } else {
+      return 'private_placement'; // Default
+    }
+  }
+
+  private calculateMatchScore(investor: EcmInvestor, request: InvestorMatchingRequest): number {
+    let score = 0.5; // Base score
+    
+    // Deal size fit
+    if (investor.deal_size_min && investor.deal_size_max) {
+      if (request.deal_size >= investor.deal_size_min && request.deal_size <= investor.deal_size_max) {
+        score += 0.3;
+      }
+    }
+    
+    // ESG alignment
+    if (request.esg_focused && investor.esg_focused) {
+      score += 0.2;
+    }
+    
+    // Sector preferences
+    if (investor.sector_preferences && request.sector && investor.sector_preferences.includes(request.sector)) {
+      score += 0.2;
+    }
+    
+    // Investment capacity
+    if (investor.total_investment_amount > request.deal_size * 0.1) {
+      score += 0.1;
+    }
+    
+    return Math.min(score, 1.0);
+  }
+
+  private getCompatibilityFactors(investor: EcmInvestor, request: InvestorMatchingRequest): string[] {
+    const factors = [];
+    
+    if (investor.deal_size_min && investor.deal_size_max && 
+        request.deal_size >= investor.deal_size_min && request.deal_size <= investor.deal_size_max) {
+      factors.push('Deal size fit');
+    }
+    
+    if (request.esg_focused && investor.esg_focused) {
+      factors.push('ESG alignment');
+    }
+    
+    if (investor.sector_preferences && request.sector && investor.sector_preferences.includes(request.sector)) {
+      factors.push('Sector preference match');
+    }
+    
+    if (investor.stock_connect_eligible) {
+      factors.push('Stock Connect eligible');
+    }
+    
+    return factors;
+  }
+
+  private calculateAllocation(investor: EcmInvestor, dealSize: number): number {
+    const maxAllocation = Math.min(
+      dealSize * 0.25, // Max 25% of deal
+      investor.deal_size_max || dealSize * 0.1 // Or investor's max
+    );
+    
+    return Math.max(
+      dealSize * 0.05, // Min 5% of deal
+      maxAllocation
+    );
+  }
+
+  private getEngagementStrategy(investor: EcmInvestor, matchScore: number): string {
+    if (matchScore > 0.8) {
+      return 'Priority engagement with senior management presentation';
+    } else if (matchScore > 0.6) {
+      return 'Direct approach with comprehensive deal materials';
+    } else {
+      return 'Standard marketing approach with deal summary';
+    }
+  }
 }
 
-function getCompatibilityFactors(investor: EcmInvestor, deal: any, request: InvestorMatchingRequest): string[] {
-  const factors: string[] = [];
-  
-  if (investor.deal_size_min && investor.deal_size_max && 
-      request.deal_size >= investor.deal_size_min && request.deal_size <= investor.deal_size_max) {
-    factors.push('Deal size fit');
-  }
-  
-  if (investor.sector_preferences && deal?.ecm_issuers?.sector && 
-      investor.sector_preferences.includes(deal.ecm_issuers.sector)) {
-    factors.push('Sector preference match');
-  }
-  
-  if (request.esg_focused === investor.esg_focused) {
-    factors.push('ESG alignment');
-  }
-  
-  if (investor.stock_connect_eligible) {
-    factors.push('Stock Connect eligible');
-  }
-  
-  if (['institutional', 'sovereign', 'pension'].includes(investor.investor_type)) {
-    factors.push('Institutional investor');
-  }
-  
-  return factors;
-}
-
-function calculateRecommendedAllocation(matchScore: number, dealSize: number): number {
-  const baseAllocation = dealSize * 0.1; // 10% base
-  return Math.round(baseAllocation * matchScore);
-}
-
-function generateEngagementStrategy(investor: EcmInvestor, deal: any): string {
-  const strategies = [];
-  
-  if (investor.investor_type === 'institutional') {
-    strategies.push('Formal roadshow presentation');
-  }
-  
-  if (investor.esg_focused) {
-    strategies.push('Emphasize ESG credentials');
-  }
-  
-  if (investor.stock_connect_eligible) {
-    strategies.push('Highlight Stock Connect benefits');
-  }
-  
-  return strategies.join(', ') || 'Standard institutional approach';
-}
-
-function parseStructuringRecommendation(aiResponse: string): DealStructuringRecommendation {
-  // Simple parsing - in production, use more sophisticated NLP
-  return {
-    recommended_structure: extractSection(aiResponse, 'structure') || 'Rights Issue recommended',
-    deal_type: 'rights_issue',
-    pricing_strategy: extractSection(aiResponse, 'pricing') || 'Market-based pricing',
-    timeline_estimate: extractSection(aiResponse, 'timeline') || '6-8 weeks',
-    regulatory_requirements: ['HKEX approval', 'SFC filing'],
-    market_conditions_analysis: extractSection(aiResponse, 'market') || 'Favorable conditions',
-    risk_factors: ['Market volatility', 'Regulatory changes'],
-    investor_targeting_strategy: extractSection(aiResponse, 'targeting') || 'Institutional focus',
-    esg_considerations: extractSection(aiResponse, 'esg'),
-    confidence_score: 0.85
-  };
-}
-
-function parseMarketIntelligence(aiResponse: string): any {
-  return {
-    marketConditions: extractSection(aiResponse, 'conditions') || 'Market analysis pending',
-    ecmActivity: extractSection(aiResponse, 'activity') || 'ECM activity analysis pending',
-    recommendations: ['Monitor market conditions', 'Consider timing optimization'],
-    riskFactors: ['Market volatility', 'Regulatory changes']
-  };
-}
-
-function extractSection(text: string, keyword: string): string | undefined {
-  // Simple text extraction - in production, use more sophisticated parsing
-  const lines = text.split('\n');
-  const relevantLine = lines.find(line => 
-    line.toLowerCase().includes(keyword.toLowerCase())
-  );
-  return relevantLine?.replace(/^\d+\.?\s*/, '').trim();
-}
+export const ecmService = new EcmService();

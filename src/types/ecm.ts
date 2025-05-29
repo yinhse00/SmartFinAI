@@ -25,8 +25,8 @@ export interface EcmIssuer {
 export interface EcmInvestor {
   id: string;
   investor_name: string;
-  investor_type: 'institutional' | 'retail' | 'hnw' | 'sovereign' | 'pension';
-  regulatory_classification?: 'professional' | 'retail' | 'connected';
+  investor_type: string; // Allow any string from database
+  regulatory_classification?: string;
   aum_range?: string;
   geographic_focus?: string[];
   sector_preferences?: string[];
@@ -40,7 +40,7 @@ export interface EcmInvestor {
   last_activity_date?: string;
   total_investments_count: number;
   total_investment_amount: number;
-  risk_appetite: 'conservative' | 'moderate' | 'aggressive';
+  risk_appetite: string;
   created_at: string;
   updated_at: string;
 }
@@ -49,18 +49,18 @@ export interface EcmDeal {
   id: string;
   issuer_id?: string;
   deal_name: string;
-  deal_type: 'rights_issue' | 'private_placement' | 'convertible_bond' | 'follow_on' | 'block_trade';
-  deal_status: 'pipeline' | 'preparation' | 'marketing' | 'execution' | 'completed' | 'cancelled';
+  deal_type: string; // Allow any string from database
+  deal_status: string;
   target_amount?: number;
   final_amount?: number;
   currency: string;
-  pricing_method?: 'fixed' | 'book_building' | 'market_price';
+  pricing_method?: string;
   launch_date?: string;
   completion_date?: string;
   book_runner?: string;
   co_managers?: string[];
   use_of_proceeds?: string;
-  esg_classification?: 'green' | 'social' | 'sustainability' | 'conventional';
+  esg_classification?: string;
   regulatory_approvals_required?: string[];
   regulatory_status: string;
   market_conditions_score: number;
@@ -76,9 +76,9 @@ export interface EcmInvestorMatch {
   investor_id?: string;
   match_score?: number;
   compatibility_factors?: string[];
-  investment_interest_level?: 'high' | 'medium' | 'low' | 'none';
+  investment_interest_level?: string; // Allow any string from database
   indicative_amount?: number;
-  status: 'identified' | 'contacted' | 'interested' | 'committed' | 'declined';
+  status: string;
   contact_date?: string;
   response_date?: string;
   notes?: string;
@@ -97,7 +97,7 @@ export interface EcmMarketData {
   ipo_activity_count: number;
   secondary_fundraising_count: number;
   average_deal_size?: number;
-  market_sentiment?: 'bullish' | 'neutral' | 'bearish';
+  market_sentiment?: string; // Allow any string from database
   regulatory_environment_score: number;
   created_at: string;
 }
@@ -107,7 +107,7 @@ export interface EcmDealDocument {
   deal_id?: string;
   document_type: string;
   document_name: string;
-  document_status: 'draft' | 'review' | 'approved' | 'filed';
+  document_status: string;
   file_url?: string;
   file_path?: string;
   version: number;
@@ -133,7 +133,7 @@ export interface DealStructuringRequest {
 
 export interface DealStructuringRecommendation {
   recommended_structure: string;
-  deal_type: EcmDeal['deal_type'];
+  deal_type: string;
   pricing_strategy: string;
   timeline_estimate: string;
   regulatory_requirements: string[];
@@ -146,7 +146,7 @@ export interface DealStructuringRecommendation {
 
 export interface InvestorMatchingRequest {
   deal_id: string;
-  deal_type: EcmDeal['deal_type'];
+  deal_type: string;
   deal_size: number;
   sector?: string;
   esg_focused?: boolean;

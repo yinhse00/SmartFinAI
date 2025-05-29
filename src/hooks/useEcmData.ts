@@ -18,7 +18,7 @@ export function useEcmIssuers() {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as EcmIssuer[];
     },
     staleTime: 30000,
   });
@@ -39,7 +39,7 @@ export function useEcmInvestors() {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as EcmInvestor[];
     },
     staleTime: 30000,
   });
@@ -73,7 +73,7 @@ export function useEcmDeals(status?: string) {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as EcmDeal[];
     },
     staleTime: 30000,
   });
@@ -102,7 +102,7 @@ export function useInvestorMatches(dealId: string) {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as EcmInvestorMatch[];
     },
     enabled: !!dealId,
     staleTime: 30000,
@@ -125,7 +125,7 @@ export function useEcmMarketData() {
         throw error;
       }
       
-      return data || [];
+      return (data || []) as EcmMarketData[];
     },
     staleTime: 60000, // 1 minute
   });
@@ -136,7 +136,7 @@ export function useCreateDeal() {
   const queryClient = useQueryClient();
   
   return useMutation({
-    mutationFn: async (dealData: Partial<EcmDeal>) => {
+    mutationFn: async (dealData: { deal_name: string; deal_type: string; deal_status?: string; currency?: string }) => {
       const { data, error } = await supabase
         .from('ecm_deals')
         .insert([dealData])
