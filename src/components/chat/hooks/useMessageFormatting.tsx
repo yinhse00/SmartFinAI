@@ -20,19 +20,19 @@ export const useMessageFormatting = ({ content, originalContent, isBot }: UseMes
     
     // Format tables and process content properly while preserving links
     if (isBot) {
-      // Debug log to see if content already has links
-      if (displayContent.includes('<a ')) {
-        console.log('Content already contains links before formatting:', displayContent.substring(0, 200));
+      // Check if content already contains clickable links (anchor tags with href)
+      const hasClickableLinks = /<a\s+[^>]*href[^>]*>.*?<\/a>/i.test(displayContent);
+      
+      if (hasClickableLinks) {
+        // Content already has clickable links - preserve as-is to avoid double formatting
+        console.log('Content already contains clickable links, preserving formatting');
+        setFormattedContent(displayContent);
+      } else {
+        // No existing links detected - safe to apply table formatting
+        console.log('No existing links detected, applying table formatting');
+        const formatted = detectAndFormatTables(displayContent);
+        setFormattedContent(formatted);
       }
-      
-      const formatted = detectAndFormatTables(displayContent);
-      
-      // Debug log to see if links survived formatting
-      if (displayContent.includes('<a ') && !formatted.includes('<a ')) {
-        console.warn('Links were removed during table formatting!');
-      }
-      
-      setFormattedContent(formatted);
     } else {
       // For user messages, no formatting needed
       setFormattedContent(displayContent);
