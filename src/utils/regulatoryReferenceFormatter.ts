@@ -106,9 +106,13 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
  * Convert regulatory references to clickable links
  */
 export const enhanceWithClickableLinks = (text: string): string => {
-  // Don't modify HTML content that already has links
-  if (text.includes('</a>') || text.includes('<a ')) {
-    console.log('Text already contains links, skipping enhancement');
+  // IMPROVED: Only skip if there are actual existing anchor tags with href attributes
+  // Don't skip just because there are other HTML elements like <p>, <h2>, etc.
+  const existingLinksRegex = /<a\s+[^>]*href[^>]*>.*?<\/a>/gi;
+  const hasExistingLinks = existingLinksRegex.test(text);
+  
+  if (hasExistingLinks) {
+    console.log('Text already contains anchor links, skipping enhancement');
     return text;
   }
   
@@ -121,7 +125,6 @@ export const enhanceWithClickableLinks = (text: string): string => {
   console.log(`Enhancing ${references.length} references with clickable links`);
   
   let enhancedText = text;
-  let offset = 0;
   
   // Process references in reverse order to maintain indices
   for (let i = references.length - 1; i >= 0; i--) {
@@ -151,6 +154,7 @@ export const enhanceWithClickableLinks = (text: string): string => {
     }
   }
   
+  console.log(`Enhanced text with ${references.length} clickable regulatory references`);
   return enhancedText;
 };
 

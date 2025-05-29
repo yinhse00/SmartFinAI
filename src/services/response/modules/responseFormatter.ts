@@ -24,14 +24,22 @@ export const responseFormatter = {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Improve formatting with proper HTML elements for better readability
+    // Start with the original text
     let formattedText = text;
+    
+    // FIRST: Apply clickable links to regulatory references BEFORE any other formatting
+    // This is the key fix - do this before HTML formatting to avoid conflicts
+    console.log('Step 1: Applying clickable links to regulatory references...');
+    formattedText = enhanceWithClickableLinks(formattedText);
+    console.log('Step 1 complete: Regulatory references enhanced with links');
     
     // Check if text already contains HTML formatting
     const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
     
     // Only apply formatting if HTML formatting is not already present
     if (!hasHtmlFormatting) {
+      console.log('Step 2: Applying HTML formatting...');
+      
       // Replace markdown-style headers with semantic HTML elements
       formattedText = formattedText
         .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
@@ -44,11 +52,11 @@ export const responseFormatter = {
         .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
         .replace(/^___+$/gm, '<div class="my-4"></div>');
       
-      // Enhanced inline text formatting - but skip regulatory references (they'll be handled separately)
+      // Enhanced inline text formatting - but preserve existing links
       formattedText = formattedText
-        .replace(/\*\*((?!Rule\s+\d|Chapter\s+\d|FAQ\s+|Guidance|LD\s+|Listing\s+Decision).*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/__(.*?)__/g, '<u>$1</u>');
+        .replace(/\*\*((?!<a\s)(?!Rule\s+\d|Chapter\s+\d|FAQ\s+|Guidance|LD\s+|Listing\s+Decision).*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>')
+        .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>')
+        .replace(/__((?!<a\s).*?)__/g, '<u>$1</u>');
       
       // Enhanced bullet point formatting
       formattedText = formattedText
@@ -79,19 +87,10 @@ export const responseFormatter = {
           formattedText.length > 1500) {
         formattedText += '\n\n<h2 class="text-xl font-semibold my-3">Conclusion</h2>\n<p class="my-2">The above analysis provides a comprehensive overview based on the applicable Hong Kong regulatory framework. Always consult the specific rules and guidance for your particular situation.</p>';
       }
-    }
-    
-    // Apply clickable links to regulatory references AFTER other formatting
-    // This is the key step that should make references clickable
-    console.log('Applying clickable links to regulatory references...');
-    const textBeforeLinkEnhancement = formattedText;
-    formattedText = enhanceWithClickableLinks(formattedText);
-    
-    // Debug log to verify links were added
-    if (textBeforeLinkEnhancement !== formattedText) {
-      console.log('Successfully enhanced text with clickable links');
+      
+      console.log('Step 2 complete: HTML formatting applied');
     } else {
-      console.log('No changes made during link enhancement - check if references were detected');
+      console.log('Skipping HTML formatting - content already has HTML elements');
     }
     
     // Correct the profit test requirements for HKEX listing
@@ -118,6 +117,8 @@ export const responseFormatter = {
       // For Rule 7.19A responses that contain key elements, override truncation detection
       completenessOverride = true;
     }
+    
+    console.log('Response formatting complete');
     
     return {
       text: formattedText,
