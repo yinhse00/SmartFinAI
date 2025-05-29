@@ -56,35 +56,9 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         ) : (
           <div 
             dangerouslySetInnerHTML={{ __html: formattedContent }}
-            className="regulatory-content"
+            className="regulatory-content [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
           />
         )}
-        
-        {/* Enhanced styling for regulatory reference links */}
-        <style jsx>{`
-          .regulatory-content :global(a) {
-            color: inherit;
-            text-decoration: underline;
-            text-decoration-style: dotted;
-            text-underline-offset: 2px;
-            transition: all 0.2s ease;
-          }
-          
-          .regulatory-content :global(a:hover) {
-            text-decoration-style: solid;
-            text-decoration-color: var(--finance-accent-green);
-          }
-          
-          .regulatory-content :global(a:visited) {
-            color: inherit;
-          }
-          
-          .regulatory-content :global(a:focus) {
-            outline: 2px solid var(--finance-accent-blue);
-            outline-offset: 2px;
-            border-radius: 2px;
-          }
-        `}</style>
       </div>
     );
   }
