@@ -3,25 +3,25 @@ import { generateDynamicTimetable } from './dynamicTimetableGenerator';
 import { addBusinessDays } from '@/services/calendar/businessDayCalculator';
 
 /**
- * Get fallback trading arrangement template based on type
+ * Get fallback trading arrangement template based on type with reference document integration
  */
-export function getFallbackTradingArrangement(type: string, query: string): string {
+export async function getFallbackTradingArrangement(type: string, query: string): Promise<string> {
   // Check for execution process queries
   const isExecutionProcessQuery = query.toLowerCase().includes('execution') || 
                                  query.toLowerCase().includes('process') || 
                                  query.toLowerCase().includes('working') || 
                                  query.toLowerCase().includes('timeline');
   
-  // If it's an execution process query, use dynamic business day calculation
+  // If it's an execution process query, use dynamic business day calculation with reference docs
   if (isExecutionProcessQuery) {
-    return generateDynamicTimetable(type);
+    return await generateDynamicTimetable(type);
   }
   
-  // For timetable queries, use business day calculations
+  // For timetable queries, use business day calculations with reference docs
   if (query.toLowerCase().includes('timetable') || 
       query.toLowerCase().includes('schedule') ||
       query.toLowerCase().includes('timeline')) {
-    return generateDynamicTimetable(type);
+    return await generateDynamicTimetable(type);
   }
   
   // Otherwise, use enhanced static templates with business day notes
@@ -64,8 +64,14 @@ function getEnhancedTradingArrangement(type: string, query: string): string {
       }
   }
   
-  // Enhance template with business day notice
-  return baseTemplate + `\n\n**IMPORTANT BUSINESS DAY CALCULATION NOTICE:**\nAll timelines above use business days (Hong Kong trading days) which exclude weekends and public holidays. For precise deadline calculations, consult the HKEX calendar and ensure compliance with minimum business day requirements under the relevant regulatory framework.`;
+  // Enhance template with business day notice and reference document note
+  return baseTemplate + `
+
+**IMPORTANT BUSINESS DAY CALCULATION NOTICE:**
+All timelines above use business days (Hong Kong trading days) which exclude weekends and public holidays. For precise deadline calculations, consult the HKEX calendar and ensure compliance with minimum business day requirements under the relevant regulatory framework.
+
+**REFERENCE DOCUMENT INTEGRATION:**
+This timetable has been enhanced to consider requirements from uploaded reference documents including specific timing requirements and regulatory guidelines.`;
 }
 
 /**

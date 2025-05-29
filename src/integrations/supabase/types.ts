@@ -490,6 +490,7 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          description: string | null
           file_path: string
           file_size: number | null
           file_type: string | null
@@ -501,6 +502,7 @@ export type Database = {
         Insert: {
           category: string
           created_at?: string
+          description?: string | null
           file_path: string
           file_size?: number | null
           file_type?: string | null
@@ -512,6 +514,7 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
+          description?: string | null
           file_path?: string
           file_size?: number | null
           file_type?: string | null
