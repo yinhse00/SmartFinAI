@@ -20,22 +20,19 @@ export const useMessageFormatting = ({ content, originalContent, isBot }: UseMes
     
     // Format tables and process content properly while preserving links
     if (isBot) {
-      // Check if content is already formatted (contains HTML tags or clickable links)
-      const isAlreadyFormatted = displayContent.includes('<a href=') || 
-                               displayContent.includes('<h1') || 
-                               displayContent.includes('<h2') || 
-                               displayContent.includes('<p class=') ||
-                               displayContent.includes('<strong class=');
-      
-      if (isAlreadyFormatted) {
-        console.log('Content already formatted with HTML, preserving as-is');
-        setFormattedContent(displayContent);
-      } else {
-        // Only apply table formatting to raw text content
-        console.log('Applying table formatting to raw content');
-        const formatted = detectAndFormatTables(displayContent);
-        setFormattedContent(formatted);
+      // Debug log to see if content already has links
+      if (displayContent.includes('<a ')) {
+        console.log('Content already contains links before formatting:', displayContent.substring(0, 200));
       }
+      
+      const formatted = detectAndFormatTables(displayContent);
+      
+      // Debug log to see if links survived formatting
+      if (displayContent.includes('<a ') && !formatted.includes('<a ')) {
+        console.warn('Links were removed during table formatting!');
+      }
+      
+      setFormattedContent(formatted);
     } else {
       // For user messages, no formatting needed
       setFormattedContent(displayContent);
