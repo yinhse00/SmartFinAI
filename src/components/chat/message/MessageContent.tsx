@@ -54,8 +54,37 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         ) : isUserMessage ? (
           <div className="whitespace-pre-line">{formattedContent}</div>
         ) : (
-          <div dangerouslySetInnerHTML={{ __html: formattedContent }} />
+          <div 
+            dangerouslySetInnerHTML={{ __html: formattedContent }}
+            className="regulatory-content"
+          />
         )}
+        
+        {/* Enhanced styling for regulatory reference links */}
+        <style jsx>{`
+          .regulatory-content :global(a) {
+            color: inherit;
+            text-decoration: underline;
+            text-decoration-style: dotted;
+            text-underline-offset: 2px;
+            transition: all 0.2s ease;
+          }
+          
+          .regulatory-content :global(a:hover) {
+            text-decoration-style: solid;
+            text-decoration-color: var(--finance-accent-green);
+          }
+          
+          .regulatory-content :global(a:visited) {
+            color: inherit;
+          }
+          
+          .regulatory-content :global(a:focus) {
+            outline: 2px solid var(--finance-accent-blue);
+            outline-offset: 2px;
+            border-radius: 2px;
+          }
+        `}</style>
       </div>
     );
   }

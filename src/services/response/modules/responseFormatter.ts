@@ -1,6 +1,7 @@
 
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
+import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
 
 /**
  * Service for formatting final responses
@@ -43,22 +44,13 @@ export const responseFormatter = {
         .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
         .replace(/^___+$/gm, '<div class="my-4"></div>');
       
-      // Enhanced inline text formatting - RESTORE BOLD KEYWORDS
+      // Enhanced inline text formatting - but skip regulatory references (they'll be handled separately)
       formattedText = formattedText
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>') // Bold text with styling
-        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
-        .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
+        .replace(/\*\*((?!Rule\s+\d|Chapter\s+\d|FAQ\s+|Guidance|LD\s+|Listing\s+Decision).*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/__(.*?)__/g, '<u>$1</u>');
       
-      // Enhanced formatting for rule references - RESTORE BOLD REGULATORY TERMS
-      formattedText = formattedText
-        .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="font-bold text-finance-accent-blue">$1</strong>')
-        .replace(/(\bGuidance Letter\s+\w+-\d+\b|\bListing Decision\s+\w+-\d+\b|\bFAQ\s+\d+\.\d+\b)/g, 
-                '<strong class="font-bold text-finance-accent-green">$1</strong>')
-        .replace(/(\bHK\$[\d,]+(?:\.\d+)?\s*(?:million|billion)?\b)/g, '<strong class="font-bold">$1</strong>') // Financial amounts
-        .replace(/(\b(?:independent shareholders|connected transaction|aggregation|whitewash|takeover|substantial shareholder)\b)/gi, 
-                '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>'); // Key financial terms
-      
-      // Enhanced bullet point formatting - RESTORE BULLET POINTS
+      // Enhanced bullet point formatting
       formattedText = formattedText
         .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li class="my-1 ml-4">$3</li>');
       
@@ -88,6 +80,9 @@ export const responseFormatter = {
         formattedText += '\n\n<h2 class="text-xl font-semibold my-3">Conclusion</h2>\n<p class="my-2">The above analysis provides a comprehensive overview based on the applicable Hong Kong regulatory framework. Always consult the specific rules and guidance for your particular situation.</p>';
       }
     }
+    
+    // Apply clickable links to regulatory references AFTER other formatting
+    formattedText = enhanceWithClickableLinks(formattedText);
     
     // Correct the profit test requirements for HKEX listing
     formattedText = formattedText
