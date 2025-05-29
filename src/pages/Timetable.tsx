@@ -55,10 +55,9 @@ const TimetablePage: React.FC = () => {
                   setCustomCategory('');
                 }}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select a headline category" />
+                    <SelectValue placeholder="Select a headline category or enter custom" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Custom category</SelectItem>
                     {requirements?.map((req) => (
                       <SelectItem key={req.headlineCategory} value={req.headlineCategory}>
                         {req.headlineCategory}
@@ -68,17 +67,18 @@ const TimetablePage: React.FC = () => {
                 </Select>
               </div>
               
-              {!selectedCategory && (
-                <div>
-                  <Label htmlFor="custom-category">Custom Headline Category</Label>
-                  <Input
-                    id="custom-category"
-                    placeholder="Enter headline category"
-                    value={customCategory}
-                    onChange={(e) => setCustomCategory(e.target.value)}
-                  />
-                </div>
-              )}
+              <div>
+                <Label htmlFor="custom-category">Custom Headline Category</Label>
+                <Input
+                  id="custom-category"
+                  placeholder="Enter headline category"
+                  value={customCategory}
+                  onChange={(e) => {
+                    setCustomCategory(e.target.value);
+                    setSelectedCategory('');
+                  }}
+                />
+              </div>
               
               {headlineCategory && (
                 <div className="pt-2">

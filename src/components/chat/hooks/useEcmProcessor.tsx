@@ -1,4 +1,3 @@
-
 import { useToast } from '@/hooks/use-toast';
 import { ecmService } from '@/services/ecm/ecmService';
 import { grokService } from '@/services/grokService';
@@ -93,8 +92,6 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      regulatoryContext: '',
-      guidanceContext: '',
       sourceMaterials: [],
       skipSequentialSearches: true,
       isRegulatoryRelated: true,
@@ -128,8 +125,6 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      regulatoryContext: '',
-      guidanceContext: '',
       sourceMaterials: [],
       skipSequentialSearches: true,
       isRegulatoryRelated: false,
@@ -165,8 +160,6 @@ export const useEcmProcessor = () => {
 
       const response = await grokService.generateResponse({
         prompt: ecmPrompt,
-        regulatoryContext: '',
-        guidanceContext: '',
         sourceMaterials: [],
         skipSequentialSearches: true,
         isRegulatoryRelated: false,
@@ -204,8 +197,6 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      regulatoryContext: '',
-      guidanceContext: '',
       sourceMaterials: [],
       skipSequentialSearches: true,
       isRegulatoryRelated: true,
@@ -241,8 +232,6 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      regulatoryContext: '',
-      guidanceContext: '',
       sourceMaterials: [],
       skipSequentialSearches: true,
       isRegulatoryRelated: false,
@@ -270,8 +259,6 @@ export const useEcmProcessor = () => {
 
     const response = await grokService.generateResponse({
       prompt: ecmPrompt,
-      regulatoryContext: '',
-      guidanceContext: '',
       sourceMaterials: [],
       skipSequentialSearches: true,
       isRegulatoryRelated: true,

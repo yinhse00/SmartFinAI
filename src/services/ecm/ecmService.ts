@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { 
@@ -30,8 +29,6 @@ class EcmService {
 
       const response = await grokService.generateResponse({
         prompt: marketPrompt,
-        regulatoryContext: '',
-        guidanceContext: '',
         sourceMaterials: [],
         skipSequentialSearches: true,
         isRegulatoryRelated: false,
@@ -97,8 +94,6 @@ class EcmService {
 
       const response = await grokService.generateResponse({
         prompt: structuringPrompt,
-        regulatoryContext: '',
-        guidanceContext: '',
         sourceMaterials: [],
         skipSequentialSearches: true,
         isRegulatoryRelated: true,
