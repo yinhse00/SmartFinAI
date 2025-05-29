@@ -8,7 +8,6 @@ import { useCacheManager } from './workflow/useCacheManager';
 import { useStreamingHandler } from './workflow/useStreamingHandler';
 import { useWorkflowState } from './workflow/useWorkflowState';
 import { useQueryUtils } from './workflow/useQueryUtils';
-import { useEcmProcessor } from './useEcmProcessor';
 
 interface OptimizedWorkflowProps {
   messages: Message[];
@@ -19,7 +18,7 @@ interface OptimizedWorkflowProps {
 }
 
 /**
- * Enhanced optimized workflow processor with ECM capabilities
+ * Enhanced optimized workflow processor with improved state management and caching
  */
 export const useOptimizedWorkflowProcessor = ({
   messages,
@@ -43,10 +42,9 @@ export const useOptimizedWorkflowProcessor = ({
     handleError 
   } = useWorkflowState();
   const { isSimpleQuery } = useQueryUtils();
-  const { processEcmQuery, detectEcmQueryType } = useEcmProcessor();
   
   /**
-   * Enhanced workflow with ECM capabilities and improved state management
+   * Enhanced workflow with improved caching and state management
    */
   const executeOptimizedWorkflow = async (query: string) => {
     if (!isGrokApiKeySet) {
@@ -58,10 +56,10 @@ export const useOptimizedWorkflowProcessor = ({
     setLastQuery(query);
     
     try {
-      // Step 1: Enhanced query analysis with ECM detection
-      console.log('Starting enhanced workflow with ECM support - Step 1: Query Analysis');
+      // Step 1: Initial Analysis with improved state tracking
+      console.log('Starting enhanced workflow - Step 1: Initial Analysis');
       updateStep('preparing');
-      updateStage('Analyzing your query and detecting domain expertise...');
+      updateStage('Analyzing your query and checking cache...');
       
       // Add user message
       const userMessage: Message = {
@@ -90,47 +88,8 @@ export const useOptimizedWorkflowProcessor = ({
       // Create streaming response handler
       const streamingResponse = createStreamingResponse('Analyzing your query...', assistantMessageId);
       
-      // Step 2: ECM Query Detection and Routing
-      console.log('Step 2: ECM query detection and intelligent routing');
-      updateStage('Detecting ECM expertise requirements...');
-      
-      const ecmQueryType = detectEcmQueryType(query);
-      const isEcmQuery = ecmQueryType !== 'general_ecm' || 
-        query.toLowerCase().includes('ecm') ||
-        query.toLowerCase().includes('equity capital') ||
-        query.toLowerCase().includes('fundraising') ||
-        query.toLowerCase().includes('deal structure') ||
-        query.toLowerCase().includes('investor match');
-      
-      if (isEcmQuery) {
-        console.log(`ECM query detected: ${ecmQueryType}`);
-        updateStage('Processing with ECM expertise...');
-        updateStreamingContent(streamingResponse, 'Applying specialized ECM knowledge...');
-        
-        try {
-          const ecmResponse = await processEcmQuery(query);
-          updateStreamingContent(streamingResponse, ecmResponse);
-          completeStreaming(streamingResponse);
-          
-          // Enhanced completion sequence for ECM queries
-          updateStep('finalizing');
-          updateStage('ECM analysis complete - Specialized expertise applied');
-          
-          setTimeout(() => {
-            updateStage('Complete');
-            setTimeout(() => {
-              completeWorkflow();
-            }, 1000);
-          }, 500);
-          return;
-        } catch (ecmError) {
-          console.log('ECM processing failed, falling back to general workflow:', ecmError);
-          updateStage('Applying general regulatory expertise...');
-        }
-      }
-      
-      // Step 3: Enhanced cache checking with semantic similarity
-      console.log('Step 3: Enhanced cache checking with semantic similarity');
+      // Step 2: Enhanced cache checking with semantic similarity
+      console.log('Step 2: Enhanced cache checking with semantic similarity');
       updateStage('Checking cached responses and similar queries...');
       
       const cachedResult = checkCache(query);
@@ -154,8 +113,8 @@ export const useOptimizedWorkflowProcessor = ({
         return;
       }
       
-      // Step 4: Enhanced parallel context retrieval with early termination
-      console.log('Step 4: Enhanced parallel context retrieval');
+      // Step 3: Enhanced parallel context retrieval with early termination
+      console.log('Step 3: Enhanced parallel context retrieval');
       updateStep('processing');
       updateStage('Gathering regulatory context with quality scoring...');
       updateStreamingContent(streamingResponse, 'Gathering enhanced regulatory context...');
@@ -166,13 +125,12 @@ export const useOptimizedWorkflowProcessor = ({
           optimized: true,
           useParallelProcessing: true,
           earlyTermination: true,
-          qualityThreshold: 0.8,
-          ecmEnhanced: isEcmQuery
+          qualityThreshold: 0.8
         }
       });
       
-      // Step 5: Intelligent search routing
-      console.log('Step 5: Intelligent search with fast paths');
+      // Step 4: Intelligent search routing
+      console.log('Step 4: Intelligent search with fast paths');
       updateStage('Applying intelligent search patterns and fast paths...');
       
       // Check if this is a simple query that can use fast path
@@ -190,12 +148,11 @@ export const useOptimizedWorkflowProcessor = ({
         skipSequentialSearches: true,
         isRegulatoryRelated: Boolean(contextResult.context),
         optimized: true,
-        useFastPath: isSimple,
-        ecmEnhanced: isEcmQuery
+        useFastPath: isSimple
       };
       
-      // Step 6: Enhanced response generation with progressive delivery
-      console.log('Step 6: Enhanced response generation');
+      // Step 5: Enhanced response generation with progressive delivery
+      console.log('Step 5: Enhanced response generation');
       updateStep('finalizing');
       updateStage('Generating high-quality response...');
       updateStreamingContent(streamingResponse, 'Generating comprehensive response...');
@@ -214,16 +171,8 @@ export const useOptimizedWorkflowProcessor = ({
       if (step5Result?.response) {
         updateStreamingContent(streamingResponse, step5Result.response);
         
-        // Enhanced cache storage with longer duration for ECM queries
-        const cacheData = {
-          response: step5Result.response,
-          metadata: { 
-            ...step5Result.metadata,
-            ecmEnhanced: isEcmQuery,
-            queryType: ecmQueryType
-          }
-        };
-        storeInCache(query, step5Result.response, cacheData);
+        // Enhanced cache storage with longer duration
+        storeInCache(query, step5Result.response, step5Result.metadata);
         
         // Handle translations if needed
         if (step5Result.requiresTranslation) {
