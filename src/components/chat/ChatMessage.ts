@@ -5,7 +5,7 @@ export interface Message {
   content: string;
   isUser: boolean;
   timestamp: Date;
-  sender?: 'user' | 'bot';
+  sender?: 'user' | 'bot' | 'system';
   references?: string[];
   isError?: boolean;
   isUsingFallback?: boolean;
@@ -28,9 +28,6 @@ export interface Message {
     translation?: string;
     guidanceMaterialsUsed?: boolean;
     sourceMaterials?: string[];
-    searchStrategy?: 'local_only' | 'live_only' | 'hybrid' | 'failed';
-    liveResultsCount?: number;
-    localResultsCount?: number;
     validation?: {
       isValid: boolean;
       vettingConsistency: boolean;
@@ -42,11 +39,6 @@ export interface Message {
     vettingCategory?: string;
     relevantGuidance?: number;
     guidanceTypes?: string[];
-    regulatoryContext?: string;
-    queryType?: string;
-    financialAnalysis?: any;
-    isUsingFallback?: boolean;
-    verified?: boolean;
   };
   verified?: boolean;
 }

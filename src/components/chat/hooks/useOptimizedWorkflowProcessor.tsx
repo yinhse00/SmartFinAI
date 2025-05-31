@@ -1,13 +1,12 @@
 
+import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { parallelContextService } from '@/services/regulatory/context/parallelContextService';
+import { responseStreamingService } from '@/services/response/streaming/responseStreamingService';
+import { smartCacheService } from '@/services/cache/smartCacheService';
 import { step5Response } from './useStep5Response';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
-import { useCacheManager } from './workflow/useCacheManager';
-import { useStreamingHandler } from './workflow/useStreamingHandler';
-import { useWorkflowState } from './workflow/useWorkflowState';
-import { useQueryUtils } from './workflow/useQueryUtils';
 
 interface OptimizedWorkflowProps {
   messages: Message[];
@@ -27,21 +26,39 @@ export const useOptimizedWorkflowProcessor = ({
   isGrokApiKeySet,
   setApiKeyDialogOpen
 }: OptimizedWorkflowProps) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [processingStage, setProcessingStage] = useState('');
+  const [currentStep, setCurrentStep] = useState<'preparing' | 'processing' | 'finalizing' | 'reviewing'>('preparing');
+  
   const { lastInputWasChinese } = useLanguageState();
   const { manageTranslations } = useTranslationManager();
-  const { checkCache, storeInCache } = useCacheManager();
-  const { createStreamingResponse, updateStreamingContent, completeStreaming } = useStreamingHandler({ setMessages });
-  const { 
-    isLoading, 
-    processingStage, 
-    currentStep, 
-    startWorkflow, 
-    updateStage, 
-    updateStep, 
-    completeWorkflow, 
-    handleError 
-  } = useWorkflowState();
-  const { isSimpleQuery } = useQueryUtils();
+  
+  // Helper method to check query similarity (simplified version)
+  const isSimilarQuery = (query1: string, query2: string): boolean => {
+    const normalize = (str: string) => str.toLowerCase().replace(/[^\w\s]/g, '').trim();
+    const words1 = normalize(query1).split(/\s+/);
+    const words2 = normalize(query2).split(/\s+/);
+    
+    const commonWords = words1.filter(word => words2.includes(word));
+    const similarity = commonWords.length / Math.max(words1.length, words2.length);
+    
+    return similarity > 0.6; // 60% similarity threshold
+  };
+
+  // Helper method to identify simple queries for fast path
+  const isSimpleQuery = (query: string): boolean => {
+    const simplePatterns = [
+      /^what is/i,
+      /^define/i,
+      /^meaning of/i,
+      /^\w+\s+definition/i,
+      /^how to calculate/i,
+      /^when is/i,
+      /^where can I find/i
+    ];
+    
+    return simplePatterns.some(pattern => pattern.test(query)) || query.length < 50;
+  };
   
   /**
    * Enhanced workflow with improved caching and state management
@@ -52,14 +69,14 @@ export const useOptimizedWorkflowProcessor = ({
       return;
     }
     
-    startWorkflow();
+    setIsLoading(true);
     setLastQuery(query);
     
     try {
       // Step 1: Initial Analysis with improved state tracking
       console.log('Starting enhanced workflow - Step 1: Initial Analysis');
-      updateStep('preparing');
-      updateStage('Analyzing your query and checking cache...');
+      setCurrentStep('preparing');
+      setProcessingStage('Analyzing your query and checking cache...');
       
       // Add user message
       const userMessage: Message = {
@@ -86,28 +103,61 @@ export const useOptimizedWorkflowProcessor = ({
       setMessages([...updatedMessages, assistantMessage]);
       
       // Create streaming response handler
-      const streamingResponse = createStreamingResponse('Analyzing your query...', assistantMessageId);
+      const streamingResponse = responseStreamingService.createStreamingResponse('Analyzing your query...');
+      
+      // Update UI with streaming content
+      streamingResponse.onUpdate((content) => {
+        setMessages(prevMessages => {
+          const newMessages = [...prevMessages];
+          const assistantIndex = newMessages.findIndex(m => m.id === assistantMessageId);
+          if (assistantIndex !== -1) {
+            newMessages[assistantIndex] = {
+              ...newMessages[assistantIndex],
+              content: content
+            };
+          }
+          return newMessages;
+        });
+      });
       
       // Step 2: Enhanced cache checking with semantic similarity
       console.log('Step 2: Enhanced cache checking with semantic similarity');
-      updateStage('Checking cached responses and similar queries...');
+      setProcessingStage('Checking cached responses and similar queries...');
       
-      const cachedResult = checkCache(query);
+      // Check for exact match first
+      let cachedResult = smartCacheService.get(query, 'regulatory');
+      
+      // If no exact match, check for similar queries (Phase 1 enhancement)
+      if (!cachedResult) {
+        // Simple similarity check - in a real implementation, this would use semantic embeddings
+        const cacheKeys = smartCacheService.getAllKeys('regulatory');
+        for (const key of cacheKeys) {
+          if (key && isSimilarQuery(query, key)) {
+            cachedResult = smartCacheService.get(key, 'regulatory');
+            console.log('Found similar cached query:', key);
+            break;
+          }
+        }
+      }
       
       if (cachedResult) {
         console.log('Using cached response for faster processing');
-        updateStreamingContent(streamingResponse, cachedResult.response);
-        completeStreaming(streamingResponse);
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent(cachedResult.response);
+          streamingResponse.complete();
+        }
         
         // Enhanced completion sequence
-        updateStep('finalizing');
-        updateStage('Retrieved from cache - Response ready');
+        setCurrentStep('finalizing');
+        setProcessingStage('Retrieved from cache - Response ready');
         
         // Brief completion display before clearing
         setTimeout(() => {
-          updateStage('Complete');
+          setProcessingStage('Complete');
           setTimeout(() => {
-            completeWorkflow();
+            setIsLoading(false);
+            setProcessingStage('');
+            setCurrentStep('preparing');
           }, 1000);
         }, 500);
         return;
@@ -115,29 +165,31 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Step 3: Enhanced parallel context retrieval with early termination
       console.log('Step 3: Enhanced parallel context retrieval');
-      updateStep('processing');
-      updateStage('Gathering regulatory context with quality scoring...');
-      updateStreamingContent(streamingResponse, 'Gathering enhanced regulatory context...');
+      setCurrentStep('processing');
+      setProcessingStage('Gathering regulatory context with quality scoring...');
+      if (streamingResponse && typeof streamingResponse.appendContent === 'function') {
+        streamingResponse.appendContent('\n\nGathering enhanced regulatory context...');
+      }
       
       const contextResult = await parallelContextService.getContextInParallel(query, {
         isPreliminaryAssessment: false,
         metadata: { 
           optimized: true,
           useParallelProcessing: true,
-          earlyTermination: true,
-          qualityThreshold: 0.8
+          earlyTermination: true, // New enhancement
+          qualityThreshold: 0.8   // Stop when high-quality context found
         }
       });
       
       // Step 4: Intelligent search routing
       console.log('Step 4: Intelligent search with fast paths');
-      updateStage('Applying intelligent search patterns and fast paths...');
+      setProcessingStage('Applying intelligent search patterns and fast paths...');
       
       // Check if this is a simple query that can use fast path
       const isSimple = isSimpleQuery(query);
       if (isSimple) {
         console.log('Using fast path for simple query');
-        updateStage('Using fast path for quick response...');
+        setProcessingStage('Using fast path for quick response...');
       }
       
       const params = {
@@ -153,26 +205,39 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Step 5: Enhanced response generation with progressive delivery
       console.log('Step 5: Enhanced response generation');
-      updateStep('finalizing');
-      updateStage('Generating high-quality response...');
-      updateStreamingContent(streamingResponse, 'Generating comprehensive response...');
+      setCurrentStep('finalizing');
+      setProcessingStage('Generating high-quality response...');
+      if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+        streamingResponse.setContent('Generating comprehensive response...');
+      }
       
       const step5Result = await step5Response(
         params,
         (progress) => {
           console.log('Step 5 progress:', progress);
-          updateStage(progress);
-          updateStreamingContent(streamingResponse, `Generating response: ${progress}`);
+          setProcessingStage(progress);
+          if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+            streamingResponse.setContent(`Generating response: ${progress}`);
+          }
         },
         lastInputWasChinese
       );
       
       // Update with final response
       if (step5Result?.response) {
-        updateStreamingContent(streamingResponse, step5Result.response);
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent(step5Result.response);
+        }
         
-        // Enhanced cache storage with longer duration
-        storeInCache(query, step5Result.response, step5Result.metadata);
+        // Enhanced cache storage with longer duration (2 hours)
+        smartCacheService.set(query, {
+          response: step5Result.response,
+          metadata: { 
+            ...step5Result.metadata,
+            timestamp: Date.now(),
+            quality: 'high'
+          }
+        }, 'regulatory', 2 * 60 * 60 * 1000); // 2 hours cache duration
         
         // Handle translations if needed
         if (step5Result.requiresTranslation) {
@@ -183,22 +248,31 @@ export const useOptimizedWorkflowProcessor = ({
           }
         }
       } else {
-        updateStreamingContent(streamingResponse, "I wasn't able to generate a proper response. Please try again.");
+        if (streamingResponse && typeof streamingResponse.setContent === 'function') {
+          streamingResponse.setContent("I wasn't able to generate a proper response. Please try again.");
+        }
       }
       
-      completeStreaming(streamingResponse);
+      if (streamingResponse && typeof streamingResponse.complete === 'function') {
+        streamingResponse.complete();
+      }
       
       // Enhanced completion sequence with proper state management
       console.log('Workflow completed successfully');
-      updateStep('reviewing');
-      updateStage('Validating response quality...');
+      setCurrentStep('reviewing');
+      setProcessingStage('Validating response quality...');
       
       // Brief validation phase
       setTimeout(() => {
-        updateStage('Response complete - High quality validated');
+        setProcessingStage('Response complete - High quality validated');
         setTimeout(() => {
-          completeWorkflow();
-        }, 800);
+          setProcessingStage('Complete');
+          setTimeout(() => {
+            setIsLoading(false);
+            setProcessingStage('');
+            setCurrentStep('preparing');
+          }, 1500);
+        }, 1000);
       }, 800);
       
     } catch (error) {
@@ -221,7 +295,10 @@ export const useOptimizedWorkflowProcessor = ({
         return newMessages;
       });
       
-      handleError();
+      // Clear processing state on error
+      setIsLoading(false);
+      setProcessingStage('');
+      setCurrentStep('preparing');
     }
   };
 

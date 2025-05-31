@@ -6,7 +6,49 @@ import { MessageActions } from './message/MessageActions';
 import { MessageError } from './message/MessageError';
 import { useMessageFormatting } from './hooks/useMessageFormatting';
 import { getInitialVisibleChars, getCardClassName } from './utils/messageUtils';
-import { Message } from './ChatMessage';
+
+export interface Message {
+  id: string;
+  content: string;
+  isUser: boolean;
+  timestamp: Date;
+  sender?: 'user' | 'bot' | 'system';
+  references?: string[];
+  isError?: boolean;
+  isUsingFallback?: boolean;
+  reasoning?: string;
+  queryType?: string;
+  isTruncated?: boolean;
+  isBatchPart?: boolean;
+  originalContent?: string;
+  translationInProgress?: boolean;
+  isTranslated?: boolean;
+  metadata?: {
+    financialQueryType?: string;
+    reasoning?: string;
+    processingTime?: number;
+    model?: string;
+    temperature?: number;
+    maxTokens?: number;
+    isTruncated?: boolean;
+    isError?: boolean;
+    translation?: string;
+    guidanceMaterialsUsed?: boolean;
+    sourceMaterials?: string[];
+    validation?: {
+      isValid: boolean;
+      vettingConsistency: boolean;
+      guidanceConsistency: boolean;
+      validationNotes: string[];
+      confidence: number;
+    };
+    vettingRequired?: boolean;
+    vettingCategory?: string;
+    relevantGuidance?: number;
+    guidanceTypes?: string[];
+  };
+  verified?: boolean;
+}
 
 interface ChatMessageProps {
   message: Message;

@@ -3,43 +3,43 @@ import { generateDynamicTimetable } from './dynamicTimetableGenerator';
 import { addBusinessDays } from '@/services/calendar/businessDayCalculator';
 
 /**
- * Get enhanced trading arrangement template with conditional shareholder approval logic
+ * Get fallback trading arrangement template based on type
  */
-export async function getFallbackTradingArrangement(type: string, query: string): Promise<string> {
+export function getFallbackTradingArrangement(type: string, query: string): string {
   // Check for execution process queries
   const isExecutionProcessQuery = query.toLowerCase().includes('execution') || 
                                  query.toLowerCase().includes('process') || 
                                  query.toLowerCase().includes('working') || 
                                  query.toLowerCase().includes('timeline');
   
-  // If it's an execution process query, use dynamic business day calculation with enhanced logic
+  // If it's an execution process query, use dynamic business day calculation
   if (isExecutionProcessQuery) {
-    return await generateDynamicTimetable(type);
+    return generateDynamicTimetable(type);
   }
   
-  // For timetable queries, use dynamic business day calculations with enhanced logic
+  // For timetable queries, use business day calculations
   if (query.toLowerCase().includes('timetable') || 
       query.toLowerCase().includes('schedule') ||
       query.toLowerCase().includes('timeline')) {
-    return await generateDynamicTimetable(type);
+    return generateDynamicTimetable(type);
   }
   
-  // Otherwise, use enhanced static templates with conditional logic
+  // Otherwise, use enhanced static templates with business day notes
   return getEnhancedTradingArrangement(type, query);
 }
 
 /**
- * Get enhanced trading arrangement with conditional shareholder approval logic
+ * Get enhanced trading arrangement with business day annotations
  */
 function getEnhancedTradingArrangement(type: string, query: string): string {
   let baseTemplate: string;
   
   switch (type) {
     case 'rights_issue':
-      baseTemplate = getConditionalRightsIssueTemplate();
+      baseTemplate = TRADING_ARRANGEMENTS.RIGHTS_ISSUE;
       break;
     case 'open_offer':
-      baseTemplate = getConditionalOpenOfferTemplate();
+      baseTemplate = TRADING_ARRANGEMENTS.OPEN_OFFER;
       break;
     case 'share_consolidation': 
       baseTemplate = TRADING_ARRANGEMENTS.SHARE_CONSOLIDATION;
@@ -60,103 +60,20 @@ function getEnhancedTradingArrangement(type: string, query: string): string {
           query.toLowerCase().includes('takeover')) {
         baseTemplate = TRADING_ARRANGEMENTS.GENERAL_OFFER;
       } else {
-        baseTemplate = getConditionalRightsIssueTemplate();
+        baseTemplate = TRADING_ARRANGEMENTS.RIGHTS_ISSUE;
       }
   }
   
-  // Enhance template with business day notice and reference document note
-  return baseTemplate + `
-
-**IMPORTANT BUSINESS DAY CALCULATION NOTICE:**
-All timelines above use business days (Hong Kong trading days) which exclude weekends and public holidays. For precise deadline calculations, consult the HKEX calendar and ensure compliance with minimum business day requirements under the relevant regulatory framework.
-
-**ENHANCED REFERENCE DOCUMENT INTEGRATION:**
-This timetable incorporates requirements from uploaded reference documents (Timetable20250520.docx) including:
-- Listing document preparation: 5 business days
-- Stock Exchange vetting: 10 business days
-- Conditional circular/EGM requirements based on shareholder approval needs
-
-**CONDITIONAL LOGIC APPLIED:**
-- Circular and EGM phases are only included when shareholder approval is required
-- Rights issues and open offers typically do not require shareholder approval unless exceeding regulatory thresholds
-- All timelines adjusted based on actual regulatory requirements`;
-}
-
-/**
- * Get conditional rights issue template that excludes circular/EGM when not required
- */
-function getConditionalRightsIssueTemplate(): string {
-  return `# Enhanced Rights Issue Execution Timetable (Conditional Logic Applied)
-
-## Phase 1: Listing Documents Preparation and Vetting
-| Timeline | Step | Description |
-|----------|------|-------------|
-| Day 1-5 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
-| Day 6-15 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
-| Day 16 | Announcement | Rights issue announcement published |
-
-## Phase 2: Implementation (No Shareholder Approval Required)
-**Note:** Rights issues typically do not require shareholder approval unless they would increase issued shares by more than 50% when aggregated with other issues in the previous 12 months.
-
-| Date | Trading Event | Details |
-|------|---------------|---------|
-| T-2 | Last Cum-Rights Trading Day | Last day for trading in shares with rights entitlement |
-| T-1 | Ex-Rights Date | Shares begin trading ex-rights |
-| T | Record Date | Shareholder register closed to establish entitlements |
-| T+5 | PAL Dispatch | Provisional Allotment Letters sent to shareholders |
-| T+6 | Nil-Paid Rights Trading Start | First day of dealing in nil-paid rights |
-| T+16 | Nil-Paid Rights Trading End | Last day of dealing in nil-paid rights |
-| T+20 | Latest Acceptance Date | Final date for acceptance and payment |
-| T+27 | New Shares Listing | Dealing in fully-paid new shares commences |
-
-**CONDITIONAL REQUIREMENTS:**
-- If rights issue exceeds 50% threshold (aggregated): Shareholder approval via EGM required
-- If shareholder approval required: Add 21+ business days for circular preparation, vetting, dispatch, and EGM
-- Listing documents must be prepared and vetted before announcement (15 business days total)`;
-}
-
-/**
- * Get conditional open offer template that excludes circular/EGM when not required
- */
-function getConditionalOpenOfferTemplate(): string {
-  return `# Enhanced Open Offer Execution Timetable (Conditional Logic Applied)
-
-## Phase 1: Listing Documents Preparation and Vetting
-| Timeline | Step | Description |
-|----------|------|-------------|
-| Day 1-5 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
-| Day 6-15 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
-| Day 16 | Announcement | Open offer announcement published |
-
-## Phase 2: Implementation (No Shareholder Approval Required)
-**Note:** Open offers typically do not require shareholder approval unless they would increase issued shares by more than 50% when aggregated with other issues in the previous 12 months.
-
-| Date | Trading Event | Details |
-|------|---------------|---------|
-| T-2 | Last Cum-Entitlement Trading Day | Last day for trading in shares with entitlement |
-| T-1 | Ex-Entitlement Date | Shares trade ex-entitlement from this date |
-| T | Record Date | Shareholder register closed to establish entitlements |
-| T+5 | Application Form Dispatch | Application forms sent to qualifying shareholders |
-| T+19 | Latest Acceptance Date | Final date for acceptance and payment |
-| T+26 | New Shares Listing | Dealing in new shares commences |
-
-**CRITICAL DISTINCTIONS:**
-- CORPORATE ACTION regulated under Listing Rules Chapter 7 for capital-raising
-- NO trading in nil-paid rights for open offers (unlike rights issues)
-- Only one market exists during the open offer period - existing shares (ex-entitlement)
-
-**CONDITIONAL REQUIREMENTS:**
-- If open offer exceeds 50% threshold (aggregated): Shareholder approval via EGM required
-- If shareholder approval required: Add 21+ business days for circular preparation, vetting, dispatch, and EGM
-- Listing documents must be prepared and vetted before announcement (15 business days total)`;
+  // Enhance template with business day notice
+  return baseTemplate + `\n\n**IMPORTANT BUSINESS DAY CALCULATION NOTICE:**\nAll timelines above use business days (Hong Kong trading days) which exclude weekends and public holidays. For precise deadline calculations, consult the HKEX calendar and ensure compliance with minimum business day requirements under the relevant regulatory framework.`;
 }
 
 /**
  * Get execution process template based on query type - now with business day calculations
  */
-async function getExecutionProcessTemplate(type: string, query: string): Promise<string> {
+function getExecutionProcessTemplate(type: string, query: string): string {
   // Use dynamic business day calculation for execution processes
-  return await generateDynamicTimetable(type);
+  return generateDynamicTimetable(type);
 }
 
 /**
@@ -216,14 +133,13 @@ export function isCompleteExecutionProcess(content: string, type: string): boole
     const hasHKEX = normalizedContent.includes('hkex') || 
                    normalizedContent.includes('stock exchange');
                    
-    const hasListingDocuments = normalizedContent.includes('listing document');
+    const hasCircular = normalizedContent.includes('circular');
     
-    // Check for conditional circular logic
-    const hasConditionalLogic = normalizedContent.includes('conditional') ||
-                               normalizedContent.includes('no shareholder approval') ||
-                               normalizedContent.includes('if shareholder approval');
+    const hasShareholders = normalizedContent.includes('shareholders') ||
+                           normalizedContent.includes('egm') ||
+                           normalizedContent.includes('meeting');
     
     return hasPreparation && hasVetting && hasPublication && hasHKEX && 
-           hasListingDocuments && hasConditionalLogic;
+           hasCircular && hasShareholders;
   }
 }
