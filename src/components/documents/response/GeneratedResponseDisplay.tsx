@@ -21,7 +21,7 @@ const GeneratedResponseDisplay = ({
 }: GeneratedResponseDisplayProps) => {
   if (!response) return null;
 
-  // Format response with tables and enhanced paragraph/bullet point formatting
+  // Apply minimal table formatting only
   const formattedResponse = detectAndFormatTables(response);
   
   return (
@@ -70,6 +70,10 @@ const GeneratedResponseDisplay = ({
         dangerouslySetInnerHTML={{ __html: formattedResponse }}
       />
       <style>{`
+        .response-container {
+          line-height: 1.6;
+        }
+        
         .response-container h1, .response-container h2, .response-container h3 {
           font-weight: bold;
           margin: 1rem 0 0.5rem 0;
@@ -89,7 +93,6 @@ const GeneratedResponseDisplay = ({
         
         .response-container p {
           margin-bottom: 1rem;
-          line-height: 1.5;
         }
         
         .response-container strong {
@@ -100,26 +103,11 @@ const GeneratedResponseDisplay = ({
           font-style: italic;
         }
         
-        .response-container u {
-          text-decoration: underline;
-        }
-        
-        .response-container p.bullet-point {
-          margin: 0.25rem 0 0.25rem 1.5rem;
-          position: relative;
-          padding-left: 1rem;
-        }
-        
-        .response-container .bullet-point:before {
-          content: "•";
-          position: absolute;
-          left: -0.5rem;
-        }
-        
         .response-container table {
           border-collapse: collapse;
           margin: 1rem 0;
           width: 100%;
+          border: 1px solid #ddd;
         }
         
         .response-container table th,

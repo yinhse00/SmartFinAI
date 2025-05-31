@@ -18,18 +18,18 @@ export const useMessageFormatting = ({ content, originalContent, isBot }: UseMes
     const safeContent = content || "";
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
-    // Format tables and process content properly while preserving links
+    // SIMPLIFIED: Only apply table formatting for bot messages, preserve everything else
     if (isBot) {
       // Check if content already contains clickable links (anchor tags with href)
       const hasClickableLinks = /<a\s+[^>]*href[^>]*>.*?<\/a>/i.test(displayContent);
       
       if (hasClickableLinks) {
-        // Content already has clickable links - preserve as-is to avoid double formatting
+        // Content already has clickable links - preserve as-is
         console.log('Content already contains clickable links, preserving formatting');
         setFormattedContent(displayContent);
       } else {
-        // No existing links detected - safe to apply table formatting
-        console.log('No existing links detected, applying table formatting');
+        // Apply ONLY table formatting - no other processing
+        console.log('Applying minimal table formatting only');
         const formatted = detectAndFormatTables(displayContent);
         setFormattedContent(formatted);
       }
