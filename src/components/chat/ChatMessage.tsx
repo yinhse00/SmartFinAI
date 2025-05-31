@@ -6,53 +6,7 @@ import { MessageActions } from './message/MessageActions';
 import { MessageError } from './message/MessageError';
 import { useMessageFormatting } from './hooks/useMessageFormatting';
 import { getInitialVisibleChars, getCardClassName } from './utils/messageUtils';
-
-export interface Message {
-  id: string;
-  content: string;
-  isUser: boolean;
-  timestamp: Date;
-  isError?: boolean;
-  sender?: 'user' | 'bot';
-  metadata?: {
-    regulatoryContext?: string;
-    reasoning?: string;
-    queryType?: string;
-    financialAnalysis?: any;
-    isUsingFallback?: boolean;
-    verified?: boolean;
-    guidanceMaterialsUsed?: boolean;
-    sourceMaterials?: string[];
-    searchStrategy?: 'local_only' | 'live_only' | 'hybrid' | 'failed';
-    liveResultsCount?: number;
-    localResultsCount?: number;
-    isError?: boolean;
-    isTruncated?: boolean;
-    financialQueryType?: string;
-    processingTime?: number;
-    model?: string;
-    temperature?: number;
-    maxTokens?: number;
-    translation?: string;
-    validation?: {
-      isValid: boolean;
-      vettingConsistency: boolean;
-      guidanceConsistency: boolean;
-      validationNotes: string[];
-      confidence: number;
-    };
-    vettingRequired?: boolean;
-    vettingCategory?: string;
-    relevantGuidance?: number;
-    guidanceTypes?: string[];
-  };
-  references?: string[];
-  isTruncated?: boolean;
-  isBatchPart?: boolean;
-  originalContent?: string;
-  translationInProgress?: boolean;
-  isTranslated?: boolean;
-}
+import { Message } from './ChatMessage';
 
 interface ChatMessageProps {
   message: Message;
