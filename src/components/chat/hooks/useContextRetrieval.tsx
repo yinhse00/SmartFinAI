@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { hybridSearchService } from '@/services/search/hybridSearchService';
 import { contextService } from '@/services/regulatory/contextService';
@@ -39,7 +40,10 @@ export const useContextRetrieval = () => {
         };
       } else {
         // Fallback to existing context retrieval logic
-        const contextResult = await contextService.getRegulatoryContext(query, { prioritizeFAQ });
+        const contextResult = await contextService.getRegulatoryContext(query, { 
+          isPreliminaryAssessment: prioritizeFAQ,
+          metadata: { prioritizeFAQ }
+        });
         context = contextResult.context;
         reasoning = contextResult.reasoning;
         searchStrategy = contextResult.searchStrategy || 'local_only';
