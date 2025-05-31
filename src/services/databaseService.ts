@@ -18,5 +18,7 @@ import { initializeSampleData } from './database/sampleData';
 export { initializeSampleData };
 
 // Initialize sample data when importing this file
-// This will now check if data exists in Supabase first
-initializeSampleData();
+// This will now check if data exists in Supabase first and only add sample data if database is empty
+initializeSampleData().catch(error => {
+  console.warn('Sample data initialization failed:', error);
+});
