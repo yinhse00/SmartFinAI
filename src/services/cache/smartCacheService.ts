@@ -227,7 +227,7 @@ class SmartCacheService {
     }
     
     toDelete.forEach(key => this.cache.delete(key));
-    console.log(`Cleaned ${toDelete.length} old cache entries`);
+    console.log(`🧹 Cleaned ${toDelete.length} old cache entries`);
   }
   
   /**
@@ -262,30 +262,6 @@ class SmartCacheService {
       categories,
       entries
     };
-  }
-  
-  /**
-   * Clean expired and old entries
-   */
-  private cleanOldEntries(): void {
-    const now = Date.now();
-    const toDelete: string[] = [];
-    
-    for (const [key, entry] of this.cache.entries()) {
-      if (now - entry.timestamp > this.CACHE_EXPIRATION) {
-        toDelete.push(key);
-      }
-    }
-    
-    // If not enough expired entries, remove oldest ones
-    if (toDelete.length < 10) {
-      const entries = Array.from(this.cache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      entries.slice(0, 10).forEach(([key]) => toDelete.push(key));
-    }
-    
-    toDelete.forEach(key => this.cache.delete(key));
-    console.log(`🧹 Cleaned ${toDelete.length} old cache entries`);
   }
 }
 
