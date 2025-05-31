@@ -1,76 +1,93 @@
-
-import { enhancedContextService } from '@/services/regulatory/context/enhancedContextService';
+import { useState } from 'react';
+import { hybridSearchService } from '@/services/search/hybridSearchService';
+import { contextService } from '@/services/regulatory/contextService';
 
 export const useContextRetrieval = () => {
+  const [isRetrievingContext, setIsRetrievingContext] = useState(false);
+
   const retrieveRegulatoryContext = async (
-    queryText: string,
-    isFaqQuery: boolean
+    query: string,
+    prioritizeFAQ: boolean = false,
+    options?: { useHybridSearch?: boolean }
   ) => {
-    const contextStart = Date.now();
+    console.log('Starting enhanced context retrieval with hybrid search...');
+    setIsRetrievingContext(true);
+    
+    const startTime = Date.now();
     
     try {
-      console.log('Retrieving enhanced regulatory context...');
-      
-      // Use enhanced context service for comprehensive context gathering
-      const enhancedContext = await enhancedContextService.getEnhancedContext(
-        queryText,
-        { 
-          isPreliminaryAssessment: false,
-          metadata: { 
-            isFaqQuery,
-            useParallelProcessing: true
-          }
-        }
-      );
-      
-      const contextTime = Date.now() - contextStart;
-      
-      // Format the context for Grok
-      const formattedContext = enhancedContextService.formatEnhancedContextForGrok(enhancedContext);
-      
-      // Create reasoning that includes validation information
-      let reasoning = 'Enhanced regulatory context retrieved';
-      
-      if (enhancedContext.vettingInfo.isRequired) {
-        reasoning += ` with vetting requirements (${enhancedContext.vettingInfo.headlineCategory || 'applicable'})`;
+      let context = '';
+      let reasoning = '';
+      let searchStrategy = 'local_only';
+      let enhancedContext: any = {};
+
+      // Use hybrid search if enabled (default for current information queries)
+      if (options?.useHybridSearch !== false && hybridSearchService.needsLiveSearch(query)) {
+        console.log('Using hybrid search for current information...');
+        
+        const hybridResults = await hybridSearchService.search(query);
+        context = hybridSearchService.formatResultsForContext(hybridResults);
+        searchStrategy = hybridResults.searchStrategy;
+        
+        reasoning = `Used ${searchStrategy} search strategy. Found ${hybridResults.localResults.length} regulatory database entries and ${hybridResults.liveResults.length} live search results.`;
+        
+        enhancedContext = {
+          hasLiveResults: hybridResults.liveResults.length > 0,
+          liveResultsCount: hybridResults.liveResults.length,
+          localResultsCount: hybridResults.localResults.length,
+          searchStrategy: hybridResults.searchStrategy
+        };
+      } else {
+        // Fallback to existing context retrieval logic
+        const contextResult = await contextService.getRegulatoryContext(query, { prioritizeFAQ });
+        context = contextResult.context;
+        reasoning = contextResult.reasoning;
+        searchStrategy = contextResult.searchStrategy || 'local_only';
       }
-      
-      if (enhancedContext.guidanceValidation.hasRelevantGuidance) {
-        reasoning += ` and ${enhancedContext.guidanceValidation.matches.length} relevant guidance document(s)`;
-      }
-      
-      // Determine search strategy used
-      const searchStrategy = enhancedContext.contextMetadata.sources.join(' + ');
-      
-      console.log(`Enhanced context retrieved in ${contextTime}ms`);
-      console.log(`Sources: ${searchStrategy}`);
-      console.log(`Vetting required: ${enhancedContext.vettingInfo.isRequired}`);
-      console.log(`Guidance matches: ${enhancedContext.guidanceValidation.matches.length}`);
-      
+
+      const contextTime = Date.now() - startTime;
+      console.log(`Context retrieval completed in ${contextTime}ms using ${searchStrategy} strategy`);
+
       return {
-        regulatoryContext: formattedContext,
+        regulatoryContext: context,
         reasoning,
         contextTime,
         usedSummaryIndex: false,
         searchStrategy,
-        enhancedContext // Pass through for later use in validation
+        enhancedContext
       };
     } catch (error) {
       console.error('Error in enhanced context retrieval:', error);
       
-      // Fallback to basic context
-      const basicContext = '';
-      return {
-        regulatoryContext: basicContext,
-        reasoning: 'Enhanced context retrieval failed, using fallback',
-        contextTime: Date.now() - contextStart,
-        usedSummaryIndex: false,
-        searchStrategy: 'fallback'
-      };
+      // Fallback to local search only
+      try {
+        const fallbackResult = await contextService.getRegulatoryContext(query);
+        return {
+          regulatoryContext: fallbackResult.context,
+          reasoning: `Fallback to local search due to error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          contextTime: Date.now() - startTime,
+          usedSummaryIndex: false,
+          searchStrategy: 'local_only',
+          enhancedContext: {}
+        };
+      } catch (fallbackError) {
+        console.error('Fallback context retrieval also failed:', fallbackError);
+        return {
+          regulatoryContext: '',
+          reasoning: 'Context retrieval failed',
+          contextTime: Date.now() - startTime,
+          usedSummaryIndex: false,
+          searchStrategy: 'failed',
+          enhancedContext: {}
+        };
+      }
+    } finally {
+      setIsRetrievingContext(false);
     }
   };
 
   return {
-    retrieveRegulatoryContext
+    retrieveRegulatoryContext,
+    isRetrievingContext
   };
 };
