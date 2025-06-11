@@ -1,13 +1,14 @@
 
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
+import { analyzeContentForCharts } from '@/utils/chartParser';
 
 /**
- * Service for formatting final responses
+ * Service for formatting final responses with visual enhancements
  */
 export const responseFormatter = {
   /**
-   * Format the final response with metadata
+   * Format the final response with metadata and chart data
    */
   formatResponse: (
     text: string, 
@@ -22,6 +23,9 @@ export const responseFormatter = {
   ): GrokResponse => {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
+    
+    // Analyze content for chart opportunities
+    const chartAnalysis = analyzeContentForCharts(text);
     
     // Improve formatting with proper HTML elements for better readability
     let formattedText = text;
@@ -45,18 +49,18 @@ export const responseFormatter = {
       
       // Enhanced inline text formatting - RESTORE BOLD KEYWORDS
       formattedText = formattedText
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>') // Bold text with styling
-        .replace(/\*(.*?)\*/g, '<em>$1</em>') // Italic text
-        .replace(/__(.*?)__/g, '<u>$1</u>'); // Underlined text
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>')
+        .replace(/\*(.*?)\*/g, '<em>$1</em>')
+        .replace(/__(.*?)__/g, '<u>$1</u>');
       
       // Enhanced formatting for rule references - RESTORE BOLD REGULATORY TERMS
       formattedText = formattedText
         .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="font-bold text-finance-accent-blue">$1</strong>')
         .replace(/(\bGuidance Letter\s+\w+-\d+\b|\bListing Decision\s+\w+-\d+\b|\bFAQ\s+\d+\.\d+\b)/g, 
                 '<strong class="font-bold text-finance-accent-green">$1</strong>')
-        .replace(/(\bHK\$[\d,]+(?:\.\d+)?\s*(?:million|billion)?\b)/g, '<strong class="font-bold">$1</strong>') // Financial amounts
+        .replace(/(\bHK\$[\d,]+(?:\.\d+)?\s*(?:million|billion)?\b)/g, '<strong class="font-bold">$1</strong>')
         .replace(/(\b(?:independent shareholders|connected transaction|aggregation|whitewash|takeover|substantial shareholder)\b)/gi, 
-                '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>'); // Key financial terms
+                '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>');
       
       // Enhanced bullet point formatting - RESTORE BULLET POINTS
       formattedText = formattedText
@@ -131,7 +135,8 @@ export const responseFormatter = {
           isComplete: completenessOverride || !diagnostics.isTruncated,
           confidence: diagnostics.confidence,
           reasons: diagnostics.reasons
-        }
+        },
+        chartAnalysis: chartAnalysis // Add chart analysis to metadata
       }
     };
   }

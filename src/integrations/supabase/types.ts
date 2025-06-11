@@ -13,75 +13,40 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          exemptions: string | null
-          headline_category: string
+          gem_listingrules: string | null
+          generally_headline_categories: string | null
           id: string
           is_vetting_required: boolean
-          rule_reference: string | null
+          matter_transaction_question: string
+          md_listingrules: string | null
+          means_disclosure: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string | null
-          exemptions?: string | null
-          headline_category: string
+          gem_listingrules?: string | null
+          generally_headline_categories?: string | null
           id?: string
           is_vetting_required?: boolean
-          rule_reference?: string | null
+          matter_transaction_question: string
+          md_listingrules?: string | null
+          means_disclosure?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string | null
-          exemptions?: string | null
-          headline_category?: string
+          gem_listingrules?: string | null
+          generally_headline_categories?: string | null
           id?: string
           is_vetting_required?: boolean
-          rule_reference?: string | null
+          matter_transaction_question?: string
+          md_listingrules?: string | null
+          means_disclosure?: string | null
           updated_at?: string
         }
         Relationships: []
-      }
-      interpretation_guidance: {
-        Row: {
-          applicable_rules: string[] | null
-          content: string
-          created_at: string
-          guidance_number: string | null
-          id: string
-          issue_date: string | null
-          source_document_id: string | null
-          title: string
-        }
-        Insert: {
-          applicable_rules?: string[] | null
-          content: string
-          created_at?: string
-          guidance_number?: string | null
-          id?: string
-          issue_date?: string | null
-          source_document_id?: string | null
-          title: string
-        }
-        Update: {
-          applicable_rules?: string[] | null
-          content?: string
-          created_at?: string
-          guidance_number?: string | null
-          id?: string
-          issue_date?: string | null
-          source_document_id?: string | null
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "interpretation_guidance_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       "Listing Rules": {
         Row: {
@@ -98,10 +63,131 @@ export type Database = {
         }
         Relationships: []
       }
-      reference_documents: {
+      listingrule_listed_faq: {
+        Row: {
+          faq_Number: string
+          gem_listingrules: string | null
+          id: string
+          md_listingrules: string | null
+          Sub_topics: string | null
+          topics: string
+        }
+        Insert: {
+          faq_Number: string
+          gem_listingrules?: string | null
+          id?: string
+          md_listingrules?: string | null
+          Sub_topics?: string | null
+          topics: string
+        }
+        Update: {
+          faq_Number?: string
+          gem_listingrules?: string | null
+          id?: string
+          md_listingrules?: string | null
+          Sub_topics?: string | null
+          topics?: string
+        }
+        Relationships: []
+      }
+      listingrule_new_faq: {
+        Row: {
+          chapter: string | null
+          createtime: string | null
+          faqtopic: string | null
+          id: string
+          mblistingrule_reference: string | null
+          question_no: string | null
+          seriesno: string
+          topic: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          createtime?: string | null
+          faqtopic?: string | null
+          id?: string
+          mblistingrule_reference?: string | null
+          question_no?: string | null
+          seriesno: string
+          topic?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          createtime?: string | null
+          faqtopic?: string | null
+          id?: string
+          mblistingrule_reference?: string | null
+          question_no?: string | null
+          seriesno?: string
+          topic?: string | null
+        }
+        Relationships: []
+      }
+      listingrule_new_gl: {
+        Row: {
+          chapter: string | null
+          created_at: string
+          id: string
+          mblistingrules_Topics: string | null
+          particulars: string | null
+          reference_no: string | null
+          title: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          created_at?: string
+          id?: string
+          mblistingrules_Topics?: string | null
+          particulars?: string | null
+          reference_no?: string | null
+          title?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          created_at?: string
+          id?: string
+          mblistingrules_Topics?: string | null
+          particulars?: string | null
+          reference_no?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      listingrule_new_ld: {
+        Row: {
+          chapter: string | null
+          createtime: string | null
+          id: string
+          mblistingrules_Topics: string
+          particulars: string | null
+          reference_No: string
+          title: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          createtime?: string | null
+          id?: string
+          mblistingrules_Topics: string
+          particulars?: string | null
+          reference_No: string
+          title?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          createtime?: string | null
+          id?: string
+          mblistingrules_Topics?: string
+          particulars?: string | null
+          reference_No?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      mb_listingrule_documents: {
         Row: {
           category: string
           created_at: string
+          description: string | null
           file_path: string
           file_size: number | null
           file_type: string | null
@@ -113,6 +199,7 @@ export type Database = {
         Insert: {
           category: string
           created_at?: string
+          description?: string | null
           file_path: string
           file_size?: number | null
           file_type?: string | null
@@ -124,6 +211,7 @@ export type Database = {
         Update: {
           category?: string
           created_at?: string
+          description?: string | null
           file_path?: string
           file_size?: number | null
           file_type?: string | null
@@ -163,93 +251,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      regulatory_definitions: {
-        Row: {
-          category_id: string | null
-          created_at: string
-          definition: string
-          id: string
-          source_provision_id: string | null
-          term: string
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string
-          definition: string
-          id?: string
-          source_provision_id?: string | null
-          term: string
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string
-          definition?: string
-          id?: string
-          source_provision_id?: string | null
-          term?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_definitions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_definitions_source_provision_id_fkey"
-            columns: ["source_provision_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regulatory_faqs: {
-        Row: {
-          answer: string
-          category_id: string | null
-          created_at: string
-          id: string
-          question: string
-          related_provisions: string[] | null
-          source_document_id: string | null
-        }
-        Insert: {
-          answer: string
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          question: string
-          related_provisions?: string[] | null
-          source_document_id?: string | null
-        }
-        Update: {
-          answer?: string
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          question?: string
-          related_provisions?: string[] | null
-          source_document_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_faqs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_faqs_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       regulatory_provisions: {
         Row: {
@@ -309,71 +310,7 @@ export type Database = {
           title?: string
           version?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_provisions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_provisions_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_provisions_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rule_cross_references: {
-        Row: {
-          created_at: string
-          from_rule_id: string
-          id: string
-          reference_text: string | null
-          reference_type: string | null
-          to_rule_id: string
-        }
-        Insert: {
-          created_at?: string
-          from_rule_id: string
-          id?: string
-          reference_text?: string | null
-          reference_type?: string | null
-          to_rule_id: string
-        }
-        Update: {
-          created_at?: string
-          from_rule_id?: string
-          id?: string
-          reference_text?: string | null
-          reference_type?: string | null
-          to_rule_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rule_cross_references_from_rule_id_fkey"
-            columns: ["from_rule_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rule_cross_references_to_rule_id_fkey"
-            columns: ["to_rule_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       rule_keywords: {
         Row: {
@@ -427,15 +364,7 @@ export type Database = {
           provision_id?: string
           search_vector?: unknown | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "search_index_provision_id_fkey"
-            columns: ["provision_id"]
-            isOneToOne: true
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
