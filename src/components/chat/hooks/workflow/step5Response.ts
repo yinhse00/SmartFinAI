@@ -3,7 +3,7 @@ import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 
 /**
- * Step 5: Enhanced Response Generation with visual output optimization
+ * Step 5: Enhanced Response Generation with quality-focused parameters
  */
 export const executeStep5 = async (
   params: any, 
@@ -34,24 +34,9 @@ export const executeStep5 = async (
                           params.query.toLowerCase().includes('timetable') ||
                           params.query.toLowerCase().includes('rights issue');
     
-    // Determine if this query would benefit from visual representation
-    const isProcessQuery = params.query.toLowerCase().includes('process') ||
-                          params.query.toLowerCase().includes('procedure') ||
-                          params.query.toLowerCase().includes('steps') ||
-                          params.query.toLowerCase().includes('how to');
-    
-    const isTimelineQuery = params.query.toLowerCase().includes('timeline') ||
-                           params.query.toLowerCase().includes('timetable') ||
-                           params.query.toLowerCase().includes('schedule') ||
-                           params.query.toLowerCase().includes('deadline');
-    
-    const isDecisionQuery = params.query.toLowerCase().includes('criteria') ||
-                           params.query.toLowerCase().includes('requirement') ||
-                           params.query.toLowerCase().includes('exemption') ||
-                           params.query.toLowerCase().includes('whether');
-    
-    // Create enhanced instructions with visual formatting guidance
-    let enhancedInstructions = `
+    // Create quality-focused instructions with improved formatting guidance for semantic HTML
+    // and professional tone guidance
+    const enhancedInstructions = `
 IMPORTANT: Provide a comprehensive and thorough response. Include all relevant information with appropriate formatting.
 
 PROFESSIONAL TONE GUIDELINES:
@@ -96,46 +81,6 @@ For rules interpretation:
 
 Ensure your response is complete, accurate, and addresses all aspects of the query.
 `;
-
-    // Add specific visual formatting hints based on query type
-    if (isTimelineQuery) {
-      enhancedInstructions += `
-
-TIMELINE FORMATTING:
-- Structure timeline information clearly with T-X or T+X notation (e.g., T-15, T+5)
-- Use consistent date formats and include day descriptions
-- Organize chronologically from earliest to latest events
-- Include both deadlines and milestones
-- Specify business days vs calendar days where relevant
-- Bold critical deadlines and submission dates
-`;
-    }
-    
-    if (isProcessQuery) {
-      enhancedInstructions += `
-
-PROCESS FORMATTING:
-- Number each step clearly (Step 1, Step 2, etc.)
-- Use action-oriented language for each step
-- Include responsible parties and timeframes
-- Show decision points and alternative paths
-- Highlight approval requirements and checkpoints
-- Include any parallel processes or dependencies
-`;
-    }
-    
-    if (isDecisionQuery) {
-      enhancedInstructions += `
-
-DECISION CRITERIA FORMATTING:
-- Clearly state the main decision question
-- Present criteria in a logical order
-- Use "if/then" structure for conditional requirements
-- Distinguish between mandatory and optional criteria
-- Include exemption conditions and their requirements
-- Show the decision outcomes clearly
-`;
-    }
     
     // Quality-optimized response parameters - ALWAYS use full model
     const responseParams = {
@@ -187,3 +132,4 @@ DECISION CRITERIA FORMATTING:
     };
   }
 };
+

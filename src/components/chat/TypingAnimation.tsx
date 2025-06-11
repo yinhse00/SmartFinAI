@@ -39,10 +39,17 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
     
     // Show initial characters immediately for perceived responsiveness
     if (initialVisibleChars > 0 && text.length > 0) {
-      setDisplayedText(text.substring(0, Math.min(initialVisibleChars, text.length)));
-      setCharacterIndex(Math.min(initialVisibleChars, text.length));
+      if (renderAsHTML) {
+        // For HTML content, find a safe breaking point that doesn't break tags
+        const safeBreakpoint = findSafeHtmlBreakpoint(text, initialVisibleChars);
+        setDisplayedText(text.substring(0, safeBreakpoint));
+        setCharacterIndex(safeBreakpoint);
+      } else {
+        setDisplayedText(text.substring(0, Math.min(initialVisibleChars, text.length)));
+        setCharacterIndex(Math.min(initialVisibleChars, text.length));
+      }
     }
-  }, [text, initialVisibleChars]);
+  }, [text, initialVisibleChars, renderAsHTML]);
 
   // Clean up timer on unmount
   useEffect(() => {
@@ -55,12 +62,68 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
   // Reset when text changes
   useEffect(() => {
-    setCharacterIndex(initialVisibleChars > 0 ? Math.min(initialVisibleChars, text.length) : 0);
-    setDisplayedText(initialVisibleChars > 0 ? text.substring(0, Math.min(initialVisibleChars, text.length)) : '');
+    const initialChars = initialVisibleChars > 0 ? Math.min(initialVisibleChars, text.length) : 0;
+    
+    if (renderAsHTML && initialChars > 0) {
+      const safeBreakpoint = findSafeHtmlBreakpoint(text, initialChars);
+      setCharacterIndex(safeBreakpoint);
+      setDisplayedText(text.substring(0, safeBreakpoint));
+    } else {
+      setCharacterIndex(initialChars);
+      setDisplayedText(initialChars > 0 ? text.substring(0, initialChars) : '');
+    }
     setIsPaused(false);
-  }, [text, initialVisibleChars]);
+  }, [text, initialVisibleChars, renderAsHTML]);
 
-  // Enhanced typing effect with adaptive speed
+  // Helper function to find safe HTML breaking points
+  const findSafeHtmlBreakpoint = (htmlText: string, targetIndex: number): number => {
+    if (targetIndex >= htmlText.length) return htmlText.length;
+    
+    // Find the nearest safe breaking point that doesn't break HTML tags
+    let safeIndex = targetIndex;
+    
+    // Look backwards for a safe spot (outside of any HTML tag)
+    while (safeIndex > 0) {
+      const beforeChar = htmlText[safeIndex - 1];
+      const afterChar = htmlText[safeIndex];
+      
+      // Safe if we're not inside a tag
+      if (beforeChar !== '<' && afterChar !== '>' && !isInsideHtmlTag(htmlText, safeIndex)) {
+        break;
+      }
+      safeIndex--;
+    }
+    
+    return safeIndex;
+  };
+
+  // Helper function to check if a position is inside an HTML tag
+  const isInsideHtmlTag = (htmlText: string, position: number): boolean => {
+    const beforeText = htmlText.substring(0, position);
+    const lastOpenTag = beforeText.lastIndexOf('<');
+    const lastCloseTag = beforeText.lastIndexOf('>');
+    
+    return lastOpenTag > lastCloseTag;
+  };
+
+  // Helper function to get the next safe position for HTML content
+  const getNextSafePosition = (currentIndex: number): number => {
+    if (currentIndex >= text.length) return text.length;
+    
+    const currentChar = text[currentIndex];
+    
+    // If we hit an opening tag, jump to after the complete tag
+    if (currentChar === '<') {
+      const tagEnd = text.indexOf('>', currentIndex);
+      if (tagEnd !== -1) {
+        return tagEnd + 1;
+      }
+    }
+    
+    return currentIndex + 1;
+  };
+
+  // Enhanced typing effect with HTML awareness
   useEffect(() => {
     if (characterIndex >= text.length) {
       onComplete && onComplete();
@@ -71,6 +134,17 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
 
     // Base typing speed
     let baseDelay = 1000 / typingSpeed;
+    
+    // For HTML content, use safe positioning
+    let nextIndex = characterIndex + 1;
+    if (renderAsHTML) {
+      nextIndex = getNextSafePosition(characterIndex);
+      
+      // If we're jumping over a tag, reduce delay
+      if (nextIndex - characterIndex > 1) {
+        baseDelay *= 0.3; // Faster for tag processing
+      }
+    }
     
     // Adaptive typing speed based on content
     const currentChar = text[characterIndex] || '';
@@ -93,42 +167,18 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
     if (nextChars.includes('```') || nextChars.includes('|')) {
       baseDelay *= 0.5; // Speed through code blocks and tables
     }
-    
-    // Handle HTML tags specially
-    if (renderAsHTML) {
-      if (currentChar === '<') {
-        const tagEndIndex = text.indexOf('>', characterIndex);
-        if (tagEndIndex > characterIndex) {
-          const tagContent = text.substring(characterIndex, tagEndIndex + 1);
-          
-          if (tagContent.includes('<p') || tagContent.includes('<h')) {
-            baseDelay *= 2; // Pause for paragraph tags
-          } else if (tagContent.includes('bullet-point') || tagContent.includes('<li')) {
-            baseDelay *= 1.5; // Pause for list items
-          } else if (tagContent.includes('<strong') || tagContent.includes('<b')) {
-            baseDelay *= 0.7; // Faster for emphasized text
-          }
-          
-          // Speed up tag rendering (don't need to see tags typed out character by character)
-          timerId.current = setTimeout(() => {
-            setDisplayedText(text.slice(0, tagEndIndex + 1));
-            setCharacterIndex(tagEndIndex + 1);
-            
-            // Notify progress
-            if (onProgress && characterIndex % 20 === 0) {
-              onProgress();
-            }
-          }, baseDelay);
-          
-          return;
-        }
-      }
-    }
 
-    // Normal character typing
+    // Normal character typing with HTML awareness
     timerId.current = setTimeout(() => {
-      setDisplayedText(text.slice(0, characterIndex + 1));
-      setCharacterIndex(prev => prev + 1);
+      if (renderAsHTML) {
+        // For HTML, ensure we get a safe substring
+        const safeEndIndex = findSafeHtmlBreakpoint(text, nextIndex);
+        setDisplayedText(text.slice(0, safeEndIndex));
+        setCharacterIndex(safeEndIndex);
+      } else {
+        setDisplayedText(text.slice(0, nextIndex));
+        setCharacterIndex(nextIndex);
+      }
       
       // Notify parent component of progress
       if (onProgress && characterIndex % 20 === 0) {

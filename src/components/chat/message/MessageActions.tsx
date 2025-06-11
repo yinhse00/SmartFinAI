@@ -2,9 +2,11 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, ExternalLink } from 'lucide-react';
 import ValidationStatusIndicator from '../ValidationStatusIndicator';
 import { Message } from '../ChatMessage';
+import { mapReference } from '@/services/regulatory/urlMappingService';
+import { extractRuleReferences } from '@/utils/regulatoryReferenceFormatter';
 
 interface MessageActionsProps {
   message: Message;
@@ -33,6 +35,45 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
   references,
   isTruncated
 }) => {
+  // Convert reference strings to clickable badges
+  const getClickableReferences = (refs: string[]) => {
+    return refs.map((ref, i) => {
+      // Try to extract and map the reference
+      const extractedRefs = extractRuleReferences(ref);
+      if (extractedRefs.length > 0) {
+        const extracted = extractedRefs[0];
+        const mapping = mapReference(extracted.type, extracted.identifier, ref);
+        
+        if (mapping) {
+          return (
+            <Badge 
+              key={i} 
+              variant="outline" 
+              className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20 cursor-pointer hover:bg-finance-light-blue/40 dark:hover:bg-finance-medium-blue/40 transition-colors group"
+              onClick={() => window.open(mapping.url, '_blank', 'noopener,noreferrer')}
+            >
+              <span className="flex items-center gap-1">
+                {ref}
+                <ExternalLink size={10} className="opacity-60 group-hover:opacity-100" />
+              </span>
+            </Badge>
+          );
+        }
+      }
+      
+      // Fallback to non-clickable badge
+      return (
+        <Badge 
+          key={i} 
+          variant="outline" 
+          className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20"
+        >
+          {ref}
+        </Badge>
+      );
+    });
+  };
+
   return (
     <>
       {/* Validation Status Indicator for bot messages */}
@@ -75,18 +116,10 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
         </div>
       )}
       
-      {/* References badges */}
+      {/* Enhanced clickable references badges */}
       {references && references.length > 0 && isTypingComplete && !isTranslating && !translationInProgress && (
         <div className="mt-2 flex flex-wrap gap-1">
-          {references.map((ref, i) => (
-            <Badge 
-              key={i} 
-              variant="outline" 
-              className="text-xs bg-finance-light-blue/20 dark:bg-finance-medium-blue/20"
-            >
-              {ref}
-            </Badge>
-          ))}
+          {getClickableReferences(references)}
         </div>
       )}
     </>

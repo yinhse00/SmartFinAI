@@ -1,14 +1,14 @@
 
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
-import { analyzeContentForCharts } from '@/utils/chartParser';
+import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
 
 /**
- * Service for formatting final responses with visual enhancements
+ * Service for formatting final responses with simplified, clean formatting
  */
 export const responseFormatter = {
   /**
-   * Format the final response with metadata and chart data
+   * Format the final response with minimal, clean formatting
    */
   formatResponse: (
     text: string, 
@@ -24,73 +24,33 @@ export const responseFormatter = {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Analyze content for chart opportunities
-    const chartAnalysis = analyzeContentForCharts(text);
-    
-    // Improve formatting with proper HTML elements for better readability
+    // Start with the original text
     let formattedText = text;
     
-    // Check if text already contains HTML formatting
+    // ONLY apply clickable links to regulatory references - no other formatting
+    console.log('Applying clickable links to regulatory references...');
+    formattedText = enhanceWithClickableLinks(formattedText);
+    console.log('Regulatory references enhanced with links');
+    
+    // SIMPLIFIED: Only apply minimal formatting if no HTML is present
     const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
     
-    // Only apply formatting if HTML formatting is not already present
     if (!hasHtmlFormatting) {
-      // Replace markdown-style headers with semantic HTML elements
+      // Only convert basic markdown to minimal HTML - no CSS classes
       formattedText = formattedText
-        .replace(/^###\s+(.*?)$/gm, '<h3 class="text-lg font-semibold my-3">$1</h3>')
-        .replace(/^##\s+(.*?)$/gm, '<h2 class="text-xl font-semibold my-3">$1</h2>')
-        .replace(/^#\s+(.*?)$/gm, '<h1 class="text-2xl font-bold my-4">$1</h1>');
+        .replace(/^###\s+(.*?)$/gm, '<h3>$1</h3>')
+        .replace(/^##\s+(.*?)$/gm, '<h2>$1</h2>')
+        .replace(/^#\s+(.*?)$/gm, '<h1>$1</h1>')
+        .replace(/\*\*((?!<a\s).*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>')
+        .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li>$3</li>');
       
-      // Replace horizontal rules with proper spacing
-      formattedText = formattedText
-        .replace(/^---+$/gm, '<div class="my-4"></div>')
-        .replace(/^\*\*\*+$/gm, '<div class="my-4"></div>')
-        .replace(/^___+$/gm, '<div class="my-4"></div>');
-      
-      // Enhanced inline text formatting - RESTORE BOLD KEYWORDS
-      formattedText = formattedText
-        .replace(/\*\*(.*?)\*\*/g, '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>')
-        .replace(/__(.*?)__/g, '<u>$1</u>');
-      
-      // Enhanced formatting for rule references - RESTORE BOLD REGULATORY TERMS
-      formattedText = formattedText
-        .replace(/(\bRule\s+\d+\.\d+[A-Z]?\b|\bChapter\s+\d+[A-Z]?\b)/g, '<strong class="font-bold text-finance-accent-blue">$1</strong>')
-        .replace(/(\bGuidance Letter\s+\w+-\d+\b|\bListing Decision\s+\w+-\d+\b|\bFAQ\s+\d+\.\d+\b)/g, 
-                '<strong class="font-bold text-finance-accent-green">$1</strong>')
-        .replace(/(\bHK\$[\d,]+(?:\.\d+)?\s*(?:million|billion)?\b)/g, '<strong class="font-bold">$1</strong>')
-        .replace(/(\b(?:independent shareholders|connected transaction|aggregation|whitewash|takeover|substantial shareholder)\b)/gi, 
-                '<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">$1</strong>');
-      
-      // Enhanced bullet point formatting - RESTORE BULLET POINTS
-      formattedText = formattedText
-        .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li class="my-1 ml-4">$3</li>');
-      
-      // Wrap consecutive bullet points in ul tags
-      formattedText = formattedText.replace(
-        /(<li class="my-1 ml-4">.*?<\/li>)(\s*<li class="my-1 ml-4">.*?<\/li>)*/gs,
-        '<ul class="list-disc pl-6 my-3">$&</ul>'
-      );
-      
-      // Enhance paragraphing with proper spacing
+      // Simple paragraph wrapping without CSS classes
       const paragraphs = formattedText.split(/\n\n+/);
       formattedText = paragraphs.map(p => {
-        // Skip already formatted elements (those that start with HTML tags)
-        if (p.trim().startsWith('<')) return p;
-        
-        // Format as paragraph if it's not already HTML and isn't empty
-        if (p.trim().length > 0) {
-          return `<p class="my-2 leading-relaxed">${p.trim()}</p>`;
-        }
-        return p;
+        if (p.trim().startsWith('<') || p.trim().length === 0) return p;
+        return `<p>${p.trim()}</p>`;
       }).join('\n\n');
-      
-      // Add section for conclusion if not present and response is long enough
-      if (!formattedText.includes('<h1>Conclusion</h1>') && 
-          !formattedText.includes('<h2>Conclusion</h2>') && 
-          formattedText.length > 1500) {
-        formattedText += '\n\n<h2 class="text-xl font-semibold my-3">Conclusion</h2>\n<p class="my-2">The above analysis provides a comprehensive overview based on the applicable Hong Kong regulatory framework. Always consult the specific rules and guidance for your particular situation.</p>';
-      }
     }
     
     // Correct the profit test requirements for HKEX listing
@@ -114,9 +74,10 @@ export const responseFormatter = {
         text.toLowerCase().includes('within 12 months') &&
         text.toLowerCase().includes('independent shareholders') &&
         text.toLowerCase().includes('conclusion')) {
-      // For Rule 7.19A responses that contain key elements, override truncation detection
       completenessOverride = true;
     }
+    
+    console.log('Response formatting complete - clean layout restored');
     
     return {
       text: formattedText,
@@ -135,8 +96,7 @@ export const responseFormatter = {
           isComplete: completenessOverride || !diagnostics.isTruncated,
           confidence: diagnostics.confidence,
           reasons: diagnostics.reasons
-        },
-        chartAnalysis: chartAnalysis // Add chart analysis to metadata
+        }
       }
     };
   }

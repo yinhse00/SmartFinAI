@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './useStep1Initial';
@@ -70,13 +69,14 @@ export const useWorkflowProcessor = ({
       
       setMessages([...updatedMessages, assistantMessage]);
       
-      // Step 1: Enhanced Initial Processing with parallel classification
+      // Step 1: Enhanced Initial Processing with hybrid search
       setCurrentStep('initial');
       const step1Result = await step1Initial({
         query,
         storeTranslation,
         setStepProgress,
-        retrieveRegulatoryContext
+        retrieveRegulatoryContext: (q: string, prioritizeFAQ?: boolean) => 
+          retrieveRegulatoryContext(q, prioritizeFAQ, { useHybridSearch: true })
       });
       
       // Get workflow parameters from step 1 result
@@ -159,7 +159,10 @@ export const useWorkflowProcessor = ({
             metadata: {
               ...(step5Result.metadata || {}),
               guidanceMaterialsUsed: Boolean(params.guidanceContext),
-              sourceMaterials: params.sourceMaterials || []
+              sourceMaterials: params.sourceMaterials || [],
+              searchStrategy: params.searchStrategy,
+              liveResultsCount: params.liveResultsCount,
+              localResultsCount: params.localResultsCount
             }
           };
           
@@ -182,7 +185,10 @@ export const useWorkflowProcessor = ({
             metadata: {
               ...(step5Result.metadata || {}),
               guidanceMaterialsUsed: Boolean(params.guidanceContext),
-              sourceMaterials: params.sourceMaterials || []
+              sourceMaterials: params.sourceMaterials || [],
+              searchStrategy: params.searchStrategy,
+              liveResultsCount: params.liveResultsCount,
+              localResultsCount: params.localResultsCount
             }
           };
           
