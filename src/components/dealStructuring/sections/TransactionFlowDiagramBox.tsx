@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Network } from 'lucide-react';
@@ -10,7 +11,7 @@ interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
 }
 
-// Convert analysis results to transaction flow format
+// Enhanced conversion function to extract all real transaction data
 const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | undefined => {
   if (!results.shareholding && !results.shareholdingChanges) {
     return undefined;
@@ -21,22 +22,82 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
   const afterShareholders = results.shareholdingChanges?.after || results.shareholding?.after || [];
   
   // Find buyer/acquiring entity from after shareholding
-  // Look for institutional type if available, otherwise use the largest shareholder
   const buyerShareholder = afterShareholders.find(s => 
     ('type' in s && s.type === 'institutional') && s.percentage > 50
   ) || afterShareholders.find(s => s.percentage > 50) || afterShareholders[0];
   
   const remainingShareholders = afterShareholders.filter(s => s !== buyerShareholder);
   
-  // Extract transaction amount from cost analysis
-  const transactionAmount = results.costs?.total || 1000000; // Convert to millions
-  const transactionAmountM = Math.round(transactionAmount / 1000000);
-
-  // Get target company name from transaction type or use default
-  const targetCompanyName = results.transactionType?.includes('acquisition') ? 
-    'Target Company' : 'Target Company';
+  // Extract REAL transaction data from analysis results
+  const transactionAmount = results.costs?.total || 0;
+  const currency = results.costs?.breakdown?.find(item => 
+    item.description.toLowerCase().includes('consideration') || 
+    item.description.toLowerCase().includes('payment')
+  )?.description.includes('USD') ? 'USD' : 'HKD';
   
-  const buyerCompanyName = buyerShareholder?.name || 'Acquiring Company';
+  // Get actual company names from structure or use analysis context
+  const targetCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'target')?.name ||
+    results.structure?.recommended?.split(' ')[0] || 'Target Company';
+  
+  const buyerCompanyName = buyerShareholder?.name || 
+    results.corporateStructure?.entities?.find(e => e.type === 'parent')?.name || 
+    'Acquiring Company';
+
+  // Generate dynamic transaction steps based on actual transaction type
+  const generateTransactionSteps = () => {
+    const transactionType = results.transactionType.toLowerCase();
+    const steps = [];
+    
+    if (transactionType.includes('rights issue')) {
+      steps.push({
+        id: 'step-1',
+        title: 'Rights Issue Announcement',
+        description: `Announcement of rights issue by ${targetCompanyName}`,
+        entities: ['before-target-1']
+      });
+      steps.push({
+        id: 'step-2',
+        title: 'Subscription Process',
+        description: `${buyerCompanyName} subscribes for rights shares`,
+        entities: ['after-buyer-1', 'before-target-1']
+      });
+    } else if (transactionType.includes('acquisition') || transactionType.includes('takeover')) {
+      steps.push({
+        id: 'step-1',
+        title: 'Due Diligence',
+        description: `${buyerCompanyName} conducts due diligence on ${targetCompanyName}`,
+        entities: ['after-buyer-1', 'before-target-1']
+      });
+      steps.push({
+        id: 'step-2',
+        title: results.transactionType,
+        description: `Execution of ${results.transactionType.toLowerCase()}`,
+        entities: ['after-buyer-1', ...beforeShareholders.map((_, index) => `before-stockholder-${index}`)]
+      });
+    } else {
+      steps.push({
+        id: 'step-1',
+        title: 'Transaction Preparation',
+        description: `Preparation for ${results.transactionType}`,
+        entities: ['after-buyer-1', 'before-target-1']
+      });
+      steps.push({
+        id: 'step-2',
+        title: results.transactionType,
+        description: `Completion of ${results.transactionType}`,
+        entities: ['after-buyer-1', 'before-target-1']
+      });
+    }
+    
+    steps.push({
+      id: 'step-3',
+      title: 'Completion',
+      description: `Transfer of ownership and payment of ${currency} ${transactionAmount.toLocaleString()} consideration`,
+      entities: ['after-buyer-1', 'after-consideration-1']
+    });
+    
+    return steps;
+  };
 
   const before = {
     entities: [
@@ -79,7 +140,7 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         id: 'after-buyer-1', 
         name: buyerCompanyName, 
         type: 'buyer' as const, 
-        percentage: buyerShareholder?.percentage || 70 
+        percentage: buyerShareholder?.percentage || 0
       },
       ...remainingShareholders.map((shareholder, index) => ({
         id: `after-stockholder-${index + 1}`,
@@ -89,9 +150,10 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       })),
       { 
         id: 'after-consideration-1', 
-        name: `Cash Consideration`, 
+        name: `${currency} Consideration`, 
         type: 'consideration' as const, 
-        value: transactionAmountM 
+        value: transactionAmount,
+        currency: currency
       },
       // Include subsidiaries in after state
       ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
@@ -106,7 +168,7 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         source: 'after-buyer-1', 
         target: 'after-target-1', 
         type: 'ownership' as const, 
-        percentage: buyerShareholder?.percentage || 70 
+        percentage: buyerShareholder?.percentage || 0
       },
       ...remainingShareholders.map((shareholder, index) => ({
         source: `after-stockholder-${index + 1}`,
@@ -118,7 +180,7 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         source: 'after-buyer-1', 
         target: 'after-consideration-1', 
         type: 'consideration' as const, 
-        value: transactionAmountM 
+        value: transactionAmount
       },
       // Add subsidiary relationships in after state
       ...(results.corporateStructure?.relationships?.map((rel, index) => ({
@@ -133,26 +195,16 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
   return {
     before,
     after,
-    transactionSteps: [
-      {
-        id: 'step-1',
-        title: 'Due Diligence',
-        description: 'Buyer conducts comprehensive due diligence',
-        entities: ['after-buyer-1', 'after-target-1'],
-      },
-      {
-        id: 'step-2',
-        title: 'Share Purchase Agreement',
-        description: 'Execution of share purchase agreement',
-        entities: ['after-buyer-1', ...remainingShareholders.map((_, index) => `after-stockholder-${index + 1}`)],
-      },
-      {
-        id: 'step-3',
-        title: 'Completion',
-        description: 'Transfer of shares and payment of consideration',
-        entities: ['after-buyer-1', ...remainingShareholders.map((_, index) => `after-stockholder-${index + 1}`), 'after-consideration-1'],
-      },
-    ],
+    transactionSteps: generateTransactionSteps(),
+    // Pass additional real transaction context
+    transactionContext: {
+      type: results.transactionType,
+      amount: transactionAmount,
+      currency: currency,
+      targetName: targetCompanyName,
+      buyerName: buyerCompanyName,
+      description: results.structure?.rationale || `${results.transactionType} transaction`
+    }
   };
 };
 

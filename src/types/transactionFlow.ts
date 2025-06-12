@@ -8,6 +8,7 @@ export interface TransactionEntity {
   value?: number;
   percentage?: number;
   description?: string;
+  currency?: string;
 }
 
 export interface TransactionFlow {
@@ -36,6 +37,15 @@ export interface TransactionFlow {
     description: string;
     entities: string[];
   }>;
+  // Add transaction context for real data
+  transactionContext?: {
+    type: string;
+    amount: number;
+    currency: string;
+    targetName: string;
+    buyerName: string;
+    description: string;
+  };
 }
 
 export interface FlowDiagramNode extends Node {
