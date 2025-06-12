@@ -24,10 +24,14 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         </div>
       </div>
       
-      {/* Second Row: Shareholding, Regulatory, and Timetable */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Second Row: Shareholding and Regulatory */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <ShareholdingImpactBox results={results} />
         <RegulatoryComplianceBox results={results} />
+      </div>
+      
+      {/* Third Row: Execution Timetable */}
+      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
         <ExecutionTimetableBox results={results} />
       </div>
     </div>
