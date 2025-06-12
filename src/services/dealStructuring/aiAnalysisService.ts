@@ -1,6 +1,7 @@
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface TransactionAnalysisRequest {
   transactionType: string;
@@ -217,18 +218,18 @@ function parseAnalysisResponse(responseText: string): AnalysisResults {
 /**
  * Create fallback shareholding changes when data is missing
  */
-function createFallbackShareholdingChanges() {
+function createFallbackShareholdingChanges(): ShareholdingChanges {
   return {
     before: [
-      { name: "Existing Shareholders", percentage: 100, type: "institutional", isConnected: false }
+      { name: "Existing Shareholders", percentage: 100, type: "institutional" as const, isConnected: false }
     ],
     after: [
-      { name: "Existing Shareholders", percentage: 80, type: "institutional", isConnected: false },
-      { name: "New Investors", percentage: 20, type: "institutional", isConnected: false }
+      { name: "Existing Shareholders", percentage: 80, type: "institutional" as const, isConnected: false },
+      { name: "New Investors", percentage: 20, type: "institutional" as const, isConnected: false }
     ],
     keyChanges: [
-      { shareholder: "Existing Shareholders", change: -20, type: "decrease" },
-      { shareholder: "New Investors", change: 20, type: "new" }
+      { shareholder: "Existing Shareholders", change: -20, type: "decrease" as const },
+      { shareholder: "New Investors", change: 20, type: "new" as const }
     ],
     controlImplications: ["Dilution of existing shareholders", "Introduction of new institutional investors"]
   };
@@ -237,11 +238,11 @@ function createFallbackShareholdingChanges() {
 /**
  * Create fallback corporate structure when data is missing
  */
-function createFallbackCorporateStructure() {
+function createFallbackCorporateStructure(): CorporateStructure {
   return {
     entities: [
-      { id: "issuer", name: "Main Company", type: "issuer", ownership: 100 },
-      { id: "target", name: "Target Entity", type: "target", ownership: 0 }
+      { id: "issuer", name: "Main Company", type: "issuer" as const, ownership: 100 },
+      { id: "target", name: "Target Entity", type: "target" as const, ownership: 0 }
     ],
     relationships: [
       { parent: "issuer", child: "target", ownershipPercentage: 100 }
