@@ -35,14 +35,14 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <ShareholdingImpactBox results={results} />
       </div>
       
-      {/* Row 2, Col 2: Execution Timetable */}
+      {/* Row 2, Col 2: Regulatory Compliance */}
       <div className="lg:col-start-2 lg:row-start-2">
-        <ExecutionTimetableBox results={results} />
+        <RegulatoryComplianceBox results={results} />
       </div>
       
-      {/* Row 3, Col 1: Regulatory Compliance */}
+      {/* Row 3, Col 1: Execution Timetable */}
       <div className="lg:col-start-1 lg:row-start-3">
-        <RegulatoryComplianceBox results={results} />
+        <ExecutionTimetableBox results={results} />
       </div>
     </div>
   );
