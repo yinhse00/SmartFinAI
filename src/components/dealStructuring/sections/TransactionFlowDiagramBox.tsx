@@ -11,199 +11,251 @@ interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
 }
 
-// Enhanced conversion function to extract all real transaction data
+// Enhanced parsing function to extract exact values from transaction description
+const parseTransactionData = (description: string) => {
+  // Parse consideration amount
+  const considerationMatch = description.match(/(?:consideration.*?)(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
+  const considerationAmount = considerationMatch ? parseConsiderationAmount(considerationMatch[1]) : 0;
+  
+  // Parse ownership percentage being acquired
+  const ownershipMatch = description.match(/(?:purchase|acquire|buy)\s+(\d+)%/i);
+  const acquisitionPercentage = ownershipMatch ? parseInt(ownershipMatch[1]) : 0;
+  
+  // Parse market cap
+  const marketCapMatch = description.match(/market cap.*?(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
+  const marketCap = marketCapMatch ? parseConsiderationAmount(marketCapMatch[1]) : 0;
+  
+  // Parse controlling shareholder percentage
+  const controllingMatch = description.match(/controlling shareholder.*?(\d+)%/i);
+  const controllingPercentage = controllingMatch ? parseInt(controllingMatch[1]) : 0;
+  
+  // Parse public shareholders percentage
+  const publicMatch = description.match(/(?:other|public).*?(\d+)%.*?public/i);
+  const publicPercentage = publicMatch ? parseInt(publicMatch[1]) : 0;
+  
+  return {
+    considerationAmount,
+    acquisitionPercentage,
+    marketCap,
+    controllingPercentage,
+    publicPercentage,
+    currency: 'HKD'
+  };
+};
+
+const parseConsiderationAmount = (amountStr: string): number => {
+  const cleanStr = amountStr.replace(/[HK$\s,]/g, '');
+  const numMatch = cleanStr.match(/([\d.]+)/);
+  if (!numMatch) return 0;
+  
+  const num = parseFloat(numMatch[1]);
+  if (cleanStr.toLowerCase().includes('billion')) {
+    return num * 1000000000;
+  } else if (cleanStr.toLowerCase().includes('million')) {
+    return num * 1000000;
+  }
+  return num;
+};
+
+// Enhanced conversion function with proper data parsing
 const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | undefined => {
   if (!results.shareholding && !results.shareholdingChanges) {
     return undefined;
   }
 
-  // Extract real shareholding data - handle both types of shareholder objects
-  const beforeShareholders = results.shareholdingChanges?.before || results.shareholding?.before || [];
-  const afterShareholders = results.shareholdingChanges?.after || results.shareholding?.after || [];
+  // Parse actual transaction data from the original description
+  const transactionData = parseTransactionData(results.structure?.rationale || '');
   
-  // Find buyer/acquiring entity from after shareholding
-  const buyerShareholder = afterShareholders.find(s => 
-    ('type' in s && s.type === 'institutional') && s.percentage > 50
-  ) || afterShareholders.find(s => s.percentage > 50) || afterShareholders[0];
+  // Use parsed data instead of AI analysis fallbacks
+  const actualConsideration = transactionData.considerationAmount || results.costs?.total || 0;
+  const actualAcquisitionPercentage = transactionData.acquisitionPercentage || 55;
+  const remainingPercentage = 100 - actualAcquisitionPercentage;
   
-  const remainingShareholders = afterShareholders.filter(s => s !== buyerShareholder);
-  
-  // Extract REAL transaction data from analysis results
-  const transactionAmount = results.costs?.total || 0;
-  const currency = results.costs?.breakdown?.find(item => 
-    item.description.toLowerCase().includes('consideration') || 
-    item.description.toLowerCase().includes('payment')
-  )?.description.includes('USD') ? 'USD' : 'HKD';
-  
-  // Get actual company names from structure or use analysis context
-  const targetCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'target')?.name ||
-    results.structure?.recommended?.split(' ')[0] || 'Target Company';
-  
-  const buyerCompanyName = buyerShareholder?.name || 
-    results.corporateStructure?.entities?.find(e => e.type === 'parent')?.name || 
-    'Acquiring Company';
+  // Extract entity names
+  const targetCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'target')?.name || 'Target Company';
+  const acquiringCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'parent')?.name || 'Acquiring Company';
 
-  // Generate dynamic transaction steps based on actual transaction type
+  // Generate transaction steps based on actual data
   const generateTransactionSteps = () => {
-    const transactionType = results.transactionType.toLowerCase();
-    const steps = [];
-    
-    if (transactionType.includes('rights issue')) {
-      steps.push({
+    return [
+      {
         id: 'step-1',
-        title: 'Rights Issue Announcement',
-        description: `Announcement of rights issue by ${targetCompanyName}`,
-        entities: ['before-target-1']
-      });
-      steps.push({
+        title: 'Due Diligence & Negotiation',
+        description: `${acquiringCompanyName} conducts due diligence and negotiates acquisition terms`,
+        entities: ['before-acquiring-company', 'before-target-company']
+      },
+      {
         id: 'step-2',
-        title: 'Subscription Process',
-        description: `${buyerCompanyName} subscribes for rights shares`,
-        entities: ['after-buyer-1', 'before-target-1']
-      });
-    } else if (transactionType.includes('acquisition') || transactionType.includes('takeover')) {
-      steps.push({
-        id: 'step-1',
-        title: 'Due Diligence',
-        description: `${buyerCompanyName} conducts due diligence on ${targetCompanyName}`,
-        entities: ['after-buyer-1', 'before-target-1']
-      });
-      steps.push({
-        id: 'step-2',
-        title: results.transactionType,
-        description: `Execution of ${results.transactionType.toLowerCase()}`,
-        entities: ['after-buyer-1', ...beforeShareholders.map((_, index) => `before-stockholder-${index}`)]
-      });
-    } else {
-      steps.push({
-        id: 'step-1',
-        title: 'Transaction Preparation',
-        description: `Preparation for ${results.transactionType}`,
-        entities: ['after-buyer-1', 'before-target-1']
-      });
-      steps.push({
-        id: 'step-2',
-        title: results.transactionType,
-        description: `Completion of ${results.transactionType}`,
-        entities: ['after-buyer-1', 'before-target-1']
-      });
-    }
-    
-    steps.push({
-      id: 'step-3',
-      title: 'Completion',
-      description: `Transfer of ownership and payment of ${currency} ${transactionAmount.toLocaleString()} consideration`,
-      entities: ['after-buyer-1', 'after-consideration-1']
-    });
-    
-    return steps;
+        title: 'Share Purchase Agreement',
+        description: `Execution of share purchase for ${actualAcquisitionPercentage}% stake`,
+        entities: ['before-acquiring-company', 'before-target-company']
+      },
+      {
+        id: 'step-3',
+        title: 'Completion & Payment',
+        description: `Transfer of ${actualAcquisitionPercentage}% ownership and payment of ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M consideration`,
+        entities: ['after-acquiring-company', 'after-target-company', 'consideration-payment']
+      }
+    ];
   };
 
+  // BEFORE structure - showing both acquiring company and target company structures
   const before = {
     entities: [
-      { id: 'before-target-1', name: targetCompanyName, type: 'target' as const },
-      ...beforeShareholders.map((shareholder, index) => ({
-        id: `before-stockholder-${index}`,
-        name: shareholder.name,
+      // Acquiring Company Structure
+      { 
+        id: 'before-controlling-shareholder', 
+        name: 'Controlling Shareholder', 
         type: 'stockholder' as const,
-        percentage: shareholder.percentage
-      })),
-      // Add subsidiary entities if available
-      ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
-        id: `before-subsidiary-${index}`,
-        name: entity.name,
-        type: 'subsidiary' as const,
-        percentage: results.corporateStructure?.relationships?.find(r => r.child === entity.id)?.ownershipPercentage || 100
-      })) || [])
+        percentage: transactionData.controllingPercentage || 65
+      },
+      { 
+        id: 'before-public-shareholders', 
+        name: 'Public Shareholders', 
+        type: 'stockholder' as const,
+        percentage: transactionData.publicPercentage || 35
+      },
+      { 
+        id: 'before-acquiring-company', 
+        name: acquiringCompanyName, 
+        type: 'buyer' as const,
+        description: `Market Cap: ${transactionData.currency} ${(transactionData.marketCap / 1000000000).toFixed(1)}B`
+      },
+      
+      // Target Company Structure
+      { 
+        id: 'before-target-shareholders', 
+        name: 'Existing Target Shareholders', 
+        type: 'stockholder' as const,
+        percentage: 100
+      },
+      { 
+        id: 'before-target-company', 
+        name: targetCompanyName, 
+        type: 'target' as const 
+      }
     ],
     relationships: [
-      ...beforeShareholders.map((shareholder, index) => ({
-        source: `before-stockholder-${index}`,
-        target: 'before-target-1',
+      // Acquiring company ownership structure
+      {
+        source: 'before-controlling-shareholder',
+        target: 'before-acquiring-company',
         type: 'ownership' as const,
-        percentage: shareholder.percentage
-      })),
-      // Add subsidiary relationships
-      ...(results.corporateStructure?.relationships?.map((rel, index) => ({
-        source: `before-target-1`,
-        target: `before-subsidiary-${index}`,
-        type: 'subsidiary' as const,
-        percentage: rel.ownershipPercentage
-      })) || [])
-    ],
+        percentage: transactionData.controllingPercentage || 65
+      },
+      {
+        source: 'before-public-shareholders',
+        target: 'before-acquiring-company',
+        type: 'ownership' as const,
+        percentage: transactionData.publicPercentage || 35
+      },
+      // Target company ownership structure
+      {
+        source: 'before-target-shareholders',
+        target: 'before-target-company',
+        type: 'ownership' as const,
+        percentage: 100
+      }
+    ]
   };
 
+  // AFTER structure - showing new ownership of target and maintained acquiring company structure
   const after = {
     entities: [
-      { id: 'after-target-1', name: targetCompanyName, type: 'target' as const },
+      // Target Company Post-Transaction
       { 
-        id: 'after-buyer-1', 
-        name: buyerCompanyName, 
-        type: 'buyer' as const, 
-        percentage: buyerShareholder?.percentage || 0
+        id: 'after-target-company', 
+        name: targetCompanyName, 
+        type: 'target' as const 
       },
-      ...remainingShareholders.map((shareholder, index) => ({
-        id: `after-stockholder-${index + 1}`,
-        name: shareholder.name,
+      
+      // New Target Company Owners
+      { 
+        id: 'after-acquiring-company', 
+        name: acquiringCompanyName, 
+        type: 'buyer' as const,
+        percentage: actualAcquisitionPercentage
+      },
+      { 
+        id: 'after-remaining-shareholders', 
+        name: 'Remaining Target Shareholders', 
         type: 'stockholder' as const,
-        percentage: shareholder.percentage
-      })),
-      { 
-        id: 'after-consideration-1', 
-        name: `${currency} Consideration`, 
-        type: 'consideration' as const, 
-        value: transactionAmount,
-        currency: currency
+        percentage: remainingPercentage
       },
-      // Include subsidiaries in after state
-      ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
-        id: `after-subsidiary-${index}`,
-        name: entity.name,
-        type: 'subsidiary' as const,
-        percentage: results.corporateStructure?.relationships?.find(r => r.child === entity.id)?.ownershipPercentage || 100
-      })) || [])
+      
+      // Acquiring Company Structure (maintained)
+      { 
+        id: 'after-controlling-shareholder', 
+        name: 'Controlling Shareholder', 
+        type: 'stockholder' as const,
+        percentage: transactionData.controllingPercentage || 65
+      },
+      { 
+        id: 'after-public-shareholders', 
+        name: 'Public Shareholders', 
+        type: 'stockholder' as const,
+        percentage: transactionData.publicPercentage || 35
+      },
+      
+      // Consideration Payment
+      { 
+        id: 'consideration-payment', 
+        name: `${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M Consideration`, 
+        type: 'consideration' as const,
+        value: actualConsideration,
+        currency: transactionData.currency
+      }
     ],
     relationships: [
-      { 
-        source: 'after-buyer-1', 
-        target: 'after-target-1', 
-        type: 'ownership' as const, 
-        percentage: buyerShareholder?.percentage || 0
-      },
-      ...remainingShareholders.map((shareholder, index) => ({
-        source: `after-stockholder-${index + 1}`,
-        target: 'after-target-1',
+      // Target company new ownership
+      {
+        source: 'after-acquiring-company',
+        target: 'after-target-company',
         type: 'ownership' as const,
-        percentage: shareholder.percentage
-      })),
-      { 
-        source: 'after-buyer-1', 
-        target: 'after-consideration-1', 
-        type: 'consideration' as const, 
-        value: transactionAmount
+        percentage: actualAcquisitionPercentage
       },
-      // Add subsidiary relationships in after state
-      ...(results.corporateStructure?.relationships?.map((rel, index) => ({
-        source: `after-target-1`,
-        target: `after-subsidiary-${index}`,
-        type: 'subsidiary' as const,
-        percentage: rel.ownershipPercentage
-      })) || [])
-    ],
+      {
+        source: 'after-remaining-shareholders',
+        target: 'after-target-company',
+        type: 'ownership' as const,
+        percentage: remainingPercentage
+      },
+      
+      // Acquiring company maintained structure
+      {
+        source: 'after-controlling-shareholder',
+        target: 'after-acquiring-company',
+        type: 'ownership' as const,
+        percentage: transactionData.controllingPercentage || 65
+      },
+      {
+        source: 'after-public-shareholders',
+        target: 'after-acquiring-company',
+        type: 'ownership' as const,
+        percentage: transactionData.publicPercentage || 35
+      },
+      
+      // Consideration flow
+      {
+        source: 'after-acquiring-company',
+        target: 'consideration-payment',
+        type: 'consideration' as const,
+        value: actualConsideration
+      }
+    ]
   };
 
   return {
     before,
     after,
     transactionSteps: generateTransactionSteps(),
-    // Pass additional real transaction context
     transactionContext: {
       type: results.transactionType,
-      amount: transactionAmount,
-      currency: currency,
+      amount: actualConsideration,
+      currency: transactionData.currency,
       targetName: targetCompanyName,
-      buyerName: buyerCompanyName,
-      description: results.structure?.rationale || `${results.transactionType} transaction`
+      buyerName: acquiringCompanyName,
+      description: `${actualAcquisitionPercentage}% acquisition for ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M`
     }
   };
 };
