@@ -1,12 +1,8 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Network, GitBranch, Building2, LayoutGrid } from 'lucide-react';
+import { Network } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
-import DealStepsFlowDiagram from '../flow/DealStepsFlowDiagram';
-import TransactionFlowControls from '../flow/TransactionFlowControls';
-import { CorporateStructureDiagram } from './CorporateStructureDiagram';
 import CombinedTransactionFlowDiagram from '../flow/CombinedTransactionFlowDiagram';
 import { TransactionFlow } from '@/types/transactionFlow';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
@@ -21,33 +17,55 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
     return undefined;
   }
 
-  // Create enhanced transaction flow based on analysis results
+  // Create comprehensive transaction flow based on analysis results
   const before = {
-    entities: results.shareholdingChanges?.before.map((shareholder, index) => ({
-      id: `before-shareholder-${index}`,
-      name: shareholder.name,
-      type: shareholder.type === 'institutional' ? 'stockholder' as const : 'stockholder' as const,
-      percentage: shareholder.percentage,
-    })) || [
+    entities: [
       { id: 'before-target-1', name: 'Target Company', type: 'target' as const },
       { id: 'before-stockholder-1', name: 'Existing Shareholders', type: 'stockholder' as const, percentage: 100 },
+      ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
+        id: `before-subsidiary-${index}`,
+        name: entity.name,
+        type: 'subsidiary' as const,
+        percentage: results.corporateStructure?.relationships?.find(r => r.child === entity.id)?.ownershipPercentage || 100
+      })) || [])
     ],
     relationships: [
       { source: 'before-stockholder-1', target: 'before-target-1', type: 'ownership' as const, percentage: 100 },
+      // Add subsidiary relationships
+      ...(results.corporateStructure?.relationships?.map((rel, index) => ({
+        source: `before-target-1`,
+        target: `before-subsidiary-${index}`,
+        type: 'subsidiary' as const,
+        percentage: rel.ownershipPercentage
+      })) || [])
     ],
   };
 
   const after = {
     entities: [
       { id: 'after-target-1', name: 'Target Company', type: 'target' as const },
-      { id: 'after-buyer-1', name: 'Acquiring Company', type: 'buyer' as const },
-      { id: 'after-stockholder-1', name: 'Existing Shareholders', type: 'stockholder' as const, percentage: 30 },
+      { id: 'after-buyer-1', name: 'Acquiring Company', type: 'buyer' as const, percentage: 70 },
+      { id: 'after-stockholder-1', name: 'Remaining Shareholders', type: 'stockholder' as const, percentage: 30 },
       { id: 'after-consideration-1', name: 'Cash Consideration', type: 'consideration' as const, value: 1000 },
+      // Include subsidiaries in after state
+      ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
+        id: `after-subsidiary-${index}`,
+        name: entity.name,
+        type: 'subsidiary' as const,
+        percentage: results.corporateStructure?.relationships?.find(r => r.child === entity.id)?.ownershipPercentage || 100
+      })) || [])
     ],
     relationships: [
       { source: 'after-buyer-1', target: 'after-target-1', type: 'ownership' as const, percentage: 70 },
       { source: 'after-stockholder-1', target: 'after-target-1', type: 'ownership' as const, percentage: 30 },
       { source: 'after-buyer-1', target: 'after-consideration-1', type: 'consideration' as const, value: 1000 },
+      // Add subsidiary relationships in after state
+      ...(results.corporateStructure?.relationships?.map((rel, index) => ({
+        source: `after-target-1`,
+        target: `after-subsidiary-${index}`,
+        type: 'subsidiary' as const,
+        percentage: rel.ownershipPercentage
+      })) || [])
     ],
   };
 
@@ -78,68 +96,22 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
 };
 
 const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
-  const [showBefore, setShowBefore] = useState(true);
   const transactionFlow = convertToTransactionFlow(results);
 
   return (
     <div className="h-full flex flex-col">
-      <Tabs defaultValue="combined" className="h-full flex flex-col">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
-          <TabsTrigger value="combined" className="flex items-center gap-2">
-            <LayoutGrid className="h-4 w-4" />
-            Combined View
-          </TabsTrigger>
-          <TabsTrigger value="flow" className="flex items-center gap-2">
-            <GitBranch className="h-4 w-4" />
-            Deal Flow
-          </TabsTrigger>
-          <TabsTrigger value="structure" className="flex items-center gap-2">
-            <Building2 className="h-4 w-4" />
-            Corporate Structure
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="combined" className="flex-1 space-y-4">
-          <TransactionFlowControls
-            showBefore={showBefore}
-            onToggleView={setShowBefore}
+      <div className="flex-1">
+        <div className="h-[700px]">
+          <CombinedTransactionFlowDiagram 
+            transactionFlow={transactionFlow}
           />
-          <div className="h-[600px]">
-            <CombinedTransactionFlowDiagram 
-              transactionFlow={transactionFlow}
-              showBefore={showBefore}
-            />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="flow" className="flex-1 space-y-4">
-          <TransactionFlowControls
-            showBefore={showBefore}
-            onToggleView={setShowBefore}
-          />
-          <div className="h-[600px]">
-            <DealStepsFlowDiagram 
-              transactionFlow={transactionFlow}
-              showBefore={showBefore}
-            />
-          </div>
-        </TabsContent>
-        
-        <TabsContent value="structure" className="flex-1">
-          <div className="h-[650px]">
-            <CorporateStructureDiagram 
-              corporateStructure={results.corporateStructure}
-              transactionType={results.transactionType}
-            />
-          </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   );
 };
 
 export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps> = ({ results }) => {
-  const [showBefore, setShowBefore] = useState(true);
   const transactionFlow = convertToTransactionFlow(results);
 
   return (
@@ -151,7 +123,7 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
             Transaction Structure Diagram
           </CardTitle>
           <EnlargedContentDialog
-            title="Transaction Structure & Flow Analysis"
+            title="Complete Transaction Structure & Flow"
             enlargedContent={<EnlargedFlowContent results={results} />}
             size="full"
           >
@@ -160,55 +132,11 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
         </div>
       </CardHeader>
       <CardContent className="h-[400px]">
-        <Tabs defaultValue="combined" className="h-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="combined" className="flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4" />
-              Combined
-            </TabsTrigger>
-            <TabsTrigger value="flow" className="flex items-center gap-2">
-              <GitBranch className="h-4 w-4" />
-              Deal Flow
-            </TabsTrigger>
-            <TabsTrigger value="structure" className="flex items-center gap-2">
-              <Building2 className="h-4 w-4" />
-              Structure
-            </TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="combined" className="h-[340px] mt-4 space-y-2">
-            <TransactionFlowControls
-              showBefore={showBefore}
-              onToggleView={setShowBefore}
-            />
-            <div className="h-[290px]">
-              <CombinedTransactionFlowDiagram 
-                transactionFlow={transactionFlow}
-                showBefore={showBefore}
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="flow" className="h-[340px] mt-4 space-y-2">
-            <TransactionFlowControls
-              showBefore={showBefore}
-              onToggleView={setShowBefore}
-            />
-            <div className="h-[290px]">
-              <DealStepsFlowDiagram 
-                transactionFlow={transactionFlow}
-                showBefore={showBefore}
-              />
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="structure" className="h-[340px] mt-4">
-            <CorporateStructureDiagram 
-              corporateStructure={results.corporateStructure}
-              transactionType={results.transactionType}
-            />
-          </TabsContent>
-        </Tabs>
+        <div className="h-full">
+          <CombinedTransactionFlowDiagram 
+            transactionFlow={transactionFlow}
+          />
+        </div>
       </CardContent>
     </Card>
   );
