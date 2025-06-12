@@ -72,7 +72,10 @@ export class EdgeFactory {
     };
   }
 
-  createBidirectionalTransactionEdges(): Edge[] {
+  createBidirectionalTransactionEdges(
+    acquiringCompanyNodeId: string = 'acquiring-company',
+    targetShareholderNodeId: string = 'target-existing-shareholders'
+  ): Edge[] {
     // Extract dynamic values from transaction data
     const sharePercentage = this.getAcquisitionPercentage();
     const considerationAmount = this.getConsiderationAmount();
@@ -81,8 +84,8 @@ export class EdgeFactory {
       // Share transfer: from target shareholders to acquiring company
       {
         id: 'share-transfer',
-        source: 'target-existing-shareholders',
-        target: 'acquiring-company',
+        source: targetShareholderNodeId,
+        target: acquiringCompanyNodeId,
         type: 'smoothstep',
         style: {
           stroke: '#2563eb',
@@ -107,8 +110,8 @@ export class EdgeFactory {
       // Cash consideration: from acquiring company to target shareholders
       {
         id: 'cash-consideration',
-        source: 'acquiring-company',
-        target: 'target-existing-shareholders',
+        source: acquiringCompanyNodeId,
+        target: targetShareholderNodeId,
         type: 'smoothstep',
         style: {
           stroke: '#16a34a',
@@ -183,9 +186,28 @@ export class EdgeFactory {
         rel => rel.type === 'consideration' && rel.value
       );
       if (considerationRelationship?.value) {
-        return `HK$${considerationRelationship.value.toLocaleString()}M`;
+        const amount = considerationRelationship.value;
+        if (amount >= 1000) {
+          return `HK$${(amount / 1000).toFixed(1)}B`;
+        }
+        return `HK$${amount}M`;
       }
     }
+    
+    // Try to find consideration from entities
+    if (this.transactionData?.after?.entities) {
+      const considerationEntity = this.transactionData.after.entities.find(
+        entity => entity.type === 'consideration' && entity.value
+      );
+      if (considerationEntity?.value) {
+        const amount = considerationEntity.value;
+        if (amount >= 1000) {
+          return `HK$${(amount / 1000).toFixed(1)}B`;
+        }
+        return `HK$${amount}M`;
+      }
+    }
+    
     return 'HK$1,000M'; // Default fallback
   }
 
