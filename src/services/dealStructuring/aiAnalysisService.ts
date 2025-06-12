@@ -1,4 +1,3 @@
-
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -40,7 +39,6 @@ export const aiAnalysisService = {
       // Get AI analysis from Grok
       const response = await grokService.generateResponse({
         prompt: analysisPrompt,
-        conversationId: `deal-analysis-${Date.now()}`,
         metadata: {
           type: 'deal_structuring',
           hasDocuments: request.uploadedFiles.length > 0

@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ArrowRight, Plus, Trash2 } from 'lucide-react';
-import { TransactionData } from '@/pages/DealStructuring';
+import { TransactionData } from '@/types/dealStructuring';
 
 interface TransactionInputWizardProps {
   onSubmit: (data: TransactionData) => void;

@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -6,7 +5,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
 import { ArrowRight, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
-import { TransactionData } from '@/pages/DealStructuring';
+import { TransactionData } from '@/types/dealStructuring';
 
 interface TransactionAnalysisProps {
   transactionData: TransactionData;

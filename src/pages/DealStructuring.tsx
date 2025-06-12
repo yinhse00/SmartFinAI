@@ -1,4 +1,3 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,6 +6,9 @@ import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedT
 import { AIAnalysisResults, AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { aiAnalysisService, TransactionAnalysisRequest } from '@/services/dealStructuring/aiAnalysisService';
 import { useToast } from '@/hooks/use-toast';
+
+// Export the TransactionData type for other components
+export type { TransactionData } from '@/types/dealStructuring';
 
 const DealStructuring = () => {
   const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
