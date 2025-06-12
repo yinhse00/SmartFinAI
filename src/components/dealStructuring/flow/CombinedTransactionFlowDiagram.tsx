@@ -28,13 +28,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const nodeFactory = new NodeFactory();
     const edgeFactory = new EdgeFactory(transactionFlow);
 
-    // Initialize builders with transaction data
-    const beforeBuilder = new BeforeSectionBuilder(nodeFactory);
-    const transactionBuilder = new TransactionSectionBuilder(nodeFactory);
-    const afterBuilder = new AfterSectionBuilder(nodeFactory);
+    // Initialize builders with transaction data - PASS THE TRANSACTION DATA
+    const beforeBuilder = new BeforeSectionBuilder(nodeFactory, transactionFlow);
+    const transactionBuilder = new TransactionSectionBuilder(nodeFactory, transactionFlow);
+    const afterBuilder = new AfterSectionBuilder(nodeFactory, transactionFlow);
     const edgeBuilder = new EdgeBuilder(edgeFactory, transactionFlow);
 
-    // Build all nodes
+    // Build all nodes with dynamic data
     const allNodes: Node[] = [
       ...beforeBuilder.buildBeforeSection(),
       ...transactionBuilder.buildTransactionSection(),
@@ -44,8 +44,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     // Build all edges with dynamic data
     const allEdges: Edge[] = edgeBuilder.buildAllEdges();
 
-    console.log('Generated nodes:', allNodes.length);
-    console.log('Generated edges:', allEdges.length);
+    console.log('Generated nodes with data:', allNodes.length);
+    console.log('Generated edges with data:', allEdges.length);
+    console.log('Transaction flow entities:', transactionFlow);
 
     return { nodes: allNodes, edges: allEdges };
   }, [transactionFlow]);

@@ -131,6 +131,74 @@ export class NodeFactory {
     };
   }
 
+  createDynamicTransactionDetailsNode(
+    id: string, 
+    x: number, 
+    y: number, 
+    transactionData: {
+      buyerName: string;
+      targetName: string;
+      acquisitionPercentage: number;
+      considerationAmount: number;
+      transactionSteps: any[];
+    }
+  ): Node {
+    const formatAmount = (amount: number) => {
+      if (amount >= 1000) {
+        return `HK$${(amount / 1000).toFixed(1)}B`;
+      }
+      return `HK$${amount}M`;
+    };
+
+    return {
+      id,
+      type: 'default',
+      position: { x, y },
+      data: {
+        label: (
+          <div className="text-center p-4">
+            <div className="text-lg font-bold mb-3 text-blue-900">
+              Share Acquisition
+            </div>
+            <div className="space-y-2 text-xs text-left">
+              <div className="bg-blue-50 p-2 rounded">
+                <strong className="text-blue-800">Transaction:</strong>
+                <div className="text-blue-700">
+                  {transactionData.buyerName} purchases {transactionData.acquisitionPercentage}% of {transactionData.targetName} shares
+                </div>
+              </div>
+              <div className="bg-green-50 p-2 rounded">
+                <strong className="text-green-800">Consideration:</strong>
+                <div className="text-green-700">{formatAmount(transactionData.considerationAmount)} cash payment</div>
+              </div>
+              <div className="bg-orange-50 p-2 rounded">
+                <strong className="text-orange-800">Result:</strong>
+                <div className="text-orange-700">
+                  {transactionData.buyerName} gains control of {transactionData.targetName}
+                </div>
+              </div>
+              {transactionData.transactionSteps.length > 0 && (
+                <div className="bg-purple-50 p-2 rounded">
+                  <strong className="text-purple-800">Steps:</strong>
+                  <div className="text-purple-700">{transactionData.transactionSteps.length} transaction steps</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )
+      },
+      style: {
+        backgroundColor: '#f8fafc',
+        border: '3px solid #2563eb',
+        borderRadius: '12px',
+        width: '350px',
+        height: transactionData.transactionSteps.length > 0 ? '250px' : '220px'
+      },
+      draggable: false,
+      selectable: false
+    };
+  }
+
   getNodes(): Node[] {
     return this.nodes;
   }
