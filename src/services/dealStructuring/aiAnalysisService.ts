@@ -277,24 +277,24 @@ function createFallbackTransactionFlow() {
   return {
     before: {
       entities: [
-        { id: "target-1", name: "Target Company", type: "target", percentage: 100, description: "Listed company to be acquired" },
-        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder", percentage: 100, description: "Current shareholders of target" }
+        { id: "target-1", name: "Target Company", type: "target" as const, percentage: 100, description: "Listed company to be acquired" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder" as const, percentage: 100, description: "Current shareholders of target" }
       ],
       relationships: [
-        { source: "shareholders-1", target: "target-1", type: "ownership", percentage: 100 }
+        { source: "shareholders-1", target: "target-1", type: "ownership" as const, percentage: 100 }
       ]
     },
     after: {
       entities: [
-        { id: "target-1", name: "Target Company", type: "target", percentage: 100, description: "Listed company acquired" },
-        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder", percentage: 30, description: "Remaining shareholders" },
-        { id: "buyer-1", name: "Acquiring Company", type: "buyer", percentage: 70, description: "New controlling shareholder" },
-        { id: "consideration-1", name: "Cash Consideration", type: "consideration", value: 1000, description: "Payment to selling shareholders" }
+        { id: "target-1", name: "Target Company", type: "target" as const, percentage: 100, description: "Listed company acquired" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder" as const, percentage: 30, description: "Remaining shareholders" },
+        { id: "buyer-1", name: "Acquiring Company", type: "buyer" as const, percentage: 70, description: "New controlling shareholder" },
+        { id: "consideration-1", name: "Cash Consideration", type: "consideration" as const, value: 1000, description: "Payment to selling shareholders" }
       ],
       relationships: [
-        { source: "buyer-1", target: "target-1", type: "ownership", percentage: 70 },
-        { source: "shareholders-1", target: "target-1", type: "ownership", percentage: 30 },
-        { source: "buyer-1", target: "consideration-1", type: "consideration", value: 1000 }
+        { source: "buyer-1", target: "target-1", type: "ownership" as const, percentage: 70 },
+        { source: "shareholders-1", target: "target-1", type: "ownership" as const, percentage: 30 },
+        { source: "buyer-1", target: "consideration-1", type: "consideration" as const, value: 1000 }
       ]
     },
     transactionSteps: [
