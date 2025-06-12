@@ -175,7 +175,7 @@ async function searchExistingFAQs(searchTerms: string[]): Promise<GuidanceMatch[
       }
     }
     
-    // Search listed FAQ table
+    // Search listed FAQ table - fix property names to match actual schema
     const { data: listedFaqData, error: listedFaqError } = await supabase
       .from('listingrule_listed_faq')
       .select('*')
@@ -183,13 +183,14 @@ async function searchExistingFAQs(searchTerms: string[]): Promise<GuidanceMatch[
     
     if (!listedFaqError && listedFaqData) {
       for (const item of listedFaqData) {
-        const searchableText = `${item.topics || ''} ${item.Sub_topics || ''}`;
+        // Use the correct property names from the database schema
+        const searchableText = `${item.listingrules || ''} ${item.particulars || ''} ${item.category || ''}`;
         const relevance = calculateRelevance(searchTerms, searchableText);
         if (relevance > 0.3) {
           matches.push({
             id: item.id,
-            title: item.topics || 'FAQ',
-            content: item.Sub_topics || '',
+            title: item.category || 'FAQ',
+            content: item.particulars || '',
             type: 'faq',
             relevance,
             source: 'listingrule_listed_faq'
