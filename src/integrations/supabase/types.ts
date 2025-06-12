@@ -65,28 +65,28 @@ export type Database = {
       }
       listingrule_listed_faq: {
         Row: {
-          faq_Number: string
-          gem_listingrules: string | null
+          category: string
           id: string
-          md_listingrules: string | null
-          Sub_topics: string | null
-          topics: string
+          listingrules: string | null
+          particulars: string
+          reference_nos: string | null
+          updated_datae: string | null
         }
         Insert: {
-          faq_Number: string
-          gem_listingrules?: string | null
+          category: string
           id?: string
-          md_listingrules?: string | null
-          Sub_topics?: string | null
-          topics: string
+          listingrules?: string | null
+          particulars: string
+          reference_nos?: string | null
+          updated_datae?: string | null
         }
         Update: {
-          faq_Number?: string
-          gem_listingrules?: string | null
+          category?: string
           id?: string
-          md_listingrules?: string | null
-          Sub_topics?: string | null
-          topics?: string
+          listingrules?: string | null
+          particulars?: string
+          reference_nos?: string | null
+          updated_datae?: string | null
         }
         Relationships: []
       }

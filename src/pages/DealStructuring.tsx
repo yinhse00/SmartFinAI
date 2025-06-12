@@ -1,13 +1,12 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { DealStructuringDashboard } from '@/components/dealStructuring/DealStructuringDashboard';
-import { aiAnalysisService, TransactionAnalysisRequest, AnalysisContext } from '@/services/dealStructuring/aiAnalysisService';
+import { enhancedAiAnalysisService, EnhancedAnalysisResult } from '@/services/dealStructuring/enhancedAiAnalysisService';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, FileText, Calculator, Clock, Users, Shield } from 'lucide-react';
+import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, CheckCircle } from 'lucide-react';
 
 // Export the TransactionData type for other components
 export type { TransactionData } from '@/types/dealStructuring';
@@ -15,11 +14,9 @@ export type { TransactionData } from '@/types/dealStructuring';
 const DealStructuring = () => {
   const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
-  const [analysisContext, setAnalysisContext] = useState<AnalysisContext | null>(null);
+  const [enhancedResults, setEnhancedResults] = useState<EnhancedAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
 
   const handleTransactionAnalysis = async (data: {
     description: string;
@@ -29,24 +26,47 @@ const DealStructuring = () => {
     setIsAnalyzing(true);
     try {
       // Convert the input data to TransactionAnalysisRequest format
-      const request: TransactionAnalysisRequest = {
+      const request = {
         transactionType: 'Transaction Analysis', // Default type
         description: data.description,
         documents: data.uploadedFiles,
         additionalContext: data.extractedContent?.join('\n\n')
       };
 
-      // Use the enhanced analysis method that provides context
-      const { results, context } = await aiAnalysisService.analyzeTransactionWithContext(request);
+      // Use the enhanced analysis method with validation and reconciliation
+      const enhancedResult = await enhancedAiAnalysisService.analyzeTransactionWithValidation(request);
       
-      setAnalysisResults(results);
-      setAnalysisContext(context);
+      setAnalysisResults(enhancedResult.results);
+      setEnhancedResults(enhancedResult);
       setCurrentStep('analysis');
       
+      // Show analysis quality report
+      const qualityReport = enhancedAiAnalysisService.getAnalysisQualityReport(enhancedResult);
+      
+      let toastVariant: 'default' | 'destructive' = 'default';
+      let toastTitle = "Analysis Complete";
+      let toastDescription = `Analysis quality: ${qualityReport.overallQuality}`;
+      
+      if (qualityReport.reconciliationNeeded) {
+        toastVariant = 'default';
+        toastTitle = "Analysis Complete (Data Reconciled)";
+        toastDescription = "Analysis completed with data reconciliation to match your inputs.";
+      }
+      
+      if (qualityReport.overallQuality === 'poor') {
+        toastVariant = 'destructive';
+        toastDescription = "Analysis completed but may not be fully accurate. Consider providing more specific details.";
+      }
+      
       toast({
-        title: "Analysis Complete",
-        description: "Your transaction has been analyzed successfully."
+        title: toastTitle,
+        description: toastDescription,
+        variant: toastVariant
       });
+
+      // Log quality report for debugging
+      console.log('Analysis quality report:', qualityReport);
+      
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
@@ -62,38 +82,40 @@ const DealStructuring = () => {
   const handleNewAnalysis = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
-    setAnalysisContext(null);
+    setEnhancedResults(null);
   };
 
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
     setAnalysisResults(updatedResults);
   };
 
-  const featureCards = [{
-    icon: Brain,
-    title: "AI Analysis",
-    description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
-  }, {
-    icon: FileText,
-    title: "Document Intelligence",
-    description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
-  }, {
-    icon: Calculator,
-    title: "Cost Analysis",
-    description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
-  }, {
-    icon: Clock,
-    title: "Timeline Planning",
-    description: "Detailed execution timetable with key milestones and critical path analysis."
-  }, {
-    icon: Users,
-    title: "Shareholding Impact",
-    description: "Before and after shareholding analysis with dilution impact assessment."
-  }, {
-    icon: Shield,
-    title: "Compliance Guide",
-    description: "Regulatory compliance requirements including listing rules and takeovers code."
-  }];
+  const featureCards = [
+    {
+      icon: Brain,
+      title: "AI Analysis",
+      description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
+    }, {
+      icon: FileText,
+      title: "Document Intelligence",
+      description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
+    }, {
+      icon: Calculator,
+      title: "Cost Analysis",
+      description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
+    }, {
+      icon: Clock,
+      title: "Timeline Planning",
+      description: "Detailed execution timetable with key milestones and critical path analysis."
+    }, {
+      icon: Users,
+      title: "Shareholding Impact",
+      description: "Before and after shareholding analysis with dilution impact assessment."
+    }, {
+      icon: Shield,
+      title: "Compliance Guide",
+      description: "Regulatory compliance requirements including listing rules and takeovers code."
+    }
+  ];
 
   return (
     <MainLayout>
@@ -140,7 +162,24 @@ const DealStructuring = () => {
           {currentStep === 'analysis' && analysisResults && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
+                <div className="flex items-center gap-4">
+                  <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
+                  {enhancedResults && (
+                    <div className="flex items-center gap-2">
+                      {enhancedResults.reconciliation.reconciliationApplied ? (
+                        <div className="flex items-center text-orange-600 text-sm">
+                          <AlertTriangle className="h-4 w-4 mr-1" />
+                          Data Reconciled
+                        </div>
+                      ) : enhancedResults.inputValidation.isValid ? (
+                        <div className="flex items-center text-green-600 text-sm">
+                          <CheckCircle className="h-4 w-4 mr-1" />
+                          Input Validated
+                        </div>
+                      ) : null}
+                    </div>
+                  )}
+                </div>
                 <button onClick={handleNewAnalysis} className="text-primary hover:underline">
                   New Analysis
                 </button>
