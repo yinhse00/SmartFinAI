@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Network } from 'lucide-react';
@@ -69,204 +68,137 @@ const parseConsiderationAmount = (amountStr: string): number => {
   return num;
 };
 
-// Enhanced conversion function with proper data parsing
-const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | undefined => {
+// Enhanced conversion function to create unified post-transaction structure
+const convertToUnifiedPostTransactionFlow = (results: AnalysisResults): TransactionFlow | undefined => {
   if (!results.shareholding && !results.shareholdingChanges) {
     return undefined;
   }
 
-  // Parse actual transaction data from the original description
-  const transactionData = parseTransactionData(results.structure?.rationale || '');
+  // Parse transaction data from available sources
+  const transactionData = parseTransactionData(
+    results.structure?.rationale || 
+    results.structure?.summary || 
+    results.transactionType || 
+    ''
+  );
   
-  // Use parsed data instead of AI analysis fallbacks
-  const actualConsideration = transactionData.considerationAmount;
-  const actualAcquisitionPercentage = transactionData.acquisitionPercentage;
+  // Fallback to cost analysis for consideration amount
+  if (transactionData.considerationAmount === 0 && results.costs?.totalCost) {
+    transactionData.considerationAmount = results.costs.totalCost * 1000000; // Convert to actual amount
+  }
+  
+  // Use shareholding changes data if available
+  const shareholdingAfter = results.shareholdingChanges?.after || results.shareholding?.after || [];
+  const actualAcquisitionPercentage = shareholdingAfter.find(s => s.name.toLowerCase().includes('acquiring') || s.name.toLowerCase().includes('buyer'))?.percentage || transactionData.acquisitionPercentage;
   const remainingPercentage = 100 - actualAcquisitionPercentage;
   
   // Extract entity names
   const targetCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'target')?.name || 'Target Company';
   const acquiringCompanyName = results.corporateStructure?.entities?.find(e => e.type === 'parent')?.name || 'Acquiring Company';
 
-  // Generate transaction steps based on actual data
-  const generateTransactionSteps = () => {
-    return [
-      {
-        id: 'step-1',
-        title: 'Due Diligence & Negotiation',
-        description: `${acquiringCompanyName} conducts due diligence and negotiates acquisition terms`,
-        entities: ['before-acquiring-company', 'before-target-company']
-      },
-      {
-        id: 'step-2',
-        title: 'Share Purchase Agreement',
-        description: `Execution of share purchase for ${actualAcquisitionPercentage}% stake`,
-        entities: ['before-acquiring-company', 'before-target-company']
-      },
-      {
-        id: 'step-3',
-        title: 'Completion & Payment',
-        description: `Transfer of ${actualAcquisitionPercentage}% ownership and payment of ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M consideration`,
-        entities: ['after-acquiring-company', 'after-target-company', 'consideration-payment']
-      }
-    ];
-  };
-
-  // BEFORE structure - showing both acquiring company and target company structures
-  const before = {
+  // Create unified post-transaction structure showing the final state
+  const unifiedPostTransactionStructure = {
     entities: [
-      // Acquiring Company Structure
+      // Ultimate controlling shareholders of acquiring company
       { 
-        id: 'before-controlling-shareholder', 
+        id: 'controlling-shareholder', 
         name: 'Controlling Shareholder', 
         type: 'stockholder' as const
       },
       { 
-        id: 'before-public-shareholders', 
+        id: 'public-shareholders', 
         name: 'Public Shareholders', 
         type: 'stockholder' as const
       },
+      
+      // Listed acquiring company
       { 
-        id: 'before-acquiring-company', 
+        id: 'acquiring-company', 
         name: acquiringCompanyName, 
         type: 'buyer' as const,
-        description: transactionData.marketCap > 0 ? `Market Cap: ${transactionData.currency} ${(transactionData.marketCap / 1000000000).toFixed(1)}B` : 'Listed Entity'
+        description: `Listed Entity${transactionData.marketCap > 0 ? ` - Market Cap: ${transactionData.currency} ${(transactionData.marketCap / 1000000000).toFixed(1)}B` : ''}`
       },
       
-      // Target Company Structure
+      // Target company with new ownership structure
       { 
-        id: 'before-target-shareholders', 
-        name: 'Existing Target Shareholders', 
-        type: 'stockholder' as const
-      },
-      { 
-        id: 'before-target-company', 
+        id: 'target-company', 
         name: targetCompanyName, 
-        type: 'target' as const 
-      }
-    ],
-    relationships: [
-      // Acquiring company ownership structure
-      {
-        source: 'before-controlling-shareholder',
-        target: 'before-acquiring-company',
-        type: 'ownership' as const,
-        percentage: transactionData.controllingPercentage
-      },
-      {
-        source: 'before-public-shareholders',
-        target: 'before-acquiring-company',
-        type: 'ownership' as const,
-        percentage: transactionData.publicPercentage
-      },
-      // Target company ownership structure
-      {
-        source: 'before-target-shareholders',
-        target: 'before-target-company',
-        type: 'ownership' as const,
-        percentage: 100
-      }
-    ]
-  };
-
-  // AFTER structure - showing new ownership of target and maintained acquiring company structure
-  const after = {
-    entities: [
-      // Target Company Post-Transaction
-      { 
-        id: 'after-target-company', 
-        name: targetCompanyName, 
-        type: 'target' as const 
+        type: 'target' as const,
+        description: 'Post-Transaction Structure'
       },
       
-      // New Target Company Owners
+      // Remaining shareholders of target
       { 
-        id: 'after-acquiring-company', 
-        name: acquiringCompanyName, 
-        type: 'buyer' as const
-      },
-      { 
-        id: 'after-remaining-shareholders', 
+        id: 'remaining-target-shareholders', 
         name: 'Remaining Target Shareholders', 
         type: 'stockholder' as const
       },
       
-      // Acquiring Company Structure (maintained)
+      // Transaction consideration
       { 
-        id: 'after-controlling-shareholder', 
-        name: 'Controlling Shareholder', 
-        type: 'stockholder' as const
-      },
-      { 
-        id: 'after-public-shareholders', 
-        name: 'Public Shareholders', 
-        type: 'stockholder' as const
-      },
-      
-      // Consideration Payment
-      { 
-        id: 'consideration-payment', 
-        name: `${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M Consideration`, 
+        id: 'consideration', 
+        name: `${transactionData.currency} ${(transactionData.considerationAmount / 1000000).toFixed(0)}M Consideration`, 
         type: 'consideration' as const,
-        value: actualConsideration,
+        value: transactionData.considerationAmount,
         currency: transactionData.currency
       }
     ],
     relationships: [
-      // Target company new ownership
+      // Acquiring company ownership structure (unchanged)
       {
-        source: 'after-acquiring-company',
-        target: 'after-target-company',
-        type: 'ownership' as const,
-        percentage: actualAcquisitionPercentage
-      },
-      {
-        source: 'after-remaining-shareholders',
-        target: 'after-target-company',
-        type: 'ownership' as const,
-        percentage: remainingPercentage
-      },
-      
-      // Acquiring company maintained structure
-      {
-        source: 'after-controlling-shareholder',
-        target: 'after-acquiring-company',
+        source: 'controlling-shareholder',
+        target: 'acquiring-company',
         type: 'ownership' as const,
         percentage: transactionData.controllingPercentage
       },
       {
-        source: 'after-public-shareholders',
-        target: 'after-acquiring-company',
+        source: 'public-shareholders',
+        target: 'acquiring-company',
         type: 'ownership' as const,
         percentage: transactionData.publicPercentage
       },
       
+      // New target company ownership (post-transaction)
+      {
+        source: 'acquiring-company',
+        target: 'target-company',
+        type: 'ownership' as const,
+        percentage: actualAcquisitionPercentage
+      },
+      {
+        source: 'remaining-target-shareholders',
+        target: 'target-company',
+        type: 'ownership' as const,
+        percentage: remainingPercentage
+      },
+      
       // Consideration flow
       {
-        source: 'after-acquiring-company',
-        target: 'consideration-payment',
+        source: 'acquiring-company',
+        target: 'consideration',
         type: 'consideration' as const,
-        value: actualConsideration
+        value: transactionData.considerationAmount
       }
     ]
   };
 
   return {
-    before,
-    after,
-    transactionSteps: generateTransactionSteps(),
+    before: { entities: [], relationships: [] }, // Not needed for unified view
+    after: unifiedPostTransactionStructure,
+    transactionSteps: [], // Not needed for unified view
     transactionContext: {
       type: results.transactionType,
-      amount: actualConsideration,
+      amount: transactionData.considerationAmount,
       currency: transactionData.currency,
       targetName: targetCompanyName,
       buyerName: acquiringCompanyName,
-      description: `${actualAcquisitionPercentage}% acquisition for ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M`
+      description: `${actualAcquisitionPercentage}% acquisition for ${transactionData.currency} ${(transactionData.considerationAmount / 1000000).toFixed(0)}M`
     }
   };
 };
 
 const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
-  const transactionFlow = convertToTransactionFlow(results);
+  const transactionFlow = convertToUnifiedPostTransactionFlow(results);
 
   return (
     <div className="h-full flex flex-col">
@@ -274,6 +206,7 @@ const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
         <div className="h-[700px]">
           <CombinedTransactionFlowDiagram 
             transactionFlow={transactionFlow}
+            showUnifiedView={true}
           />
         </div>
       </div>
@@ -282,7 +215,7 @@ const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
 };
 
 export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps> = ({ results }) => {
-  const transactionFlow = convertToTransactionFlow(results);
+  const transactionFlow = convertToUnifiedPostTransactionFlow(results);
 
   return (
     <Card className="h-[500px]">
@@ -290,10 +223,10 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Network className="h-5 w-5 text-blue-500" />
-            Transaction Structure Diagram
+            Post-Transaction Structure
           </CardTitle>
           <EnlargedContentDialog
-            title="Complete Transaction Structure & Flow"
+            title="Complete Post-Transaction Corporate & Shareholding Structure"
             enlargedContent={<EnlargedFlowContent results={results} />}
             size="full"
           >
@@ -305,6 +238,7 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
         <div className="h-full">
           <CombinedTransactionFlowDiagram 
             transactionFlow={transactionFlow}
+            showUnifiedView={true}
           />
         </div>
       </CardContent>

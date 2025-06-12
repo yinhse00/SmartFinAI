@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -6,10 +5,12 @@ import { TransactionFlow } from '@/types/transactionFlow';
 
 interface CombinedTransactionFlowDiagramProps {
   transactionFlow?: TransactionFlow;
+  showUnifiedView?: boolean;
 }
 
 const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramProps> = ({
-  transactionFlow
+  transactionFlow,
+  showUnifiedView = false
 }) => {
   const { nodes, edges } = useMemo(() => {
     if (!transactionFlow) {
@@ -18,6 +19,242 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     const nodes: Node[] = [];
     const edges: Edge[] = [];
+
+    if (showUnifiedView) {
+      // Unified post-transaction view layout
+      const CENTER_X = 400;
+      const VERTICAL_SPACING = 120;
+      const HORIZONTAL_SPACING = 200;
+      
+      // Layout positions for unified view
+      const SHAREHOLDERS_Y = 50;
+      const ACQUIRING_COMPANY_Y = 200;
+      const TARGET_COMPANY_Y = 350;
+      const CONSIDERATION_Y = 500;
+
+      const afterEntities = transactionFlow.after.entities;
+      const afterRelationships = transactionFlow.after.relationships;
+      const transactionContext = transactionFlow.transactionContext;
+
+      // Color schemes for different entity types
+      const getNodeColors = (type: string) => {
+        switch (type) {
+          case 'target':
+            return { backgroundColor: '#fef3c7', borderColor: '#f59e0b' };
+          case 'buyer':
+            return { backgroundColor: '#dbeafe', borderColor: '#2563eb' };
+          case 'stockholder':
+            return { backgroundColor: '#f3f4f6', borderColor: '#6b7280' };
+          case 'consideration':
+            return { backgroundColor: '#f0fdf4', borderColor: '#16a34a' };
+          default:
+            return { backgroundColor: '#f3f4f6', borderColor: '#6b7280' };
+        }
+      };
+
+      // Title
+      nodes.push({
+        id: 'title',
+        type: 'default',
+        position: { x: CENTER_X - 150, y: 10 },
+        data: { 
+          label: (
+            <div className="text-xl font-bold text-gray-800">
+              Post-Transaction Corporate & Shareholding Structure
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: 'transparent',
+          border: 'none',
+          width: '400px',
+          height: '30px'
+        },
+        draggable: false,
+        selectable: false
+      });
+
+      // Controlling Shareholder
+      const controllingEntity = afterEntities.find(e => e.id === 'controlling-shareholder');
+      if (controllingEntity) {
+        const colors = getNodeColors('stockholder');
+        nodes.push({
+          id: 'controlling-shareholder',
+          type: 'default',
+          position: { x: CENTER_X - HORIZONTAL_SPACING, y: SHAREHOLDERS_Y },
+          data: {
+            label: (
+              <div className="text-center p-2">
+                <div className="font-semibold text-sm">{controllingEntity.name}</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `2px solid ${colors.borderColor}`,
+            borderRadius: '8px',
+            width: '160px',
+            height: '60px'
+          }
+        });
+      }
+
+      // Public Shareholders
+      const publicEntity = afterEntities.find(e => e.id === 'public-shareholders');
+      if (publicEntity) {
+        const colors = getNodeColors('stockholder');
+        nodes.push({
+          id: 'public-shareholders',
+          type: 'default',
+          position: { x: CENTER_X + HORIZONTAL_SPACING - 160, y: SHAREHOLDERS_Y },
+          data: {
+            label: (
+              <div className="text-center p-2">
+                <div className="font-semibold text-sm">{publicEntity.name}</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `2px solid ${colors.borderColor}`,
+            borderRadius: '8px',
+            width: '160px',
+            height: '60px'
+          }
+        });
+      }
+
+      // Acquiring Company
+      const acquiringEntity = afterEntities.find(e => e.id === 'acquiring-company');
+      if (acquiringEntity) {
+        const colors = getNodeColors('buyer');
+        nodes.push({
+          id: 'acquiring-company',
+          type: 'default',
+          position: { x: CENTER_X - 100, y: ACQUIRING_COMPANY_Y },
+          data: {
+            label: (
+              <div className="text-center p-3">
+                <div className="font-semibold text-lg">{acquiringEntity.name}</div>
+                <div className="text-sm text-gray-600">{acquiringEntity.description}</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `3px solid ${colors.borderColor}`,
+            borderRadius: '12px',
+            width: '200px',
+            height: '90px'
+          }
+        });
+      }
+
+      // Target Company
+      const targetEntity = afterEntities.find(e => e.id === 'target-company');
+      if (targetEntity) {
+        const colors = getNodeColors('target');
+        nodes.push({
+          id: 'target-company',
+          type: 'default',
+          position: { x: CENTER_X - 100, y: TARGET_COMPANY_Y },
+          data: {
+            label: (
+              <div className="text-center p-3">
+                <div className="font-semibold text-lg">{targetEntity.name}</div>
+                <div className="text-sm text-gray-600">{targetEntity.description}</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `3px solid ${colors.borderColor}`,
+            borderRadius: '12px',
+            width: '200px',
+            height: '90px'
+          }
+        });
+      }
+
+      // Remaining Target Shareholders
+      const remainingEntity = afterEntities.find(e => e.id === 'remaining-target-shareholders');
+      if (remainingEntity) {
+        const colors = getNodeColors('stockholder');
+        nodes.push({
+          id: 'remaining-target-shareholders',
+          type: 'default',
+          position: { x: CENTER_X + HORIZONTAL_SPACING - 160, y: TARGET_COMPANY_Y },
+          data: {
+            label: (
+              <div className="text-center p-2">
+                <div className="font-semibold text-sm">{remainingEntity.name}</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `2px solid ${colors.borderColor}`,
+            borderRadius: '8px',
+            width: '160px',
+            height: '60px'
+          }
+        });
+      }
+
+      // Consideration
+      const considerationEntity = afterEntities.find(e => e.id === 'consideration');
+      if (considerationEntity) {
+        const colors = getNodeColors('consideration');
+        nodes.push({
+          id: 'consideration',
+          type: 'default',
+          position: { x: CENTER_X - 100, y: CONSIDERATION_Y },
+          data: {
+            label: (
+              <div className="text-center p-3">
+                <div className="font-semibold text-lg">{considerationEntity.name}</div>
+                <div className="text-sm text-gray-600">Transaction Payment</div>
+              </div>
+            )
+          },
+          style: {
+            backgroundColor: colors.backgroundColor,
+            border: `3px solid ${colors.borderColor}`,
+            borderRadius: '12px',
+            width: '200px',
+            height: '80px'
+          }
+        });
+      }
+
+      // Create edges with percentage/value labels
+      afterRelationships.forEach((rel, index) => {
+        if (nodes.find(n => n.id === rel.source) && nodes.find(n => n.id === rel.target)) {
+          edges.push({
+            id: `unified-edge-${index}`,
+            source: rel.source,
+            target: rel.target,
+            type: 'straight',
+            style: {
+              stroke: rel.type === 'consideration' ? '#16a34a' : '#2563eb',
+              strokeWidth: rel.type === 'consideration' ? 3 : 2
+            },
+            label: rel.percentage ? `${rel.percentage}%` : rel.value ? `${transactionContext?.currency} ${(rel.value / 1000000).toFixed(0)}M` : '',
+            labelStyle: {
+              fontSize: '12px',
+              fontWeight: 'bold',
+              fill: rel.type === 'consideration' ? '#16a34a' : '#2563eb',
+              backgroundColor: 'white',
+              padding: '4px 8px',
+              borderRadius: '4px',
+              border: `1px solid ${rel.type === 'consideration' ? '#16a34a' : '#2563eb'}`
+            }
+          });
+        }
+      });
+
+      return { nodes, edges };
+    }
 
     // Layout configuration - using identical Y-coordinates for Before/After sections
     const SECTION_WIDTH = 400;
@@ -684,7 +921,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     return { nodes, edges };
-  }, [transactionFlow]);
+  }, [transactionFlow, showUnifiedView]);
 
   return (
     <div className="h-full w-full relative">
@@ -698,7 +935,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         zoomOnScroll={true}
         panOnDrag={true}
         className="bg-gray-50"
-        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
+        defaultViewport={{ x: 0, y: 0, zoom: showUnifiedView ? 0.8 : 0.6 }}
         minZoom={0.3}
         maxZoom={1.5}
       >
