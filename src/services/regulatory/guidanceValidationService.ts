@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GuidanceMatch {
@@ -33,12 +34,12 @@ export const guidanceValidationService = {
       const searchTerms = extractSearchTerms(query);
       const matches: GuidanceMatch[] = [];
       
-      // Search FAQs
-      const faqMatches = await searchFAQs(searchTerms);
+      // Search FAQs from existing tables
+      const faqMatches = await searchExistingFAQs(searchTerms);
       matches.push(...faqMatches);
       
-      // Search interpretation guidance
-      const guidanceMatches = await searchInterpretationGuidance(searchTerms);
+      // Search guidance letters
+      const guidanceMatches = await searchGuidanceLetters(searchTerms);
       matches.push(...guidanceMatches);
       
       // Sort by relevance
@@ -145,81 +146,100 @@ export const guidanceValidationService = {
 };
 
 /**
- * Search FAQs table
+ * Search existing FAQ tables
  */
-async function searchFAQs(searchTerms: string[]): Promise<GuidanceMatch[]> {
+async function searchExistingFAQs(searchTerms: string[]): Promise<GuidanceMatch[]> {
   const matches: GuidanceMatch[] = [];
   
   try {
-    const { data, error } = await supabase
-      .from('regulatory_faqs')
+    // Search new FAQ table
+    const { data: newFaqData, error: newFaqError } = await supabase
+      .from('listingrule_new_faq')
       .select('*')
       .limit(20);
     
-    if (error) {
-      console.error('Error searching FAQs:', error);
-      return matches;
-    }
-    
-    if (data) {
-      for (const item of data) {
-        const relevance = calculateRelevance(searchTerms, item.question + ' ' + item.answer);
+    if (!newFaqError && newFaqData) {
+      for (const item of newFaqData) {
+        const searchableText = `${item.topic || ''} ${item.faqtopic || ''} ${item.chapter || ''}`;
+        const relevance = calculateRelevance(searchTerms, searchableText);
         if (relevance > 0.3) {
           matches.push({
             id: item.id,
-            title: item.question,
-            content: item.answer,
+            title: item.topic || 'FAQ',
+            content: item.faqtopic || '',
             type: 'faq',
             relevance,
-            source: 'regulatory_faqs',
-            relatedProvisions: item.related_provisions || []
+            source: 'listingrule_new_faq'
+          });
+        }
+      }
+    }
+    
+    // Search listed FAQ table
+    const { data: listedFaqData, error: listedFaqError } = await supabase
+      .from('listingrule_listed_faq')
+      .select('*')
+      .limit(20);
+    
+    if (!listedFaqError && listedFaqData) {
+      for (const item of listedFaqData) {
+        const searchableText = `${item.topics || ''} ${item.Sub_topics || ''}`;
+        const relevance = calculateRelevance(searchTerms, searchableText);
+        if (relevance > 0.3) {
+          matches.push({
+            id: item.id,
+            title: item.topics || 'FAQ',
+            content: item.Sub_topics || '',
+            type: 'faq',
+            relevance,
+            source: 'listingrule_listed_faq'
           });
         }
       }
     }
   } catch (error) {
-    console.error('Error in searchFAQs:', error);
+    console.error('Error in searchExistingFAQs:', error);
   }
   
   return matches;
 }
 
 /**
- * Search interpretation guidance table
+ * Search guidance letters table
  */
-async function searchInterpretationGuidance(searchTerms: string[]): Promise<GuidanceMatch[]> {
+async function searchGuidanceLetters(searchTerms: string[]): Promise<GuidanceMatch[]> {
   const matches: GuidanceMatch[] = [];
   
   try {
     const { data, error } = await supabase
-      .from('interpretation_guidance')
+      .from('listingrule_new_gl')
       .select('*')
       .limit(20);
     
     if (error) {
-      console.error('Error searching guidance:', error);
+      console.error('Error searching guidance letters:', error);
       return matches;
     }
     
     if (data) {
       for (const item of data) {
-        const relevance = calculateRelevance(searchTerms, item.title + ' ' + item.content);
+        const searchableText = `${item.title || ''} ${item.particulars || ''} ${item.mblistingrules_Topics || ''}`;
+        const relevance = calculateRelevance(searchTerms, searchableText);
         if (relevance > 0.3) {
           matches.push({
             id: item.id,
-            title: item.title,
-            content: item.content,
+            title: item.title || 'Guidance Letter',
+            content: item.particulars || '',
             type: 'guidance',
             relevance,
-            source: 'interpretation_guidance',
-            applicableRules: item.applicable_rules || [],
-            guidanceNumber: item.guidance_number || ''
+            source: 'listingrule_new_gl',
+            guidanceNumber: item.reference_no || ''
           });
         }
       }
     }
   } catch (error) {
-    console.error('Error in searchInterpretationGuidance:', error);
+    console.error('Error in searchGuidanceLetters:', error);
   }
   
   return matches;

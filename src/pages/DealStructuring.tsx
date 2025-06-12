@@ -1,41 +1,46 @@
 
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
-import { TransactionInputWizard } from '@/components/dealStructuring/TransactionInputWizard';
-import { StructureRecommendations } from '@/components/dealStructuring/StructureRecommendations';
-import { TransactionAnalysis } from '@/components/dealStructuring/TransactionAnalysis';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { TrendingUp, Calculator, FileText, Clock } from 'lucide-react';
-
-export interface TransactionData {
-  type: 'capital_raising' | 'ma_transaction' | 'hybrid' | '';
-  subtype: string;
-  amount: number;
-  currency: string;
-  currentShares: number;
-  marketCap: number;
-  objectives: string[];
-  timeline: string;
-  shareholderStructure: Array<{
-    name: string;
-    percentage: number;
-    type: 'individual' | 'institutional' | 'connected';
-  }>;
-  regulatoryConstraints: string[];
-  jurisdiction: string;
-}
+import { TrendingUp, Calculator, FileText, Clock, Sparkles, Users } from 'lucide-react';
+import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
+import { AIAnalysisResults, AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { aiAnalysisService, TransactionAnalysisRequest } from '@/services/dealStructuring/aiAnalysisService';
+import { useToast } from '@/hooks/use-toast';
 
 const DealStructuring = () => {
-  const [currentStep, setCurrentStep] = useState<'input' | 'analysis' | 'recommendations'>('input');
-  const [transactionData, setTransactionData] = useState<TransactionData | null>(null);
+  const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const { toast } = useToast();
 
-  const handleTransactionSubmit = (data: TransactionData) => {
-    setTransactionData(data);
-    setCurrentStep('analysis');
+  const handleTransactionAnalysis = async (request: TransactionAnalysisRequest) => {
+    setIsAnalyzing(true);
+    
+    try {
+      const results = await aiAnalysisService.analyzeTransaction(request);
+      setAnalysisResults(results);
+      setCurrentStep('analysis');
+      
+      toast({
+        title: "Analysis Complete",
+        description: "Your transaction has been analyzed successfully.",
+      });
+    } catch (error) {
+      console.error('Analysis error:', error);
+      toast({
+        title: "Analysis Failed",
+        description: "Unable to analyze transaction. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
 
-  const handleProceedToRecommendations = () => {
-    setCurrentStep('recommendations');
+  const handleNewAnalysis = () => {
+    setCurrentStep('input');
+    setAnalysisResults(null);
   };
 
   return (
@@ -43,79 +48,82 @@ const DealStructuring = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            Deal Structuring Advisory
+            AI-Powered Deal Structuring
           </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-3xl">
-            Comprehensive advisory for capital raising and M&A transactions, covering regulatory compliance, 
-            execution planning, cost optimization, and structure recommendations.
+          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-4xl">
+            Get intelligent advisory for capital raising and M&A transactions. Our AI analyzes your requirements 
+            and documents to provide professional-grade structuring advice, cost analysis, regulatory compliance 
+            guidance, and execution timetables.
           </p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Transaction Types</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">15+</div>
-              <p className="text-xs text-muted-foreground">Capital raising & M&A structures</p>
+        {/* Features Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Sparkles className="h-8 w-8 mx-auto text-primary mb-2" />
+              <p className="text-sm font-medium">AI Analysis</p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Regulatory Frameworks</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">2</div>
-              <p className="text-xs text-muted-foreground">Listing Rules & Takeovers Code</p>
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <FileText className="h-8 w-8 mx-auto text-blue-500 mb-2" />
+              <p className="text-sm font-medium">Document Intelligence</p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Cost Analysis</CardTitle>
-              <Calculator className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">360°</div>
-              <p className="text-xs text-muted-foreground">Complete cost optimization</p>
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Calculator className="h-8 w-8 mx-auto text-green-500 mb-2" />
+              <p className="text-sm font-medium">Cost Analysis</p>
             </CardContent>
           </Card>
           
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Timeline Planning</CardTitle>
-              <Clock className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">Smart</div>
-              <p className="text-xs text-muted-foreground">Optimized execution timeline</p>
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Clock className="h-8 w-8 mx-auto text-orange-500 mb-2" />
+              <p className="text-sm font-medium">Timeline Planning</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <Users className="h-8 w-8 mx-auto text-purple-500 mb-2" />
+              <p className="text-sm font-medium">Shareholding Impact</p>
+            </CardContent>
+          </Card>
+          
+          <Card className="text-center">
+            <CardContent className="pt-6">
+              <TrendingUp className="h-8 w-8 mx-auto text-red-500 mb-2" />
+              <p className="text-sm font-medium">Compliance Guide</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content Area */}
+        {/* Main Content */}
         <div className="space-y-8">
           {currentStep === 'input' && (
-            <TransactionInputWizard onSubmit={handleTransactionSubmit} />
-          )}
-          
-          {currentStep === 'analysis' && transactionData && (
-            <TransactionAnalysis 
-              transactionData={transactionData}
-              onProceed={handleProceedToRecommendations}
+            <EnhancedTransactionInput
+              onAnalyze={handleTransactionAnalysis}
+              isAnalyzing={isAnalyzing}
             />
           )}
           
-          {currentStep === 'recommendations' && transactionData && (
-            <StructureRecommendations 
-              transactionData={transactionData}
-              onBack={() => setCurrentStep('analysis')}
-            />
+          {currentStep === 'analysis' && analysisResults && (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-bold">Transaction Analysis Results</h2>
+                <button
+                  onClick={handleNewAnalysis}
+                  className="text-primary hover:underline"
+                >
+                  New Analysis
+                </button>
+              </div>
+              <AIAnalysisResults results={analysisResults} />
+            </div>
           )}
         </div>
       </div>

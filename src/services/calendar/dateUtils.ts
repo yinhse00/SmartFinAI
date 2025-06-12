@@ -1,91 +1,34 @@
 
-import { addBusinessDays, isBusinessDay } from './businessDayCalculator';
-import { TimetableEntry } from '@/types/calendar';
+import { BusinessDayCalculator } from './businessDayCalculator';
+import { HongKongHolidays } from './hongKongHolidays';
+
+const holidayChecker = new HongKongHolidays();
+const businessDayCalculator = new BusinessDayCalculator(holidayChecker);
 
 /**
- * Format date for Hong Kong timezone display
+ * Check if a date is a business day
  */
-export const formatHongKongDate = (date: Date, includeDay: boolean = true): string => {
-  const options: Intl.DateTimeFormatOptions = {
-    timeZone: 'Asia/Hong_Kong',
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric'
-  };
-
-  if (includeDay) {
-    options.weekday = 'short';
-  }
-
-  return date.toLocaleDateString('en-HK', options);
+export const isBusinessDay = (date: Date): boolean => {
+  return businessDayCalculator.isBusinessDay(date);
 };
 
 /**
- * Create a timetable entry with business day calculations
+ * Add business days to a date
  */
-export const createTimetableEntry = (
-  baseDate: Date,
-  businessDayOffset: number,
-  event: string,
-  description: string
-): TimetableEntry => {
-  const targetDate = addBusinessDays(baseDate, businessDayOffset);
-  const calendarDayOffset = Math.floor((targetDate.getTime() - baseDate.getTime()) / (1000 * 60 * 60 * 24));
-
-  return {
-    date: targetDate,
-    event,
-    description,
-    isBusinessDay: isBusinessDay(targetDate),
-    dayOffset: calendarDayOffset,
-    businessDayOffset
-  };
+export const addBusinessDays = (startDate: Date, days: number): Date => {
+  return businessDayCalculator.addBusinessDays(startDate, days);
 };
 
 /**
- * Generate a series of timetable entries based on business day offsets
+ * Subtract business days from a date
  */
-export const generateBusinessDayTimetable = (
-  recordDate: Date,
-  entries: Array<{ businessDays: number; event: string; description: string }>
-): TimetableEntry[] => {
-  return entries.map(entry => 
-    createTimetableEntry(recordDate, entry.businessDays, entry.event, entry.description)
-  );
+export const subtractBusinessDays = (startDate: Date, days: number): Date => {
+  return businessDayCalculator.subtractBusinessDays(startDate, days);
 };
 
 /**
- * Validate that a deadline meets minimum business day requirements
+ * Count business days between two dates
  */
-export const validateBusinessDayRequirement = (
-  startDate: Date,
-  endDate: Date,
-  minimumBusinessDays: number
-): { isValid: boolean; actualDays: number; suggestion?: Date } => {
-  const actualDays = Math.floor((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-  
-  if (actualDays >= minimumBusinessDays) {
-    return { isValid: true, actualDays };
-  }
-
-  const suggestedDate = addBusinessDays(startDate, minimumBusinessDays);
-  return {
-    isValid: false,
-    actualDays,
-    suggestion: suggestedDate
-  };
-};
-
-/**
- * Format business day offset for display (e.g., "T+5 (7 calendar days)")
- */
-export const formatBusinessDayOffset = (businessDays: number, calendarDays: number): string => {
-  const sign = businessDays >= 0 ? '+' : '';
-  const businessDayStr = `T${sign}${businessDays}`;
-  
-  if (Math.abs(calendarDays - businessDays) > 0) {
-    return `${businessDayStr} (${calendarDays} calendar days)`;
-  }
-  
-  return businessDayStr;
+export const countBusinessDays = (startDate: Date, endDate: Date): number => {
+  return businessDayCalculator.countBusinessDays(startDate, endDate);
 };
