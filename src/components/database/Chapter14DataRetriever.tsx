@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,15 +37,7 @@ const Chapter14DataRetriever: React.FC = () => {
       
       const { data: provisions, error } = await supabase
         .from('regulatory_provisions')
-        .select(`
-          id,
-          rule_number,
-          title,
-          content,
-          chapter,
-          section,
-          regulatory_categories(code)
-        `)
+        .select('id, rule_number, title, content, chapter, section')
         .eq('chapter', 'Chapter 14')
         .order('rule_number');
         
@@ -61,7 +52,7 @@ const Chapter14DataRetriever: React.FC = () => {
         content: item.content || '',
         chapter: item.chapter || 'Chapter 14',
         section: item.section || '',
-        categoryCode: item.regulatory_categories?.code || 'CH14'
+        categoryCode: 'CH14'
       }));
       
       setFormattedData(formattedProvisions);

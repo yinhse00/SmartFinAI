@@ -1,3 +1,4 @@
+
 /**
  * Service for searching the regulatory database
  */
@@ -17,39 +18,12 @@ export const searchService = {
     // Convert query to lowercase for case-insensitive matching
     const queryLower = query.toLowerCase();
     
-    // Prepare the Supabase query
+    // Prepare the Supabase query - simplified without problematic relationships
     let supabaseQuery = supabase
       .from('regulatory_provisions')
-      .select(`
-        id,
-        rule_number,
-        title,
-        content,
-        chapter,
-        section,
-        last_updated,
-        is_current,
-        regulatory_categories(code)
-      `);
-    
-    // Map our category strings to the database category codes
-    if (category) {
-      const categoryMapping: Record<string, string[]> = {
-        'listing_rules': ['CH13', 'CH14', 'CH14A'],
-        'takeovers': ['TO'],
-        'guidance': ['GN'],
-        'decisions': ['LD'],
-        'checklists': ['CL'],
-        'other': ['OTHER']
-      };
-      
-      const categoryCodes = categoryMapping[category] || ['OTHER'];
-      supabaseQuery = supabaseQuery.in('regulatory_categories.code', categoryCodes);
-    }
+      .select('id, rule_number, title, content, chapter, section, last_updated, is_current');
     
     // Add search condition
-    // Since we can't do complex text search with the regular Supabase query,
-    // we'll fetch the results and filter them client-side
     const { data, error } = await supabaseQuery;
     
     if (error) {
@@ -68,19 +42,19 @@ export const searchService = {
     
     // Map the Supabase data structure to our RegulatoryEntry type
     return filteredData.map(item => {
-      const categoryCode = item.regulatory_categories?.code || 'other';
-      const categoryMapping: Record<string, RegulatoryEntry['category']> = {
-        'CH13': 'listing_rules',
-        'CH14': 'listing_rules',
-        'CH14A': 'listing_rules',
-        'TO': 'takeovers'
-      };
+      // Determine category based on chapter or rule number
+      let mappedCategory: RegulatoryEntry['category'] = 'other';
+      if (item.chapter?.includes('14') || item.chapter?.includes('13')) {
+        mappedCategory = 'listing_rules';
+      } else if (item.rule_number?.includes('TO')) {
+        mappedCategory = 'takeovers';
+      }
       
       return {
         id: item.id,
         title: item.title,
         content: item.content,
-        category: categoryMapping[categoryCode] || 'other',
+        category: mappedCategory,
         source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
         section: item.section || undefined,
         lastUpdated: new Date(item.last_updated),
@@ -142,9 +116,9 @@ export const searchService = {
     // Search for entries in the regulatory database
     const databaseEntries = await searchService.search(query, category);
     
-    // Search for reference documents in Supabase
+    // Search for reference documents in Supabase using the correct table name
     let referenceQuery = supabase
-      .from('reference_documents')
+      .from('mb_listingrule_documents')
       .select('*');
       
     if (category && category !== 'all') {
@@ -163,8 +137,16 @@ export const searchService = {
     
     // Convert the raw data to ReferenceDocument type
     const typedReferenceData = referenceData?.map(item => ({
-      ...item,
-      category: item.category as DocumentCategory
+      id: item.id,
+      title: item.title,
+      description: item.description || '',
+      category: item.category as DocumentCategory,
+      file_path: item.file_path,
+      file_url: item.file_url,
+      file_size: item.file_size || 0,
+      file_type: item.file_type || '',
+      created_at: item.created_at,
+      metadata: item.metadata
     })) as ReferenceDocument[] || [];
     
     console.log(`Found ${databaseEntries.length} database entries and ${typedReferenceData.length || 0} reference documents`);
@@ -182,9 +164,9 @@ async function searchReferenceDocuments(
   category?: string, 
   prioritizeFAQ: boolean = false
 ): Promise<{ referenceDocuments: ReferenceDocument[] }> {
-  // Search reference documents in Supabase
+  // Search reference documents in Supabase using correct table name
   let referenceQuery = supabase
-    .from('reference_documents')
+    .from('mb_listingrule_documents')
     .select('*');
     
   if (category && category !== 'all') {
@@ -203,8 +185,16 @@ async function searchReferenceDocuments(
   
   // Convert the raw data to ReferenceDocument type
   const typedReferenceData = referenceData?.map(item => ({
-    ...item,
-    category: item.category as DocumentCategory
+    id: item.id,
+    title: item.title,
+    description: item.description || '',
+    category: item.category as DocumentCategory,
+    file_path: item.file_path,
+    file_url: item.file_url,
+    file_size: item.file_size || 0,
+    file_type: item.file_type || '',
+    created_at: item.created_at,
+    metadata: item.metadata
   })) as ReferenceDocument[] || [];
   
   // Prioritize FAQ documents if requested

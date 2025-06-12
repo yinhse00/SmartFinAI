@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -44,9 +45,9 @@ const TimetableViewer: React.FC = () => {
     setError(null);
     
     try {
-      // Search for Timetable document in the reference_documents table
+      // Search for Timetable document in the mb_listingrule_documents table
       const { data: documents, error: docError } = await supabase
-        .from('reference_documents')
+        .from('mb_listingrule_documents')
         .select('*')
         .or('title.ilike.%Timetable%,file_path.ilike.%Timetable%')
         .order('created_at', { ascending: false })

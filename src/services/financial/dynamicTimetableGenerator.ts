@@ -1,283 +1,478 @@
-
-import { addBusinessDays, isBusinessDay } from '@/services/calendar/businessDayCalculator';
+import { BusinessDayCalculator } from '../calendar/businessDayCalculator';
+import { HongKongHolidays } from '../calendar/hongKongHolidays';
 import { supabase } from '@/integrations/supabase/client';
 
-/**
- * Enhanced dynamic timetable generator that incorporates reference document content
- * and handles conditional logic for shareholder approval requirements
- */
-export const generateDynamicTimetable = async (processType: string): Promise<string> => {
-  console.log(`Generating dynamic timetable for process type: ${processType}`);
-  
-  // First, try to get content from uploaded reference documents
-  const referenceContent = await getReferenceDocumentContent();
-  
-  // Get the current date for calculations
-  const currentDate = new Date();
-  
-  // Determine if shareholder approval is required based on process type
-  const requiresShareholderApproval = determineShareholderApprovalRequirement(processType);
-  
-  // Base timetable structure with business day calculations and listing document phases
-  let timetable = generateEnhancedTimetable(processType, currentDate, requiresShareholderApproval);
-  
-  // If we have reference document content, enhance the timetable
-  if (referenceContent) {
-    console.log('Enhancing timetable with reference document content');
-    timetable = enhanceWithReferenceContent(timetable, referenceContent, processType);
-  }
-  
-  return timetable;
-};
-
-/**
- * Determine if shareholder approval is required for the corporate action
- */
-function determineShareholderApprovalRequirement(processType: string): boolean {
-  switch (processType) {
-    case 'rights_issue':
-      // Rights issues typically don't require shareholder approval unless exceeding 50% threshold
-      return false;
-    case 'open_offer':
-      // Open offers typically don't require shareholder approval unless exceeding 50% threshold
-      return false;
-    case 'share_consolidation':
-    case 'company_name_change':
-      // These always require shareholder approval
-      return true;
-    case 'board_lot_change':
-      // Board lot changes typically don't require shareholder approval
-      return false;
-    default:
-      return false;
-  }
+interface TimetableEvent {
+  day: number;
+  date: Date;
+  event: string;
+  description?: string;
+  isKeyEvent?: boolean;
 }
 
-/**
- * Generate enhanced timetable with listing document phases and conditional logic
- */
-function generateEnhancedTimetable(processType: string, currentDate: Date, requiresShareholderApproval: boolean): string {
-  const today = new Date(currentDate);
-  
-  // Phase 1: Listing Documents Preparation and Vetting (as per Timetable20250520.docx)
-  const preparationStart = addBusinessDays(today, 0);
-  const preparationComplete = addBusinessDays(preparationStart, 5); // 5 business days
-  const vettingComplete = addBusinessDays(preparationComplete, 10); // 10 business days
-  const announcementDate = addBusinessDays(vettingComplete, 1);
-  
-  let timetable = `
-## ${getProcessTitle(processType)} - Enhanced Business Day Compliant Timetable
-
-**IMPORTANT:** All dates below are calculated using Hong Kong business days (excluding weekends and public holidays).
-
-### Phase 1: Listing Documents Preparation and Vetting
-| Business Day | Date | Event | Description |
-|--------------|------|-------|-------------|
-| T+0 | ${formatDate(preparationStart)} | Preparation Start | Listing documents preparation begins |
-| T+5 | ${formatDate(preparationComplete)} | Preparation Complete | Listing documents preparation completed (5 business days) |
-| T+15 | ${formatDate(vettingComplete)} | Vetting Complete | Stock Exchange vetting completed (10 business days) |
-| T+16 | ${formatDate(announcementDate)} | Announcement | Corporate action announcement published |
-`;
-
-  // Phase 2: Conditional Circular and Approval Phase (only if shareholder approval required)
-  if (requiresShareholderApproval) {
-    const circularPreparation = addBusinessDays(announcementDate, 5);
-    const circularVetting = addBusinessDays(circularPreparation, 10);
-    const circularDispatch = addBusinessDays(circularVetting, 1);
-    const egmDate = addBusinessDays(circularDispatch, 21);
-    const resultsAnnouncement = addBusinessDays(egmDate, 0);
-
-    timetable += `
-### Phase 2: Circular and Shareholder Approval (Required for ${processType})
-| Business Day | Date | Event | Description |
-|--------------|------|-------|-------------|
-| T+21 | ${formatDate(circularPreparation)} | Circular Preparation | Circular preparation begins |
-| T+31 | ${formatDate(circularVetting)} | Circular Vetting Complete | Circular vetting by Stock Exchange completed |
-| T+32 | ${formatDate(circularDispatch)} | Circular Dispatch | Circular dispatched to shareholders |
-| T+53 | ${formatDate(egmDate)} | EGM Date | Extraordinary General Meeting for approval |
-| T+53 | ${formatDate(resultsAnnouncement)} | Results Announcement | EGM results announced |
-`;
-
-    // Implementation phase starts after EGM
-    const implementationStart = addBusinessDays(egmDate, 2);
-    generateImplementationPhase(timetable, implementationStart, processType);
-  } else {
-    timetable += `
-### Phase 2: Direct Implementation (No Shareholder Approval Required)
-**Note:** This ${processType} does not require shareholder approval and can proceed directly to implementation.
-`;
-
-    // Implementation phase starts after announcement
-    const implementationStart = addBusinessDays(announcementDate, 2);
-    timetable = generateImplementationPhase(timetable, implementationStart, processType);
-  }
-
-  // Add compliance notes
-  timetable += `
-**Business Day Compliance Notes:**
-- All calculations exclude Hong Kong public holidays and weekends
-- Listing document preparation: 5 business days (as per Timetable20250520.docx)
-- Stock Exchange vetting: 10 business days (as per Timetable20250520.docx)
-${requiresShareholderApproval ? '- Shareholder approval required via EGM' : '- No shareholder approval required for this corporate action'}
-- Dates may be adjusted if they fall on non-business days
-`;
-
-  return timetable;
+interface TimetableOptions {
+  startDate: Date;
+  transactionType: string;
+  includeWeekends?: boolean;
+  adjustForHolidays?: boolean;
+  customEvents?: TimetableEvent[];
 }
 
-/**
- * Generate implementation phase based on corporate action type
- */
-function generateImplementationPhase(baseTimetable: string, startDate: Date, processType: string): string {
-  let implementationPhase = `
-### Phase 3: Implementation Timeline
-| Business Day | Date | Event | Description |
-|--------------|------|-------|-------------|
-`;
-
-  switch (processType) {
-    case 'rights_issue':
-      const recordDate = addBusinessDays(startDate, 2);
-      const palDispatch = addBusinessDays(recordDate, 3);
-      const nilPaidStart = addBusinessDays(palDispatch, 1);
-      const nilPaidEnd = addBusinessDays(nilPaidStart, 10);
-      const acceptanceDeadline = addBusinessDays(nilPaidEnd, 4);
-      const newSharesListing = addBusinessDays(acceptanceDeadline, 7);
-
-      implementationPhase += `| R+2 | ${formatDate(recordDate)} | Record Date | Shareholder register closed |
-| R+5 | ${formatDate(palDispatch)} | PAL Dispatch | Provisional Allotment Letters dispatched |
-| R+6 | ${formatDate(nilPaidStart)} | Nil-Paid Trading Start | Nil-paid rights trading begins |
-| R+16 | ${formatDate(nilPaidEnd)} | Nil-Paid Trading End | Last day of nil-paid rights trading |
-| R+20 | ${formatDate(acceptanceDeadline)} | Acceptance Deadline | Final date for acceptance and payment |
-| R+27 | ${formatDate(newSharesListing)} | New Shares Listing | Dealing in fully-paid new shares commences |`;
-      break;
-
-    case 'open_offer':
-      const openOfferRecord = addBusinessDays(startDate, 2);
-      const applicationDispatch = addBusinessDays(openOfferRecord, 3);
-      const openOfferDeadline = addBusinessDays(applicationDispatch, 14);
-      const openOfferListing = addBusinessDays(openOfferDeadline, 7);
-
-      implementationPhase += `| O+2 | ${formatDate(openOfferRecord)} | Record Date | Shareholder register closed |
-| O+5 | ${formatDate(applicationDispatch)} | Application Forms Dispatch | Application forms sent to shareholders |
-| O+19 | ${formatDate(openOfferDeadline)} | Acceptance Deadline | Final date for acceptance and payment |
-| O+26 | ${formatDate(openOfferListing)} | New Shares Listing | Dealing in new shares commences |
-
-**Note:** Open offers do NOT include nil-paid rights trading period.`;
-      break;
-
-    default:
-      const effectiveDate = addBusinessDays(startDate, 5);
-      implementationPhase += `| I+5 | ${formatDate(effectiveDate)} | Effective Date | Corporate action becomes effective |`;
-      break;
-  }
-
-  return baseTimetable + implementationPhase + '\n';
+enum TimetablePhase {
+  ANNOUNCEMENT = 'announcement',
+  CIRCULAR_PREPARATION = 'circular_preparation',
+  REGULATORY_REVIEW = 'regulatory_review',
+  SHAREHOLDER_APPROVAL = 'shareholder_approval',
+  COMPLETION = 'completion'
 }
 
-/**
- * Get content from uploaded reference documents, particularly Timetable20250520.docx
- */
-async function getReferenceDocumentContent(): Promise<string | null> {
-  try {
-    const { data: referenceDocuments, error } = await supabase
-      .from('reference_documents')
-      .select('title, description, file_path')
-      .or(`title.ilike.%timetable%,file_path.ilike.%timetable%`)
-      .order('created_at', { ascending: false });
+export class DynamicTimetableGenerator {
+  private businessDayCalculator: BusinessDayCalculator;
+
+  constructor() {
+    this.businessDayCalculator = new BusinessDayCalculator(new HongKongHolidays());
+  }
+
+  /**
+   * Generate a timetable for a financial transaction
+   */
+  public async generateTimetable(options: TimetableOptions): Promise<TimetableEvent[]> {
+    console.log(`Generating timetable for ${options.transactionType} starting on ${options.startDate.toDateString()}`);
     
-    if (error) {
-      console.error('Error fetching reference documents:', error);
-      return null;
+    const events: TimetableEvent[] = [];
+    const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
+    
+    // Add announcement day (Day 0)
+    events.push({
+      day: 0,
+      date: new Date(startDate),
+      event: 'Board Meeting and Announcement',
+      description: 'Board approves the transaction and issues announcement',
+      isKeyEvent: true
+    });
+    
+    // Add standard events based on transaction type
+    switch (transactionType.toLowerCase()) {
+      case 'major transaction':
+        this.addMajorTransactionEvents(events, startDate, adjustForHolidays);
+        break;
+      case 'very substantial acquisition':
+      case 'vsa':
+        this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+        break;
+      case 'very substantial disposal':
+      case 'vsd':
+        this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays);
+        break;
+      case 'connected transaction':
+        this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
+        break;
+      case 'reverse takeover':
+      case 'rto':
+        this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
+        break;
+      default:
+        this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
     }
     
-    if (!referenceDocuments || referenceDocuments.length === 0) {
-      return null;
+    // Add custom events if provided
+    if (options.customEvents && options.customEvents.length > 0) {
+      events.push(...options.customEvents);
     }
     
-    // Prioritize the specific document mentioned by the user
-    const timetableDoc = referenceDocuments.find(doc => 
-      doc.file_path.toLowerCase().includes('timetable20250520') ||
-      doc.title.toLowerCase().includes('timetable20250520')
-    ) || referenceDocuments[0];
+    // Sort events by day
+    events.sort((a, b) => a.day - b.day);
     
-    if (timetableDoc) {
-      console.log(`Using reference document: ${timetableDoc.title}`);
-      return timetableDoc.description || `Reference: ${timetableDoc.title}`;
+    // Try to find reference timetables for this transaction type
+    const referenceTimetables = await this.searchReferenceTimetables(transactionType);
+    if (referenceTimetables.length > 0) {
+      console.log(`Found ${referenceTimetables.length} reference timetables that may be relevant`);
     }
     
-    return null;
-  } catch (error) {
-    console.error('Error in getReferenceDocumentContent:', error);
-    return null;
+    return events;
   }
-}
-
-/**
- * Enhance timetable with content from reference documents
- */
-function enhanceWithReferenceContent(baseTimetable: string, referenceContent: string, processType: string): string {
-  // Add reference document information at the top
-  const enhancedTimetable = `
-## Enhanced Timetable Based on Reference Documentation
-
-**Reference Source:** Content incorporated from uploaded timetable documentation (Timetable20250520.docx)
-
-**Key Requirements from Reference Document:**
-${referenceContent}
-
----
-
-${baseTimetable}
-
----
-
-**Additional Notes from Reference Documentation:**
-- Listing document preparation: 5 business days (as specified in reference document)
-- Stock Exchange vetting: 10 business days (as specified in reference document)
-- Conditional circular/EGM requirements properly applied
-- Business day calculations comply with Hong Kong market practices
-
-**Compliance Verification:**
-- Cross-referenced with uploaded timetable requirements
-- Aligned with reference document specifications
-- Conditional logic applied for shareholder approval requirements
-- Business day calculations verified for Hong Kong market
-`;
-
-  return enhancedTimetable;
-}
-
-/**
- * Get process title based on type
- */
-function getProcessTitle(processType: string): string {
-  switch (processType) {
-    case 'rights_issue':
-      return 'Rights Issue Execution Process';
-    case 'open_offer':
-      return 'Open Offer Execution Process';
-    case 'share_consolidation':
-      return 'Share Consolidation Process';
-    case 'board_lot_change':
-      return 'Board Lot Change Process';
-    case 'company_name_change':
-      return 'Company Name Change Process';
-    case 'takeovers_code':
-    case 'takeover_offer':
-      return 'General Offer Process';
-    default:
-      return 'Corporate Action Execution Process';
+  
+  /**
+   * Add events for a Major Transaction
+   */
+  private addMajorTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Day 1: Submit draft circular
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Submit Draft Circular to HKEX',
+      description: 'First draft circular submitted for regulatory review'
+    });
+    
+    // Day 14: Expected regulatory feedback
+    events.push({
+      day: 14,
+      date: this.calculateBusinessDay(startDate, 14, adjustForHolidays),
+      event: 'Expected Regulatory Feedback',
+      description: 'First round of comments from HKEX expected'
+    });
+    
+    // Day 28: Despatch circular
+    events.push({
+      day: 28,
+      date: this.calculateBusinessDay(startDate, 28, adjustForHolidays),
+      event: 'EGM Notice & Despatch Circular',
+      description: 'Circular finalized and sent to shareholders',
+      isKeyEvent: true
+    });
+    
+    // Day 42: EGM
+    events.push({
+      day: 42,
+      date: this.calculateBusinessDay(startDate, 42, adjustForHolidays),
+      event: 'Extraordinary General Meeting',
+      description: 'Shareholders vote on the proposed transaction',
+      isKeyEvent: true
+    });
+    
+    // Day 44: Results announcement
+    events.push({
+      day: 44,
+      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
+      event: 'Results Announcement',
+      description: 'Publication of EGM results and next steps'
+    });
   }
-}
-
-/**
- * Format date for display
- */
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('en-GB', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  
+  /**
+   * Add events for a Very Substantial Acquisition
+   */
+  private addVerySubstantialAcquisitionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // VSA follows similar timeline to Major Transaction but with longer review period
+    
+    // Day 1: Submit draft circular
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Submit Draft Circular to HKEX',
+      description: 'First draft circular submitted for regulatory review'
+    });
+    
+    // Day 21: Expected regulatory feedback (longer for VSA)
+    events.push({
+      day: 21,
+      date: this.calculateBusinessDay(startDate, 21, adjustForHolidays),
+      event: 'Expected Regulatory Feedback',
+      description: 'First round of comments from HKEX expected'
+    });
+    
+    // Day 35: Despatch circular (longer for VSA)
+    events.push({
+      day: 35,
+      date: this.calculateBusinessDay(startDate, 35, adjustForHolidays),
+      event: 'EGM Notice & Despatch Circular',
+      description: 'Circular finalized and sent to shareholders',
+      isKeyEvent: true
+    });
+    
+    // Day 49: EGM
+    events.push({
+      day: 49,
+      date: this.calculateBusinessDay(startDate, 49, adjustForHolidays),
+      event: 'Extraordinary General Meeting',
+      description: 'Shareholders vote on the proposed transaction',
+      isKeyEvent: true
+    });
+    
+    // Day 51: Results announcement
+    events.push({
+      day: 51,
+      date: this.calculateBusinessDay(startDate, 51, adjustForHolidays),
+      event: 'Results Announcement',
+      description: 'Publication of EGM results and next steps'
+    });
+    
+    // Day 65: Long stop date for completion
+    events.push({
+      day: 65,
+      date: this.calculateBusinessDay(startDate, 65, adjustForHolidays),
+      event: 'Long Stop Date for Completion',
+      description: 'Target date for completing the acquisition',
+      isKeyEvent: true
+    });
+  }
+  
+  /**
+   * Add events for a Very Substantial Disposal
+   */
+  private addVerySubstantialDisposalEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // VSD follows similar timeline to VSA
+    this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+    
+    // Update the last event description
+    const lastEvent = events[events.length - 1];
+    if (lastEvent && lastEvent.event.includes('Long Stop Date')) {
+      lastEvent.description = 'Target date for completing the disposal';
+    }
+  }
+  
+  /**
+   * Add events for a Connected Transaction
+   */
+  private addConnectedTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Connected transactions require independent shareholder approval
+    
+    // Day 1: Submit draft circular
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Submit Draft Circular to HKEX',
+      description: 'First draft circular submitted for regulatory review'
+    });
+    
+    // Day 5: Appoint Independent Financial Adviser
+    events.push({
+      day: 5,
+      date: this.calculateBusinessDay(startDate, 5, adjustForHolidays),
+      event: 'Appoint Independent Financial Adviser',
+      description: 'IFA appointed to advise independent board committee'
+    });
+    
+    // Day 14: Expected regulatory feedback
+    events.push({
+      day: 14,
+      date: this.calculateBusinessDay(startDate, 14, adjustForHolidays),
+      event: 'Expected Regulatory Feedback',
+      description: 'First round of comments from HKEX expected'
+    });
+    
+    // Day 21: IFA opinion finalized
+    events.push({
+      day: 21,
+      date: this.calculateBusinessDay(startDate, 21, adjustForHolidays),
+      event: 'IFA Opinion Finalized',
+      description: 'Independent Financial Adviser finalizes opinion letter'
+    });
+    
+    // Day 28: Despatch circular
+    events.push({
+      day: 28,
+      date: this.calculateBusinessDay(startDate, 28, adjustForHolidays),
+      event: 'EGM Notice & Despatch Circular',
+      description: 'Circular with IFA opinion sent to shareholders',
+      isKeyEvent: true
+    });
+    
+    // Day 42: EGM
+    events.push({
+      day: 42,
+      date: this.calculateBusinessDay(startDate, 42, adjustForHolidays),
+      event: 'Extraordinary General Meeting',
+      description: 'Independent shareholders vote on the connected transaction',
+      isKeyEvent: true
+    });
+    
+    // Day 44: Results announcement
+    events.push({
+      day: 44,
+      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
+      event: 'Results Announcement',
+      description: 'Publication of EGM results and next steps'
+    });
+  }
+  
+  /**
+   * Add events for a Reverse Takeover
+   */
+  private addReverseTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // RTO has a much longer timeline due to enhanced scrutiny
+    
+    // Day 1: Submit draft circular
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Submit Draft Circular to HKEX',
+      description: 'First draft circular submitted for regulatory review'
+    });
+    
+    // Day 28: Expected first round of regulatory feedback
+    events.push({
+      day: 28,
+      date: this.calculateBusinessDay(startDate, 28, adjustForHolidays),
+      event: 'First Round Regulatory Feedback',
+      description: 'Initial comments from HKEX expected'
+    });
+    
+    // Day 60: Submit revised circular
+    events.push({
+      day: 60,
+      date: this.calculateBusinessDay(startDate, 60, adjustForHolidays),
+      event: 'Submit Revised Circular',
+      description: 'Revised circular addressing HKEX comments'
+    });
+    
+    // Day 90: Expected second round of regulatory feedback
+    events.push({
+      day: 90,
+      date: this.calculateBusinessDay(startDate, 90, adjustForHolidays),
+      event: 'Second Round Regulatory Feedback',
+      description: 'Follow-up comments from HKEX expected'
+    });
+    
+    // Day 120: Despatch circular
+    events.push({
+      day: 120,
+      date: this.calculateBusinessDay(startDate, 120, adjustForHolidays),
+      event: 'EGM Notice & Despatch Circular',
+      description: 'Final circular sent to shareholders',
+      isKeyEvent: true
+    });
+    
+    // Day 135: EGM
+    events.push({
+      day: 135,
+      date: this.calculateBusinessDay(startDate, 135, adjustForHolidays),
+      event: 'Extraordinary General Meeting',
+      description: 'Shareholders vote on the reverse takeover',
+      isKeyEvent: true
+    });
+    
+    // Day 137: Results announcement
+    events.push({
+      day: 137,
+      date: this.calculateBusinessDay(startDate, 137, adjustForHolidays),
+      event: 'Results Announcement',
+      description: 'Publication of EGM results'
+    });
+    
+    // Day 150: Completion
+    events.push({
+      day: 150,
+      date: this.calculateBusinessDay(startDate, 150, adjustForHolidays),
+      event: 'Expected Completion',
+      description: 'Target date for completing the reverse takeover',
+      isKeyEvent: true
+    });
+    
+    // Day 165: Resumption of trading
+    events.push({
+      day: 165,
+      date: this.calculateBusinessDay(startDate, 165, adjustForHolidays),
+      event: 'Resumption of Trading',
+      description: 'Trading of shares resumes after completion',
+      isKeyEvent: true
+    });
+  }
+  
+  /**
+   * Add generic transaction events
+   */
+  private addGenericTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Generic timeline for unspecified transaction types
+    
+    // Day 7: Due diligence completion
+    events.push({
+      day: 7,
+      date: this.calculateBusinessDay(startDate, 7, adjustForHolidays),
+      event: 'Due Diligence Completion',
+      description: 'Complete due diligence process'
+    });
+    
+    // Day 14: Draft documentation
+    events.push({
+      day: 14,
+      date: this.calculateBusinessDay(startDate, 14, adjustForHolidays),
+      event: 'Draft Documentation',
+      description: 'Prepare transaction documentation'
+    });
+    
+    // Day 21: Regulatory submission
+    events.push({
+      day: 21,
+      date: this.calculateBusinessDay(startDate, 21, adjustForHolidays),
+      event: 'Regulatory Submission',
+      description: 'Submit required documentation to regulators',
+      isKeyEvent: true
+    });
+    
+    // Day 35: Expected regulatory approval
+    events.push({
+      day: 35,
+      date: this.calculateBusinessDay(startDate, 35, adjustForHolidays),
+      event: 'Expected Regulatory Approval',
+      description: 'Anticipated receipt of regulatory approvals',
+      isKeyEvent: true
+    });
+    
+    // Day 42: Completion
+    events.push({
+      day: 42,
+      date: this.calculateBusinessDay(startDate, 42, adjustForHolidays),
+      event: 'Transaction Completion',
+      description: 'Complete the transaction',
+      isKeyEvent: true
+    });
+  }
+  
+  /**
+   * Calculate business day from a start date
+   */
+  private calculateBusinessDay(startDate: Date, days: number, adjustForHolidays: boolean): Date {
+    if (adjustForHolidays) {
+      return this.businessDayCalculator.addBusinessDays(startDate, days);
+    } else {
+      const result = new Date(startDate);
+      result.setDate(result.getDate() + days);
+      return result;
+    }
+  }
+  
+  /**
+   * Search for reference timetables in the database
+   */
+  private async searchReferenceTimetables(transactionType: string): Promise<any[]> {
+    console.log(`Searching for reference timetables for ${transactionType}`);
+    
+    try {
+      // Search for timetable documents using the correct table name
+      const { data, error } = await supabase
+        .from('mb_listingrule_documents')
+        .select('*')
+        .or('title.ilike.%timetable%,description.ilike.%timetable%,file_path.ilike.%timetable%')
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        console.error('Error searching timetables:', error);
+        return [];
+      }
+      
+      console.log(`Found ${data?.length || 0} potential timetable documents`);
+      return data || [];
+    } catch (err) {
+      console.error('Error in searchReferenceTimetables:', err);
+      return [];
+    }
+  }
+  
+  /**
+   * Get a phase for a specific day in the timetable
+   */
+  public getPhaseForDay(day: number): TimetablePhase {
+    if (day === 0) {
+      return TimetablePhase.ANNOUNCEMENT;
+    } else if (day <= 14) {
+      return TimetablePhase.CIRCULAR_PREPARATION;
+    } else if (day <= 28) {
+      return TimetablePhase.REGULATORY_REVIEW;
+    } else if (day <= 42) {
+      return TimetablePhase.SHAREHOLDER_APPROVAL;
+    } else {
+      return TimetablePhase.COMPLETION;
+    }
+  }
+  
+  /**
+   * Format a date as a string
+   */
+  public formatDate(date: Date): string {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    
+    return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+  }
 }
