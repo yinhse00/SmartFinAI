@@ -14,29 +14,35 @@ interface DealStructuringDashboardProps {
 
 export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
   return (
-    <div className="space-y-6">
-      {/* Top Row: Structure, Cost, and Chat (Chat spans 2 rows) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:grid-rows-3">
+      {/* Row 1, Col 1: Structure Recommendation */}
+      <div className="lg:col-start-1 lg:row-start-1">
         <StructureRecommendationBox results={results} />
+      </div>
+      
+      {/* Row 1, Col 2: Cost Analysis */}
+      <div className="lg:col-start-2 lg:row-start-1">
         <CostAnalysisBox results={results} />
-        
-        <div className="lg:row-span-3">
-          <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
-        </div>
       </div>
       
-      {/* Second Row: Shareholding and Regulatory */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Row 1-3, Col 3: Chat (spans all 3 rows) */}
+      <div className="lg:col-start-3 lg:row-start-1 lg:row-span-3">
+        <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
+      </div>
+      
+      {/* Row 2, Col 1: Shareholding Impact */}
+      <div className="lg:col-start-1 lg:row-start-2">
         <ShareholdingImpactBox results={results} />
-        <RegulatoryComplianceBox results={results} />
-        <div></div> {/* Empty space for chat column */}
       </div>
       
-      {/* Third Row: Execution Timetable */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Row 2, Col 2: Regulatory Compliance */}
+      <div className="lg:col-start-2 lg:row-start-2">
+        <RegulatoryComplianceBox results={results} />
+      </div>
+      
+      {/* Row 3, Col 1: Execution Timetable */}
+      <div className="lg:col-start-1 lg:row-start-3">
         <ExecutionTimetableBox results={results} />
-        <div></div> {/* Empty space */}
-        <div></div> {/* Empty space for chat column */}
       </div>
     </div>
   );
