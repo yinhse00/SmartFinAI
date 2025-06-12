@@ -1,4 +1,3 @@
-
 import { Edge } from '@xyflow/react';
 import { EdgeFactory } from '../factories/EdgeFactory';
 
@@ -18,8 +17,11 @@ export class EdgeBuilder {
     // After section ownership edges
     edges.push(...this.buildAfterOwnershipEdges());
     
-    // Transaction flow edges
-    edges.push(...this.buildTransactionFlowEdges());
+    // Bidirectional transaction flow edges
+    edges.push(...this.buildBidirectionalTransactionEdges());
+    
+    // Other transaction flow edges
+    edges.push(...this.buildOtherTransactionFlowEdges());
 
     return edges;
   }
@@ -80,18 +82,17 @@ export class EdgeBuilder {
     ];
   }
 
-  private buildTransactionFlowEdges(): Edge[] {
+  private buildBidirectionalTransactionEdges(): Edge[] {
+    return this.edgeFactory.createBidirectionalTransactionEdges();
+  }
+
+  private buildOtherTransactionFlowEdges(): Edge[] {
     return [
       this.edgeFactory.createTransactionFlowEdge(
         'transaction-flow',
         'acquiring-company',
         'transaction-details',
         'Acquires 70%'
-      ),
-      this.edgeFactory.createConsiderationEdge(
-        'consideration-flow',
-        'acquiring-company',
-        'target-company'
       ),
       this.edgeFactory.createTransactionFlowEdge(
         'transaction-result',
