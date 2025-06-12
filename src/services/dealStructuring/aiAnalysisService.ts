@@ -131,7 +131,14 @@ Please provide a detailed analysis covering:
    - Key regulatory risks
    - Compliance recommendations
 
-6. DIAGRAM DATA (REQUIRED for visualization):
+6. TRANSACTION FLOW DATA (REQUIRED for visualization):
+   - Detailed before/after transaction flow with entities and relationships
+   - Entity types: target, buyer, stockholder, subsidiary, newco, consideration
+   - Relationship types: ownership, control, subsidiary, consideration
+   - Include consideration amounts and ownership percentages
+   - Transaction steps with entity involvement
+
+7. DIAGRAM DATA (REQUIRED for visualization):
    - Enhanced shareholding changes with entity types and control implications
    - Corporate structure with entity relationships and ownership percentages
    - Detailed before/after comparison with change indicators
@@ -178,12 +185,23 @@ FORMAT your response as a structured JSON object with the following schema:
     "relationships": [{"parent": "string", "child": "string", "ownershipPercentage": number}],
     "mainIssuer": "string",
     "targetEntities": ["string"]
+  },
+  "transactionFlow": {
+    "before": {
+      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string"}],
+      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary", "percentage": number}]
+    },
+    "after": {
+      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string"}],
+      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary|consideration", "percentage": number, "value": number}]
+    },
+    "transactionSteps": [{"id": "string", "title": "string", "description": "string", "entities": ["string"]}]
   }
 }
 
-IMPORTANT: You MUST include both "shareholdingChanges" and "corporateStructure" objects in your response for the diagrams to display properly. Generate realistic sample data if specific details are not provided.
+IMPORTANT: You MUST include "shareholdingChanges", "corporateStructure", and "transactionFlow" objects in your response for the diagrams to display properly. Generate realistic sample data that reflects the transaction described, including proper entity relationships and flow structures.
 
-Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar. Include comprehensive diagram data for visualization purposes.
+Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar. Include comprehensive diagram data for proper visualization of the transaction structure and flow.
 `;
 }
 
@@ -253,6 +271,42 @@ function createFallbackCorporateStructure(): CorporateStructure {
 }
 
 /**
+ * Create fallback transaction flow when data is missing
+ */
+function createFallbackTransactionFlow() {
+  return {
+    before: {
+      entities: [
+        { id: "target-1", name: "Target Company", type: "target", percentage: 100, description: "Listed company to be acquired" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder", percentage: 100, description: "Current shareholders of target" }
+      ],
+      relationships: [
+        { source: "shareholders-1", target: "target-1", type: "ownership", percentage: 100 }
+      ]
+    },
+    after: {
+      entities: [
+        { id: "target-1", name: "Target Company", type: "target", percentage: 100, description: "Listed company acquired" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder", percentage: 30, description: "Remaining shareholders" },
+        { id: "buyer-1", name: "Acquiring Company", type: "buyer", percentage: 70, description: "New controlling shareholder" },
+        { id: "consideration-1", name: "Cash Consideration", type: "consideration", value: 1000, description: "Payment to selling shareholders" }
+      ],
+      relationships: [
+        { source: "buyer-1", target: "target-1", type: "ownership", percentage: 70 },
+        { source: "shareholders-1", target: "target-1", type: "ownership", percentage: 30 },
+        { source: "buyer-1", target: "consideration-1", type: "consideration", value: 1000 }
+      ]
+    },
+    transactionSteps: [
+      { id: "step-1", title: "Due Diligence", description: "Buyer conducts comprehensive due diligence", entities: ["buyer-1", "target-1"] },
+      { id: "step-2", title: "Share Purchase Agreement", description: "Execution of binding agreement", entities: ["buyer-1", "shareholders-1"] },
+      { id: "step-3", title: "Regulatory Approvals", description: "Obtain necessary regulatory clearances", entities: ["buyer-1", "target-1"] },
+      { id: "step-4", title: "Completion", description: "Transfer of shares and payment", entities: ["buyer-1", "shareholders-1", "consideration-1"] }
+    ]
+  };
+}
+
+/**
  * Create fallback analysis when JSON parsing fails
  */
 function createFallbackAnalysis(responseText: string): AnalysisResults {
@@ -295,6 +349,7 @@ function createFallbackAnalysis(responseText: string): AnalysisResults {
     },
     confidence: 0.7,
     shareholdingChanges: createFallbackShareholdingChanges(),
-    corporateStructure: createFallbackCorporateStructure()
+    corporateStructure: createFallbackCorporateStructure(),
+    transactionFlow: createFallbackTransactionFlow()
   };
 }

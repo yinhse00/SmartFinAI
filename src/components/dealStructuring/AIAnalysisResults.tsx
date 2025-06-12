@@ -43,9 +43,51 @@ export interface AnalysisResults {
     recommendations: string[];
   };
   confidence: number;
-  // New diagram-specific data
+  // Enhanced diagram-specific data
   shareholdingChanges?: ShareholdingChanges;
   corporateStructure?: CorporateStructure;
+  // New transaction flow data
+  transactionFlow?: {
+    before: {
+      entities: Array<{
+        id: string;
+        name: string;
+        type: 'target' | 'buyer' | 'stockholder' | 'subsidiary' | 'newco' | 'consideration';
+        value?: number;
+        percentage?: number;
+        description?: string;
+      }>;
+      relationships: Array<{
+        source: string;
+        target: string;
+        type: 'ownership' | 'control' | 'subsidiary';
+        percentage?: number;
+      }>;
+    };
+    after: {
+      entities: Array<{
+        id: string;
+        name: string;
+        type: 'target' | 'buyer' | 'stockholder' | 'subsidiary' | 'newco' | 'consideration';
+        value?: number;
+        percentage?: number;
+        description?: string;
+      }>;
+      relationships: Array<{
+        source: string;
+        target: string;
+        type: 'ownership' | 'control' | 'subsidiary' | 'consideration';
+        percentage?: number;
+        value?: number;
+      }>;
+    };
+    transactionSteps: Array<{
+      id: string;
+      title: string;
+      description: string;
+      entities: string[];
+    }>;
+  };
 }
 
 interface AIAnalysisResultsProps {

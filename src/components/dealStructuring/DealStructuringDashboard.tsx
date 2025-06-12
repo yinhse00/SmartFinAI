@@ -6,7 +6,7 @@ import { ExecutionTimetableBox } from './sections/ExecutionTimetableBox';
 import { ShareholdingImpactBox } from './sections/ShareholdingImpactBox';
 import { RegulatoryComplianceBox } from './sections/RegulatoryComplianceBox';
 import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
-import { TransactionStructureDiagramBox } from './sections/TransactionStructureDiagramBox';
+import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
@@ -46,9 +46,9 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <ExecutionTimetableBox results={results} />
       </div>
 
-      {/* Row 3, Col 2: Transaction Structure Diagram */}
+      {/* Row 3, Col 2: Transaction Flow Diagram (Updated) */}
       <div className="lg:col-start-2 lg:row-start-3">
-        <TransactionStructureDiagramBox results={results} />
+        <TransactionFlowDiagramBox results={results} />
       </div>
     </div>
   );
