@@ -41,7 +41,7 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
       </div>
       
       {/* Row 3, Col 1: Execution Timetable - moved up with larger negative margin */}
-      <div className="lg:col-start-1 lg:row-start-3 lg:-mt-12">
+      <div className="lg:col-start-1 lg:row-start-3 lg:-mt-16">
         <ExecutionTimetableBox results={results} />
       </div>
     </div>
