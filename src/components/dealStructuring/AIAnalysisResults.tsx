@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -12,6 +11,7 @@ import {
   CheckCircle,
   Calculator
 } from 'lucide-react';
+import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface AnalysisResults {
   transactionType: string;
@@ -43,6 +43,9 @@ export interface AnalysisResults {
     recommendations: string[];
   };
   confidence: number;
+  // New diagram-specific data
+  shareholdingChanges?: ShareholdingChanges;
+  corporateStructure?: CorporateStructure;
 }
 
 interface AIAnalysisResultsProps {

@@ -130,6 +130,11 @@ Please provide a detailed analysis covering:
    - Key regulatory risks
    - Compliance recommendations
 
+6. DIAGRAM DATA (for visualization):
+   - Enhanced shareholding changes with entity types and control implications
+   - Corporate structure with entity relationships and ownership percentages
+   - Detailed before/after comparison with change indicators
+
 FORMAT your response as a structured JSON object with the following schema:
 {
   "transactionType": "string",
@@ -160,10 +165,22 @@ FORMAT your response as a structured JSON object with the following schema:
     "risks": ["string"],
     "recommendations": ["string"]
   },
-  "confidence": number
+  "confidence": number,
+  "shareholdingChanges": {
+    "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": boolean}],
+    "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": boolean}],
+    "keyChanges": [{"shareholder": "string", "change": number, "type": "increase|decrease|new|exit"}],
+    "controlImplications": ["string"]
+  },
+  "corporateStructure": {
+    "entities": [{"id": "string", "name": "string", "type": "parent|subsidiary|target|issuer", "ownership": number}],
+    "relationships": [{"parent": "string", "child": "string", "ownershipPercentage": number}],
+    "mainIssuer": "string",
+    "targetEntities": ["string"]
+  }
 }
 
-Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar.
+Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar. Include comprehensive diagram data for visualization purposes.
 `;
 }
 
