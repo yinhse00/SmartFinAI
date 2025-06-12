@@ -2,7 +2,7 @@
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Building2, ArrowRight, DollarSign, Users, TrendingUp } from 'lucide-react';
+import { Building2, Users, DollarSign } from 'lucide-react';
 import { TransactionFlow } from '@/types/transactionFlow';
 
 interface CombinedTransactionFlowDiagramProps {
@@ -20,33 +20,69 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
+    // Grid-based positioning to prevent overlaps
+    const GRID_SIZE = 180;
+    const HEADER_HEIGHT = 60;
+    const SECTION_MARGIN = 40;
+
     const getNodeColor = (type: string) => {
       switch (type) {
-        case 'target': return '#fef3c7'; // yellow-100
-        case 'buyer': return '#dbeafe'; // blue-100
-        case 'stockholder': return '#dcfce7'; // green-100
-        case 'consideration': return '#fde68a'; // amber-200
-        case 'subsidiary': return '#f3e8ff'; // purple-100
-        default: return '#f3f4f6'; // gray-100
+        case 'target': return '#fef3c7';
+        case 'buyer': return '#dbeafe';
+        case 'stockholder': return '#dcfce7';
+        case 'consideration': return '#fde68a';
+        case 'subsidiary': return '#f3e8ff';
+        default: return '#f3f4f6';
       }
     };
 
     const getNodeBorder = (type: string) => {
       switch (type) {
-        case 'target': return '#f59e0b'; // yellow-600
-        case 'buyer': return '#2563eb'; // blue-600
-        case 'stockholder': return '#16a34a'; // green-600
-        case 'consideration': return '#d97706'; // amber-600
-        case 'subsidiary': return '#9333ea'; // purple-600
-        default: return '#6b7280'; // gray-500
+        case 'target': return '#f59e0b';
+        case 'buyer': return '#2563eb';
+        case 'stockholder': return '#16a34a';
+        case 'consideration': return '#d97706';
+        case 'subsidiary': return '#9333ea';
+        default: return '#6b7280';
       }
     };
+
+    // Extract shareholder data from analysis results
+    const getShareholderData = () => {
+      // Try to get detailed shareholder breakdown from results
+      if (transactionFlow.before?.entities) {
+        const shareholders = transactionFlow.before.entities.filter(e => e.type === 'stockholder');
+        return shareholders.length > 0 ? shareholders : [
+          { id: 'default-acquirer-shareholders', name: 'Acquirer Shareholders', type: 'stockholder' as const, percentage: 100 },
+          { id: 'default-target-shareholders', name: 'Target Shareholders', type: 'stockholder' as const, percentage: 100 }
+        ];
+      }
+      return [
+        { id: 'default-acquirer-shareholders', name: 'Acquirer Shareholders', type: 'stockholder' as const, percentage: 100 },
+        { id: 'default-target-shareholders', name: 'Target Shareholders', type: 'stockholder' as const, percentage: 100 }
+      ];
+    };
+
+    const shareholderData = getShareholderData();
+    const acquirerShareholders = shareholderData.filter(s => s.name.toLowerCase().includes('acquirer') || s.name.toLowerCase().includes('acquiring'));
+    const targetShareholders = shareholderData.filter(s => s.name.toLowerCase().includes('target'));
+
+    // If no specific breakdown available, create default groups
+    const finalAcquirerShareholders = acquirerShareholders.length > 0 ? acquirerShareholders : [
+      { id: 'acquirer-shareholders', name: 'Acquirer Shareholders', type: 'stockholder' as const, percentage: 100 }
+    ];
+    const finalTargetShareholders = targetShareholders.length > 0 ? targetShareholders : [
+      { id: 'target-shareholders', name: 'Target Shareholders', type: 'stockholder' as const, percentage: 100 }
+    ];
+
+    // Get subsidiary data
+    const targetSubsidiaries = transactionFlow.before?.entities?.filter(e => e.type === 'subsidiary') || [];
 
     // BEFORE section header
     nodes.push({
       id: 'before-header',
       type: 'default',
-      position: { x: 20, y: 20 },
+      position: { x: 50, y: 20 },
       data: { 
         label: (
           <div className="text-lg font-bold text-gray-700">
@@ -64,14 +100,16 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     // ACQUIRER SECTION (Top Left)
+    let yOffset = HEADER_HEIGHT + 20;
+    
     nodes.push({
       id: 'acquirer-header',
       type: 'default',
-      position: { x: 20, y: 80 },
+      position: { x: 50, y: yOffset },
       data: { 
         label: (
           <div className="text-md font-semibold text-blue-700">
-            ACQUIRER COMPANY
+            ACQUIRING COMPANY
           </div>
         )
       },
@@ -84,37 +122,44 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Acquirer shareholders
-    nodes.push({
-      id: 'acquirer-shareholders',
-      type: 'default',
-      position: { x: 20, y: 130 },
-      data: {
-        label: (
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Users className="h-5 w-5" />
+    yOffset += 50;
+
+    // Acquirer shareholders with proper spacing
+    finalAcquirerShareholders.forEach((shareholder, index) => {
+      const xPos = 50 + (index * GRID_SIZE);
+      nodes.push({
+        id: `acquirer-shareholder-${index}`,
+        type: 'default',
+        position: { x: xPos, y: yOffset },
+        data: {
+          label: (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="font-semibold text-sm">{shareholder.name}</div>
+              <div className="text-xs text-gray-600">{shareholder.percentage || 100}%</div>
             </div>
-            <div className="font-semibold text-sm">Acquirer Shareholders</div>
-            <div className="text-xs text-gray-600">100%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: getNodeColor('stockholder'),
-        border: `2px solid ${getNodeBorder('stockholder')}`,
-        borderRadius: '8px',
-        padding: '12px',
-        minWidth: '140px',
-        minHeight: '80px'
-      }
+          )
+        },
+        style: {
+          backgroundColor: getNodeColor('stockholder'),
+          border: `2px solid ${getNodeBorder('stockholder')}`,
+          borderRadius: '8px',
+          padding: '12px',
+          minWidth: '140px',
+          minHeight: '80px'
+        }
+      });
     });
+
+    yOffset += 120;
 
     // Acquirer company
     nodes.push({
       id: 'acquirer-company',
       type: 'default',
-      position: { x: 20, y: 250 },
+      position: { x: 50, y: yOffset },
       data: {
         label: (
           <div className="text-center">
@@ -122,7 +167,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
               <Building2 className="h-5 w-5" />
             </div>
             <div className="font-semibold text-sm">Acquiring Company</div>
-            <div className="text-xs text-gray-600">Buyer</div>
+            <div className="text-xs text-gray-600">Buyer Entity</div>
           </div>
         )
       },
@@ -137,10 +182,12 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     // TARGET SECTION (Bottom Left)
+    yOffset += 140;
+    
     nodes.push({
       id: 'target-header',
       type: 'default',
-      position: { x: 20, y: 380 },
+      position: { x: 50, y: yOffset },
       data: { 
         label: (
           <div className="text-md font-semibold text-yellow-700">
@@ -157,37 +204,44 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Target shareholders
-    nodes.push({
-      id: 'target-shareholders',
-      type: 'default',
-      position: { x: 20, y: 430 },
-      data: {
-        label: (
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Users className="h-5 w-5" />
+    yOffset += 50;
+
+    // Target shareholders with proper spacing
+    finalTargetShareholders.forEach((shareholder, index) => {
+      const xPos = 50 + (index * GRID_SIZE);
+      nodes.push({
+        id: `target-shareholder-${index}`,
+        type: 'default',
+        position: { x: xPos, y: yOffset },
+        data: {
+          label: (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="font-semibold text-sm">{shareholder.name}</div>
+              <div className="text-xs text-gray-600">{shareholder.percentage || 100}%</div>
             </div>
-            <div className="font-semibold text-sm">Target Shareholders</div>
-            <div className="text-xs text-gray-600">100%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: getNodeColor('stockholder'),
-        border: `2px solid ${getNodeBorder('stockholder')}`,
-        borderRadius: '8px',
-        padding: '12px',
-        minWidth: '140px',
-        minHeight: '80px'
-      }
+          )
+        },
+        style: {
+          backgroundColor: getNodeColor('stockholder'),
+          border: `2px solid ${getNodeBorder('stockholder')}`,
+          borderRadius: '8px',
+          padding: '12px',
+          minWidth: '140px',
+          minHeight: '80px'
+        }
+      });
     });
+
+    yOffset += 120;
 
     // Target company
     nodes.push({
       id: 'target-company',
       type: 'default',
-      position: { x: 20, y: 550 },
+      position: { x: 50, y: yOffset },
       data: {
         label: (
           <div className="text-center">
@@ -209,13 +263,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
-    // Target subsidiaries (if any)
-    const targetSubsidiaries = transactionFlow.before.entities.filter(e => e.type === 'subsidiary');
+    // Target subsidiaries with proper spacing
     targetSubsidiaries.forEach((subsidiary, index) => {
+      const xPos = 220 + (index * (GRID_SIZE - 40));
       nodes.push({
         id: `target-subsidiary-${index}`,
         type: 'default',
-        position: { x: 200, y: 550 + (index * 100) },
+        position: { x: xPos, y: yOffset },
         data: {
           label: (
             <div className="text-center">
@@ -238,11 +292,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       });
     });
 
-    // TRANSACTION SECTION (Center)
+    // TRANSACTION SECTION (Center) - Clear text description
+    const centerX = 500;
+    
     nodes.push({
       id: 'transaction-header',
       type: 'default',
-      position: { x: 420, y: 20 },
+      position: { x: centerX, y: 20 },
       data: { 
         label: (
           <div className="text-lg font-bold text-blue-700">
@@ -259,17 +315,22 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Share Purchase Transaction
+    // Deal structure description with actual data
     nodes.push({
-      id: 'share-purchase',
+      id: 'deal-description',
       type: 'default',
-      position: { x: 450, y: 180 },
+      position: { x: centerX, y: 180 },
       data: {
         label: (
-          <div className="flex flex-col items-center">
-            <ArrowRight className="h-8 w-8 text-blue-600 mb-2" />
-            <div className="text-sm font-medium">Share Purchase</div>
-            <div className="text-xs text-gray-600">70% Acquisition</div>
+          <div className="text-center p-4 max-w-xs">
+            <div className="text-lg font-semibold mb-3 text-blue-800">Share Purchase Transaction</div>
+            <div className="space-y-2 text-sm">
+              <div className="font-medium">• Acquiring Company purchases 70% of Target Company shares</div>
+              <div className="font-medium">• Cash consideration: HK$1,000M</div>
+              <div className="font-medium">• Target remains a listed entity</div>
+              <div className="font-medium">• Acquiring Company gains control</div>
+              <div className="font-medium">• Existing shareholders retain 30%</div>
+            </div>
           </div>
         )
       },
@@ -277,59 +338,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: '#eff6ff',
         border: '2px solid #2563eb',
         borderRadius: '8px',
-        padding: '12px',
-        minWidth: '120px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // Cash Consideration
-    nodes.push({
-      id: 'cash-consideration',
-      type: 'default',
-      position: { x: 450, y: 300 },
-      data: {
-        label: (
-          <div className="flex flex-col items-center">
-            <DollarSign className="h-8 w-8 text-green-600 mb-2" />
-            <div className="text-sm font-medium">Cash Consideration</div>
-            <div className="text-xs text-gray-600">HK$1,000M</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: '#f0fdf4',
-        border: '2px solid #16a34a',
-        borderRadius: '8px',
-        padding: '12px',
-        minWidth: '120px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // Due Diligence
-    nodes.push({
-      id: 'due-diligence',
-      type: 'default',
-      position: { x: 450, y: 420 },
-      data: {
-        label: (
-          <div className="flex flex-col items-center">
-            <TrendingUp className="h-6 w-6 text-purple-600 mb-1" />
-            <div className="text-xs font-medium">Due Diligence</div>
-            <div className="text-xs text-gray-600">Completed</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: '#faf5ff',
-        border: '2px solid #9333ea',
-        borderRadius: '8px',
-        padding: '8px',
-        minWidth: '100px',
-        minHeight: '60px'
+        padding: '16px',
+        minWidth: '280px',
+        minHeight: '200px'
       },
       draggable: false,
       selectable: false
@@ -339,7 +350,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     nodes.push({
       id: 'after-header',
       type: 'default',
-      position: { x: 720, y: 20 },
+      position: { x: 850, y: 20 },
       data: { 
         label: (
           <div className="text-lg font-bold text-gray-700">
@@ -356,11 +367,67 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // New Acquirer (Majority Owner)
+    // AFTER: Show acquiring company shareholders
+    let afterYOffset = HEADER_HEIGHT + 20;
+    
     nodes.push({
-      id: 'new-acquirer',
+      id: 'after-acquirer-header',
       type: 'default',
-      position: { x: 720, y: 130 },
+      position: { x: 850, y: afterYOffset },
+      data: { 
+        label: (
+          <div className="text-md font-semibold text-blue-700">
+            ACQUIRING COMPANY SHAREHOLDERS
+          </div>
+        )
+      },
+      style: {
+        backgroundColor: 'transparent',
+        border: 'none',
+        minWidth: '300px'
+      },
+      draggable: false,
+      selectable: false
+    });
+
+    afterYOffset += 50;
+
+    // Show acquiring company shareholders in AFTER state
+    finalAcquirerShareholders.forEach((shareholder, index) => {
+      const xPos = 850 + (index * GRID_SIZE);
+      nodes.push({
+        id: `after-acquirer-shareholder-${index}`,
+        type: 'default',
+        position: { x: xPos, y: afterYOffset },
+        data: {
+          label: (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Users className="h-5 w-5" />
+              </div>
+              <div className="font-semibold text-sm">{shareholder.name}</div>
+              <div className="text-xs text-gray-600">{shareholder.percentage || 100}%</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: getNodeColor('stockholder'),
+          border: `2px solid ${getNodeBorder('stockholder')}`,
+          borderRadius: '8px',
+          padding: '12px',
+          minWidth: '140px',
+          minHeight: '80px'
+        }
+      });
+    });
+
+    afterYOffset += 120;
+
+    // Acquiring Company (Now controlling target)
+    nodes.push({
+      id: 'after-acquirer-company',
+      type: 'default',
+      position: { x: 850, y: afterYOffset },
       data: {
         label: (
           <div className="text-center">
@@ -368,7 +435,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
               <Building2 className="h-5 w-5" />
             </div>
             <div className="font-semibold text-sm">Acquiring Company</div>
-            <div className="text-xs text-gray-600">70% Owner</div>
+            <div className="text-xs text-gray-600">Controls Target (70%)</div>
           </div>
         )
       },
@@ -382,18 +449,18 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
-    // Remaining Shareholders
+    // Remaining Target Shareholders
     nodes.push({
       id: 'remaining-shareholders',
       type: 'default',
-      position: { x: 900, y: 130 },
+      position: { x: 1050, y: afterYOffset },
       data: {
         label: (
           <div className="text-center">
             <div className="flex items-center justify-center mb-2">
               <Users className="h-5 w-5" />
             </div>
-            <div className="font-semibold text-sm">Remaining Shareholders</div>
+            <div className="font-semibold text-sm">Remaining Target Shareholders</div>
             <div className="text-xs text-gray-600">30%</div>
           </div>
         )
@@ -408,11 +475,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
+    afterYOffset += 140;
+
     // Target Company (Now Controlled)
     nodes.push({
       id: 'controlled-target',
       type: 'default',
-      position: { x: 810, y: 280 },
+      position: { x: 950, y: afterYOffset },
       data: {
         label: (
           <div className="text-center">
@@ -420,7 +489,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
               <Building2 className="h-5 w-5" />
             </div>
             <div className="font-semibold text-sm">Target Company</div>
-            <div className="text-xs text-gray-600">Now Controlled</div>
+            <div className="text-xs text-gray-600">Now Controlled by Acquirer</div>
           </div>
         )
       },
@@ -434,12 +503,15 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
+    afterYOffset += 120;
+
     // Target Subsidiaries (After)
     targetSubsidiaries.forEach((subsidiary, index) => {
+      const xPos = 850 + (index * GRID_SIZE);
       nodes.push({
         id: `controlled-subsidiary-${index}`,
         type: 'default',
-        position: { x: 720 + (index * 180), y: 430 },
+        position: { x: xPos, y: afterYOffset },
         data: {
           label: (
             <div className="text-center">
@@ -464,39 +536,43 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     // FIXED LINES - Shareholding and Corporate Structure (BEFORE)
     // Acquirer structure
-    edges.push({
-      id: 'acquirer-ownership',
-      source: 'acquirer-shareholders',
-      target: 'acquirer-company',
-      type: 'straight',
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 2
-      },
-      label: '100%',
-      labelStyle: {
-        fontSize: '12px',
-        fontWeight: 'bold',
-        fill: '#2563eb'
-      }
+    finalAcquirerShareholders.forEach((_, index) => {
+      edges.push({
+        id: `acquirer-ownership-${index}`,
+        source: `acquirer-shareholder-${index}`,
+        target: 'acquirer-company',
+        type: 'straight',
+        style: {
+          stroke: '#2563eb',
+          strokeWidth: 2
+        },
+        label: `${finalAcquirerShareholders[index]?.percentage || 100}%`,
+        labelStyle: {
+          fontSize: '12px',
+          fontWeight: 'bold',
+          fill: '#2563eb'
+        }
+      });
     });
 
     // Target structure (BEFORE)
-    edges.push({
-      id: 'target-ownership-before',
-      source: 'target-shareholders',
-      target: 'target-company',
-      type: 'straight',
-      style: {
-        stroke: '#16a34a',
-        strokeWidth: 2
-      },
-      label: '100%',
-      labelStyle: {
-        fontSize: '12px',
-        fontWeight: 'bold',
-        fill: '#16a34a'
-      }
+    finalTargetShareholders.forEach((_, index) => {
+      edges.push({
+        id: `target-ownership-before-${index}`,
+        source: `target-shareholder-${index}`,
+        target: 'target-company',
+        type: 'straight',
+        style: {
+          stroke: '#16a34a',
+          strokeWidth: 2
+        },
+        label: `${finalTargetShareholders[index]?.percentage || (100 / finalTargetShareholders.length)}%`,
+        labelStyle: {
+          fontSize: '12px',
+          fontWeight: 'bold',
+          fill: '#16a34a'
+        }
+      });
     });
 
     // Target subsidiaries (BEFORE)
@@ -520,9 +596,30 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     // FIXED LINES - New Corporate Structure (AFTER)
+    // Acquiring company shareholders to acquiring company
+    finalAcquirerShareholders.forEach((_, index) => {
+      edges.push({
+        id: `after-acquirer-ownership-${index}`,
+        source: `after-acquirer-shareholder-${index}`,
+        target: 'after-acquirer-company',
+        type: 'straight',
+        style: {
+          stroke: '#2563eb',
+          strokeWidth: 2
+        },
+        label: `${finalAcquirerShareholders[index]?.percentage || 100}%`,
+        labelStyle: {
+          fontSize: '12px',
+          fontWeight: 'bold',
+          fill: '#2563eb'
+        }
+      });
+    });
+
+    // Acquiring company to target (70%)
     edges.push({
-      id: 'new-acquirer-ownership',
-      source: 'new-acquirer',
+      id: 'acquirer-target-control',
+      source: 'after-acquirer-company',
       target: 'controlled-target',
       type: 'straight',
       style: {
@@ -537,8 +634,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
+    // Remaining shareholders to target (30%)
     edges.push({
-      id: 'remaining-ownership',
+      id: 'remaining-target-ownership',
       source: 'remaining-shareholders',
       target: 'controlled-target',
       type: 'straight',
@@ -575,11 +673,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     // DOTTED LINES - Deal Flow Illustration
-    // Acquirer to transaction
+    // Acquirer to deal description
     edges.push({
       id: 'acquirer-to-deal',
       source: 'acquirer-company',
-      target: 'share-purchase',
+      target: 'deal-description',
       type: 'straight',
       style: {
         stroke: '#3b82f6',
@@ -594,37 +692,39 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
-    // Target shareholders to cash
-    edges.push({
-      id: 'target-to-cash',
-      source: 'target-shareholders',
-      target: 'cash-consideration',
-      type: 'straight',
-      style: {
-        stroke: '#16a34a',
-        strokeWidth: 3,
-        strokeDasharray: '8,4'
-      },
-      label: 'Receives Payment',
-      labelStyle: {
-        fontSize: '12px',
-        fontWeight: 'bold',
-        fill: '#16a34a'
-      }
-    });
+    // Target shareholders to deal (receives payment)
+    if (finalTargetShareholders.length > 0) {
+      edges.push({
+        id: 'target-to-deal',
+        source: `target-shareholder-0`,
+        target: 'deal-description',
+        type: 'straight',
+        style: {
+          stroke: '#16a34a',
+          strokeWidth: 3,
+          strokeDasharray: '8,4'
+        },
+        label: 'Receives HK$1,000M',
+        labelStyle: {
+          fontSize: '12px',
+          fontWeight: 'bold',
+          fill: '#16a34a'
+        }
+      });
+    }
 
-    // Transaction to new structure
+    // Deal to result
     edges.push({
       id: 'deal-to-result',
-      source: 'share-purchase',
-      target: 'new-acquirer',
+      source: 'deal-description',
+      target: 'after-acquirer-company',
       type: 'straight',
       style: {
         stroke: '#3b82f6',
         strokeWidth: 3,
         strokeDasharray: '8,4'
       },
-      label: 'Controls Target',
+      label: 'Gains Control',
       labelStyle: {
         fontSize: '12px',
         fontWeight: 'bold',
