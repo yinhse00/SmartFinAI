@@ -1,3 +1,4 @@
+
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
@@ -20,9 +21,21 @@ const DealStructuring = () => {
     toast
   } = useToast();
 
-  const handleTransactionAnalysis = async (request: TransactionAnalysisRequest) => {
+  const handleTransactionAnalysis = async (data: {
+    description: string;
+    uploadedFiles: File[];
+    extractedContent?: string[];
+  }) => {
     setIsAnalyzing(true);
     try {
+      // Convert the input data to TransactionAnalysisRequest format
+      const request: TransactionAnalysisRequest = {
+        transactionType: 'Transaction Analysis', // Default type
+        description: data.description,
+        documents: data.uploadedFiles,
+        additionalContext: data.extractedContent?.join('\n\n')
+      };
+
       // Use the enhanced analysis method that provides context
       const { results, context } = await aiAnalysisService.analyzeTransactionWithContext(request);
       

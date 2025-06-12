@@ -11,6 +11,11 @@ export interface TransactionAnalysisRequest {
   additionalContext?: string;
 }
 
+export interface AnalysisContext {
+  originalRequest: TransactionAnalysisRequest;
+  analysisTimestamp: Date;
+}
+
 /**
  * Service for AI-powered transaction analysis
  */
