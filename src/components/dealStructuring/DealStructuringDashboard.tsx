@@ -14,24 +14,26 @@ interface DealStructuringDashboardProps {
 
 export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
   return (
-    <div className="space-y-8">
-      {/* Top Row: Structure, Cost, and Chat */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <StructureRecommendationBox results={results} />
+    <div className="space-y-6">
+      {/* Top Row: Structure, Cost, and Chat (Chat spans 2 rows) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="space-y-6">
+          <StructureRecommendationBox results={results} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+            <ShareholdingImpactBox results={results} />
+            <RegulatoryComplianceBox results={results} />
+          </div>
+        </div>
+        
         <CostAnalysisBox results={results} />
-        <div className="lg:row-span-2">
+        
+        <div className="lg:row-span-1">
           <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
         </div>
       </div>
       
-      {/* Second Row: Shareholding and Regulatory */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ShareholdingImpactBox results={results} />
-        <RegulatoryComplianceBox results={results} />
-      </div>
-      
-      {/* Third Row: Execution Timetable */}
-      <div className="grid grid-cols-1 lg:grid-cols-1 gap-8">
+      {/* Bottom Row: Full Width Timetable */}
+      <div className="w-full">
         <ExecutionTimetableBox results={results} />
       </div>
     </div>
