@@ -11,6 +11,7 @@ import Chat from "./pages/Chat";
 import References from "./pages/References";
 import NotFound from "./pages/NotFound";
 import Database from "./pages/Database";
+import DealStructuring from "./pages/DealStructuring";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -35,6 +36,7 @@ const App = () => (
             <Route path="/chat" element={<Chat />} />
             <Route path="/references" element={<References />} />
             <Route path="/database" element={<Database />} />
+            <Route path="/deal-structuring" element={<DealStructuring />} />
             {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>

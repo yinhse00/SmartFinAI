@@ -13,463 +13,40 @@ export type Database = {
         Row: {
           created_at: string
           description: string | null
-          exemptions: string | null
-          headline_category: string
+          gem_listingrules: string | null
+          generally_headline_categories: string | null
           id: string
           is_vetting_required: boolean
-          rule_reference: string | null
+          matter_transaction_question: string
+          md_listingrules: string | null
+          means_disclosure: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
           description?: string | null
-          exemptions?: string | null
-          headline_category: string
+          gem_listingrules?: string | null
+          generally_headline_categories?: string | null
           id?: string
           is_vetting_required?: boolean
-          rule_reference?: string | null
+          matter_transaction_question: string
+          md_listingrules?: string | null
+          means_disclosure?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
           description?: string | null
-          exemptions?: string | null
-          headline_category?: string
+          gem_listingrules?: string | null
+          generally_headline_categories?: string | null
           id?: string
           is_vetting_required?: boolean
-          rule_reference?: string | null
+          matter_transaction_question?: string
+          md_listingrules?: string | null
+          means_disclosure?: string | null
           updated_at?: string
         }
         Relationships: []
-      }
-      ecm_deal_documents: {
-        Row: {
-          approval_date: string | null
-          approved_by: string | null
-          created_at: string
-          created_by: string | null
-          deal_id: string | null
-          document_name: string
-          document_status: string | null
-          document_type: string
-          file_path: string | null
-          file_url: string | null
-          filing_reference: string | null
-          id: string
-          regulatory_filing_status: string | null
-          updated_at: string
-          version: number | null
-        }
-        Insert: {
-          approval_date?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by?: string | null
-          deal_id?: string | null
-          document_name: string
-          document_status?: string | null
-          document_type: string
-          file_path?: string | null
-          file_url?: string | null
-          filing_reference?: string | null
-          id?: string
-          regulatory_filing_status?: string | null
-          updated_at?: string
-          version?: number | null
-        }
-        Update: {
-          approval_date?: string | null
-          approved_by?: string | null
-          created_at?: string
-          created_by?: string | null
-          deal_id?: string | null
-          document_name?: string
-          document_status?: string | null
-          document_type?: string
-          file_path?: string | null
-          file_url?: string | null
-          filing_reference?: string | null
-          id?: string
-          regulatory_filing_status?: string | null
-          updated_at?: string
-          version?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ecm_deal_documents_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "ecm_deals"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ecm_deals: {
-        Row: {
-          book_runner: string | null
-          co_managers: string[] | null
-          completion_date: string | null
-          created_at: string
-          currency: string | null
-          deal_name: string
-          deal_status: string | null
-          deal_type: string
-          esg_classification: string | null
-          execution_complexity_score: number | null
-          final_amount: number | null
-          id: string
-          investor_interest_level: string | null
-          issuer_id: string | null
-          launch_date: string | null
-          market_conditions_score: number | null
-          pricing_method: string | null
-          regulatory_approvals_required: string[] | null
-          regulatory_status: string | null
-          target_amount: number | null
-          updated_at: string
-          use_of_proceeds: string | null
-        }
-        Insert: {
-          book_runner?: string | null
-          co_managers?: string[] | null
-          completion_date?: string | null
-          created_at?: string
-          currency?: string | null
-          deal_name: string
-          deal_status?: string | null
-          deal_type: string
-          esg_classification?: string | null
-          execution_complexity_score?: number | null
-          final_amount?: number | null
-          id?: string
-          investor_interest_level?: string | null
-          issuer_id?: string | null
-          launch_date?: string | null
-          market_conditions_score?: number | null
-          pricing_method?: string | null
-          regulatory_approvals_required?: string[] | null
-          regulatory_status?: string | null
-          target_amount?: number | null
-          updated_at?: string
-          use_of_proceeds?: string | null
-        }
-        Update: {
-          book_runner?: string | null
-          co_managers?: string[] | null
-          completion_date?: string | null
-          created_at?: string
-          currency?: string | null
-          deal_name?: string
-          deal_status?: string | null
-          deal_type?: string
-          esg_classification?: string | null
-          execution_complexity_score?: number | null
-          final_amount?: number | null
-          id?: string
-          investor_interest_level?: string | null
-          issuer_id?: string | null
-          launch_date?: string | null
-          market_conditions_score?: number | null
-          pricing_method?: string | null
-          regulatory_approvals_required?: string[] | null
-          regulatory_status?: string | null
-          target_amount?: number | null
-          updated_at?: string
-          use_of_proceeds?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ecm_deals_issuer_id_fkey"
-            columns: ["issuer_id"]
-            isOneToOne: false
-            referencedRelation: "ecm_issuers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ecm_investor_matches: {
-        Row: {
-          compatibility_factors: string[] | null
-          contact_date: string | null
-          created_at: string
-          deal_id: string | null
-          id: string
-          indicative_amount: number | null
-          investment_interest_level: string | null
-          investor_id: string | null
-          match_score: number | null
-          notes: string | null
-          response_date: string | null
-          status: string | null
-          updated_at: string
-        }
-        Insert: {
-          compatibility_factors?: string[] | null
-          contact_date?: string | null
-          created_at?: string
-          deal_id?: string | null
-          id?: string
-          indicative_amount?: number | null
-          investment_interest_level?: string | null
-          investor_id?: string | null
-          match_score?: number | null
-          notes?: string | null
-          response_date?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Update: {
-          compatibility_factors?: string[] | null
-          contact_date?: string | null
-          created_at?: string
-          deal_id?: string | null
-          id?: string
-          indicative_amount?: number | null
-          investment_interest_level?: string | null
-          investor_id?: string | null
-          match_score?: number | null
-          notes?: string | null
-          response_date?: string | null
-          status?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "ecm_investor_matches_deal_id_fkey"
-            columns: ["deal_id"]
-            isOneToOne: false
-            referencedRelation: "ecm_deals"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ecm_investor_matches_investor_id_fkey"
-            columns: ["investor_id"]
-            isOneToOne: false
-            referencedRelation: "ecm_investors"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      ecm_investors: {
-        Row: {
-          aum_range: string | null
-          contact_email: string | null
-          contact_phone: string | null
-          created_at: string
-          deal_size_max: number | null
-          deal_size_min: number | null
-          esg_focused: boolean | null
-          geographic_focus: string[] | null
-          id: string
-          investor_name: string
-          investor_type: string
-          kyc_status: string | null
-          last_activity_date: string | null
-          regulatory_classification: string | null
-          risk_appetite: string | null
-          sector_preferences: string[] | null
-          stock_connect_eligible: boolean | null
-          total_investment_amount: number | null
-          total_investments_count: number | null
-          updated_at: string
-        }
-        Insert: {
-          aum_range?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          deal_size_max?: number | null
-          deal_size_min?: number | null
-          esg_focused?: boolean | null
-          geographic_focus?: string[] | null
-          id?: string
-          investor_name: string
-          investor_type: string
-          kyc_status?: string | null
-          last_activity_date?: string | null
-          regulatory_classification?: string | null
-          risk_appetite?: string | null
-          sector_preferences?: string[] | null
-          stock_connect_eligible?: boolean | null
-          total_investment_amount?: number | null
-          total_investments_count?: number | null
-          updated_at?: string
-        }
-        Update: {
-          aum_range?: string | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          deal_size_max?: number | null
-          deal_size_min?: number | null
-          esg_focused?: boolean | null
-          geographic_focus?: string[] | null
-          id?: string
-          investor_name?: string
-          investor_type?: string
-          kyc_status?: string | null
-          last_activity_date?: string | null
-          regulatory_classification?: string | null
-          risk_appetite?: string | null
-          sector_preferences?: string[] | null
-          stock_connect_eligible?: boolean | null
-          total_investment_amount?: number | null
-          total_investments_count?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      ecm_issuers: {
-        Row: {
-          company_name: string
-          compliance_risk_score: number | null
-          contact_email: string | null
-          contact_phone: string | null
-          created_at: string
-          esg_rating: string | null
-          esg_score: number | null
-          financial_year_end: string | null
-          hkex_listing_date: string | null
-          id: string
-          industry: string | null
-          last_fundraising_date: string | null
-          market_cap: number | null
-          regulatory_status: string | null
-          sector: string | null
-          stock_code: string | null
-          total_funds_raised: number | null
-          updated_at: string
-        }
-        Insert: {
-          company_name: string
-          compliance_risk_score?: number | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          esg_rating?: string | null
-          esg_score?: number | null
-          financial_year_end?: string | null
-          hkex_listing_date?: string | null
-          id?: string
-          industry?: string | null
-          last_fundraising_date?: string | null
-          market_cap?: number | null
-          regulatory_status?: string | null
-          sector?: string | null
-          stock_code?: string | null
-          total_funds_raised?: number | null
-          updated_at?: string
-        }
-        Update: {
-          company_name?: string
-          compliance_risk_score?: number | null
-          contact_email?: string | null
-          contact_phone?: string | null
-          created_at?: string
-          esg_rating?: string | null
-          esg_score?: number | null
-          financial_year_end?: string | null
-          hkex_listing_date?: string | null
-          id?: string
-          industry?: string | null
-          last_fundraising_date?: string | null
-          market_cap?: number | null
-          regulatory_status?: string | null
-          sector?: string | null
-          stock_code?: string | null
-          total_funds_raised?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      ecm_market_data: {
-        Row: {
-          average_deal_size: number | null
-          created_at: string
-          data_date: string
-          hang_seng_index: number | null
-          hang_seng_tech_index: number | null
-          id: string
-          ipo_activity_count: number | null
-          market_sentiment: string | null
-          market_volatility: number | null
-          regulatory_environment_score: number | null
-          secondary_fundraising_count: number | null
-          stock_connect_northbound_flow: number | null
-          stock_connect_southbound_flow: number | null
-        }
-        Insert: {
-          average_deal_size?: number | null
-          created_at?: string
-          data_date: string
-          hang_seng_index?: number | null
-          hang_seng_tech_index?: number | null
-          id?: string
-          ipo_activity_count?: number | null
-          market_sentiment?: string | null
-          market_volatility?: number | null
-          regulatory_environment_score?: number | null
-          secondary_fundraising_count?: number | null
-          stock_connect_northbound_flow?: number | null
-          stock_connect_southbound_flow?: number | null
-        }
-        Update: {
-          average_deal_size?: number | null
-          created_at?: string
-          data_date?: string
-          hang_seng_index?: number | null
-          hang_seng_tech_index?: number | null
-          id?: string
-          ipo_activity_count?: number | null
-          market_sentiment?: string | null
-          market_volatility?: number | null
-          regulatory_environment_score?: number | null
-          secondary_fundraising_count?: number | null
-          stock_connect_northbound_flow?: number | null
-          stock_connect_southbound_flow?: number | null
-        }
-        Relationships: []
-      }
-      interpretation_guidance: {
-        Row: {
-          applicable_rules: string[] | null
-          content: string
-          created_at: string
-          guidance_number: string | null
-          id: string
-          issue_date: string | null
-          source_document_id: string | null
-          title: string
-        }
-        Insert: {
-          applicable_rules?: string[] | null
-          content: string
-          created_at?: string
-          guidance_number?: string | null
-          id?: string
-          issue_date?: string | null
-          source_document_id?: string | null
-          title: string
-        }
-        Update: {
-          applicable_rules?: string[] | null
-          content?: string
-          created_at?: string
-          guidance_number?: string | null
-          id?: string
-          issue_date?: string | null
-          source_document_id?: string | null
-          title?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "interpretation_guidance_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       "Listing Rules": {
         Row: {
@@ -486,7 +63,127 @@ export type Database = {
         }
         Relationships: []
       }
-      reference_documents: {
+      listingrule_listed_faq: {
+        Row: {
+          faq_Number: string
+          gem_listingrules: string | null
+          id: string
+          md_listingrules: string | null
+          Sub_topics: string | null
+          topics: string
+        }
+        Insert: {
+          faq_Number: string
+          gem_listingrules?: string | null
+          id?: string
+          md_listingrules?: string | null
+          Sub_topics?: string | null
+          topics: string
+        }
+        Update: {
+          faq_Number?: string
+          gem_listingrules?: string | null
+          id?: string
+          md_listingrules?: string | null
+          Sub_topics?: string | null
+          topics?: string
+        }
+        Relationships: []
+      }
+      listingrule_new_faq: {
+        Row: {
+          chapter: string | null
+          createtime: string | null
+          faqtopic: string | null
+          id: string
+          mblistingrule_reference: string | null
+          question_no: string | null
+          seriesno: string
+          topic: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          createtime?: string | null
+          faqtopic?: string | null
+          id?: string
+          mblistingrule_reference?: string | null
+          question_no?: string | null
+          seriesno: string
+          topic?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          createtime?: string | null
+          faqtopic?: string | null
+          id?: string
+          mblistingrule_reference?: string | null
+          question_no?: string | null
+          seriesno?: string
+          topic?: string | null
+        }
+        Relationships: []
+      }
+      listingrule_new_gl: {
+        Row: {
+          chapter: string | null
+          created_at: string
+          id: string
+          mblistingrules_Topics: string | null
+          particulars: string | null
+          reference_no: string | null
+          title: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          created_at?: string
+          id?: string
+          mblistingrules_Topics?: string | null
+          particulars?: string | null
+          reference_no?: string | null
+          title?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          created_at?: string
+          id?: string
+          mblistingrules_Topics?: string | null
+          particulars?: string | null
+          reference_no?: string | null
+          title?: string | null
+        }
+        Relationships: []
+      }
+      listingrule_new_ld: {
+        Row: {
+          chapter: string | null
+          createtime: string | null
+          id: string
+          mblistingrules_Topics: string
+          particulars: string | null
+          reference_No: string
+          title: string | null
+        }
+        Insert: {
+          chapter?: string | null
+          createtime?: string | null
+          id?: string
+          mblistingrules_Topics: string
+          particulars?: string | null
+          reference_No: string
+          title?: string | null
+        }
+        Update: {
+          chapter?: string | null
+          createtime?: string | null
+          id?: string
+          mblistingrules_Topics?: string
+          particulars?: string | null
+          reference_No?: string
+          title?: string | null
+        }
+        Relationships: []
+      }
+      mb_listingrule_documents: {
         Row: {
           category: string
           created_at: string
@@ -555,93 +252,6 @@ export type Database = {
         }
         Relationships: []
       }
-      regulatory_definitions: {
-        Row: {
-          category_id: string | null
-          created_at: string
-          definition: string
-          id: string
-          source_provision_id: string | null
-          term: string
-        }
-        Insert: {
-          category_id?: string | null
-          created_at?: string
-          definition: string
-          id?: string
-          source_provision_id?: string | null
-          term: string
-        }
-        Update: {
-          category_id?: string | null
-          created_at?: string
-          definition?: string
-          id?: string
-          source_provision_id?: string | null
-          term?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_definitions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_definitions_source_provision_id_fkey"
-            columns: ["source_provision_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      regulatory_faqs: {
-        Row: {
-          answer: string
-          category_id: string | null
-          created_at: string
-          id: string
-          question: string
-          related_provisions: string[] | null
-          source_document_id: string | null
-        }
-        Insert: {
-          answer: string
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          question: string
-          related_provisions?: string[] | null
-          source_document_id?: string | null
-        }
-        Update: {
-          answer?: string
-          category_id?: string | null
-          created_at?: string
-          id?: string
-          question?: string
-          related_provisions?: string[] | null
-          source_document_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_faqs_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_faqs_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       regulatory_provisions: {
         Row: {
           category_id: string | null
@@ -700,71 +310,7 @@ export type Database = {
           title?: string
           version?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "regulatory_provisions_category_id_fkey"
-            columns: ["category_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_categories"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_provisions_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "regulatory_provisions_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "reference_documents"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      rule_cross_references: {
-        Row: {
-          created_at: string
-          from_rule_id: string
-          id: string
-          reference_text: string | null
-          reference_type: string | null
-          to_rule_id: string
-        }
-        Insert: {
-          created_at?: string
-          from_rule_id: string
-          id?: string
-          reference_text?: string | null
-          reference_type?: string | null
-          to_rule_id: string
-        }
-        Update: {
-          created_at?: string
-          from_rule_id?: string
-          id?: string
-          reference_text?: string | null
-          reference_type?: string | null
-          to_rule_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "rule_cross_references_from_rule_id_fkey"
-            columns: ["from_rule_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "rule_cross_references_to_rule_id_fkey"
-            columns: ["to_rule_id"]
-            isOneToOne: false
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       rule_keywords: {
         Row: {
@@ -818,15 +364,7 @@ export type Database = {
           provision_id?: string
           search_vector?: unknown | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "search_index_provision_id_fkey"
-            columns: ["provision_id"]
-            isOneToOne: true
-            referencedRelation: "regulatory_provisions"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
