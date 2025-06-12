@@ -3,9 +3,12 @@ import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 
 export interface TransactionAnalysisRequest {
+  transactionType: string;
   description: string;
-  uploadedFiles: File[];
-  extractedContent?: string[];
+  amount?: number;
+  currency?: string;
+  documents?: File[];
+  additionalContext?: string;
 }
 
 /**
@@ -21,9 +24,9 @@ export const aiAnalysisService = {
       
       // Extract content from uploaded documents
       let documentContent = '';
-      if (request.uploadedFiles.length > 0) {
-        console.log(`Processing ${request.uploadedFiles.length} uploaded documents...`);
-        const extractionPromises = request.uploadedFiles.map(file => 
+      if (request.documents?.length > 0) {
+        console.log(`Processing ${request.documents.length} uploaded documents...`);
+        const extractionPromises = request.documents.map(file => 
           fileProcessingService.processFile(file)
         );
         
@@ -41,7 +44,7 @@ export const aiAnalysisService = {
         prompt: analysisPrompt,
         metadata: {
           type: 'deal_structuring',
-          hasDocuments: request.uploadedFiles.length > 0
+          hasDocuments: request.documents?.length > 0
         }
       });
       
@@ -54,6 +57,29 @@ export const aiAnalysisService = {
       console.error('Error in AI transaction analysis:', error);
       throw new Error('Failed to analyze transaction. Please try again.');
     }
+  },
+
+  /**
+   * Store analysis context for follow-up processing
+   */
+  storeAnalysisContext: (request: TransactionAnalysisRequest, results: AnalysisResults): AnalysisContext => {
+    return {
+      originalRequest: request,
+      analysisTimestamp: new Date()
+    };
+  },
+
+  /**
+   * Enhanced analysis method that returns both results and context
+   */
+  analyzeTransactionWithContext: async (request: TransactionAnalysisRequest): Promise<{
+    results: AnalysisResults;
+    context: AnalysisContext;
+  }> => {
+    const results = await aiAnalysisService.analyzeTransaction(request);
+    const context = aiAnalysisService.storeAnalysisContext(request, results);
+    
+    return { results, context };
   }
 };
 

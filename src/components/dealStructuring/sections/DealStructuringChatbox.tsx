@@ -1,180 +1,209 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { MessageSquare, Send, Loader2 } from 'lucide-react';
+import { MessageCircle, Send, Loader2, RefreshCw } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
-import { aiAnalysisService } from '@/services/dealStructuring/aiAnalysisService';
+import { followUpService, FollowUpContext } from '@/services/dealStructuring/followUpService';
 import { useToast } from '@/hooks/use-toast';
-
-interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: Date;
-}
+import { Badge } from '@/components/ui/badge';
 
 interface DealStructuringChatboxProps {
   results: AnalysisResults;
   onResultsUpdate: (updatedResults: AnalysisResults) => void;
 }
 
+interface ChatMessage {
+  id: string;
+  type: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  changedSections?: string[];
+}
+
 export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructuringChatboxProps) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [input, setInput] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: '1',
+      type: 'assistant',
+      content: 'Hello! I can help you refine your transaction analysis. Ask me questions about specific aspects you\'d like to adjust or clarify.',
+      timestamp: new Date()
+    }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  const quickActions = [
-    'Modify timeline',
-    'Explore cost alternatives',
-    'Regulatory deep dive',
-    'Alternative structures',
-    'Risk mitigation'
-  ];
+  // Maintain follow-up context
+  const [context] = useState<FollowUpContext>({
+    originalTransactionDescription: results.transactionType, // This should be enhanced to store the original description
+    conversationHistory: []
+  });
 
-  const handleSendMessage = async (messageContent: string) => {
-    if (!messageContent.trim() || isLoading) return;
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || isProcessing) return;
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
-      role: 'user',
-      content: messageContent,
+      type: 'user',
+      content: inputValue.trim(),
       timestamp: new Date()
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInput('');
-    setIsLoading(true);
+    setInputValue('');
+    setIsProcessing(true);
 
     try {
-      // Create follow-up request with context
-      const followUpRequest = {
-        description: `Follow-up question: ${messageContent}\n\nOriginal Analysis Context:\nTransaction Type: ${results.transactionType}\nRecommended Structure: ${results.structure.recommended}`,
-        uploadedFiles: []
+      // Update conversation history
+      const updatedContext = {
+        ...context,
+        conversationHistory: [
+          ...context.conversationHistory,
+          followUpService.createHistoryEntry(inputValue.trim(), '')
+        ]
       };
 
-      const updatedResults = await aiAnalysisService.analyzeTransaction(followUpRequest);
-      
+      // Process the follow-up question
+      const followUpResponse = await followUpService.processFollowUpQuestion(
+        results,
+        inputValue.trim(),
+        updatedContext
+      );
+
+      // Update the analysis results
+      onResultsUpdate(followUpResponse.updatedResults);
+
+      // Add assistant response to chat
       const assistantMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: `Based on your follow-up question, I've updated the analysis. The key changes include adjustments to the ${messageContent.toLowerCase().includes('timeline') ? 'execution timetable' : messageContent.toLowerCase().includes('cost') ? 'cost structure' : 'recommendations'}.`,
-        timestamp: new Date()
+        type: 'assistant',
+        content: followUpResponse.assistantMessage,
+        timestamp: new Date(),
+        changedSections: followUpResponse.changedSections
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-      onResultsUpdate(updatedResults);
 
-      toast({
-        title: "Analysis Updated",
-        description: "Your follow-up question has been processed and the analysis updated.",
-      });
+      // Update conversation history with the assistant's response
+      updatedContext.conversationHistory[updatedContext.conversationHistory.length - 1] = 
+        followUpService.createHistoryEntry(userMessage.content, followUpResponse.assistantMessage);
+
+      // Show success toast with changed sections
+      if (followUpResponse.changedSections.length > 0) {
+        toast({
+          title: "Analysis Updated",
+          description: followUpService.formatChangedSections(followUpResponse.changedSections)
+        });
+      }
+
     } catch (error) {
-      console.error('Follow-up analysis error:', error);
+      console.error('Error processing follow-up:', error);
       
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: "I apologize, but I encountered an issue processing your follow-up question. Please try again or rephrase your question.",
+        type: 'assistant',
+        content: 'I apologize, but I encountered an error processing your question. Please try rephrasing your question or ask about a specific aspect of the analysis.',
         timestamp: new Date()
       };
 
       setMessages(prev => [...prev, errorMessage]);
-      
+
       toast({
-        title: "Analysis Error",
-        description: "Unable to process follow-up question. Please try again.",
+        title: "Error",
+        description: "Failed to process your question. Please try again.",
         variant: "destructive"
       });
     } finally {
-      setIsLoading(false);
+      setIsProcessing(false);
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    setInput(action);
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
   };
 
   return (
     <Card className="h-full flex flex-col min-h-0">
-      <CardHeader className="pb-2 flex-shrink-0">
+      <CardHeader className="pb-3 flex-shrink-0">
         <CardTitle className="flex items-center gap-2 text-base">
-          <MessageSquare className="h-4 w-4 text-blue-500" />
-          Follow-up Chat
+          <MessageCircle className="h-4 w-4 text-blue-500" />
+          Analysis Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4">
-        {/* Quick Actions */}
-        <div className="mb-2 flex-shrink-0">
-          <p className="text-xs text-gray-500 mb-1">Quick actions:</p>
-          <div className="flex flex-wrap gap-1">
-            {quickActions.map((action, index) => (
-              <Badge 
-                key={index} 
-                variant="outline" 
-                className="cursor-pointer hover:bg-primary/10 text-xs"
-                onClick={() => handleQuickAction(action)}
+      <CardContent className="flex-1 p-0 min-h-0 flex flex-col">
+        <ScrollArea className="flex-1 px-4 pb-4" type="always">
+          <div className="space-y-4">
+            {messages.map((message) => (
+              <div
+                key={message.id}
+                className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
-                {action}
-              </Badge>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto mb-2 space-y-2 min-h-0">
-          {messages.length === 0 ? (
-            <div className="text-center text-gray-500 text-sm py-4">
-              Ask follow-up questions about the analysis or use quick actions above.
-            </div>
-          ) : (
-            messages.map((message) => (
-              <div key={message.id} className={`p-2 rounded-lg text-xs ${
-                message.role === 'user' 
-                  ? 'bg-primary/10 ml-4' 
-                  : 'bg-gray-50 mr-4'
-              }`}>
-                <div className="font-medium mb-1">
-                  {message.role === 'user' ? 'You' : 'AI Assistant'}
+                <div
+                  className={`max-w-[80%] rounded-lg p-3 text-xs ${
+                    message.type === 'user'
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}
+                >
+                  <p className="leading-relaxed">{message.content}</p>
+                  {message.changedSections && message.changedSections.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-2">
+                      {message.changedSections.map((section, index) => (
+                        <Badge key={index} variant="secondary" className="text-xs">
+                          <RefreshCw className="h-2 w-2 mr-1" />
+                          {section}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                  <p className="text-xs opacity-70 mt-1">
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
                 </div>
-                <div className="text-gray-700">{message.content}</div>
               </div>
-            ))
-          )}
-          {isLoading && (
-            <div className="flex items-center gap-2 text-xs text-gray-500 p-2">
-              <Loader2 className="h-3 w-3 animate-spin" />
-              Analyzing your question...
-            </div>
-          )}
-        </div>
-
-        {/* Input Area */}
-        <div className="space-y-2 flex-shrink-0">
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about timeline modifications, cost alternatives, regulatory requirements..."
-            className="min-h-[50px] text-sm resize-none"
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage(input);
-              }
-            }}
-          />
-          <Button 
-            onClick={() => handleSendMessage(input)}
-            disabled={!input.trim() || isLoading}
-            size="sm"
-            className="w-full"
-          >
-            <Send className="h-3 w-3 mr-1" />
-            Send
-          </Button>
+            ))}
+            {isProcessing && (
+              <div className="flex justify-start">
+                <div className="bg-gray-100 rounded-lg p-3 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <span>Processing your question...</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+        
+        <div className="flex-shrink-0 p-4 border-t">
+          <div className="flex gap-2">
+            <Input
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder="Ask about your analysis..."
+              className="text-xs"
+              disabled={isProcessing}
+            />
+            <Button
+              onClick={handleSendMessage}
+              disabled={!inputValue.trim() || isProcessing}
+              size="sm"
+              className="flex-shrink-0"
+            >
+              {isProcessing ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Send className="h-3 w-3" />
+              )}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>
