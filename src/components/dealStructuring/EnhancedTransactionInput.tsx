@@ -89,33 +89,33 @@ export const EnhancedTransactionInput = ({ onAnalyze, isAnalyzing = false }: Enh
 
   return (
     <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Sparkles className="h-5 w-5 text-primary" />
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <Sparkles className="h-4 w-4 text-primary" />
           AI-Powered Transaction Advisory
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-4">
         {/* Transaction Description */}
         <div className="space-y-2">
-          <Label htmlFor="description">Transaction Description</Label>
+          <Label htmlFor="description" className="text-sm">Transaction Description</Label>
           <Textarea
             id="description"
             placeholder="Describe your transaction requirements in natural language. For example: 'We are planning a HK$500 million rights issue for our listed company. The company has 1 billion shares outstanding with a market cap of HK$8 billion. We need to raise funds for expansion and debt refinancing. The transaction should be completed within 3 months.'"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            rows={6}
-            className="resize-none"
+            rows={4}
+            className="resize-none text-sm"
           />
         </div>
 
         {/* Document Upload */}
-        <div className="space-y-4">
-          <Label>Upload Transaction Documents (Optional)</Label>
+        <div className="space-y-3">
+          <Label className="text-sm">Upload Transaction Documents (Optional)</Label>
           
-          {/* Drag & Drop Zone */}
+          {/* Drag & Drop Zone - Compact */}
           <div
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+            className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
               isDragOver 
                 ? 'border-primary bg-primary/5' 
                 : 'border-gray-300 hover:border-gray-400'
@@ -124,11 +124,11 @@ export const EnhancedTransactionInput = ({ onAnalyze, isAnalyzing = false }: Enh
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
           >
-            <Upload className="h-12 w-12 mx-auto text-gray-400 mb-4" />
-            <p className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
+            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
               Drop your documents here
             </p>
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-xs text-gray-500 mb-2">
               or click to browse files
             </p>
             <input
@@ -140,11 +140,11 @@ export const EnhancedTransactionInput = ({ onAnalyze, isAnalyzing = false }: Enh
               id="file-upload"
             />
             <label htmlFor="file-upload">
-              <Button variant="outline" className="cursor-pointer">
+              <Button variant="outline" size="sm" className="cursor-pointer">
                 Browse Files
               </Button>
             </label>
-            <p className="text-xs text-gray-400 mt-2">
+            <p className="text-xs text-gray-400 mt-1">
               Supports: PDF, Word, Excel, Text files
             </p>
           </div>
@@ -152,33 +152,36 @@ export const EnhancedTransactionInput = ({ onAnalyze, isAnalyzing = false }: Enh
           {/* Uploaded Files List */}
           {uploadedFiles.length > 0 && (
             <div className="space-y-2">
-              <Label>Uploaded Documents</Label>
-              {uploadedFiles.map((file, index) => (
-                <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <FileText className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-gray-500">
-                        {(file.size / 1024 / 1024).toFixed(2)} MB
-                      </p>
+              <Label className="text-sm">Uploaded Documents</Label>
+              <div className="max-h-20 overflow-y-auto space-y-1">
+                {uploadedFiles.map((file, index) => (
+                  <div key={index} className="flex items-center justify-between p-2 border rounded-lg">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4 text-blue-500" />
+                      <div>
+                        <p className="font-medium text-sm">{file.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeFile(index)}
+                      className="text-xs"
+                    >
+                      Remove
+                    </Button>
                   </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeFile(index)}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           )}
         </div>
 
         {/* Analyze Button */}
-        <div className="flex justify-end pt-4">
+        <div className="flex justify-end pt-2">
           <Button 
             onClick={handleSubmit}
             disabled={isAnalyzing || (!description.trim() && uploadedFiles.length === 0)}

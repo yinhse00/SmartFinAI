@@ -86,33 +86,33 @@ const DealStructuring = () => {
 
   return (
     <MainLayout>
-      <div className="container mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+      <div className="container mx-auto px-4 py-4">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
             AI-Powered Deal Structuring
           </h1>
           
           {/* Show introductory content only during input phase */}
           {currentStep === 'input' && (
             <>
-              <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-4xl">
+              <p className="text-base text-gray-600 dark:text-gray-300 mb-4 max-w-4xl">
                 Get intelligent advisory for capital raising and M&A transactions. Our AI analyzes your requirements 
                 and documents to provide professional-grade structuring advice, cost analysis, regulatory compliance 
                 guidance, and execution timetables.
               </p>
 
-              {/* Feature Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+              {/* Feature Overview Cards - Compact Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
                 {featureCards.map((feature, index) => (
                   <Card key={index} className="h-full">
-                    <CardContent className="p-6">
-                      <div className="flex items-center gap-3 mb-3">
-                        <feature.icon className="h-6 w-6 text-primary" />
-                        <h3 className="text-lg font-semibold">{feature.title}</h3>
+                    <CardContent className="p-3">
+                      <div className="flex flex-col items-center text-center">
+                        <feature.icon className="h-5 w-5 text-primary mb-2" />
+                        <h3 className="text-sm font-semibold mb-1">{feature.title}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-tight">
+                          {feature.description}
+                        </p>
                       </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">
-                        {feature.description}
-                      </p>
                     </CardContent>
                   </Card>
                 ))}
@@ -122,7 +122,7 @@ const DealStructuring = () => {
         </div>
 
         {/* Main Content */}
-        <div className="space-y-8">
+        <div className="space-y-6">
           {currentStep === 'input' && (
             <EnhancedTransactionInput
               onAnalyze={handleTransactionAnalysis}
