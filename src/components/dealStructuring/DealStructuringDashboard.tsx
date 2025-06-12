@@ -40,8 +40,8 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <RegulatoryComplianceBox results={results} />
       </div>
       
-      {/* Row 3, Col 1: Execution Timetable */}
-      <div className="lg:col-start-1 lg:row-start-3">
+      {/* Row 3, Col 1: Execution Timetable - aligned to top of cell */}
+      <div className="lg:col-start-1 lg:row-start-3 self-start">
         <ExecutionTimetableBox results={results} />
       </div>
     </div>
