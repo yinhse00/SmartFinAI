@@ -46,7 +46,7 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <ExecutionTimetableBox results={results} />
       </div>
 
-      {/* Row 3, Col 2: Unified Post-Transaction Structure Diagram */}
+      {/* Row 3, Col 2: Transaction Flow Diagram (Updated) */}
       <div className="lg:col-start-2 lg:row-start-3">
         <TransactionFlowDiagramBox results={results} />
       </div>
