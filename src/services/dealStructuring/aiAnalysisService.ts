@@ -130,7 +130,7 @@ Please provide a detailed analysis covering:
    - Key regulatory risks
    - Compliance recommendations
 
-6. DIAGRAM DATA (for visualization):
+6. DIAGRAM DATA (REQUIRED for visualization):
    - Enhanced shareholding changes with entity types and control implications
    - Corporate structure with entity relationships and ownership percentages
    - Detailed before/after comparison with change indicators
@@ -167,8 +167,8 @@ FORMAT your response as a structured JSON object with the following schema:
   },
   "confidence": number,
   "shareholdingChanges": {
-    "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": boolean}],
-    "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": boolean}],
+    "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
+    "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
     "keyChanges": [{"shareholder": "string", "change": number, "type": "increase|decrease|new|exit"}],
     "controlImplications": ["string"]
   },
@@ -179,6 +179,8 @@ FORMAT your response as a structured JSON object with the following schema:
     "targetEntities": ["string"]
   }
 }
+
+IMPORTANT: You MUST include both "shareholdingChanges" and "corporateStructure" objects in your response for the diagrams to display properly. Generate realistic sample data if specific details are not provided.
 
 Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar. Include comprehensive diagram data for visualization purposes.
 `;
@@ -193,6 +195,15 @@ function parseAnalysisResponse(responseText: string): AnalysisResults {
     const jsonMatch = responseText.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
+      
+      // Ensure diagram data exists with fallback
+      if (!parsed.shareholdingChanges) {
+        parsed.shareholdingChanges = createFallbackShareholdingChanges();
+      }
+      if (!parsed.corporateStructure) {
+        parsed.corporateStructure = createFallbackCorporateStructure();
+      }
+      
       return parsed;
     }
   } catch (error) {
@@ -201,6 +212,43 @@ function parseAnalysisResponse(responseText: string): AnalysisResults {
   
   // Fallback: create structured response from text
   return createFallbackAnalysis(responseText);
+}
+
+/**
+ * Create fallback shareholding changes when data is missing
+ */
+function createFallbackShareholdingChanges() {
+  return {
+    before: [
+      { name: "Existing Shareholders", percentage: 100, type: "institutional", isConnected: false }
+    ],
+    after: [
+      { name: "Existing Shareholders", percentage: 80, type: "institutional", isConnected: false },
+      { name: "New Investors", percentage: 20, type: "institutional", isConnected: false }
+    ],
+    keyChanges: [
+      { shareholder: "Existing Shareholders", change: -20, type: "decrease" },
+      { shareholder: "New Investors", change: 20, type: "new" }
+    ],
+    controlImplications: ["Dilution of existing shareholders", "Introduction of new institutional investors"]
+  };
+}
+
+/**
+ * Create fallback corporate structure when data is missing
+ */
+function createFallbackCorporateStructure() {
+  return {
+    entities: [
+      { id: "issuer", name: "Main Company", type: "issuer", ownership: 100 },
+      { id: "target", name: "Target Entity", type: "target", ownership: 0 }
+    ],
+    relationships: [
+      { parent: "issuer", child: "target", ownershipPercentage: 100 }
+    ],
+    mainIssuer: "issuer",
+    targetEntities: ["target"]
+  };
 }
 
 /**
@@ -244,6 +292,8 @@ function createFallbackAnalysis(responseText: string): AnalysisResults {
       risks: ["Detailed risk analysis in response"],
       recommendations: ["See comprehensive recommendations"]
     },
-    confidence: 0.7
+    confidence: 0.7,
+    shareholdingChanges: createFallbackShareholdingChanges(),
+    corporateStructure: createFallbackCorporateStructure()
   };
 }

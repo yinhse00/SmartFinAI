@@ -15,7 +15,7 @@ interface DealStructuringDashboardProps {
 
 export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:grid-rows-4 lg:items-start">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 lg:grid-rows-4 lg:items-start">
       {/* Row 1, Col 1: Structure Recommendation */}
       <div className="lg:col-start-1 lg:row-start-1">
         <StructureRecommendationBox results={results} />
