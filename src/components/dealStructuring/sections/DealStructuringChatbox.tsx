@@ -38,7 +38,7 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
 
   // Maintain follow-up context
   const [context] = useState<FollowUpContext>({
-    originalTransactionDescription: results.transactionType, // This should be enhanced to store the original description
+    originalTransactionDescription: results.transactionType,
     conversationHistory: []
   });
 
@@ -129,15 +129,15 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
   };
 
   return (
-    <Card className="h-full flex flex-col min-h-0">
-      <CardHeader className="pb-3 flex-shrink-0">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <MessageCircle className="h-4 w-4 text-blue-500" />
+    <Card className="h-[700px] flex flex-col min-h-0">
+      <CardHeader className="pb-4 flex-shrink-0">
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <MessageCircle className="h-5 w-5 text-blue-500" />
           Analysis Chat
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-0 min-h-0 flex flex-col">
-        <ScrollArea className="flex-1 px-4 pb-4" type="always">
+        <ScrollArea className="flex-1 px-6 pb-4" type="always">
           <div className="space-y-4">
             {messages.map((message) => (
               <div
@@ -145,7 +145,7 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
                 className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[80%] rounded-lg p-3 text-xs ${
+                  className={`max-w-[80%] rounded-lg p-4 text-sm ${
                     message.type === 'user'
                       ? 'bg-primary text-primary-foreground'
                       : 'bg-gray-100 text-gray-800'
@@ -153,16 +153,16 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
                 >
                   <p className="leading-relaxed">{message.content}</p>
                   {message.changedSections && message.changedSections.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-2">
+                    <div className="flex flex-wrap gap-2 mt-3">
                       {message.changedSections.map((section, index) => (
                         <Badge key={index} variant="secondary" className="text-xs">
-                          <RefreshCw className="h-2 w-2 mr-1" />
+                          <RefreshCw className="h-3 w-3 mr-1" />
                           {section}
                         </Badge>
                       ))}
                     </div>
                   )}
-                  <p className="text-xs opacity-70 mt-1">
+                  <p className="text-xs opacity-70 mt-2">
                     {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -170,9 +170,9 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
             ))}
             {isProcessing && (
               <div className="flex justify-start">
-                <div className="bg-gray-100 rounded-lg p-3 text-xs">
+                <div className="bg-gray-100 rounded-lg p-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <Loader2 className="h-3 w-3 animate-spin" />
+                    <Loader2 className="h-4 w-4 animate-spin" />
                     <span>Processing your question...</span>
                   </div>
                 </div>
@@ -181,14 +181,14 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
           </div>
         </ScrollArea>
         
-        <div className="flex-shrink-0 p-4 border-t">
-          <div className="flex gap-2">
+        <div className="flex-shrink-0 p-6 border-t">
+          <div className="flex gap-3">
             <Input
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               placeholder="Ask about your analysis..."
-              className="text-xs"
+              className="text-sm"
               disabled={isProcessing}
             />
             <Button
@@ -198,9 +198,9 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
               className="flex-shrink-0"
             >
               {isProcessing ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Send className="h-3 w-3" />
+                <Send className="h-4 w-4" />
               )}
             </Button>
           </div>
