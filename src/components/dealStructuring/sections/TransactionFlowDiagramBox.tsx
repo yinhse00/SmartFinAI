@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -8,6 +7,7 @@ import DealStepsFlowDiagram from '../flow/DealStepsFlowDiagram';
 import TransactionFlowControls from '../flow/TransactionFlowControls';
 import { CorporateStructureDiagram } from './CorporateStructureDiagram';
 import { TransactionFlow } from '@/types/transactionFlow';
+import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
@@ -74,6 +74,50 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
   };
 };
 
+const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
+  const [showBefore, setShowBefore] = useState(true);
+  const transactionFlow = convertToTransactionFlow(results);
+
+  return (
+    <div className="h-full flex flex-col">
+      <Tabs defaultValue="flow" className="h-full flex flex-col">
+        <TabsList className="grid w-full grid-cols-2 mb-4">
+          <TabsTrigger value="flow" className="flex items-center gap-2">
+            <GitBranch className="h-4 w-4" />
+            Deal Flow
+          </TabsTrigger>
+          <TabsTrigger value="structure" className="flex items-center gap-2">
+            <Building2 className="h-4 w-4" />
+            Corporate Structure
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="flow" className="flex-1 space-y-4">
+          <TransactionFlowControls
+            showBefore={showBefore}
+            onToggleView={setShowBefore}
+          />
+          <div className="h-[600px]">
+            <DealStepsFlowDiagram 
+              transactionFlow={transactionFlow}
+              showBefore={showBefore}
+            />
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="structure" className="flex-1">
+          <div className="h-[650px]">
+            <CorporateStructureDiagram 
+              corporateStructure={results.corporateStructure}
+              transactionType={results.transactionType}
+            />
+          </div>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+};
+
 export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps> = ({ results }) => {
   const [showBefore, setShowBefore] = useState(true);
   const transactionFlow = convertToTransactionFlow(results);
@@ -81,10 +125,19 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
   return (
     <Card className="h-[500px]">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Network className="h-5 w-5 text-blue-500" />
-          Transaction Structure Diagram
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Network className="h-5 w-5 text-blue-500" />
+            Transaction Structure Diagram
+          </CardTitle>
+          <EnlargedContentDialog
+            title="Transaction Structure & Flow Analysis"
+            enlargedContent={<EnlargedFlowContent results={results} />}
+            size="full"
+          >
+            <div />
+          </EnlargedContentDialog>
+        </div>
       </CardHeader>
       <CardContent className="h-[400px]">
         <Tabs defaultValue="flow" className="h-full">
