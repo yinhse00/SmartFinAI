@@ -13,13 +13,25 @@ interface TransactionFlowDiagramBoxProps {
 
 // Enhanced parsing function to extract exact values from transaction description
 const parseTransactionData = (description: string) => {
-  // Parse consideration amount
-  const considerationMatch = description.match(/(?:consideration.*?)(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
-  const considerationAmount = considerationMatch ? parseConsiderationAmount(considerationMatch[1]) : 0;
+  // Parse consideration amount with improved patterns
+  const considerationPatterns = [
+    /(?:consideration.*?)(HK\$\s*[\d.,]+\s*(?:million|billion))/i,
+    /(?:purchase.*?)(HK\$\s*[\d.,]+\s*(?:million|billion))/i,
+    /(HK\$\s*[\d.,]+\s*(?:million|billion)).*?(?:consideration|purchase|acquire)/i
+  ];
+  
+  let considerationAmount = 0;
+  for (const pattern of considerationPatterns) {
+    const match = description.match(pattern);
+    if (match) {
+      considerationAmount = parseConsiderationAmount(match[1]);
+      break;
+    }
+  }
   
   // Parse ownership percentage being acquired
   const ownershipMatch = description.match(/(?:purchase|acquire|buy)\s+(\d+)%/i);
-  const acquisitionPercentage = ownershipMatch ? parseInt(ownershipMatch[1]) : 0;
+  const acquisitionPercentage = ownershipMatch ? parseInt(ownershipMatch[1]) : 55;
   
   // Parse market cap
   const marketCapMatch = description.match(/market cap.*?(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
@@ -27,11 +39,11 @@ const parseTransactionData = (description: string) => {
   
   // Parse controlling shareholder percentage
   const controllingMatch = description.match(/controlling shareholder.*?(\d+)%/i);
-  const controllingPercentage = controllingMatch ? parseInt(controllingMatch[1]) : 0;
+  const controllingPercentage = controllingMatch ? parseInt(controllingMatch[1]) : 65;
   
   // Parse public shareholders percentage
   const publicMatch = description.match(/(?:other|public).*?(\d+)%.*?public/i);
-  const publicPercentage = publicMatch ? parseInt(publicMatch[1]) : 0;
+  const publicPercentage = publicMatch ? parseInt(publicMatch[1]) : 35;
   
   return {
     considerationAmount,
@@ -67,8 +79,8 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
   const transactionData = parseTransactionData(results.structure?.rationale || '');
   
   // Use parsed data instead of AI analysis fallbacks
-  const actualConsideration = transactionData.considerationAmount || results.costs?.total || 0;
-  const actualAcquisitionPercentage = transactionData.acquisitionPercentage || 55;
+  const actualConsideration = transactionData.considerationAmount;
+  const actualAcquisitionPercentage = transactionData.acquisitionPercentage;
   const remainingPercentage = 100 - actualAcquisitionPercentage;
   
   // Extract entity names
@@ -93,7 +105,7 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       {
         id: 'step-3',
         title: 'Completion & Payment',
-        description: `Transfer of ${actualAcquisitionPercentage}% ownership and payment of ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M consideration`,
+        description: `Transfer of ${actualAcquisitionPercentage}% ownership and payment of ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M consideration`,
         entities: ['after-acquiring-company', 'after-target-company', 'consideration-payment']
       }
     ];
@@ -106,28 +118,25 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       { 
         id: 'before-controlling-shareholder', 
         name: 'Controlling Shareholder', 
-        type: 'stockholder' as const,
-        percentage: transactionData.controllingPercentage || 65
+        type: 'stockholder' as const
       },
       { 
         id: 'before-public-shareholders', 
         name: 'Public Shareholders', 
-        type: 'stockholder' as const,
-        percentage: transactionData.publicPercentage || 35
+        type: 'stockholder' as const
       },
       { 
         id: 'before-acquiring-company', 
         name: acquiringCompanyName, 
         type: 'buyer' as const,
-        description: `Market Cap: ${transactionData.currency} ${(transactionData.marketCap / 1000000000).toFixed(1)}B`
+        description: transactionData.marketCap > 0 ? `Market Cap: ${transactionData.currency} ${(transactionData.marketCap / 1000000000).toFixed(1)}B` : 'Listed Entity'
       },
       
       // Target Company Structure
       { 
         id: 'before-target-shareholders', 
         name: 'Existing Target Shareholders', 
-        type: 'stockholder' as const,
-        percentage: 100
+        type: 'stockholder' as const
       },
       { 
         id: 'before-target-company', 
@@ -141,13 +150,13 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         source: 'before-controlling-shareholder',
         target: 'before-acquiring-company',
         type: 'ownership' as const,
-        percentage: transactionData.controllingPercentage || 65
+        percentage: transactionData.controllingPercentage
       },
       {
         source: 'before-public-shareholders',
         target: 'before-acquiring-company',
         type: 'ownership' as const,
-        percentage: transactionData.publicPercentage || 35
+        percentage: transactionData.publicPercentage
       },
       // Target company ownership structure
       {
@@ -173,34 +182,30 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       { 
         id: 'after-acquiring-company', 
         name: acquiringCompanyName, 
-        type: 'buyer' as const,
-        percentage: actualAcquisitionPercentage
+        type: 'buyer' as const
       },
       { 
         id: 'after-remaining-shareholders', 
         name: 'Remaining Target Shareholders', 
-        type: 'stockholder' as const,
-        percentage: remainingPercentage
+        type: 'stockholder' as const
       },
       
       // Acquiring Company Structure (maintained)
       { 
         id: 'after-controlling-shareholder', 
         name: 'Controlling Shareholder', 
-        type: 'stockholder' as const,
-        percentage: transactionData.controllingPercentage || 65
+        type: 'stockholder' as const
       },
       { 
         id: 'after-public-shareholders', 
         name: 'Public Shareholders', 
-        type: 'stockholder' as const,
-        percentage: transactionData.publicPercentage || 35
+        type: 'stockholder' as const
       },
       
       // Consideration Payment
       { 
         id: 'consideration-payment', 
-        name: `${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M Consideration`, 
+        name: `${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M Consideration`, 
         type: 'consideration' as const,
         value: actualConsideration,
         currency: transactionData.currency
@@ -226,13 +231,13 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         source: 'after-controlling-shareholder',
         target: 'after-acquiring-company',
         type: 'ownership' as const,
-        percentage: transactionData.controllingPercentage || 65
+        percentage: transactionData.controllingPercentage
       },
       {
         source: 'after-public-shareholders',
         target: 'after-acquiring-company',
         type: 'ownership' as const,
-        percentage: transactionData.publicPercentage || 35
+        percentage: transactionData.publicPercentage
       },
       
       // Consideration flow
@@ -255,7 +260,7 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       currency: transactionData.currency,
       targetName: targetCompanyName,
       buyerName: acquiringCompanyName,
-      description: `${actualAcquisitionPercentage}% acquisition for ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(1)}M`
+      description: `${actualAcquisitionPercentage}% acquisition for ${transactionData.currency} ${(actualConsideration / 1000000).toFixed(0)}M`
     }
   };
 };

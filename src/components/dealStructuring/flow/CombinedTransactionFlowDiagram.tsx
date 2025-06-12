@@ -19,7 +19,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Layout configuration
+    // Layout configuration - using identical Y-coordinates for Before/After sections
     const SECTION_WIDTH = 400;
     const SECTION_SPACING = 80;
     const VERTICAL_SPACING = 80;
@@ -29,6 +29,15 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const BEFORE_X = 50;
     const TRANSACTION_X = BEFORE_X + SECTION_WIDTH + SECTION_SPACING;
     const AFTER_X = TRANSACTION_X + SECTION_WIDTH + SECTION_SPACING;
+
+    // Shared Y-coordinates for mirrored layout
+    const SECTION_HEADER_Y = START_Y;
+    const ACQUIRING_HEADER_Y = START_Y + 60;
+    const CONTROLLING_SHAREHOLDER_Y = START_Y + 110;
+    const ACQUIRING_COMPANY_Y = START_Y + 190;
+    const TARGET_HEADER_Y = START_Y + 310;
+    const TARGET_SHAREHOLDERS_Y = START_Y + 360;
+    const TARGET_COMPANY_Y = START_Y + 440;
 
     // Color schemes for different entity types
     const getNodeColors = (type: string, ownership?: number) => {
@@ -74,13 +83,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const transactionContext = transactionFlow.transactionContext;
 
     // BEFORE SECTION
-    let currentY = START_Y;
-
     // Before Section Header
     nodes.push({
       id: 'before-header',
       type: 'default',
-      position: { x: BEFORE_X, y: currentY },
+      position: { x: BEFORE_X, y: SECTION_HEADER_Y },
       data: { 
         label: (
           <div className="text-lg font-bold text-gray-800">
@@ -98,13 +105,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    currentY += 60;
-
     // Acquiring Company Section Header
     nodes.push({
       id: 'acquiring-section-header',
       type: 'default',
-      position: { x: BEFORE_X, y: currentY },
+      position: { x: BEFORE_X, y: ACQUIRING_HEADER_Y },
       data: { 
         label: (
           <div className="text-sm font-semibold text-blue-700">
@@ -122,21 +127,18 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    currentY += 50;
-
     // Controlling Shareholder
     const controllingEntity = beforeEntities.find(e => e.id === 'before-controlling-shareholder');
     if (controllingEntity) {
-      const colors = getNodeColors('stockholder', controllingEntity.percentage);
+      const colors = getNodeColors('stockholder');
       nodes.push({
         id: 'before-controlling-shareholder',
         type: 'default',
-        position: { x: BEFORE_X, y: currentY },
+        position: { x: BEFORE_X, y: CONTROLLING_SHAREHOLDER_Y },
         data: {
           label: (
             <div className="text-center p-2">
               <div className="font-semibold text-xs">{controllingEntity.name}</div>
-              <div className="text-xs text-gray-600">{controllingEntity.percentage}%</div>
             </div>
           )
         },
@@ -153,16 +155,15 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     // Public Shareholders
     const publicEntity = beforeEntities.find(e => e.id === 'before-public-shareholders');
     if (publicEntity) {
-      const colors = getNodeColors('stockholder', publicEntity.percentage);
+      const colors = getNodeColors('stockholder');
       nodes.push({
         id: 'before-public-shareholders',
         type: 'default',
-        position: { x: BEFORE_X + 200, y: currentY },
+        position: { x: BEFORE_X + 200, y: CONTROLLING_SHAREHOLDER_Y },
         data: {
           label: (
             <div className="text-center p-2">
               <div className="font-semibold text-xs">{publicEntity.name}</div>
-              <div className="text-xs text-gray-600">{publicEntity.percentage}%</div>
             </div>
           )
         },
@@ -176,8 +177,6 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       });
     }
 
-    currentY += 80;
-
     // Acquiring Company
     const acquiringEntity = beforeEntities.find(e => e.id === 'before-acquiring-company');
     if (acquiringEntity) {
@@ -185,7 +184,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       nodes.push({
         id: 'before-acquiring-company',
         type: 'default',
-        position: { x: BEFORE_X + 100, y: currentY },
+        position: { x: BEFORE_X + 100, y: ACQUIRING_COMPANY_Y },
         data: {
           label: (
             <div className="text-center p-2">
@@ -207,13 +206,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       });
     }
 
-    currentY += 120;
-
     // Target Company Section Header
     nodes.push({
       id: 'target-section-header',
       type: 'default',
-      position: { x: BEFORE_X, y: currentY },
+      position: { x: BEFORE_X, y: TARGET_HEADER_Y },
       data: { 
         label: (
           <div className="text-sm font-semibold text-orange-700">
@@ -231,8 +228,6 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    currentY += 50;
-
     // Target Existing Shareholders
     const targetShareholdersEntity = beforeEntities.find(e => e.id === 'before-target-shareholders');
     if (targetShareholdersEntity) {
@@ -240,12 +235,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       nodes.push({
         id: 'before-target-shareholders',
         type: 'default',
-        position: { x: BEFORE_X + 100, y: currentY },
+        position: { x: BEFORE_X + 100, y: TARGET_SHAREHOLDERS_Y },
         data: {
           label: (
             <div className="text-center p-2">
               <div className="font-semibold text-xs">{targetShareholdersEntity.name}</div>
-              <div className="text-xs text-gray-600">{targetShareholdersEntity.percentage}%</div>
             </div>
           )
         },
@@ -259,8 +253,6 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       });
     }
 
-    currentY += 80;
-
     // Target Company
     const targetEntity = beforeEntities.find(e => e.id === 'before-target-company');
     if (targetEntity) {
@@ -268,7 +260,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       nodes.push({
         id: 'before-target-company',
         type: 'default',
-        position: { x: BEFORE_X + 100, y: currentY },
+        position: { x: BEFORE_X + 100, y: TARGET_COMPANY_Y },
         data: {
           label: (
             <div className="text-center p-2">
@@ -294,7 +286,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     nodes.push({
       id: 'transaction-header',
       type: 'default',
-      position: { x: TRANSACTION_X, y: START_Y },
+      position: { x: TRANSACTION_X, y: SECTION_HEADER_Y },
       data: { 
         label: (
           <div className="text-lg font-bold text-blue-800">
@@ -355,14 +347,12 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // AFTER SECTION
-    currentY = START_Y;
-
+    // AFTER SECTION - MIRRORING BEFORE SECTION LAYOUT
     // After Section Header
     nodes.push({
       id: 'after-header',
       type: 'default',
-      position: { x: AFTER_X, y: currentY },
+      position: { x: AFTER_X, y: SECTION_HEADER_Y },
       data: { 
         label: (
           <div className="text-lg font-bold text-gray-800">
@@ -380,13 +370,109 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    currentY += 60;
+    // Acquiring Company Structure Header (AFTER)
+    nodes.push({
+      id: 'after-acquiring-header',
+      type: 'default',
+      position: { x: AFTER_X, y: ACQUIRING_HEADER_Y },
+      data: { 
+        label: (
+          <div className="text-sm font-semibold text-blue-700">
+            ACQUIRING COMPANY STRUCTURE (MAINTAINED)
+          </div>
+        )
+      },
+      style: {
+        backgroundColor: 'transparent',
+        border: 'none',
+        width: '350px',
+        height: '30px'
+      },
+      draggable: false,
+      selectable: false
+    });
 
-    // Target Company Post-Transaction Header
+    // After Controlling Shareholder (Same Y as Before)
+    const afterControllingEntity = afterEntities.find(e => e.id === 'after-controlling-shareholder');
+    if (afterControllingEntity) {
+      const colors = getNodeColors('stockholder');
+      nodes.push({
+        id: 'after-controlling-shareholder',
+        type: 'default',
+        position: { x: AFTER_X, y: CONTROLLING_SHAREHOLDER_Y },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="font-semibold text-xs">{afterControllingEntity.name}</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: colors.backgroundColor,
+          border: `2px solid ${colors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '60px'
+        }
+      });
+    }
+
+    // After Public Shareholders (Same Y as Before)
+    const afterPublicEntity = afterEntities.find(e => e.id === 'after-public-shareholders');
+    if (afterPublicEntity) {
+      const colors = getNodeColors('stockholder');
+      nodes.push({
+        id: 'after-public-shareholders',
+        type: 'default',
+        position: { x: AFTER_X + 180, y: CONTROLLING_SHAREHOLDER_Y },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="font-semibold text-xs">{afterPublicEntity.name}</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: colors.backgroundColor,
+          border: `2px solid ${colors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '60px'
+        }
+      });
+    }
+
+    // After Acquiring Company (Same Y as Before)
+    const afterAcquiringEntity = afterEntities.find(e => e.id === 'after-acquiring-company');
+    if (afterAcquiringEntity) {
+      const colors = getNodeColors('buyer');
+      nodes.push({
+        id: 'after-acquiring-company',
+        type: 'default',
+        position: { x: AFTER_X + 90, y: ACQUIRING_COMPANY_Y },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="font-semibold text-sm">{afterAcquiringEntity.name}</div>
+              <div className="text-xs text-gray-600">Listed Entity</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: colors.backgroundColor,
+          border: `2px solid ${colors.borderColor}`,
+          borderRadius: '8px',
+          width: '160px',
+          height: '80px'
+        }
+      });
+    }
+
+    // Target Company Header (AFTER)
     nodes.push({
       id: 'after-target-header',
       type: 'default',
-      position: { x: AFTER_X, y: currentY },
+      position: { x: AFTER_X, y: TARGET_HEADER_Y },
       data: { 
         label: (
           <div className="text-sm font-semibold text-orange-700">
@@ -404,16 +490,64 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    currentY += 50;
+    // Target Company New Shareholders (Same Y as Before Target Shareholders)
+    const remainingEntity = afterEntities.find(e => e.id === 'after-remaining-shareholders');
+    if (remainingEntity) {
+      const colors = getNodeColors('stockholder');
+      nodes.push({
+        id: 'after-remaining-shareholders',
+        type: 'default',
+        position: { x: AFTER_X + 180, y: TARGET_SHAREHOLDERS_Y },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="font-semibold text-xs">{remainingEntity.name}</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: colors.backgroundColor,
+          border: `2px solid ${colors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '60px'
+        }
+      });
+    }
 
-    // Target Company Post-Transaction
+    // Acquiring Company as New Target Shareholder (positioned like the acquiring company shareholders)
+    if (afterAcquiringEntity) {
+      const colors = getNodeColors('buyer');
+      nodes.push({
+        id: 'after-acquiring-as-shareholder',
+        type: 'default',
+        position: { x: AFTER_X, y: TARGET_SHAREHOLDERS_Y },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="font-semibold text-xs">{afterAcquiringEntity.name}</div>
+              <div className="text-xs text-gray-500">New Owner</div>
+            </div>
+          )
+        },
+        style: {
+          backgroundColor: colors.backgroundColor,
+          border: `2px solid ${colors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '60px'
+        }
+      });
+    }
+
+    // Target Company Post-Transaction (Same Y as Before)
     const afterTargetEntity = afterEntities.find(e => e.id === 'after-target-company');
     if (afterTargetEntity) {
       const colors = getNodeColors('target');
       nodes.push({
         id: 'after-target-company',
         type: 'default',
-        position: { x: AFTER_X + 100, y: currentY },
+        position: { x: AFTER_X + 90, y: TARGET_COMPANY_Y },
         data: {
           label: (
             <div className="text-center p-3">
@@ -432,163 +566,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       });
     }
 
-    currentY += 120;
-
-    // New Ownership Structure Header
-    nodes.push({
-      id: 'ownership-header',
-      type: 'default',
-      position: { x: AFTER_X, y: currentY },
-      data: { 
-        label: (
-          <div className="text-sm font-semibold text-gray-700">
-            NEW SHAREHOLDERS
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '350px',
-        height: '30px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    currentY += 40;
-
-    // Acquiring Company as New Owner
-    const afterAcquiringEntity = afterEntities.find(e => e.id === 'after-acquiring-company');
-    if (afterAcquiringEntity) {
-      const colors = getNodeColors('buyer');
-      nodes.push({
-        id: 'after-acquiring-company',
-        type: 'default',
-        position: { x: AFTER_X + 20, y: currentY },
-        data: {
-          label: (
-            <div className="text-center p-2">
-              <div className="font-semibold text-xs">{afterAcquiringEntity.name}</div>
-              <div className="text-xs text-gray-500">{afterAcquiringEntity.percentage}% Owner</div>
-            </div>
-          )
-        },
-        style: {
-          backgroundColor: colors.backgroundColor,
-          border: `2px solid ${colors.borderColor}`,
-          borderRadius: '8px',
-          width: '140px',
-          height: '70px'
-        }
-      });
-    }
-
-    // Remaining Shareholders
-    const remainingEntity = afterEntities.find(e => e.id === 'after-remaining-shareholders');
-    if (remainingEntity) {
-      const colors = getNodeColors('stockholder');
-      nodes.push({
-        id: 'after-remaining-shareholders',
-        type: 'default',
-        position: { x: AFTER_X + 180, y: currentY },
-        data: {
-          label: (
-            <div className="text-center p-2">
-              <div className="font-semibold text-xs">{remainingEntity.name}</div>
-              <div className="text-xs text-gray-500">{remainingEntity.percentage}% Owner</div>
-            </div>
-          )
-        },
-        style: {
-          backgroundColor: colors.backgroundColor,
-          border: `2px solid ${colors.borderColor}`,
-          borderRadius: '8px',
-          width: '140px',
-          height: '70px'
-        }
-      });
-    }
-
-    currentY += 100;
-
-    // Acquiring Company Structure Maintained Header
-    nodes.push({
-      id: 'acquiring-maintained-header',
-      type: 'default',
-      position: { x: AFTER_X, y: currentY },
-      data: { 
-        label: (
-          <div className="text-sm font-semibold text-blue-700">
-            ACQUIRING COMPANY STRUCTURE (MAINTAINED)
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '350px',
-        height: '30px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    currentY += 40;
-
-    // After Controlling Shareholder
-    const afterControllingEntity = afterEntities.find(e => e.id === 'after-controlling-shareholder');
-    if (afterControllingEntity) {
-      const colors = getNodeColors('stockholder', afterControllingEntity.percentage);
-      nodes.push({
-        id: 'after-controlling-shareholder',
-        type: 'default',
-        position: { x: AFTER_X + 20, y: currentY },
-        data: {
-          label: (
-            <div className="text-center p-2">
-              <div className="font-semibold text-xs">{afterControllingEntity.name}</div>
-              <div className="text-xs text-gray-600">{afterControllingEntity.percentage}%</div>
-            </div>
-          )
-        },
-        style: {
-          backgroundColor: colors.backgroundColor,
-          border: `2px solid ${colors.borderColor}`,
-          borderRadius: '8px',
-          width: '140px',
-          height: '60px'
-        }
-      });
-    }
-
-    // After Public Shareholders
-    const afterPublicEntity = afterEntities.find(e => e.id === 'after-public-shareholders');
-    if (afterPublicEntity) {
-      const colors = getNodeColors('stockholder', afterPublicEntity.percentage);
-      nodes.push({
-        id: 'after-public-shareholders',
-        type: 'default',
-        position: { x: AFTER_X + 180, y: currentY },
-        data: {
-          label: (
-            <div className="text-center p-2">
-              <div className="font-semibold text-xs">{afterPublicEntity.name}</div>
-              <div className="text-xs text-gray-600">{afterPublicEntity.percentage}%</div>
-            </div>
-          )
-        },
-        style: {
-          backgroundColor: colors.backgroundColor,
-          border: `2px solid ${colors.borderColor}`,
-          borderRadius: '8px',
-          width: '140px',
-          height: '60px'
-        }
-      });
-    }
-
-    // EDGES - Create relationships based on the data
+    // EDGES - Create relationships based on the data with percentages shown on edges
     beforeRelationships.forEach((rel, index) => {
       if (nodes.find(n => n.id === rel.source) && nodes.find(n => n.id === rel.target)) {
         edges.push({
@@ -602,15 +580,43 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
           },
           label: rel.percentage ? `${rel.percentage}%` : '',
           labelStyle: {
-            fontSize: '10px',
+            fontSize: '11px',
             fontWeight: 'bold',
-            fill: rel.type === 'ownership' ? '#2563eb' : '#f59e0b'
+            fill: rel.type === 'ownership' ? '#2563eb' : '#f59e0b',
+            backgroundColor: 'white',
+            padding: '2px 4px',
+            borderRadius: '3px'
           }
         });
       }
     });
 
     afterRelationships.forEach((rel, index) => {
+      // Skip the direct acquiring company to target company edge as we're using a new node structure
+      if (rel.source === 'after-acquiring-company' && rel.target === 'after-target-company') {
+        // Create edge from the new acquiring shareholder node to target
+        edges.push({
+          id: `after-target-ownership-${index}`,
+          source: 'after-acquiring-as-shareholder',
+          target: 'after-target-company',
+          type: 'straight',
+          style: {
+            stroke: '#2563eb',
+            strokeWidth: 2
+          },
+          label: `${rel.percentage}%`,
+          labelStyle: {
+            fontSize: '11px',
+            fontWeight: 'bold',
+            fill: '#2563eb',
+            backgroundColor: 'white',
+            padding: '2px 4px',
+            borderRadius: '3px'
+          }
+        });
+        return;
+      }
+      
       if (nodes.find(n => n.id === rel.source) && nodes.find(n => n.id === rel.target)) {
         edges.push({
           id: `after-edge-${index}`,
@@ -621,11 +627,14 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             stroke: rel.type === 'consideration' ? '#16a34a' : rel.type === 'ownership' ? '#2563eb' : '#f59e0b',
             strokeWidth: rel.type === 'consideration' ? 3 : 2
           },
-          label: rel.percentage ? `${rel.percentage}%` : rel.value ? `${transactionContext?.currency} ${(rel.value / 1000000).toFixed(1)}M` : '',
+          label: rel.percentage ? `${rel.percentage}%` : rel.value ? `${transactionContext?.currency} ${(rel.value / 1000000).toFixed(0)}M` : '',
           labelStyle: {
-            fontSize: '10px',
+            fontSize: '11px',
             fontWeight: 'bold',
-            fill: rel.type === 'consideration' ? '#16a34a' : rel.type === 'ownership' ? '#2563eb' : '#f59e0b'
+            fill: rel.type === 'consideration' ? '#16a34a' : rel.type === 'ownership' ? '#2563eb' : '#f59e0b',
+            backgroundColor: 'white',
+            padding: '2px 4px',
+            borderRadius: '3px'
           }
         });
       }
@@ -646,7 +655,10 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       labelStyle: {
         fontSize: '11px',
         fontWeight: 'bold',
-        fill: '#16a34a'
+        fill: '#16a34a',
+        backgroundColor: 'white',
+        padding: '2px 4px',
+        borderRadius: '3px'
       }
     });
 
@@ -664,7 +676,10 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       labelStyle: {
         fontSize: '11px',
         fontWeight: 'bold',
-        fill: '#7c3aed'
+        fill: '#7c3aed',
+        backgroundColor: 'white',
+        padding: '2px 4px',
+        borderRadius: '3px'
       }
     });
 
