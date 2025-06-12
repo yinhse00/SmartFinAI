@@ -1,9 +1,11 @@
+
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingUp, Calculator, FileText, Clock, Sparkles, Users } from 'lucide-react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
-import { AIAnalysisResults, AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { DealStructuringDashboard } from '@/components/dealStructuring/DealStructuringDashboard';
 import { aiAnalysisService, TransactionAnalysisRequest } from '@/services/dealStructuring/aiAnalysisService';
 import { useToast } from '@/hooks/use-toast';
 
@@ -43,6 +45,10 @@ const DealStructuring = () => {
   const handleNewAnalysis = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
+  };
+
+  const handleResultsUpdate = (updatedResults: AnalysisResults) => {
+    setAnalysisResults(updatedResults);
   };
 
   return (
@@ -116,7 +122,7 @@ const DealStructuring = () => {
           {currentStep === 'analysis' && analysisResults && (
             <div className="space-y-6">
               <div className="flex justify-between items-center">
-                <h2 className="text-2xl font-bold">Transaction Analysis Results</h2>
+                <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
                 <button
                   onClick={handleNewAnalysis}
                   className="text-primary hover:underline"
@@ -124,7 +130,10 @@ const DealStructuring = () => {
                   New Analysis
                 </button>
               </div>
-              <AIAnalysisResults results={analysisResults} />
+              <DealStructuringDashboard 
+                results={analysisResults} 
+                onResultsUpdate={handleResultsUpdate}
+              />
             </div>
           )}
         </div>
