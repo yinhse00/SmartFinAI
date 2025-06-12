@@ -73,6 +73,35 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     };
 
+    // Extract real data from transactionFlow
+    const beforeEntities = transactionFlow.before.entities;
+    const afterEntities = transactionFlow.after.entities;
+    const beforeRelationships = transactionFlow.before.relationships;
+    const afterRelationships = transactionFlow.after.relationships;
+
+    // Find key entities
+    const targetEntity = beforeEntities.find(e => e.type === 'target');
+    const buyerEntity = afterEntities.find(e => e.type === 'buyer');
+    const beforeStockholders = beforeEntities.filter(e => e.type === 'stockholder');
+    const afterStockholders = afterEntities.filter(e => e.type === 'stockholder');
+    const considerationEntity = afterEntities.find(e => e.type === 'consideration');
+
+    // Get actual ownership percentages from relationships
+    const getBuyerOwnership = () => {
+      const buyerRel = afterRelationships.find(r => r.source === buyerEntity?.id && r.type === 'ownership');
+      return buyerRel?.percentage || 70;
+    };
+
+    const getRemainingOwnership = () => {
+      const remainingShareholder = afterStockholders.find(s => s.id !== buyerEntity?.id);
+      const remainingRel = afterRelationships.find(r => r.source === remainingShareholder?.id && r.type === 'ownership');
+      return remainingRel?.percentage || 30;
+    };
+
+    const getConsiderationValue = () => {
+      return considerationEntity?.value || 1000;
+    };
+
     // BEFORE SECTION
     let currentY = START_Y;
 
@@ -124,60 +153,40 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     currentY += 50;
 
-    // Controlling Shareholder of Acquiring Company
-    const controllingColors = getNodeColors('stockholder', 'acquirer');
-    nodes.push({
-      id: 'controlling-shareholder',
-      type: 'default',
-      position: { x: BEFORE_X, y: currentY },
-      data: {
-        label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+    // Dynamic shareholders from actual data
+    beforeStockholders.forEach((shareholder, index) => {
+      const shareholderRel = beforeRelationships.find(r => r.source === shareholder.id);
+      const ownership = shareholderRel?.percentage || shareholder.percentage || 0;
+      const controllingColors = getNodeColors('stockholder', 'acquirer');
+      
+      nodes.push({
+        id: `before-shareholder-${index}`,
+        type: 'default',
+        position: { x: BEFORE_X + (index * 160), y: currentY },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="flex items-center justify-center mb-1">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="font-semibold text-xs">{shareholder.name}</div>
+              <div className="text-xs text-gray-600 font-medium">{ownership}%</div>
             </div>
-            <div className="font-semibold text-xs">Controlling Shareholder</div>
-            <div className="text-xs text-gray-600 font-medium">70%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: controllingColors.backgroundColor,
-        border: `2px solid ${controllingColors.borderColor}`,
-        borderRadius: '8px',
-        width: '140px',
-        height: '80px'
-      }
-    });
-
-    // Public Shareholders of Acquiring Company
-    nodes.push({
-      id: 'public-shareholders',
-      type: 'default',
-      position: { x: BEFORE_X + 160, y: currentY },
-      data: {
-        label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="font-semibold text-xs">Public Shareholders</div>
-            <div className="text-xs text-gray-600 font-medium">30%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: controllingColors.backgroundColor,
-        border: `2px solid ${controllingColors.borderColor}`,
-        borderRadius: '8px',
-        width: '140px',
-        height: '80px'
-      }
+          )
+        },
+        style: {
+          backgroundColor: controllingColors.backgroundColor,
+          border: `2px solid ${controllingColors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '80px'
+        }
+      });
     });
 
     currentY += 100;
 
-    // Acquiring Company
+    // Acquiring Company (using actual buyer entity name if available)
     const acquirerColors = getNodeColors('buyer', 'acquirer');
     nodes.push({
       id: 'acquiring-company',
@@ -189,7 +198,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="flex items-center justify-center mb-1">
               <Building2 className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-sm">Acquiring Company</div>
+            <div className="font-semibold text-sm">{buyerEntity?.name || 'Acquiring Company'}</div>
             <div className="text-xs text-gray-600">Listed Entity</div>
           </div>
         )
@@ -257,7 +266,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     currentY += 100;
 
-    // Target Company
+    // Target Company (using actual target entity name)
     const targetColors = getNodeColors('target', 'target');
     nodes.push({
       id: 'target-company',
@@ -269,7 +278,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="flex items-center justify-center mb-1">
               <Building2 className="h-5 w-5 text-orange-600" />
             </div>
-            <div className="font-semibold text-sm">Target Company</div>
+            <div className="font-semibold text-sm">{targetEntity?.name || 'Target Company'}</div>
             <div className="text-xs text-gray-600">Listed Entity</div>
           </div>
         )
@@ -308,7 +317,10 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Transaction Details
+    // Transaction Details with real data
+    const buyerOwnership = getBuyerOwnership();
+    const considerationValue = getConsiderationValue();
+    
     nodes.push({
       id: 'transaction-details',
       type: 'default',
@@ -322,16 +334,16 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="space-y-2 text-xs text-left">
               <div className="bg-blue-50 p-2 rounded">
                 <strong className="text-blue-800">Transaction:</strong>
-                <div className="text-blue-700">Acquiring Company purchases 70% of Target Company shares</div>
+                <div className="text-blue-700">{buyerEntity?.name || 'Acquiring Company'} purchases {buyerOwnership}% of {targetEntity?.name || 'Target Company'} shares</div>
               </div>
               <div className="bg-green-50 p-2 rounded">
                 <strong className="text-green-800">Consideration:</strong>
-                <div className="text-green-700">HK$1,000M cash payment</div>
+                <div className="text-green-700">HK${considerationValue}M cash payment</div>
               </div>
               <div className="bg-orange-50 p-2 rounded">
                 <strong className="text-orange-800">Result:</strong>
                 <div className="text-orange-700">
-                  Acquiring Company gains control of Target Company
+                  {buyerEntity?.name || 'Acquiring Company'} gains control of {targetEntity?.name || 'Target Company'}
                 </div>
               </div>
             </div>
@@ -400,54 +412,35 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     currentY += 50;
 
-    // After Controlling Shareholder (unchanged)
-    nodes.push({
-      id: 'after-controlling-shareholder',
-      type: 'default',
-      position: { x: AFTER_X, y: currentY },
-      data: {
-        label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+    // After shareholders (unchanged from before)
+    beforeStockholders.forEach((shareholder, index) => {
+      const shareholderRel = beforeRelationships.find(r => r.source === shareholder.id);
+      const ownership = shareholderRel?.percentage || shareholder.percentage || 0;
+      const controllingColors = getNodeColors('stockholder', 'acquirer');
+      
+      nodes.push({
+        id: `after-shareholder-${index}`,
+        type: 'default',
+        position: { x: AFTER_X + (index * 160), y: currentY },
+        data: {
+          label: (
+            <div className="text-center p-2">
+              <div className="flex items-center justify-center mb-1">
+                <Users className="h-4 w-4 text-blue-600" />
+              </div>
+              <div className="font-semibold text-xs">{shareholder.name}</div>
+              <div className="text-xs text-gray-600 font-medium">{ownership}%</div>
             </div>
-            <div className="font-semibold text-xs">Controlling Shareholder</div>
-            <div className="text-xs text-gray-600 font-medium">70%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: controllingColors.backgroundColor,
-        border: `2px solid ${controllingColors.borderColor}`,
-        borderRadius: '8px',
-        width: '140px',
-        height: '80px'
-      }
-    });
-
-    // After Public Shareholders (unchanged)
-    nodes.push({
-      id: 'after-public-shareholders',
-      type: 'default',
-      position: { x: AFTER_X + 160, y: currentY },
-      data: {
-        label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
-            </div>
-            <div className="font-semibold text-xs">Public Shareholders</div>
-            <div className="text-xs text-gray-600 font-medium">30%</div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: controllingColors.backgroundColor,
-        border: `2px solid ${controllingColors.borderColor}`,
-        borderRadius: '8px',
-        width: '140px',
-        height: '80px'
-      }
+          )
+        },
+        style: {
+          backgroundColor: controllingColors.backgroundColor,
+          border: `2px solid ${controllingColors.borderColor}`,
+          borderRadius: '8px',
+          width: '140px',
+          height: '80px'
+        }
+      });
     });
 
     currentY += 100;
@@ -463,8 +456,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="flex items-center justify-center mb-1">
               <Building2 className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-sm">Acquiring Company</div>
-            <div className="text-xs text-blue-700 font-medium">Now controls Target</div>
+            <div className="font-semibold text-sm">{buyerEntity?.name || 'Acquiring Company'}</div>
+            <div className="text-xs text-blue-700 font-medium">Now controls {targetEntity?.name || 'Target'}</div>
           </div>
         )
       },
@@ -503,7 +496,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     currentY += 50;
 
-    // Acquiring Company's 70% stake
+    // Acquiring Company's stake
+    const buyerOwnershipPercentage = getBuyerOwnership();
     nodes.push({
       id: 'acquirer-stake',
       type: 'default',
@@ -514,8 +508,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="flex items-center justify-center mb-1">
               <Building2 className="h-4 w-4 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Acquiring Company</div>
-            <div className="text-xs text-blue-700 font-medium">70% ownership</div>
+            <div className="font-semibold text-xs">{buyerEntity?.name || 'Acquiring Company'}</div>
+            <div className="text-xs text-blue-700 font-medium">{buyerOwnershipPercentage}% ownership</div>
           </div>
         )
       },
@@ -528,7 +522,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
-    // Remaining Target Shareholders' 30% stake
+    // Remaining Target Shareholders' stake
+    const remainingOwnership = getRemainingOwnership();
     nodes.push({
       id: 'remaining-target-shareholders',
       type: 'default',
@@ -540,7 +535,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
               <Users className="h-4 w-4 text-orange-600" />
             </div>
             <div className="font-semibold text-xs">Remaining Shareholders</div>
-            <div className="text-xs text-orange-700 font-medium">30% ownership</div>
+            <div className="text-xs text-orange-700 font-medium">{remainingOwnership}% ownership</div>
           </div>
         )
       },
@@ -566,8 +561,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             <div className="flex items-center justify-center mb-1">
               <Building2 className="h-5 w-5 text-orange-600" />
             </div>
-            <div className="font-semibold text-sm">Target Company</div>
-            <div className="text-xs text-blue-700 font-medium">Controlled by Acquirer</div>
+            <div className="font-semibold text-sm">{targetEntity?.name || 'Target Company'}</div>
+            <div className="text-xs text-blue-700 font-medium">Controlled by {buyerEntity?.name || 'Acquirer'}</div>
           </div>
         )
       },
@@ -583,38 +578,26 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     // EDGES - Ownership relationships
     
     // Before: Shareholders own Acquiring Company
-    edges.push({
-      id: 'controlling-to-acquirer',
-      source: 'controlling-shareholder',
-      target: 'acquiring-company',
-      type: 'straight',
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 2
-      },
-      label: '70%',
-      labelStyle: {
-        fontSize: '10px',
-        fontWeight: 'bold',
-        fill: '#2563eb'
-      }
-    });
-
-    edges.push({
-      id: 'public-to-acquirer',
-      source: 'public-shareholders',
-      target: 'acquiring-company',
-      type: 'straight',
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 2
-      },
-      label: '30%',
-      labelStyle: {
-        fontSize: '10px',
-        fontWeight: 'bold',
-        fill: '#2563eb'
-      }
+    beforeStockholders.forEach((shareholder, index) => {
+      const shareholderRel = beforeRelationships.find(r => r.source === shareholder.id);
+      const ownership = shareholderRel?.percentage || shareholder.percentage || 0;
+      
+      edges.push({
+        id: `before-shareholder-${index}-to-acquirer`,
+        source: `before-shareholder-${index}`,
+        target: 'acquiring-company',
+        type: 'straight',
+        style: {
+          stroke: '#2563eb',
+          strokeWidth: 2
+        },
+        label: `${ownership}%`,
+        labelStyle: {
+          fontSize: '10px',
+          fontWeight: 'bold',
+          fill: '#2563eb'
+        }
+      });
     });
 
     // Before: Target shareholders own Target Company
@@ -636,38 +619,26 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     });
 
     // After: Shareholders still own Acquiring Company
-    edges.push({
-      id: 'after-controlling-to-acquirer',
-      source: 'after-controlling-shareholder',
-      target: 'after-acquiring-company',
-      type: 'straight',
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 2
-      },
-      label: '70%',
-      labelStyle: {
-        fontSize: '10px',
-        fontWeight: 'bold',
-        fill: '#2563eb'
-      }
-    });
-
-    edges.push({
-      id: 'after-public-to-acquirer',
-      source: 'after-public-shareholders',
-      target: 'after-acquiring-company',
-      type: 'straight',
-      style: {
-        stroke: '#2563eb',
-        strokeWidth: 2
-      },
-      label: '30%',
-      labelStyle: {
-        fontSize: '10px',
-        fontWeight: 'bold',
-        fill: '#2563eb'
-      }
+    beforeStockholders.forEach((shareholder, index) => {
+      const shareholderRel = beforeRelationships.find(r => r.source === shareholder.id);
+      const ownership = shareholderRel?.percentage || shareholder.percentage || 0;
+      
+      edges.push({
+        id: `after-shareholder-${index}-to-acquirer`,
+        source: `after-shareholder-${index}`,
+        target: 'after-acquiring-company',
+        type: 'straight',
+        style: {
+          stroke: '#2563eb',
+          strokeWidth: 2
+        },
+        label: `${ownership}%`,
+        labelStyle: {
+          fontSize: '10px',
+          fontWeight: 'bold',
+          fill: '#2563eb'
+        }
+      });
     });
 
     // After: Acquiring Company controls Target Company
@@ -698,7 +669,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         stroke: '#2563eb',
         strokeWidth: 2
       },
-      label: '70%',
+      label: `${buyerOwnershipPercentage}%`,
       labelStyle: {
         fontSize: '10px',
         fontWeight: 'bold',
@@ -715,7 +686,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         stroke: '#f59e0b',
         strokeWidth: 2
       },
-      label: '30%',
+      label: `${remainingOwnership}%`,
       labelStyle: {
         fontSize: '10px',
         fontWeight: 'bold',
@@ -734,7 +705,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         strokeWidth: 3,
         strokeDasharray: '8,4'
       },
-      label: 'Acquires 70%',
+      label: `Acquires ${buyerOwnershipPercentage}%`,
       labelStyle: {
         fontSize: '11px',
         fontWeight: 'bold',
