@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -19,10 +20,10 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Fixed layout configuration
-    const SECTION_WIDTH = 350;
-    const SECTION_SPACING = 50;
-    const VERTICAL_SPACING = 80;
+    // Improved layout configuration with better spacing
+    const SECTION_WIDTH = 380;
+    const SECTION_SPACING = 80;
+    const VERTICAL_SPACING = 140; // Increased from 80 to prevent overlapping
     const START_Y = 50;
 
     // Section positions
@@ -91,14 +92,14 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '300px',
+        width: '350px',
         height: '40px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 60;
+    currentY += 80;
 
     // Acquiring Company Section
     nodes.push({
@@ -115,16 +116,16 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '280px',
+        width: '320px',
         height: '30px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 50;
+    currentY += 60;
 
-    // Controlling Shareholder of Acquiring Company
+    // Controlling Shareholder of Acquiring Company (removed percentage from label)
     const controllingColors = getNodeColors('stockholder', 'acquirer');
     nodes.push({
       id: 'controlling-shareholder',
@@ -132,12 +133,11 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       position: { x: BEFORE_X, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Controlling Shareholder</div>
-            <div className="text-xs text-gray-600 font-medium">70%</div>
+            <div className="font-semibold text-sm">Controlling Shareholder</div>
           </div>
         )
       },
@@ -145,24 +145,23 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: controllingColors.backgroundColor,
         border: `2px solid ${controllingColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    // Public Shareholders of Acquiring Company
+    // Public Shareholders of Acquiring Company (removed percentage from label)
     nodes.push({
       id: 'public-shareholders',
       type: 'default',
-      position: { x: BEFORE_X + 160, y: currentY },
+      position: { x: BEFORE_X + 180, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Public Shareholders</div>
-            <div className="text-xs text-gray-600 font-medium">30%</div>
+            <div className="font-semibold text-sm">Public Shareholders</div>
           </div>
         )
       },
@@ -170,27 +169,27 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: controllingColors.backgroundColor,
         border: `2px solid ${controllingColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    currentY += 100;
+    currentY += 130;
 
     // Acquiring Company
     const acquirerColors = getNodeColors('buyer', 'acquirer');
     nodes.push({
       id: 'acquiring-company',
       type: 'default',
-      position: { x: BEFORE_X + 80, y: currentY },
+      position: { x: BEFORE_X + 90, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Building2 className="h-5 w-5 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Building2 className="h-6 w-6 text-blue-600" />
             </div>
-            <div className="font-semibold text-sm">Acquiring Company</div>
-            <div className="text-xs text-gray-600">Listed Entity</div>
+            <div className="font-semibold text-base">Acquiring Company</div>
+            <div className="text-sm text-gray-600 mt-1">Listed Entity</div>
           </div>
         )
       },
@@ -198,12 +197,12 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: acquirerColors.backgroundColor,
         border: `2px solid ${acquirerColors.borderColor}`,
         borderRadius: '8px',
-        width: '160px',
-        height: '90px'
+        width: '180px',
+        height: '100px'
       }
     });
 
-    currentY += 120;
+    currentY += 160;
 
     // Target Company Section
     nodes.push({
@@ -220,29 +219,28 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '280px',
+        width: '320px',
         height: '30px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 50;
+    currentY += 60;
 
-    // Target Company Existing Shareholders
+    // Target Company Existing Shareholders (removed percentage from label)
     const targetShareholderColors = getNodeColors('stockholder', 'target');
     nodes.push({
       id: 'target-existing-shareholders',
       type: 'default',
-      position: { x: BEFORE_X + 80, y: currentY },
+      position: { x: BEFORE_X + 90, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-orange-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-orange-600" />
             </div>
-            <div className="font-semibold text-xs">Existing Shareholders</div>
-            <div className="text-xs text-gray-600 font-medium">100%</div>
+            <div className="font-semibold text-sm">Existing Shareholders</div>
           </div>
         )
       },
@@ -250,27 +248,27 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: targetShareholderColors.backgroundColor,
         border: `2px solid ${targetShareholderColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    currentY += 100;
+    currentY += 130;
 
     // Target Company
     const targetColors = getNodeColors('target', 'target');
     nodes.push({
       id: 'target-company',
       type: 'default',
-      position: { x: BEFORE_X + 80, y: currentY },
+      position: { x: BEFORE_X + 90, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Building2 className="h-5 w-5 text-orange-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Building2 className="h-6 w-6 text-orange-600" />
             </div>
-            <div className="font-semibold text-sm">Target Company</div>
-            <div className="text-xs text-gray-600">Listed Entity</div>
+            <div className="font-semibold text-base">Target Company</div>
+            <div className="text-sm text-gray-600 mt-1">Listed Entity</div>
           </div>
         )
       },
@@ -278,13 +276,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: targetColors.backgroundColor,
         border: `2px solid ${targetColors.borderColor}`,
         borderRadius: '8px',
-        width: '160px',
-        height: '90px'
+        width: '180px',
+        height: '100px'
       }
     });
 
     // TRANSACTION SECTION
-    const transactionY = START_Y + 150;
+    const transactionY = START_Y + 200;
 
     // Transaction Header
     nodes.push({
@@ -301,7 +299,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '300px',
+        width: '350px',
         height: '40px'
       },
       draggable: false,
@@ -342,8 +340,8 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: '#f8fafc',
         border: '3px solid #2563eb',
         borderRadius: '12px',
-        width: '320px',
-        height: '200px'
+        width: '350px',
+        height: '220px'
       },
       draggable: false,
       selectable: false
@@ -367,14 +365,14 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '300px',
+        width: '350px',
         height: '40px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 60;
+    currentY += 80;
 
     // After Acquiring Company Section
     nodes.push({
@@ -391,28 +389,27 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '280px',
+        width: '320px',
         height: '30px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 50;
+    currentY += 60;
 
-    // After Controlling Shareholder (unchanged)
+    // After Controlling Shareholder (removed percentage from label)
     nodes.push({
       id: 'after-controlling-shareholder',
       type: 'default',
       position: { x: AFTER_X, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Controlling Shareholder</div>
-            <div className="text-xs text-gray-600 font-medium">70%</div>
+            <div className="font-semibold text-sm">Controlling Shareholder</div>
           </div>
         )
       },
@@ -420,24 +417,23 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: controllingColors.backgroundColor,
         border: `2px solid ${controllingColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    // After Public Shareholders (unchanged)
+    // After Public Shareholders (removed percentage from label)
     nodes.push({
       id: 'after-public-shareholders',
       type: 'default',
-      position: { x: AFTER_X + 160, y: currentY },
+      position: { x: AFTER_X + 180, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Public Shareholders</div>
-            <div className="text-xs text-gray-600 font-medium">30%</div>
+            <div className="font-semibold text-sm">Public Shareholders</div>
           </div>
         )
       },
@@ -445,26 +441,26 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: controllingColors.backgroundColor,
         border: `2px solid ${controllingColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    currentY += 100;
+    currentY += 130;
 
     // After Acquiring Company (now controls target)
     nodes.push({
       id: 'after-acquiring-company',
       type: 'default',
-      position: { x: AFTER_X + 80, y: currentY },
+      position: { x: AFTER_X + 90, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Building2 className="h-5 w-5 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Building2 className="h-6 w-6 text-blue-600" />
             </div>
-            <div className="font-semibold text-sm">Acquiring Company</div>
-            <div className="text-xs text-blue-700 font-medium">Now controls Target</div>
+            <div className="font-semibold text-base">Acquiring Company</div>
+            <div className="text-sm text-blue-700 font-medium mt-1">Now controls Target</div>
           </div>
         )
       },
@@ -472,12 +468,12 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: acquirerColors.backgroundColor,
         border: `3px solid ${acquirerColors.borderColor}`,
         borderRadius: '8px',
-        width: '160px',
-        height: '90px'
+        width: '180px',
+        height: '100px'
       }
     });
 
-    currentY += 120;
+    currentY += 160;
 
     // Target Ownership Section
     nodes.push({
@@ -494,28 +490,27 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '280px',
+        width: '320px',
         height: '30px'
       },
       draggable: false,
       selectable: false
     });
 
-    currentY += 50;
+    currentY += 60;
 
-    // Acquiring Company's 70% stake
+    // Acquiring Company's stake (removed percentage from label)
     nodes.push({
       id: 'acquirer-stake',
       type: 'default',
       position: { x: AFTER_X, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Building2 className="h-4 w-4 text-blue-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Building2 className="h-5 w-5 text-blue-600" />
             </div>
-            <div className="font-semibold text-xs">Acquiring Company</div>
-            <div className="text-xs text-blue-700 font-medium">70% ownership</div>
+            <div className="font-semibold text-sm">Acquiring Company</div>
           </div>
         )
       },
@@ -523,24 +518,23 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: acquirerColors.backgroundColor,
         border: `2px solid ${acquirerColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    // Remaining Target Shareholders' 30% stake
+    // Remaining Target Shareholders (removed percentage from label)
     nodes.push({
       id: 'remaining-target-shareholders',
       type: 'default',
-      position: { x: AFTER_X + 160, y: currentY },
+      position: { x: AFTER_X + 180, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-orange-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Users className="h-5 w-5 text-orange-600" />
             </div>
-            <div className="font-semibold text-xs">Remaining Shareholders</div>
-            <div className="text-xs text-orange-700 font-medium">30% ownership</div>
+            <div className="font-semibold text-sm">Remaining Shareholders</div>
           </div>
         )
       },
@@ -548,26 +542,26 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: targetShareholderColors.backgroundColor,
         border: `2px solid ${targetShareholderColors.borderColor}`,
         borderRadius: '8px',
-        width: '140px',
-        height: '80px'
+        width: '160px',
+        height: '90px'
       }
     });
 
-    currentY += 100;
+    currentY += 130;
 
     // After Target Company (now controlled)
     nodes.push({
       id: 'after-target-company',
       type: 'default',
-      position: { x: AFTER_X + 80, y: currentY },
+      position: { x: AFTER_X + 90, y: currentY },
       data: {
         label: (
-          <div className="text-center p-2">
-            <div className="flex items-center justify-center mb-1">
-              <Building2 className="h-5 w-5 text-orange-600" />
+          <div className="text-center p-3">
+            <div className="flex items-center justify-center mb-2">
+              <Building2 className="h-6 w-6 text-orange-600" />
             </div>
-            <div className="font-semibold text-sm">Target Company</div>
-            <div className="text-xs text-blue-700 font-medium">Controlled by Acquirer</div>
+            <div className="font-semibold text-base">Target Company</div>
+            <div className="text-sm text-blue-700 font-medium mt-1">Controlled by Acquirer</div>
           </div>
         )
       },
@@ -575,12 +569,12 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         backgroundColor: targetColors.backgroundColor,
         border: `3px solid ${targetColors.borderColor}`,
         borderRadius: '8px',
-        width: '160px',
-        height: '90px'
+        width: '180px',
+        height: '100px'
       }
     });
 
-    // EDGES - Ownership relationships
+    // EDGES - Ownership relationships with improved styling
     
     // Before: Shareholders own Acquiring Company
     edges.push({
@@ -590,13 +584,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '70%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -607,13 +605,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '30%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -625,13 +627,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#f59e0b',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '100%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#f59e0b'
+        fill: '#f59e0b',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -643,13 +649,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '70%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -660,13 +670,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '30%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -678,13 +692,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 3
+        strokeWidth: 4
       },
       label: 'Controls',
       labelStyle: {
-        fontSize: '12px',
+        fontSize: '14px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        border: '2px solid #2563eb'
       }
     });
 
@@ -696,13 +714,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#2563eb',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '70%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#2563eb'
+        fill: '#2563eb',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -713,13 +735,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#f59e0b',
-        strokeWidth: 2
+        strokeWidth: 3
       },
       label: '30%',
       labelStyle: {
-        fontSize: '10px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#f59e0b'
+        fill: '#f59e0b',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #e5e7eb'
       }
     });
 
@@ -731,14 +757,18 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#16a34a',
-        strokeWidth: 3,
+        strokeWidth: 4,
         strokeDasharray: '8,4'
       },
       label: 'Acquires 70%',
       labelStyle: {
-        fontSize: '11px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#16a34a'
+        fill: '#16a34a',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #16a34a'
       }
     });
 
@@ -749,14 +779,18 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       type: 'straight',
       style: {
         stroke: '#7c3aed',
-        strokeWidth: 3,
+        strokeWidth: 4,
         strokeDasharray: '8,4'
       },
       label: 'Result',
       labelStyle: {
-        fontSize: '11px',
+        fontSize: '12px',
         fontWeight: 'bold',
-        fill: '#7c3aed'
+        fill: '#7c3aed',
+        backgroundColor: 'white',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #7c3aed'
       }
     });
 
@@ -775,7 +809,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         zoomOnScroll={true}
         panOnDrag={true}
         className="bg-gray-50"
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
         minZoom={0.3}
         maxZoom={1.5}
       >
