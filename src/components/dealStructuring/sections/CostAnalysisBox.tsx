@@ -1,5 +1,6 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Calculator } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 
@@ -25,40 +26,42 @@ export const CostAnalysisBox = ({ results }: CostAnalysisBoxProps) => {
           Cost Analysis
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto">
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <p className="font-medium text-sm">{formatCurrency(results.costs.regulatory)}</p>
-            <p className="text-xs text-gray-500">Regulatory</p>
+      <CardContent className="flex-1 p-0">
+        <ScrollArea className="h-full px-6 pb-6">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <p className="font-medium text-sm">{formatCurrency(results.costs.regulatory)}</p>
+              <p className="text-xs text-gray-500">Regulatory</p>
+            </div>
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <p className="font-medium text-sm">{formatCurrency(results.costs.professional)}</p>
+              <p className="text-xs text-gray-500">Professional</p>
+            </div>
+            <div className="text-center p-2 bg-gray-50 rounded-lg">
+              <p className="font-medium text-sm">{formatCurrency(results.costs.timing)}</p>
+              <p className="text-xs text-gray-500">Timing</p>
+            </div>
+            <div className="text-center p-2 bg-primary/10 rounded-lg">
+              <p className="font-medium text-primary text-sm">{formatCurrency(results.costs.total)}</p>
+              <p className="text-xs text-gray-500">Total</p>
+            </div>
           </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <p className="font-medium text-sm">{formatCurrency(results.costs.professional)}</p>
-            <p className="text-xs text-gray-500">Professional</p>
-          </div>
-          <div className="text-center p-2 bg-gray-50 rounded-lg">
-            <p className="font-medium text-sm">{formatCurrency(results.costs.timing)}</p>
-            <p className="text-xs text-gray-500">Timing</p>
-          </div>
-          <div className="text-center p-2 bg-primary/10 rounded-lg">
-            <p className="font-medium text-primary text-sm">{formatCurrency(results.costs.total)}</p>
-            <p className="text-xs text-gray-500">Total</p>
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <h5 className="font-medium text-sm">Breakdown</h5>
-          <div className="space-y-1">
-            {results.costs.breakdown.map((item, index) => (
-              <div key={index} className="flex justify-between items-center py-1 text-xs border-b">
-                <div>
-                  <p className="font-medium">{item.category}</p>
-                  <p className="text-gray-500 text-xs">{item.description}</p>
+          
+          <div className="space-y-2">
+            <h5 className="font-medium text-sm">Breakdown</h5>
+            <div className="space-y-1">
+              {results.costs.breakdown.map((item, index) => (
+                <div key={index} className="flex justify-between items-center py-1 text-xs border-b">
+                  <div>
+                    <p className="font-medium">{item.category}</p>
+                    <p className="text-gray-500 text-xs">{item.description}</p>
+                  </div>
+                  <p className="font-medium">{formatCurrency(item.amount)}</p>
                 </div>
-                <p className="font-medium">{formatCurrency(item.amount)}</p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
+        </ScrollArea>
       </CardContent>
     </Card>
   );

@@ -14,9 +14,9 @@ interface DealStructuringDashboardProps {
 
 export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[800px]">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[900px]">
       {/* Top Row - Main Analysis Sections */}
-      <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 h-80">
+      <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-3 gap-4 h-96">
         <StructureRecommendationBox results={results} />
         <CostAnalysisBox results={results} />
         <ExecutionTimetableBox results={results} />
