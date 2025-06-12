@@ -13,15 +13,41 @@ interface TransactionFlowDiagramBoxProps {
 
 // Convert analysis results to transaction flow format
 const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | undefined => {
-  if (!results.shareholdingChanges && !results.corporateStructure) {
+  if (!results.shareholding && !results.shareholdingChanges) {
     return undefined;
   }
 
-  // Create comprehensive transaction flow based on analysis results
+  // Extract real shareholding data
+  const beforeShareholders = results.shareholdingChanges?.before || results.shareholding?.before || [];
+  const afterShareholders = results.shareholdingChanges?.after || results.shareholding?.after || [];
+  
+  // Find buyer/acquiring entity from after shareholding
+  const buyerShareholder = afterShareholders.find(s => 
+    s.type === 'institutional' && s.percentage > 50
+  ) || afterShareholders[0];
+  
+  const remainingShareholders = afterShareholders.filter(s => s !== buyerShareholder);
+  
+  // Extract transaction amount from cost analysis
+  const transactionAmount = results.costs?.total || 1000000; // Convert to millions
+  const transactionAmountM = Math.round(transactionAmount / 1000000);
+
+  // Get target company name from transaction type or use default
+  const targetCompanyName = results.transactionType?.includes('acquisition') ? 
+    'Target Company' : 'Target Company';
+  
+  const buyerCompanyName = buyerShareholder?.name || 'Acquiring Company';
+
   const before = {
     entities: [
-      { id: 'before-target-1', name: 'Target Company', type: 'target' as const },
-      { id: 'before-stockholder-1', name: 'Existing Shareholders', type: 'stockholder' as const, percentage: 100 },
+      { id: 'before-target-1', name: targetCompanyName, type: 'target' as const },
+      ...beforeShareholders.map((shareholder, index) => ({
+        id: `before-stockholder-${index}`,
+        name: shareholder.name,
+        type: 'stockholder' as const,
+        percentage: shareholder.percentage
+      })),
+      // Add subsidiary entities if available
       ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
         id: `before-subsidiary-${index}`,
         name: entity.name,
@@ -30,7 +56,12 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       })) || [])
     ],
     relationships: [
-      { source: 'before-stockholder-1', target: 'before-target-1', type: 'ownership' as const, percentage: 100 },
+      ...beforeShareholders.map((shareholder, index) => ({
+        source: `before-stockholder-${index}`,
+        target: 'before-target-1',
+        type: 'ownership' as const,
+        percentage: shareholder.percentage
+      })),
       // Add subsidiary relationships
       ...(results.corporateStructure?.relationships?.map((rel, index) => ({
         source: `before-target-1`,
@@ -43,10 +74,25 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
 
   const after = {
     entities: [
-      { id: 'after-target-1', name: 'Target Company', type: 'target' as const },
-      { id: 'after-buyer-1', name: 'Acquiring Company', type: 'buyer' as const, percentage: 70 },
-      { id: 'after-stockholder-1', name: 'Remaining Shareholders', type: 'stockholder' as const, percentage: 30 },
-      { id: 'after-consideration-1', name: 'Cash Consideration', type: 'consideration' as const, value: 1000 },
+      { id: 'after-target-1', name: targetCompanyName, type: 'target' as const },
+      { 
+        id: 'after-buyer-1', 
+        name: buyerCompanyName, 
+        type: 'buyer' as const, 
+        percentage: buyerShareholder?.percentage || 70 
+      },
+      ...remainingShareholders.map((shareholder, index) => ({
+        id: `after-stockholder-${index + 1}`,
+        name: shareholder.name,
+        type: 'stockholder' as const,
+        percentage: shareholder.percentage
+      })),
+      { 
+        id: 'after-consideration-1', 
+        name: `Cash Consideration`, 
+        type: 'consideration' as const, 
+        value: transactionAmountM 
+      },
       // Include subsidiaries in after state
       ...(results.corporateStructure?.entities?.filter(e => e.type === 'subsidiary').map((entity, index) => ({
         id: `after-subsidiary-${index}`,
@@ -56,9 +102,24 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
       })) || [])
     ],
     relationships: [
-      { source: 'after-buyer-1', target: 'after-target-1', type: 'ownership' as const, percentage: 70 },
-      { source: 'after-stockholder-1', target: 'after-target-1', type: 'ownership' as const, percentage: 30 },
-      { source: 'after-buyer-1', target: 'after-consideration-1', type: 'consideration' as const, value: 1000 },
+      { 
+        source: 'after-buyer-1', 
+        target: 'after-target-1', 
+        type: 'ownership' as const, 
+        percentage: buyerShareholder?.percentage || 70 
+      },
+      ...remainingShareholders.map((shareholder, index) => ({
+        source: `after-stockholder-${index + 1}`,
+        target: 'after-target-1',
+        type: 'ownership' as const,
+        percentage: shareholder.percentage
+      })),
+      { 
+        source: 'after-buyer-1', 
+        target: 'after-consideration-1', 
+        type: 'consideration' as const, 
+        value: transactionAmountM 
+      },
       // Add subsidiary relationships in after state
       ...(results.corporateStructure?.relationships?.map((rel, index) => ({
         source: `after-target-1`,
@@ -83,13 +144,13 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
         id: 'step-2',
         title: 'Share Purchase Agreement',
         description: 'Execution of share purchase agreement',
-        entities: ['after-buyer-1', 'after-stockholder-1'],
+        entities: ['after-buyer-1', ...remainingShareholders.map((_, index) => `after-stockholder-${index + 1}`)],
       },
       {
         id: 'step-3',
         title: 'Completion',
         description: 'Transfer of shares and payment of consideration',
-        entities: ['after-buyer-1', 'after-stockholder-1', 'after-consideration-1'],
+        entities: ['after-buyer-1', ...remainingShareholders.map((_, index) => `after-stockholder-${index + 1}`), 'after-consideration-1'],
       },
     ],
   };
