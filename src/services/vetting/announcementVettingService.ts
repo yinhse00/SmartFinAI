@@ -33,7 +33,7 @@ export const announcementVettingService = {
       const { data, error } = await supabase
         .from('announcement_pre_vetting_requirements')
         .select('is_vetting_required')
-        .ilike('headline_category', `%${headlineCategory}%`)
+        .ilike('generally_headline_categories', `%${headlineCategory}%`)
         .limit(1)
         .single();
       
@@ -71,7 +71,7 @@ export const announcementVettingService = {
         const { data, error } = await supabase
           .from('announcement_pre_vetting_requirements')
           .select('*')
-          .ilike('headline_category', `%${category}%`)
+          .ilike('generally_headline_categories', `%${category}%`)
           .limit(1);
         
         if (error) {
@@ -83,11 +83,11 @@ export const announcementVettingService = {
           const requirement = data[0];
           return {
             isRequired: requirement.is_vetting_required,
-            headlineCategory: requirement.headline_category,
+            headlineCategory: requirement.generally_headline_categories,
             description: requirement.description,
-            exemptions: requirement.exemptions,
-            ruleReference: requirement.rule_reference,
-            confidence: calculateConfidence(category, requirement.headline_category)
+            exemptions: requirement.means_disclosure, // Using available field
+            ruleReference: requirement.md_listingrules, // Using available field
+            confidence: calculateConfidence(category, requirement.generally_headline_categories)
           };
         }
       }
@@ -113,7 +113,7 @@ export const announcementVettingService = {
       const { data, error } = await supabase
         .from('announcement_pre_vetting_requirements')
         .select('*')
-        .order('headline_category');
+        .order('generally_headline_categories');
       
       if (error) {
         console.error('Error fetching vetting requirements:', error);
@@ -122,11 +122,11 @@ export const announcementVettingService = {
       
       return data.map(item => ({
         id: item.id,
-        headlineCategory: item.headline_category,
+        headlineCategory: item.generally_headline_categories,
         isVettingRequired: item.is_vetting_required,
         description: item.description,
-        exemptions: item.exemptions,
-        ruleReference: item.rule_reference
+        exemptions: item.means_disclosure, // Using available field
+        ruleReference: item.md_listingrules // Using available field
       }));
     } catch (error) {
       console.error('Error in getVettingRequirements:', error);
@@ -141,17 +141,17 @@ export const announcementVettingService = {
     try {
       const { data, error } = await supabase
         .from('announcement_pre_vetting_requirements')
-        .select('exemptions')
-        .ilike('headline_category', `%${headlineCategory}%`)
+        .select('means_disclosure')
+        .ilike('generally_headline_categories', `%${headlineCategory}%`)
         .limit(1)
         .single();
       
-      if (error || !data?.exemptions) {
+      if (error || !data?.means_disclosure) {
         return [];
       }
       
       // Parse exemptions - assuming they're stored as comma-separated or newline-separated
-      return data.exemptions
+      return data.means_disclosure
         .split(/[,\n]/)
         .map(exemption => exemption.trim())
         .filter(exemption => exemption.length > 0);

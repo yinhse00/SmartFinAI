@@ -91,27 +91,12 @@ export const mappingValidationService = {
     try {
       console.log('Fetching listing guidance document from the database');
       
-      // First determine if the reference_documents table has a content column
-      const { data: schemaCheck, error: schemaError } = await supabase
-        .from('reference_documents')
-        .select('*')
-        .limit(1);
-      
-      if (schemaError) {
-        console.error('Error checking reference_documents schema:', schemaError);
-        return null;
-      }
-      
-      const hasContentColumn = schemaCheck && 
-                              schemaCheck.length > 0 && 
-                              'content' in schemaCheck[0];
-      
-      // Now query for the specific document we need
+      // Use mb_listingrule_documents table instead of reference_documents
       const { data, error } = await supabase
-        .from('reference_documents')
-        .select(hasContentColumn ? '*' : 'id, title, updated_at, file_url, file_type')
+        .from('mb_listingrule_documents')
+        .select('*')
         .ilike('title', '%Guide for New Listing Applicants%')
-        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .limit(1);
       
       if (error) {
@@ -124,7 +109,7 @@ export const mappingValidationService = {
         return null;
       }
       
-      const doc = data[0] as any;
+      const doc = data[0];
       
       if (!doc) {
         return null;
@@ -134,7 +119,7 @@ export const mappingValidationService = {
       const result: ListingGuidanceDocument = {
         id: String(doc.id || ''),
         title: String(doc.title || ''),
-        updated_at: String(doc.updated_at || ''),
+        updated_at: String(doc.created_at || ''),
         content: ''
       };
       
@@ -145,8 +130,8 @@ export const mappingValidationService = {
       }
       
       // Handle content based on what's available
-      if (hasContentColumn && typeof doc.content === 'string') {
-        result.content = doc.content;
+      if (typeof doc.description === 'string') {
+        result.content = doc.description;
       } else if (typeof doc.file_url === 'string') {
         console.log('Using placeholder content from file_url');
         result.content = 'Placeholder content - file content fetching not implemented';

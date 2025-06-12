@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 export interface MappingDocument {
@@ -181,4 +182,113 @@ export const validateAgainstMappingDocuments = async (
       mappingDocuments: []
     };
   }
+};
+
+/**
+ * Extract topics from query for guidance lookups
+ */
+export const extractTopicsFromQuery = async (query: string): Promise<string[]> => {
+  const commonTopics = [
+    'acquisition', 'disposal', 'merger', 'takeover', 'transaction',
+    'rights issue', 'placing', 'subscription', 'share issue',
+    'dividend', 'distribution', 'spin-off', 'demerger',
+    'change in shareholding', 'discloseable transaction', 'connected transaction',
+    'very substantial acquisition', 'very substantial disposal',
+    'major transaction', 'notifiable transaction'
+  ];
+  
+  const lowerQuery = query.toLowerCase();
+  const foundTopics = commonTopics.filter(topic => lowerQuery.includes(topic));
+  
+  return foundTopics;
+};
+
+/**
+ * Find relevant guidance materials
+ */
+export const findRelevantGuidance = async (
+  query: string, 
+  topics: string[]
+): Promise<{ guidanceContext: string; sourceMaterials: string[] }> => {
+  try {
+    const searchTerms = extractSearchTerms(query);
+    const documents: any[] = [];
+    
+    // Search in FAQ documents
+    const { data: faqData, error: faqError } = await supabase
+      .from('listingrule_new_faq')
+      .select('*')
+      .limit(20);
+    
+    if (!faqError && faqData) {
+      for (const faq of faqData) {
+        const searchableText = `${faq.topic || ''} ${faq.faqtopic || ''}`;
+        const relevance = calculateRelevance(searchTerms, searchableText);
+        if (relevance > 0.1) {
+          documents.push({
+            content: `FAQ: ${faq.topic || ''} - ${faq.faqtopic || ''}`,
+            relevance,
+            source: faq.chapter || 'FAQ'
+          });
+        }
+      }
+    }
+    
+    // Search in guidance letters
+    const { data: guidanceData, error: guidanceError } = await supabase
+      .from('listingrule_new_gl')
+      .select('*')
+      .limit(20);
+    
+    if (!guidanceError && guidanceData) {
+      for (const guidance of guidanceData) {
+        const searchableText = `${guidance.title || ''} ${guidance.particulars || ''}`;
+        const relevance = calculateRelevance(searchTerms, searchableText);
+        if (relevance > 0.1) {
+          documents.push({
+            content: `Guidance: ${guidance.title || ''} - ${guidance.particulars || ''}`,
+            relevance,
+            source: guidance.reference_no || 'Guidance Letter'
+          });
+        }
+      }
+    }
+    
+    if (documents.length === 0) {
+      return {
+        guidanceContext: "No specific guidance materials found.",
+        sourceMaterials: []
+      };
+    }
+    
+    // Sort by relevance and combine content
+    documents.sort((a, b) => b.relevance - a.relevance);
+    const topDocuments = documents.slice(0, 5);
+    
+    const guidanceContext = topDocuments
+      .map(doc => doc.content)
+      .join('\n\n');
+    
+    const sourceMaterials = topDocuments
+      .map(doc => doc.source)
+      .filter(source => source);
+    
+    return {
+      guidanceContext,
+      sourceMaterials
+    };
+  } catch (error) {
+    console.error('Error finding relevant guidance:', error);
+    return {
+      guidanceContext: "No specific guidance materials found.",
+      sourceMaterials: []
+    };
+  }
+};
+
+// Export the service object for backward compatibility
+export const mappingSpreadsheetService = {
+  validateAgainstMappingDocuments,
+  extractTopicsFromQuery,
+  findRelevantGuidance
 };
