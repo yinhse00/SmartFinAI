@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Network } from 'lucide-react';
@@ -17,14 +16,15 @@ const convertToTransactionFlow = (results: AnalysisResults): TransactionFlow | u
     return undefined;
   }
 
-  // Extract real shareholding data
+  // Extract real shareholding data - handle both types of shareholder objects
   const beforeShareholders = results.shareholdingChanges?.before || results.shareholding?.before || [];
   const afterShareholders = results.shareholdingChanges?.after || results.shareholding?.after || [];
   
   // Find buyer/acquiring entity from after shareholding
+  // Look for institutional type if available, otherwise use the largest shareholder
   const buyerShareholder = afterShareholders.find(s => 
-    s.type === 'institutional' && s.percentage > 50
-  ) || afterShareholders[0];
+    ('type' in s && s.type === 'institutional') && s.percentage > 50
+  ) || afterShareholders.find(s => s.percentage > 50) || afterShareholders[0];
   
   const remainingShareholders = afterShareholders.filter(s => s !== buyerShareholder);
   
