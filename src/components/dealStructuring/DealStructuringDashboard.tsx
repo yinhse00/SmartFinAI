@@ -14,7 +14,7 @@ interface DealStructuringDashboardProps {
 
 export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:grid-rows-3">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:grid-rows-3 lg:items-start">
       {/* Row 1, Col 1: Structure Recommendation */}
       <div className="lg:col-start-1 lg:row-start-1">
         <StructureRecommendationBox results={results} />
@@ -40,8 +40,8 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <RegulatoryComplianceBox results={results} />
       </div>
       
-      {/* Row 3, Col 1: Execution Timetable - aligned to top of cell */}
-      <div className="lg:col-start-1 lg:row-start-3 self-start">
+      {/* Row 3, Col 1: Execution Timetable - aligned to top */}
+      <div className="lg:col-start-1 lg:row-start-3">
         <ExecutionTimetableBox results={results} />
       </div>
     </div>
