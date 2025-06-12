@@ -1,4 +1,3 @@
-
 // This is the service for the Grok AI integration specialized for Hong Kong financial expertise
 import { hasGrokApiKey, getGrokApiKey } from './apiKeyService';
 import { contextService } from './regulatory/contextService';
@@ -110,16 +109,16 @@ export const grokService = {
     error?: Error;
   }> => {
     try {
-      // Check for new listing guide
+      // Check for new listing guide using correct table name
       const { data: newListingData, error: newListingError } = await supabase
-        .from('reference_documents')
+        .from('mb_listingrule_documents')
         .select('id, title')
         .ilike('title', '%Guide for New Listing Applicants%')
         .limit(1);
       
-      // Check for listed issuer guide
+      // Check for listed issuer guide using correct table name
       const { data: listedIssuerData, error: listedIssuerError } = await supabase
-        .from('reference_documents')
+        .from('mb_listingrule_documents')
         .select('id, title')
         .ilike('title', '%Guidance Materials for Listed Issuers%')
         .limit(1);

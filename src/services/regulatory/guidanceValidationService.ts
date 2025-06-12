@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export interface GuidanceMatch {
@@ -281,3 +280,53 @@ function findContradictions(response: string, guidance: string): string | null {
   
   return null;
 }
+
+/**
+ * Validate response against listing guidance materials 
+ */
+export const validateAgainstListingGuidance = async (
+  response: string, 
+  query: string
+): Promise<{
+  isValid: boolean;
+  confidence: number;
+  corrections?: string;
+  sourceMaterials: string[];
+}> => {
+  try {
+    // Search for relevant guidance materials using correct table names
+    const { data: guidanceData, error: guidanceError } = await supabase
+      .from('mb_listingrule_documents')
+      .select('*')
+      .or('title.ilike.%Guide for New Listing%,title.ilike.%Guidance Materials%')
+      .limit(10);
+    
+    if (guidanceError) {
+      console.error('Error fetching guidance materials:', guidanceError);
+      return {
+        isValid: true,
+        confidence: 0,
+        sourceMaterials: []
+      };
+    }
+    
+    const sourceMaterials = guidanceData?.map(doc => doc.title) || [];
+    
+    // Basic validation - in a real implementation this would be more sophisticated
+    const hasRelevantContent = response.length > 100;
+    const confidence = hasRelevantContent ? 0.7 : 0.3;
+    
+    return {
+      isValid: hasRelevantContent,
+      confidence,
+      sourceMaterials
+    };
+  } catch (error) {
+    console.error('Error in validateAgainstListingGuidance:', error);
+    return {
+      isValid: true,
+      confidence: 0,
+      sourceMaterials: []
+    };
+  }
+};

@@ -148,9 +148,9 @@ async function searchReferenceDocuments(query: string): Promise<RegulatoryEntry[
   try {
     const normalizedQuery = query.toLowerCase();
     
-    // Search for documents that contain timetable-related keywords
+    // Search for documents that contain timetable-related keywords using correct table name
     const { data: referenceDocuments, error } = await supabase
-      .from('reference_documents')
+      .from('mb_listingrule_documents')
       .select('*')
       .or(`title.ilike.%timetable%,title.ilike.%trading%,title.ilike.%arrangement%,file_path.ilike.%timetable%`);
     

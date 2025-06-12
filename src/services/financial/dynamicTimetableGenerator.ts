@@ -476,3 +476,36 @@ export class DynamicTimetableGenerator {
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
 }
+
+/**
+ * Simplified function for generating dynamic timetables
+ * This is the main export that other services use
+ */
+export async function generateDynamicTimetable(transactionType: string): Promise<string> {
+  const generator = new DynamicTimetableGenerator();
+  
+  // Use current date as start date
+  const startDate = new Date();
+  
+  const events = await generator.generateTimetable({
+    startDate,
+    transactionType,
+    adjustForHolidays: true
+  });
+  
+  // Format events into a markdown table
+  let timetable = `# ${transactionType.replace(/_/g, ' ').toUpperCase()} Execution Timetable\n\n`;
+  timetable += `*Generated on ${generator.formatDate(startDate)} with Hong Kong business day calculations*\n\n`;
+  timetable += `| Business Day | Date | Event | Description |\n`;
+  timetable += `|--------------|------|-------|-------------|\n`;
+  
+  events.forEach(event => {
+    const dayLabel = event.day === 0 ? 'T+0' : `T+${event.day}`;
+    const isKeyEvent = event.isKeyEvent ? '**' : '';
+    timetable += `| ${dayLabel} | ${generator.formatDate(event.date)} | ${isKeyEvent}${event.event}${isKeyEvent} | ${event.description || '-'} |\n`;
+  });
+  
+  timetable += `\n**Note:** All dates calculated using Hong Kong business days (excludes weekends and public holidays)\n`;
+  
+  return timetable;
+}
