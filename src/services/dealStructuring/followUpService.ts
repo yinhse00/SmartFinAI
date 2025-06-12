@@ -10,6 +10,7 @@ export interface FollowUpContext {
     response: string;
     timestamp: Date;
   }>;
+  sessionId?: string;
 }
 
 export interface FollowUpResponse {
@@ -30,10 +31,20 @@ export const followUpService = {
   ): Promise<FollowUpResponse> => {
     try {
       console.log('Processing follow-up question:', followUpQuestion);
+      console.log('Context session ID:', context.sessionId);
+      console.log('Conversation history length:', context.conversationHistory.length);
+
+      // Create a unique identifier for this follow-up to prevent cache hits
+      const followUpId = `followup-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      console.log('Generated unique follow-up ID:', followUpId);
 
       // Create a specialized prompt for follow-up analysis
       const followUpPrompt = `
 You are a Hong Kong financial advisory AI assistant. A user has asked a follow-up question about their transaction analysis.
+
+UNIQUE FOLLOW-UP ID: ${followUpId}
+SESSION ID: ${context.sessionId || 'unknown'}
+TIMESTAMP: ${new Date().toISOString()}
 
 CURRENT ANALYSIS RESULTS:
 ${JSON.stringify(currentResults, null, 2)}
@@ -42,7 +53,7 @@ ORIGINAL TRANSACTION DESCRIPTION:
 ${context.originalTransactionDescription}
 
 CONVERSATION HISTORY:
-${context.conversationHistory.map(h => `Q: ${h.question}\nA: ${h.response}`).join('\n\n')}
+${context.conversationHistory.map((h, index) => `Q${index + 1}: ${h.question}\nA${index + 1}: ${h.response}\nTime: ${h.timestamp.toISOString()}`).join('\n\n')}
 
 USER'S FOLLOW-UP QUESTION:
 ${followUpQuestion}
@@ -53,6 +64,7 @@ INSTRUCTIONS:
 3. Only modify the sections that are actually affected by the follow-up question
 4. Maintain all existing data that isn't being changed
 5. Provide a clear explanation of what was changed and why
+6. This is a FRESH analysis - do not use any cached responses
 
 Please respond with a JSON object in this exact format:
 {
@@ -70,7 +82,7 @@ Please respond with a JSON object in this exact format:
 Ensure the updatedResults maintains the exact same TypeScript interface structure as the original AnalysisResults.
 `;
 
-      // Call Grok API with the specialized prompt
+      // Call Grok API with cache bypass and unique identifiers
       const response = await grokApiService.callChatCompletions({
         messages: [
           { role: 'system', content: 'You are a Hong Kong financial advisory expert specializing in deal structuring and regulatory compliance.' },
@@ -81,15 +93,22 @@ Ensure the updatedResults maintains the exact same TypeScript interface structur
         max_tokens: 15000,
         metadata: {
           processingStage: 'followUp',
-          originalQuestion: followUpQuestion
+          originalQuestion: followUpQuestion,
+          followUpId: followUpId,
+          sessionId: context.sessionId,
+          bypassCache: true, // Explicitly bypass cache for follow-ups
+          internalProcessing: false, // Allow caching but with unique ID
+          timestamp: Date.now()
         }
       });
 
       const responseContent = response?.choices?.[0]?.message?.content || '';
+      console.log('Raw API response length:', responseContent.length);
       
       // Extract JSON from the response
       const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
+        console.error('No JSON found in response, falling back to error response');
         throw new Error('Invalid response format from AI');
       }
 
@@ -97,15 +116,24 @@ Ensure the updatedResults maintains the exact same TypeScript interface structur
       
       // Validate that the response has the required structure
       if (!parsedResponse.updatedResults || !parsedResponse.changedSections || !parsedResponse.explanation) {
+        console.error('Incomplete response structure:', parsedResponse);
         throw new Error('Incomplete response from AI');
       }
 
       console.log('Follow-up processing completed. Changed sections:', parsedResponse.changedSections);
+      console.log('Response validation successful');
       
       return parsedResponse;
     } catch (error) {
       console.error('Error processing follow-up question:', error);
-      throw new Error('Failed to process follow-up question. Please try again.');
+      
+      // Enhanced fallback response with better error handling
+      return {
+        updatedResults: currentResults, // Return unchanged results as fallback
+        changedSections: [],
+        explanation: `I encountered an issue processing your question: "${followUpQuestion}". The original analysis remains unchanged.`,
+        assistantMessage: 'I apologize, but I encountered an error processing your question. Please try rephrasing your question or ask about a specific aspect of the analysis. Your original analysis remains unchanged.'
+      };
     }
   },
 
@@ -117,6 +145,11 @@ Ensure the updatedResults maintains the exact same TypeScript interface structur
     response,
     timestamp: new Date()
   }),
+
+  /**
+   * Create a unique session ID for tracking conversation context
+   */
+  createSessionId: () => `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 
   /**
    * Format changed sections for display

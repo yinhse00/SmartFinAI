@@ -1,3 +1,4 @@
+
 /**
  * Core API request processing logic - Optimized for quality responses
  */
@@ -40,12 +41,25 @@ const generateCacheKey = (requestBody: any): string => {
     return `no-cache-${Date.now()}-${Math.random()}`;
   }
   
+  // Check if this is a follow-up request with bypass flag or unique ID
+  if (requestBody.metadata?.bypassCache || requestBody.metadata?.followUpId) {
+    console.log('Bypassing cache for follow-up request:', requestBody.metadata?.followUpId);
+    return `no-cache-followup-${requestBody.metadata?.followUpId || Date.now()}-${Math.random()}`;
+  }
+  
   return `${content.substring(0, 100)}-${model}-${temperature}`;
 };
 
 // Check cache for similar requests
 const checkCache = (requestBody: any) => {
   const cacheKey = generateCacheKey(requestBody);
+  
+  // If cache key indicates no-cache, skip
+  if (cacheKey.startsWith('no-cache')) {
+    console.log('Cache bypassed due to no-cache key:', cacheKey.substring(0, 50));
+    return null;
+  }
+  
   const cached = responseCache.get(cacheKey);
   
   if (cached) {
@@ -79,6 +93,12 @@ const updateCache = (requestBody: any, response: any) => {
   
   // Don't cache internal processing responses
   if (requestBody.metadata?.internalProcessing) {
+    return;
+  }
+  
+  // Don't cache follow-up responses with bypass flag
+  if (requestBody.metadata?.bypassCache || requestBody.metadata?.followUpId) {
+    console.log('Skipping cache storage for follow-up response');
     return;
   }
   
@@ -176,7 +196,7 @@ export const processApiRequest = async (
     throw new Error("Grok API is unreachable");
   }
   
-  // Check cache for similar requests (unless it's a retry or batch)
+  // Check cache for similar requests (unless it's a retry, batch, or follow-up with bypass)
   if (!isRetryRequest && !isBatchRequest) {
     const cachedResponse = checkCache(requestBody);
     if (cachedResponse) {
@@ -206,6 +226,8 @@ export const processApiRequest = async (
   console.log("Request model:", requestBody.model);
   console.log("Temperature:", requestBody.temperature);
   console.log("Max tokens:", requestBody.max_tokens);
+  console.log("Follow-up ID:", requestBody.metadata?.followUpId || 'none');
+  console.log("Cache bypass:", requestBody.metadata?.bypassCache || false);
   
   // Add metadata to request
   if (!requestBody.metadata) {

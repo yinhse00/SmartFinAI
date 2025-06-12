@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -36,11 +36,23 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
   const [isProcessing, setIsProcessing] = useState(false);
   const { toast } = useToast();
 
-  // Maintain follow-up context
-  const [context] = useState<FollowUpContext>({
+  // Create session ID and maintain follow-up context with mutable conversation history
+  const sessionIdRef = useRef(followUpService.createSessionId());
+  const [conversationHistory, setConversationHistory] = useState<Array<{
+    question: string;
+    response: string;
+    timestamp: Date;
+  }>>([]);
+
+  // Update context with current conversation history
+  const context: FollowUpContext = {
     originalTransactionDescription: results.transactionType,
-    conversationHistory: []
-  });
+    conversationHistory: conversationHistory,
+    sessionId: sessionIdRef.current
+  };
+
+  console.log('DealStructuringChatbox rendered with session ID:', sessionIdRef.current);
+  console.log('Current conversation history length:', conversationHistory.length);
 
   const handleSendMessage = async () => {
     if (!inputValue.trim() || isProcessing) return;
@@ -53,24 +65,19 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
     };
 
     setMessages(prev => [...prev, userMessage]);
+    const currentInput = inputValue.trim();
     setInputValue('');
     setIsProcessing(true);
 
     try {
-      // Update conversation history
-      const updatedContext = {
-        ...context,
-        conversationHistory: [
-          ...context.conversationHistory,
-          followUpService.createHistoryEntry(inputValue.trim(), '')
-        ]
-      };
+      console.log('Processing new follow-up question:', currentInput);
+      console.log('Using session ID:', sessionIdRef.current);
 
-      // Process the follow-up question
+      // Process the follow-up question with fresh context
       const followUpResponse = await followUpService.processFollowUpQuestion(
         results,
-        inputValue.trim(),
-        updatedContext
+        currentInput,
+        context
       );
 
       // Update the analysis results
@@ -87,15 +94,22 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
 
       setMessages(prev => [...prev, assistantMessage]);
 
-      // Update conversation history with the assistant's response
-      updatedContext.conversationHistory[updatedContext.conversationHistory.length - 1] = 
-        followUpService.createHistoryEntry(userMessage.content, followUpResponse.assistantMessage);
+      // Update conversation history for future context
+      const newHistoryEntry = followUpService.createHistoryEntry(currentInput, followUpResponse.assistantMessage);
+      setConversationHistory(prev => [...prev, newHistoryEntry]);
+
+      console.log('Updated conversation history length:', conversationHistory.length + 1);
 
       // Show success toast with changed sections
       if (followUpResponse.changedSections.length > 0) {
         toast({
           title: "Analysis Updated",
           description: followUpService.formatChangedSections(followUpResponse.changedSections)
+        });
+      } else {
+        toast({
+          title: "Response Generated",
+          description: "I've provided information without changing the analysis."
         });
       }
 
@@ -134,6 +148,9 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
         <CardTitle className="flex items-center gap-2 text-lg">
           <MessageCircle className="h-5 w-5 text-blue-500" />
           Analysis Chat
+          <span className="text-xs text-gray-500 ml-auto">
+            Session: {sessionIdRef.current.slice(-8)}
+          </span>
         </CardTitle>
       </CardHeader>
       <CardContent className="flex-1 p-0 min-h-0 flex flex-col">
