@@ -99,17 +99,17 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
   };
 
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <MessageSquare className="h-5 w-5 text-blue-500" />
+    <Card className="h-full flex flex-col min-h-0">
+      <CardHeader className="pb-2 flex-shrink-0">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessageSquare className="h-4 w-4 text-blue-500" />
           Follow-up Chat
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 flex flex-col">
+      <CardContent className="flex-1 flex flex-col min-h-0 px-4 pb-4">
         {/* Quick Actions */}
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 mb-2">Quick actions:</p>
+        <div className="mb-2 flex-shrink-0">
+          <p className="text-xs text-gray-500 mb-1">Quick actions:</p>
           <div className="flex flex-wrap gap-1">
             {quickActions.map((action, index) => (
               <Badge 
@@ -125,7 +125,7 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
         </div>
 
         {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto mb-3 space-y-2 min-h-0">
+        <div className="flex-1 overflow-y-auto mb-2 space-y-2 min-h-0">
           {messages.length === 0 ? (
             <div className="text-center text-gray-500 text-sm py-4">
               Ask follow-up questions about the analysis or use quick actions above.
@@ -153,12 +153,12 @@ export const DealStructuringChatbox = ({ results, onResultsUpdate }: DealStructu
         </div>
 
         {/* Input Area */}
-        <div className="space-y-2">
+        <div className="space-y-2 flex-shrink-0">
           <Textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about timeline modifications, cost alternatives, regulatory requirements..."
-            className="min-h-[60px] text-sm resize-none"
+            className="min-h-[50px] text-sm resize-none"
             onKeyDown={(e) => {
               if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();

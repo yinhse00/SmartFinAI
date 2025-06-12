@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils"
 const ScrollArea = React.forwardRef<
   React.ElementRef<typeof ScrollAreaPrimitive.Root>,
   React.ComponentPropsWithoutRef<typeof ScrollAreaPrimitive.Root> & { type?: "auto" | "always" | "scroll" | "hover" }
->(({ className, children, type = "hover", ...props }, ref) => (
+>(({ className, children, type = "scroll", ...props }, ref) => (
   <ScrollAreaPrimitive.Root
     ref={ref}
     className={cn("relative overflow-hidden", className)}
@@ -33,10 +33,10 @@ const ScrollBar = React.forwardRef<
     className={cn(
       "flex touch-none select-none transition-colors",
       orientation === "vertical" &&
-        "h-full w-6 border-l border-l-transparent p-[3px]",
+        "h-full w-3 border-l border-l-transparent p-[1px]",
       orientation === "horizontal" &&
-        "h-6 flex-col border-t border-t-transparent p-[3px]",
-      "opacity-100", // Always show scrollbar
+        "h-3 flex-col border-t border-t-transparent p-[1px]",
+      "opacity-100 z-10", // Always show scrollbar with higher z-index
       className
     )}
     {...props}
@@ -44,7 +44,7 @@ const ScrollBar = React.forwardRef<
     <ScrollAreaPrimitive.ScrollAreaThumb 
       className={cn(
         "relative flex-1 rounded-full",
-        "bg-finance-medium-blue hover:bg-finance-dark-blue dark:bg-finance-accent-blue dark:hover:bg-finance-accent-blue",
+        "bg-gray-300 hover:bg-gray-400 dark:bg-gray-600 dark:hover:bg-gray-500",
         "opacity-100"
       )} 
     />

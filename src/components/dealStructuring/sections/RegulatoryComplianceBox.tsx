@@ -11,15 +11,15 @@ interface RegulatoryComplianceBoxProps {
 
 export const RegulatoryComplianceBox = ({ results }: RegulatoryComplianceBoxProps) => {
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <CheckCircle className="h-5 w-5 text-red-500" />
+    <Card className="h-full flex flex-col min-h-0">
+      <CardHeader className="pb-2 flex-shrink-0">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <CheckCircle className="h-4 w-4 text-red-500" />
           Regulatory Compliance
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full px-6 pb-6">
+      <CardContent className="flex-1 p-0 min-h-0">
+        <ScrollArea className="h-full px-4 pb-4">
           <div className="space-y-3">
             {results.compliance.listingRules.length > 0 && (
               <div>

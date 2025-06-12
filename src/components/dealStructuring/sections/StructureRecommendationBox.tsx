@@ -11,18 +11,18 @@ interface StructureRecommendationBoxProps {
 
 export const StructureRecommendationBox = ({ results }: StructureRecommendationBoxProps) => {
   return (
-    <Card className="h-full flex flex-col">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <FileText className="h-5 w-5 text-blue-500" />
+    <Card className="h-full flex flex-col min-h-0">
+      <CardHeader className="pb-2 flex-shrink-0">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <FileText className="h-4 w-4 text-blue-500" />
           Recommended Structure
         </CardTitle>
       </CardHeader>
-      <CardContent className="flex-1 p-0">
-        <ScrollArea className="h-full px-6 pb-6">
-          <div className="space-y-4">
+      <CardContent className="flex-1 p-0 min-h-0">
+        <ScrollArea className="h-full px-4 pb-4">
+          <div className="space-y-3">
             <div>
-              <h4 className="font-medium text-lg mb-2">{results.structure.recommended}</h4>
+              <h4 className="font-medium text-base mb-2">{results.structure.recommended}</h4>
               <p className="text-gray-600 text-sm">{results.structure.rationale}</p>
             </div>
             
