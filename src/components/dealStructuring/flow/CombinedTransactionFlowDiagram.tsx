@@ -647,6 +647,31 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       }
     });
 
+    // NEW: Consideration flow - dotted line showing cash payment
+    edges.push({
+      id: 'consideration-flow',
+      source: 'acquiring-company',
+      target: 'target-company',
+      type: 'smoothstep',
+      style: {
+        stroke: '#16a34a',
+        strokeWidth: 3,
+        strokeDasharray: '10,5'
+      },
+      label: 'HK$1,000M',
+      labelStyle: {
+        fontSize: '12px',
+        fontWeight: 'bold',
+        fill: '#16a34a',
+        backgroundColor: '#f0fdf4',
+        padding: '2px 6px',
+        borderRadius: '4px',
+        border: '1px solid #16a34a'
+      },
+      labelBgBorderRadius: 4,
+      labelBgPadding: [2, 6]
+    });
+
     edges.push({
       id: 'transaction-result',
       source: 'transaction-details',
