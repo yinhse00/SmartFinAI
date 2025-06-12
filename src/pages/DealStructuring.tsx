@@ -1,4 +1,3 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
@@ -11,24 +10,22 @@ import { Brain, FileText, Calculator, Clock, Users, Shield } from 'lucide-react'
 
 // Export the TransactionData type for other components
 export type { TransactionData } from '@/types/dealStructuring';
-
 const DealStructuring = () => {
   const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const { toast } = useToast();
-
+  const {
+    toast
+  } = useToast();
   const handleTransactionAnalysis = async (request: TransactionAnalysisRequest) => {
     setIsAnalyzing(true);
-    
     try {
       const results = await aiAnalysisService.analyzeTransaction(request);
       setAnalysisResults(results);
       setCurrentStep('analysis');
-      
       toast({
         title: "Analysis Complete",
-        description: "Your transaction has been analyzed successfully.",
+        description: "Your transaction has been analyzed successfully."
       });
     } catch (error) {
       console.error('Analysis error:', error);
@@ -41,60 +38,45 @@ const DealStructuring = () => {
       setIsAnalyzing(false);
     }
   };
-
   const handleNewAnalysis = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
   };
-
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
     setAnalysisResults(updatedResults);
   };
-
-  const featureCards = [
-    {
-      icon: Brain,
-      title: "AI Analysis",
-      description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
-    },
-    {
-      icon: FileText,
-      title: "Document Intelligence",
-      description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
-    },
-    {
-      icon: Calculator,
-      title: "Cost Analysis",
-      description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
-    },
-    {
-      icon: Clock,
-      title: "Timeline Planning",
-      description: "Detailed execution timetable with key milestones and critical path analysis."
-    },
-    {
-      icon: Users,
-      title: "Shareholding Impact",
-      description: "Before and after shareholding analysis with dilution impact assessment."
-    },
-    {
-      icon: Shield,
-      title: "Compliance Guide",
-      description: "Regulatory compliance requirements including listing rules and takeovers code."
-    }
-  ];
-
-  return (
-    <MainLayout>
+  const featureCards = [{
+    icon: Brain,
+    title: "AI Analysis",
+    description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
+  }, {
+    icon: FileText,
+    title: "Document Intelligence",
+    description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
+  }, {
+    icon: Calculator,
+    title: "Cost Analysis",
+    description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
+  }, {
+    icon: Clock,
+    title: "Timeline Planning",
+    description: "Detailed execution timetable with key milestones and critical path analysis."
+  }, {
+    icon: Users,
+    title: "Shareholding Impact",
+    description: "Before and after shareholding analysis with dilution impact assessment."
+  }, {
+    icon: Shield,
+    title: "Compliance Guide",
+    description: "Regulatory compliance requirements including listing rules and takeovers code."
+  }];
+  return <MainLayout>
       <div className="container mx-auto px-4 py-4">
         <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            AI-Powered Deal Structuring
-          </h1>
+          
           
           {/* Show introductory content only during input phase */}
-          {currentStep === 'input' && (
-            <>
+          {currentStep === 'input' && <>
               <p className="text-base text-gray-600 dark:text-gray-300 mb-4 max-w-4xl">
                 Get intelligent advisory for capital raising and M&A transactions. Our AI analyzes your requirements 
                 and documents to provide professional-grade structuring advice, cost analysis, regulatory compliance 
@@ -103,8 +85,7 @@ const DealStructuring = () => {
 
               {/* Feature Overview Cards - Compact Grid */}
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-                {featureCards.map((feature, index) => (
-                  <Card key={index} className="h-full">
+                {featureCards.map((feature, index) => <Card key={index} className="h-full">
                     <CardContent className="p-3">
                       <div className="flex flex-col items-center text-center">
                         <feature.icon className="h-5 w-5 text-primary mb-2" />
@@ -114,43 +95,26 @@ const DealStructuring = () => {
                         </p>
                       </div>
                     </CardContent>
-                  </Card>
-                ))}
+                  </Card>)}
               </div>
-            </>
-          )}
+            </>}
         </div>
 
         {/* Main Content */}
         <div className="space-y-6">
-          {currentStep === 'input' && (
-            <EnhancedTransactionInput
-              onAnalyze={handleTransactionAnalysis}
-              isAnalyzing={isAnalyzing}
-            />
-          )}
+          {currentStep === 'input' && <EnhancedTransactionInput onAnalyze={handleTransactionAnalysis} isAnalyzing={isAnalyzing} />}
           
-          {currentStep === 'analysis' && analysisResults && (
-            <div className="space-y-6">
+          {currentStep === 'analysis' && analysisResults && <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
-                <button
-                  onClick={handleNewAnalysis}
-                  className="text-primary hover:underline"
-                >
+                <button onClick={handleNewAnalysis} className="text-primary hover:underline">
                   New Analysis
                 </button>
               </div>
-              <DealStructuringDashboard 
-                results={analysisResults} 
-                onResultsUpdate={handleResultsUpdate}
-              />
-            </div>
-          )}
+              <DealStructuringDashboard results={analysisResults} onResultsUpdate={handleResultsUpdate} />
+            </div>}
         </div>
       </div>
-    </MainLayout>
-  );
+    </MainLayout>;
 };
-
 export default DealStructuring;
