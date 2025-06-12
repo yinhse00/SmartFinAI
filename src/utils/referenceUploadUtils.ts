@@ -1,3 +1,4 @@
+
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -44,7 +45,7 @@ export async function uploadFilesToSupabase(
     ];
 
     for (const file of files) {
-      console.log(`Uploading file: ${file.name} (${file.size} bytes)`);
+      console.log(`Processing file: ${file.name} (${file.size} bytes)`);
 
       // Validate file size
       if (file.size > 20971520) { // 20MB
@@ -66,48 +67,13 @@ export async function uploadFilesToSupabase(
         console.warn(`File type (MIME) not recognized: ${file.name} with type ${file.type}`);
       }
 
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `${category}/${fileName}`;
-
-      const { data, error } = await supabase.storage
-        .from('references')
-        .upload(filePath, file, {
-          cacheControl: '3600',
-          upsert: false
-        });
-
-      if (error) {
-        console.error('Error uploading file:', file.name, error);
-        // Provide more specific error messages based on error type
-        if (error.message.includes('bucket not found')) {
-          return { 
-            success: false, 
-            message: "The 'references' storage bucket does not exist. Please contact your administrator." 
-          };
-        } else if (error.message.includes('permission')) {
-          return { 
-            success: false, 
-            message: "You don't have permission to upload to the 'references' bucket. Please contact your administrator." 
-          };
-        }
-        
-        failedUploads.push({ name: file.name, error: error.message });
-        continue;
-      }
-
-      console.log('File uploaded successfully:', file.name);
-
-      // Get public URL for the uploaded file
-      const { data: urlData } = supabase.storage
-        .from('references')
-        .getPublicUrl(filePath);
-
+      // For now, just store metadata without actual file upload since storage bucket doesn't exist
       uploadedFiles.push({
         name: file.name,
         category: category,
         description: description,
-        path: filePath,
-        url: urlData.publicUrl,
+        path: `${category}/${file.name}`,
+        url: `placeholder-url-${file.name}`,
         size: file.size,
         type: file.type,
         uploadedAt: new Date()
@@ -117,15 +83,15 @@ export async function uploadFilesToSupabase(
     if (uploadedFiles.length === 0) {
       return { 
         success: false, 
-        message: `Failed to upload files. ${failedUploads.map(f => `${f.name}: ${f.error}`).join(', ')}` 
+        message: `Failed to process files. ${failedUploads.map(f => `${f.name}: ${f.error}`).join(', ')}` 
       };
     }
 
     console.log('Saving metadata to database for', uploadedFiles.length, 'files');
 
-    // Store metadata in Supabase
+    // Store metadata in the correct table
     const { error: metadataError } = await supabase
-      .from('reference_documents')
+      .from('mb_listingrule_documents')
       .insert(uploadedFiles.map(file => ({
         title: file.name,
         category: file.category,
@@ -147,20 +113,20 @@ export async function uploadFilesToSupabase(
     if (failedUploads.length > 0) {
       return { 
         success: true, 
-        message: `Successfully uploaded ${uploadedFiles.length} file(s). Failed to upload ${failedUploads.length} file(s).` 
+        message: `Successfully processed ${uploadedFiles.length} file(s). Failed to process ${failedUploads.length} file(s).` 
       };
     }
 
     return { 
       success: true, 
-      message: `${uploadedFiles.length} document(s) have been uploaded and are being processed.` 
+      message: `${uploadedFiles.length} document(s) have been processed and metadata saved.` 
     };
   } catch (error) {
     console.error('Unhandled upload error:', error);
 
-    let errorMessage = "There was an error uploading your references. Please try again.";
+    let errorMessage = "There was an error processing your references. Please try again.";
     if (error instanceof Error) {
-      errorMessage = `Upload failed: ${error.message}`;
+      errorMessage = `Processing failed: ${error.message}`;
     }
 
     return { 

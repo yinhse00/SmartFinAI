@@ -45,6 +45,8 @@ export const databaseService = {
         
         // Insert entries into Supabase
         for (const entry of entries) {
+          const categoryId = await getCategoryIdByCode(categoryCode);
+          
           const { error } = await supabase
             .from('regulatory_provisions')
             .insert({
@@ -53,7 +55,7 @@ export const databaseService = {
               content: entry.content,
               chapter: chapter,
               section: entry.section,
-              category_id: await getCategoryIdByCode(categoryCode),
+              category_id: categoryId,
               last_updated: new Date().toISOString(),
               is_current: true,
               path_reference: file.name
@@ -87,19 +89,10 @@ export const databaseService = {
   getAllEntries: async (): Promise<RegulatoryEntry[]> => {
     console.log('Fetching all regulatory entries from Supabase');
     
+    // Use a simpler query that doesn't rely on relationships
     const { data, error } = await supabase
       .from('regulatory_provisions')
-      .select(`
-        id,
-        rule_number,
-        title,
-        content,
-        chapter,
-        section,
-        last_updated,
-        is_current,
-        regulatory_categories(code)
-      `)
+      .select('*')
       .order('rule_number');
       
     if (error) {
@@ -109,23 +102,17 @@ export const databaseService = {
     
     // Map the Supabase data structure to our RegulatoryEntry type
     return data.map(item => {
-      const categoryCode = item.regulatory_categories?.code || 'OTHER';
-      const categoryMapping: Record<string, RegulatoryEntry['category']> = {
-        'CH13': 'listing_rules',
-        'CH14': 'listing_rules',
-        'CH14A': 'listing_rules',
-        'TO': 'takeovers',
-        'GN': 'guidance',
-        'LD': 'decisions',
-        'CL': 'checklists',
-        'OTHER': 'other'
-      };
+      // Determine category from the chapter or rule number
+      let category: RegulatoryEntry['category'] = 'other';
+      if (item.chapter?.includes('14')) category = 'listing_rules';
+      else if (item.chapter?.includes('13')) category = 'listing_rules';
+      else if (item.rule_number?.includes('TO')) category = 'takeovers';
       
       return {
         id: item.id,
         title: item.title,
         content: item.content,
-        category: categoryMapping[categoryCode] || 'other',
+        category: category,
         source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
         section: item.section || undefined,
         lastUpdated: new Date(item.last_updated),
@@ -140,52 +127,9 @@ export const databaseService = {
   getEntriesByCategory: async (category: string): Promise<RegulatoryEntry[]> => {
     console.log(`Fetching regulatory entries for category: ${category}`);
     
-    // Map our category strings to the database category codes
-    const categoryMapping: Record<string, string[]> = {
-      'listing_rules': ['CH13', 'CH14', 'CH14A'],
-      'takeovers': ['TO'],
-      'guidance': ['GN'],
-      'decisions': ['LD'],
-      'checklists': ['CL'],
-      'other': ['OTHER']
-    };
-    
-    const categoryCodes = categoryMapping[category] || ['OTHER'];
-    
-    const { data, error } = await supabase
-      .from('regulatory_provisions')
-      .select(`
-        id,
-        rule_number,
-        title,
-        content,
-        chapter,
-        section,
-        last_updated,
-        is_current,
-        regulatory_categories(code)
-      `)
-      .in('regulatory_categories.code', categoryCodes)
-      .order('rule_number');
-      
-    if (error) {
-      console.error(`Error fetching regulatory provisions for category ${category}:`, error);
-      return [];
-    }
-    
-    // Map the Supabase data structure to our RegulatoryEntry type
-    return data.map(item => {
-      return {
-        id: item.id,
-        title: item.title,
-        content: item.content,
-        category: category as RegulatoryEntry['category'],
-        source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
-        section: item.section || undefined,
-        lastUpdated: new Date(item.last_updated),
-        status: item.is_current ? 'active' : 'archived'
-      };
-    });
+    // Get all entries and filter by category
+    const allEntries = await databaseService.getAllEntries();
+    return allEntries.filter(entry => entry.category === category);
   },
   
   /**
@@ -196,17 +140,7 @@ export const databaseService = {
     
     const { data, error } = await supabase
       .from('regulatory_provisions')
-      .select(`
-        id,
-        rule_number,
-        title,
-        content,
-        chapter,
-        section,
-        last_updated,
-        is_current,
-        regulatory_categories(code)
-      `)
+      .select('*')
       .eq('id', id)
       .single();
       
@@ -215,23 +149,17 @@ export const databaseService = {
       return null;
     }
     
-    const categoryCode = data.regulatory_categories?.code || 'OTHER';
-    const categoryMapping: Record<string, RegulatoryEntry['category']> = {
-      'CH13': 'listing_rules',
-      'CH14': 'listing_rules',
-      'CH14A': 'listing_rules',
-      'TO': 'takeovers',
-      'GN': 'guidance',
-      'LD': 'decisions',
-      'CL': 'checklists',
-      'OTHER': 'other'
-    };
+    // Determine category from the chapter or rule number
+    let category: RegulatoryEntry['category'] = 'other';
+    if (data.chapter?.includes('14')) category = 'listing_rules';
+    else if (data.chapter?.includes('13')) category = 'listing_rules';
+    else if (data.rule_number?.includes('TO')) category = 'takeovers';
     
     return {
       id: data.id,
       title: data.title,
       content: data.content,
-      category: categoryMapping[categoryCode] || 'other',
+      category: category,
       source: data.chapter ? `${data.chapter} ${data.section || ''}` : 'Unknown',
       section: data.section || undefined,
       lastUpdated: new Date(data.last_updated),
@@ -305,7 +233,7 @@ export const databaseService = {
       content: data.content,
       category: entry.category,
       source: data.chapter ? `${data.chapter} ${data.section || ''}` : 'Unknown',
-      section: data.section || undefined,
+      section: entry.section || undefined,
       lastUpdated: new Date(data.last_updated),
       status: data.is_current ? 'active' : 'archived'
     };

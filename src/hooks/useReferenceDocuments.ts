@@ -10,8 +10,9 @@ export function useReferenceDocuments(category?: string) {
       try {
         console.log('Starting document fetch process for category:', category || 'all');
         
+        // Use the correct table name from the schema
         let query = supabase
-          .from('reference_documents')
+          .from('mb_listingrule_documents')
           .select('*')
           .order('created_at', { ascending: false });
         
@@ -39,8 +40,16 @@ export function useReferenceDocuments(category?: string) {
         
         // Convert the raw data to ReferenceDocument type
         const typedData = data?.map(item => ({
-          ...item,
-          category: item.category as DocumentCategory
+          id: item.id,
+          title: item.title,
+          description: item.description || '',
+          category: item.category as DocumentCategory,
+          file_path: item.file_path,
+          file_url: item.file_url,
+          file_size: item.file_size || 0,
+          file_type: item.file_type || '',
+          created_at: item.created_at,
+          metadata: item.metadata
         })) as ReferenceDocument[];
         
         console.log(`Fetch completed: ${typedData?.length || 0} documents for category "${category || 'all'}"`);

@@ -30,9 +30,9 @@ export const deleteAllDocuments = async () => {
   try {
     console.log('Attempting to delete ALL documents');
     
-    // Perform Supabase delete operation for all documents
+    // Use the correct table name from the schema
     const { error } = await supabase
-      .from('reference_documents')
+      .from('mb_listingrule_documents')
       .delete()
       .neq('id', '0'); // This will delete all records
       
@@ -65,9 +65,9 @@ const DeleteDocumentDialog: React.FC<DeleteDocumentDialogProps> = ({
       setIsDeleting(true);
       console.log('Attempting to delete document:', document.id);
       
-      // Perform Supabase delete operation
+      // Use the correct table name from the schema
       const { error } = await supabase
-        .from('reference_documents')
+        .from('mb_listingrule_documents')
         .delete()
         .eq('id', document.id);
         
