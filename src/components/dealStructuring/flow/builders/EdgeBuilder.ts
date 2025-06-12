@@ -1,11 +1,15 @@
+
 import { Edge } from '@xyflow/react';
 import { EdgeFactory } from '../factories/EdgeFactory';
+import { TransactionFlow } from '@/types/transactionFlow';
 
 export class EdgeBuilder {
   private edgeFactory: EdgeFactory;
+  private transactionData?: TransactionFlow;
 
-  constructor(edgeFactory: EdgeFactory) {
+  constructor(edgeFactory: EdgeFactory, transactionData?: TransactionFlow) {
     this.edgeFactory = edgeFactory;
+    this.transactionData = transactionData;
   }
 
   buildAllEdges(): Edge[] {
@@ -27,18 +31,21 @@ export class EdgeBuilder {
   }
 
   private buildBeforeOwnershipEdges(): Edge[] {
+    // Extract dynamic data from transaction if available
+    const beforeData = this.transactionData?.before;
+    
     return [
       this.edgeFactory.createOwnershipEdge(
         'controlling-to-acquirer',
         'controlling-shareholder',
         'acquiring-company',
-        '70%'
+        this.getShareholderPercentage(beforeData, 'controlling') || '70%'
       ),
       this.edgeFactory.createOwnershipEdge(
         'public-to-acquirer',
         'public-shareholders',
         'acquiring-company',
-        '30%'
+        this.getShareholderPercentage(beforeData, 'public') || '30%'
       ),
       this.edgeFactory.createOwnershipEdge(
         'target-shareholders-to-target',
@@ -51,24 +58,29 @@ export class EdgeBuilder {
   }
 
   private buildAfterOwnershipEdges(): Edge[] {
+    // Extract dynamic data from transaction if available
+    const afterData = this.transactionData?.after;
+    const acquisitionPercentage = this.getAcquisitionPercentage();
+    const remainingPercentage = 100 - acquisitionPercentage;
+    
     return [
       this.edgeFactory.createOwnershipEdge(
         'after-controlling-to-acquirer',
         'after-controlling-shareholder',
         'after-acquiring-company',
-        '70%'
+        this.getShareholderPercentage(afterData, 'controlling') || '70%'
       ),
       this.edgeFactory.createOwnershipEdge(
         'after-public-to-acquirer',
         'after-public-shareholders',
         'after-acquiring-company',
-        '30%'
+        this.getShareholderPercentage(afterData, 'public') || '30%'
       ),
       this.edgeFactory.createOwnershipEdge(
         'after-acquirer-to-target',
         'after-acquiring-company',
         'after-target-company',
-        '70%',
+        `${acquisitionPercentage}%`,
         '#2563eb',
         4
       ),
@@ -76,7 +88,7 @@ export class EdgeBuilder {
         'remaining-to-target',
         'remaining-target-shareholders',
         'after-target-company',
-        '30%',
+        `${remainingPercentage}%`,
         '#f59e0b'
       )
     ];
@@ -87,12 +99,14 @@ export class EdgeBuilder {
   }
 
   private buildOtherTransactionFlowEdges(): Edge[] {
+    const acquisitionPercentage = this.getAcquisitionPercentage();
+    
     return [
       this.edgeFactory.createTransactionFlowEdge(
         'transaction-flow',
         'acquiring-company',
         'transaction-details',
-        'Acquires 70%'
+        `Acquires ${acquisitionPercentage}%`
       ),
       this.edgeFactory.createTransactionFlowEdge(
         'transaction-result',
@@ -102,5 +116,27 @@ export class EdgeBuilder {
         '#7c3aed'
       )
     ];
+  }
+
+  // Helper methods to extract dynamic data
+  private getShareholderPercentage(sectionData: any, shareholderType: string): string | null {
+    if (!sectionData?.relationships) return null;
+    
+    const relationship = sectionData.relationships.find((rel: any) => 
+      rel.type === 'ownership' && 
+      rel.source?.toLowerCase().includes(shareholderType.toLowerCase())
+    );
+    
+    return relationship?.percentage ? `${relationship.percentage}%` : null;
+  }
+
+  private getAcquisitionPercentage(): number {
+    if (this.transactionData?.after?.relationships) {
+      const acquisitionRelationship = this.transactionData.after.relationships.find(
+        rel => rel.type === 'ownership' && rel.percentage
+      );
+      return acquisitionRelationship?.percentage || 70;
+    }
+    return 70; // Default fallback
   }
 }

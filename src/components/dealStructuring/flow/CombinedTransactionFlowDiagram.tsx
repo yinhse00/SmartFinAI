@@ -22,15 +22,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       return { nodes: [], edges: [] };
     }
 
-    // Initialize factories
-    const nodeFactory = new NodeFactory();
-    const edgeFactory = new EdgeFactory();
+    console.log('Building diagram with transaction data:', transactionFlow);
 
-    // Initialize builders
+    // Initialize factories with transaction data
+    const nodeFactory = new NodeFactory();
+    const edgeFactory = new EdgeFactory(transactionFlow);
+
+    // Initialize builders with transaction data
     const beforeBuilder = new BeforeSectionBuilder(nodeFactory);
     const transactionBuilder = new TransactionSectionBuilder(nodeFactory);
     const afterBuilder = new AfterSectionBuilder(nodeFactory);
-    const edgeBuilder = new EdgeBuilder(edgeFactory);
+    const edgeBuilder = new EdgeBuilder(edgeFactory, transactionFlow);
 
     // Build all nodes
     const allNodes: Node[] = [
@@ -39,11 +41,22 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       ...afterBuilder.buildAfterSection()
     ];
 
-    // Build all edges
+    // Build all edges with dynamic data
     const allEdges: Edge[] = edgeBuilder.buildAllEdges();
+
+    console.log('Generated nodes:', allNodes.length);
+    console.log('Generated edges:', allEdges.length);
 
     return { nodes: allNodes, edges: allEdges };
   }, [transactionFlow]);
+
+  if (!transactionFlow) {
+    return (
+      <div className="h-full w-full flex items-center justify-center text-gray-500">
+        <p>No transaction data available</p>
+      </div>
+    );
+  }
 
   return (
     <div className="h-full w-full relative">

@@ -1,8 +1,14 @@
 
 import { Edge, MarkerType } from '@xyflow/react';
+import { TransactionFlow } from '@/types/transactionFlow';
 
 export class EdgeFactory {
   private edges: Edge[] = [];
+  private transactionData?: TransactionFlow;
+
+  constructor(transactionData?: TransactionFlow) {
+    this.transactionData = transactionData;
+  }
 
   createOwnershipEdge(
     id: string,
@@ -67,6 +73,10 @@ export class EdgeFactory {
   }
 
   createBidirectionalTransactionEdges(): Edge[] {
+    // Extract dynamic values from transaction data
+    const sharePercentage = this.getAcquisitionPercentage();
+    const considerationAmount = this.getConsiderationAmount();
+    
     return [
       // Share transfer: from target shareholders to acquiring company
       {
@@ -79,7 +89,7 @@ export class EdgeFactory {
           strokeWidth: 3,
           strokeDasharray: '8,4'
         },
-        label: '70% Shares',
+        label: `${sharePercentage}% Shares`,
         labelStyle: {
           fontSize: '12px',
           fontWeight: 'bold',
@@ -105,7 +115,7 @@ export class EdgeFactory {
           strokeWidth: 3,
           strokeDasharray: '8,4'
         },
-        label: 'HK$1,000M Cash',
+        label: considerationAmount,
         labelStyle: {
           fontSize: '12px',
           fontWeight: 'bold',
@@ -152,6 +162,31 @@ export class EdgeFactory {
       labelBgBorderRadius: 4,
       labelBgPadding: [2, 6]
     };
+  }
+
+  // Helper methods to extract dynamic data
+  private getAcquisitionPercentage(): number {
+    // Try to find acquisition percentage from transaction data
+    if (this.transactionData?.after?.relationships) {
+      const acquisitionRelationship = this.transactionData.after.relationships.find(
+        rel => rel.type === 'ownership' && rel.percentage
+      );
+      return acquisitionRelationship?.percentage || 70;
+    }
+    return 70; // Default fallback
+  }
+
+  private getConsiderationAmount(): string {
+    // Try to find consideration amount from transaction data
+    if (this.transactionData?.after?.relationships) {
+      const considerationRelationship = this.transactionData.after.relationships.find(
+        rel => rel.type === 'consideration' && rel.value
+      );
+      if (considerationRelationship?.value) {
+        return `HK$${considerationRelationship.value.toLocaleString()}M`;
+      }
+    }
+    return 'HK$1,000M'; // Default fallback
   }
 
   getEdges(): Edge[] {
