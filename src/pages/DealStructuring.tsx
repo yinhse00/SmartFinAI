@@ -1,11 +1,9 @@
-
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { DealStructuringDashboard } from '@/components/dealStructuring/DealStructuringDashboard';
 import { enhancedAiAnalysisService, EnhancedAnalysisResult } from '@/services/dealStructuring/enhancedAiAnalysisService';
-import { optimizationEngine, OptimizationParameters } from '@/services/dealStructuring/optimizationEngine';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
@@ -24,61 +22,42 @@ const DealStructuring = () => {
     description: string;
     uploadedFiles: File[];
     extractedContent?: string[];
-    optimizationParameters?: OptimizationParameters;
   }) => {
     setIsAnalyzing(true);
     try {
       // Convert the input data to TransactionAnalysisRequest format
       const request = {
-        transactionType: data.optimizationParameters ? 'Enhanced Transaction Analysis' : 'Transaction Analysis',
+        transactionType: 'Transaction Analysis', // Default type
         description: data.description,
         documents: data.uploadedFiles,
-        additionalContext: data.extractedContent?.join('\n\n'),
-        // Extract amount from description or use default
-        amount: optimizationEngine.extractAmountFromDescription(data.description) || 50000000
+        additionalContext: data.extractedContent?.join('\n\n')
       };
 
-      // Use the enhanced analysis method with optimization parameters
-      const enhancedResult = await enhancedAiAnalysisService.analyzeTransactionWithValidation(
-        request, 
-        data.optimizationParameters
-      );
-      
+      // Use the enhanced analysis method with validation and reconciliation
+      const enhancedResult = await enhancedAiAnalysisService.analyzeTransactionWithValidation(request);
       setAnalysisResults(enhancedResult.results);
       setEnhancedResults(enhancedResult);
       setCurrentStep('analysis');
 
-      // Enhanced quality report with optimization context
+      // Show analysis quality report
       const qualityReport = enhancedAiAnalysisService.getAnalysisQualityReport(enhancedResult);
-      const optimizationScore = (enhancedResult.optimization.recommendedStructure.optimizationScore * 100).toFixed(1);
-      
       let toastVariant: 'default' | 'destructive' = 'default';
-      let toastTitle = `Analysis Complete - ${optimizationScore}% Optimized`;
-      let toastDescription = `Structure optimized for ${enhancedResult.optimizationParameters.priority} with ${qualityReport.overallQuality} quality rating`;
-      
-      if (enhancedResult.optimization.recommendedStructure.optimizationScore >= 0.95) {
-        toastTitle = `Exceptional Optimization - ${optimizationScore}%`;
-        toastDescription = "Structure achieves near-perfect alignment with your requirements";
-      } else if (enhancedResult.optimization.recommendedStructure.optimizationScore >= 0.85) {
-        toastTitle = `Strong Optimization - ${optimizationScore}%`;
-        toastDescription = `Structure strongly aligned with ${enhancedResult.optimizationParameters.priority} priority`;
-      }
+      let toastTitle = "Analysis Complete";
+      let toastDescription = `Analysis quality: ${qualityReport.overallQuality}`;
       
       if (qualityReport.reconciliationNeeded) {
-        toastDescription += " (Data reconciled for optimal results)";
+        toastVariant = 'default';
+        toastTitle = "Analysis Complete (Data Reconciled)";
+        toastDescription = "Analysis completed with data reconciliation to match your inputs.";
       }
-      
       if (qualityReport.overallQuality === 'poor') {
         toastVariant = 'destructive';
-        toastDescription = "Analysis completed but optimization may be limited by available data.";
+        toastDescription = "Analysis completed but may not be fully accurate. Consider providing more specific details.";
       }
       
-      // Add key optimization insight to toast
+      // Add optimization insights to toast
       if (enhancedResult.optimization.optimizationInsights.length > 0) {
-        const keyInsight = enhancedResult.optimization.optimizationInsights[0];
-        if (keyInsight.length <= 80) {
-          toastDescription += ` Key insight: ${keyInsight}`;
-        }
+        toastDescription += ` Key insight: ${enhancedResult.optimization.optimizationInsights[0]}`;
       }
       
       toast({
@@ -87,16 +66,14 @@ const DealStructuring = () => {
         variant: toastVariant
       });
 
-      // Enhanced logging for debugging
-      console.log('Optimization score achieved:', optimizationScore + '%');
-      console.log('Optimization parameters used:', enhancedResult.optimizationParameters);
-      console.log('Dynamic weights applied:', enhancedResult.optimization.parameterAnalysis);
-      console.log('Market intelligence quality:', qualityReport.marketDataQuality);
+      // Log quality report for debugging
+      console.log('Analysis quality report:', qualityReport);
+      console.log('Optimization results:', enhancedResult.optimization);
     } catch (error) {
       console.error('Analysis error:', error);
       toast({
         title: "Analysis Failed",
-        description: "Unable to analyze transaction. Please try again with more details.",
+        description: "Unable to analyze transaction. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -155,10 +132,9 @@ const DealStructuring = () => {
           {currentStep === 'input' && (
             <>
               <p className="text-base text-gray-600 dark:text-gray-300 mb-4 max-w-4xl px-0 mx-0 font-normal">
-                Get intelligent advisory for capital raising and M&A transactions with advanced AI optimization. 
-                Our enhanced engine analyzes your requirements and documents to provide professional-grade structuring 
-                advice with dynamic optimization scoring up to 100%, real-time market intelligence, and personalized 
-                recommendations based on your specific priorities and constraints.
+                Get intelligent advisory for capital raising and M&A transactions. Our AI analyzes your requirements 
+                and documents to provide professional-grade structuring advice, cost analysis, regulatory compliance 
+                guidance, and execution timetables with real-time market intelligence and optimization.
               </p>
 
               {/* Feature Overview Cards - Compact Grid */}
@@ -194,14 +170,9 @@ const DealStructuring = () => {
             <div className="space-y-6">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-4">
-                  <h2 className="text-2xl font-bold">Optimized Transaction Analysis Dashboard</h2>
+                  <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
                   {enhancedResults && (
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center text-blue-600 text-sm font-medium">
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        {(enhancedResults.optimization.recommendedStructure.optimizationScore * 100).toFixed(1)}% Optimized
-                      </div>
-                      
                       {enhancedResults.reconciliation.reconciliationApplied ? (
                         <div className="flex items-center text-orange-600 text-sm">
                           <AlertTriangle className="h-4 w-4 mr-1" />
@@ -215,9 +186,9 @@ const DealStructuring = () => {
                       ) : null}
                       
                       {enhancedResults.optimization.marketIntelligence.precedentTransactions.length > 0 && (
-                        <div className="flex items-center text-purple-600 text-sm">
-                          <Brain className="h-4 w-4 mr-1" />
-                          {enhancedResults.optimization.marketIntelligence.precedentTransactions.length} Precedents
+                        <div className="flex items-center text-blue-600 text-sm">
+                          <TrendingUp className="h-4 w-4 mr-1" />
+                          Market Data: {enhancedResults.optimization.marketIntelligence.precedentTransactions.length} precedents
                         </div>
                       )}
                     </div>
@@ -227,16 +198,6 @@ const DealStructuring = () => {
                   New Analysis
                 </button>
               </div>
-              
-              {enhancedResults && (
-                <div className="text-sm text-gray-600 mb-4">
-                  Optimized for: <span className="font-medium capitalize">{enhancedResults.optimizationParameters.priority}</span> • 
-                  Risk: <span className="font-medium capitalize">{enhancedResults.optimizationParameters.riskTolerance}</span> • 
-                  Timeline: <span className="font-medium capitalize">{enhancedResults.optimizationParameters.timeConstraints}</span> • 
-                  Budget: <span className="font-medium capitalize">{enhancedResults.optimizationParameters.budgetConstraints}</span>
-                </div>
-              )}
-              
               <DealStructuringDashboard 
                 results={analysisResults} 
                 onResultsUpdate={handleResultsUpdate}

@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow } from '@/types/transactionFlow';
 import { transactionDataValidator } from './transactionDataValidator';
@@ -274,8 +275,7 @@ export class TransactionFlowConverter {
         id: 'optimization-insights',
         name: `Optimization: ${optimizationResult.optimizationInsights[0].substring(0, 50)}...`,
         type: 'consideration' as const,
-        value: considerationAmount,
-        currency: 'HKD'
+        description: optimizationResult.recommendedStructure.name
       });
     }
 

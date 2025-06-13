@@ -1,3 +1,4 @@
+
 import { aiAnalysisService, TransactionAnalysisRequest } from './aiAnalysisService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
@@ -14,7 +15,6 @@ export interface EnhancedAnalysisResult {
     reconciliationApplied: boolean;
     changes: string[];
   };
-  optimizationParameters: OptimizationParameters;
 }
 
 export interface AnalysisQualityReport {
@@ -36,7 +36,7 @@ export const enhancedAiAnalysisService = {
     request: TransactionAnalysisRequest,
     optimizationParams?: OptimizationParameters
   ): Promise<EnhancedAnalysisResult> => {
-    console.log('Starting enhanced transaction analysis with dynamic optimization...');
+    console.log('Starting enhanced transaction analysis with optimization...');
     
     try {
       // Step 1: Input validation
@@ -45,36 +45,35 @@ export const enhancedAiAnalysisService = {
       // Step 2: Get basic AI analysis
       const basicResults = await aiAnalysisService.analyzeTransaction(request);
       
-      // Step 3: Generate optimization parameters from user input or defaults
-      const finalOptimizationParams = optimizationParams || 
-        enhancedAiAnalysisService.generateDefaultOptimizationParams(request, basicResults);
+      // Step 3: Apply optimization if parameters provided
+      let optimization: OptimizationResult | null = null;
+      if (optimizationParams) {
+        optimization = await optimizationEngine.optimizeStructure(request, optimizationParams);
+      } else {
+        // Use default optimization parameters based on analysis
+        const defaultParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, basicResults);
+        optimization = await optimizationEngine.optimizeStructure(request, defaultParams);
+      }
       
-      // Step 4: Apply optimization with dynamic parameters
-      const optimization = await optimizationEngine.optimizeStructure(request, finalOptimizationParams);
-      
-      // Step 5: Reconcile AI results with optimization
+      // Step 4: Reconcile AI results with optimization
       const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization);
       
       return {
         results: reconciledResults,
         optimization,
         inputValidation,
-        reconciliation,
-        optimizationParameters: finalOptimizationParams
+        reconciliation
       };
     } catch (error) {
       console.error('Enhanced analysis error:', error);
       
       // Fallback to basic analysis
       const basicResults = await aiAnalysisService.analyzeTransaction(request);
-      const fallbackParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, basicResults);
-      
       return {
         results: basicResults,
         optimization: enhancedAiAnalysisService.createFallbackOptimization(),
         inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
-        reconciliation: { reconciliationApplied: false, changes: [] },
-        optimizationParameters: fallbackParams
+        reconciliation: { reconciliationApplied: false, changes: [] }
       };
     }
   },
@@ -116,69 +115,42 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Enhanced default optimization parameters based on analysis
+   * Generate default optimization parameters based on analysis
    */
   generateDefaultOptimizationParams: (request: TransactionAnalysisRequest, results: AnalysisResults): OptimizationParameters => {
+    // Analyze transaction characteristics to determine default priorities
     const description = request.description.toLowerCase();
     const amount = request.amount || 0;
     
     let priority: OptimizationParameters['priority'] = 'control';
     let riskTolerance: OptimizationParameters['riskTolerance'] = 'medium';
     let timeConstraints: OptimizationParameters['timeConstraints'] = 'normal';
-    let budgetConstraints: OptimizationParameters['budgetConstraints'] = 'moderate';
-    let marketConditions: OptimizationParameters['marketConditions'] = 'neutral';
     
-    // Enhanced priority detection
-    if (description.includes('urgent') || description.includes('time-sensitive') || description.includes('asap')) {
+    // Determine priority based on transaction type and description
+    if (description.includes('urgent') || description.includes('time-sensitive')) {
       priority = 'speed';
       timeConstraints = 'urgent';
-    } else if (description.includes('cost') || description.includes('budget') || description.includes('cheap') || amount < 50000000) {
+    } else if (description.includes('cost') || description.includes('budget') || amount < 50000000) {
       priority = 'cost';
-      budgetConstraints = amount < 20000000 ? 'tight' : 'moderate';
-    } else if (description.includes('regulatory') || description.includes('compliance') || description.includes('safe') || description.includes('conservative')) {
+    } else if (description.includes('regulatory') || description.includes('compliance')) {
       priority = 'regulatory_certainty';
       riskTolerance = 'low';
-    } else if (description.includes('flexible') || description.includes('option')) {
-      priority = 'flexibility';
     }
     
-    // Risk tolerance detection
-    if (description.includes('conservative') || description.includes('safe') || description.includes('low risk')) {
-      riskTolerance = 'low';
-    } else if (description.includes('aggressive') || description.includes('high risk') || description.includes('bold')) {
-      riskTolerance = 'high';
-    }
-    
-    // Market conditions detection
-    if (description.includes('favorable') || description.includes('bull market') || description.includes('good timing')) {
-      marketConditions = 'favorable';
-    } else if (description.includes('challenging') || description.includes('bear market') || description.includes('difficult')) {
-      marketConditions = 'challenging';
-    }
-    
-    // Enhanced strategic objectives extraction
+    // Extract strategic objectives from description
     const strategicObjectives: string[] = [];
-    if (description.includes('control') || description.includes('majority')) strategicObjectives.push('control retention');
-    if (description.includes('synergy') || description.includes('synergies')) strategicObjectives.push('synergy realization');
-    if (description.includes('market') || description.includes('expansion')) strategicObjectives.push('market expansion');
-    if (description.includes('cost saving') || description.includes('efficiency')) strategicObjectives.push('cost minimization');
-    if (description.includes('speed') || description.includes('quick')) strategicObjectives.push('speed optimization');
-    if (description.includes('regulatory') || description.includes('compliance')) strategicObjectives.push('regulatory certainty');
-    if (description.includes('flexible') || description.includes('option')) strategicObjectives.push('flexibility maximization');
-    if (description.includes('timing') || description.includes('market window')) strategicObjectives.push('market timing');
-    
-    // Default objectives if none detected
-    if (strategicObjectives.length === 0) {
-      strategicObjectives.push('value creation', 'stakeholder satisfaction');
-    }
+    if (description.includes('control')) strategicObjectives.push('control');
+    if (description.includes('synergy')) strategicObjectives.push('synergies');
+    if (description.includes('market')) strategicObjectives.push('market expansion');
+    if (description.includes('cost saving')) strategicObjectives.push('cost savings');
     
     return {
       priority,
       riskTolerance,
       timeConstraints,
-      budgetConstraints,
-      strategicObjectives,
-      marketConditions
+      budgetConstraints: amount > 100000000 ? 'flexible' : 'moderate',
+      strategicObjectives: strategicObjectives.length > 0 ? strategicObjectives : ['value creation'],
+      marketConditions: 'neutral'
     };
   },
 
@@ -271,64 +243,41 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Enhanced quality report with optimization parameter context
+   * Generate quality report for analysis
    */
   getAnalysisQualityReport: (enhancedResult: EnhancedAnalysisResult): AnalysisQualityReport => {
     let overallQuality: AnalysisQualityReport['overallQuality'] = 'good';
     let optimizationConfidence = enhancedResult.optimization.recommendedStructure.optimizationScore;
     let marketDataQuality: AnalysisQualityReport['marketDataQuality'] = 'medium';
     
-    // Enhanced market data quality assessment
+    // Assess market data quality
     const precedentCount = enhancedResult.optimization.marketIntelligence.precedentTransactions.length;
     if (precedentCount >= 3) {
       marketDataQuality = 'high';
-      optimizationConfidence *= 1.05; // Boost confidence with good market data
     } else if (precedentCount === 0) {
       marketDataQuality = 'low';
-      optimizationConfidence *= 0.9; // Reduce confidence without market data
+      optimizationConfidence *= 0.8;
     }
     
-    // Assessment based on optimization score
-    if (optimizationConfidence >= 0.95) {
-      overallQuality = 'excellent';
-    } else if (optimizationConfidence >= 0.85) {
-      overallQuality = 'good';
-    } else if (optimizationConfidence >= 0.75) {
+    // Assess overall quality
+    if (!enhancedResult.inputValidation.isValid) {
       overallQuality = 'fair';
-    } else {
-      overallQuality = 'poor';
     }
     
-    // Input validation impact
-    if (!enhancedResult.inputValidation.isValid && overallQuality === 'excellent') {
-      overallQuality = 'good';
-    }
-    
-    // Reconciliation impact
     if (enhancedResult.reconciliation.reconciliationApplied && enhancedResult.reconciliation.changes.length > 3) {
-      if (overallQuality === 'excellent') overallQuality = 'good';
-      if (overallQuality === 'good') overallQuality = 'fair';
+      overallQuality = 'fair';
+    }
+    
+    if (optimizationConfidence > 0.8 && marketDataQuality === 'high' && enhancedResult.inputValidation.isValid) {
+      overallQuality = 'excellent';
     }
     
     const recommendations: string[] = [];
-    
-    // Optimization-specific recommendations
-    if (optimizationConfidence < 0.85) {
-      recommendations.push('Consider refining optimization preferences for better structural alignment');
-    }
-    
     if (marketDataQuality === 'low') {
-      recommendations.push('More specific transaction details would enable better market benchmarking');
+      recommendations.push('Consider providing more specific transaction details for better market benchmarking');
     }
-    
     if (!enhancedResult.inputValidation.isValid) {
       recommendations.push(...enhancedResult.inputValidation.suggestions);
-    }
-    
-    // Parameter-specific recommendations
-    const params = enhancedResult.optimizationParameters;
-    if (params.strategicObjectives.length < 2) {
-      recommendations.push('Consider specifying additional strategic objectives for more comprehensive optimization');
     }
     
     return {
