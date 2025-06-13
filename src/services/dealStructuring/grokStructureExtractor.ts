@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { EnhancedTransactionEntity, EnhancedTransactionRelationship, EnhancedTransactionFlow } from '@/types/enhancedTransactionFlow';
 
@@ -18,7 +17,7 @@ export class GrokStructureExtractor {
     const beforeHierarchy = this.buildCorporateHierarchy(beforeEntities, beforeRelationships);
     const afterHierarchy = this.buildCorporateHierarchy(afterEntities, afterRelationships);
 
-    // Extract transaction steps from timeline
+    // Extract transaction steps from timetable
     const transactionSteps = this.extractTransactionSteps(results);
 
     // Calculate key metrics
@@ -191,13 +190,13 @@ export class GrokStructureExtractor {
   private extractTransactionSteps(results: AnalysisResults): any[] {
     const steps = [];
     
-    if (results.timeline?.milestones) {
-      results.timeline.milestones.forEach((milestone, index) => {
+    if (results.timetable?.keyMilestones) {
+      results.timetable.keyMilestones.forEach((milestone, index) => {
         steps.push({
           id: `step-${index + 1}`,
-          title: milestone.milestone,
-          description: milestone.description || milestone.milestone,
-          timing: milestone.timeframe || 'TBD',
+          title: milestone.event,
+          description: milestone.description || milestone.event,
+          timing: milestone.date || 'TBD',
           entities: [], // Will be populated based on step analysis
           relationships: [],
           considerations: results.costs?.total ? [{
