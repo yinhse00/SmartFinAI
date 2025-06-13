@@ -1,206 +1,283 @@
 
-import { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Upload, FileText, Loader2, Sparkles } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Brain, Upload, TrendingUp, FileText } from 'lucide-react';
+import { useFileUpload } from '@/hooks/useFileUpload';
+import { fileProcessingService } from '@/services/documents/fileProcessingService';
+import { OptimizationPreferences } from './OptimizationPreferences';
+import { OptimizationParameters } from '@/services/dealStructuring/optimizationEngine';
 
 interface EnhancedTransactionInputProps {
   onAnalyze: (data: {
     description: string;
     uploadedFiles: File[];
     extractedContent?: string[];
+    optimizationParameters?: OptimizationParameters;
   }) => void;
-  isAnalyzing?: boolean;
+  isAnalyzing: boolean;
 }
 
-export const EnhancedTransactionInput = ({ onAnalyze, isAnalyzing = false }: EnhancedTransactionInputProps) => {
+export const EnhancedTransactionInput: React.FC<EnhancedTransactionInputProps> = ({
+  onAnalyze,
+  isAnalyzing
+}) => {
   const [description, setDescription] = useState('');
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const { toast } = useToast();
+  const [transactionType, setTransactionType] = useState('');
+  const [amount, setAmount] = useState('');
+  const [currency, setCurrency] = useState('HKD');
+  
+  // Default optimization parameters
+  const [optimizationParams, setOptimizationParams] = useState<OptimizationParameters>({
+    priority: 'control',
+    riskTolerance: 'medium',
+    timeConstraints: 'normal',
+    budgetConstraints: 'moderate',
+    strategicObjectives: ['value creation'],
+    marketConditions: 'neutral'
+  });
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
+  const {
+    files,
+    uploadFile,
+    removeFile,
+    isUploading,
+    uploadProgress
+  } = useFileUpload();
+
+  const [extractedContent, setExtractedContent] = useState<string[]>([]);
+
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const selectedFiles = Array.from(event.target.files || []);
     
-    const files = Array.from(e.dataTransfer.files);
-    const validFiles = files.filter(file => {
-      const validTypes = [
-        'application/pdf',
-        'application/msword',
-        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'application/vnd.ms-excel',
-        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        'text/plain'
-      ];
-      return validTypes.includes(file.type);
-    });
-
-    if (validFiles.length !== files.length) {
-      toast({
-        title: "Invalid file types",
-        description: "Only PDF, Word, Excel, and text files are supported.",
-        variant: "destructive"
-      });
-    }
-
-    setUploadedFiles(prev => [...prev, ...validFiles]);
-  }, [toast]);
-
-  const handleDragOver = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  }, []);
-
-  const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const files = Array.from(e.target.files);
-      setUploadedFiles(prev => [...prev, ...files]);
+    for (const file of selectedFiles) {
+      await uploadFile(file);
+      
+      // Extract content from uploaded files
+      try {
+        const content = await fileProcessingService.processFile(file);
+        if (content.content) {
+          setExtractedContent(prev => [...prev, content.content]);
+        }
+      } catch (error) {
+        console.error('Error processing file:', error);
+      }
     }
   };
 
-  const removeFile = (index: number) => {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleSubmit = () => {
-    if (!description.trim() && uploadedFiles.length === 0) {
-      toast({
-        title: "Input required",
-        description: "Please provide either a transaction description or upload documents.",
-        variant: "destructive"
-      });
-      return;
+  const handleAnalyze = () => {
+    // Build enhanced description with transaction details
+    let enhancedDescription = description;
+    
+    if (transactionType) {
+      enhancedDescription = `Transaction Type: ${transactionType}\n\n${enhancedDescription}`;
+    }
+    
+    if (amount) {
+      enhancedDescription = `Transaction Amount: ${currency} ${amount}\n\n${enhancedDescription}`;
     }
 
     onAnalyze({
-      description,
-      uploadedFiles
+      description: enhancedDescription,
+      uploadedFiles: files,
+      extractedContent,
+      optimizationParameters: optimizationParams
     });
   };
 
+  const isReadyToAnalyze = description.trim().length > 20;
+
   return (
-    <Card className="w-full">
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-lg">
-          <Sparkles className="h-4 w-4 text-primary" />
-          AI-Powered Transaction Advisory
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Transaction Description */}
-        <div className="space-y-2">
-          <Label htmlFor="description" className="text-sm">Transaction Description</Label>
-          <Textarea
-            id="description"
-            placeholder="Describe your transaction requirements in natural language. For example: 'We are planning a HK$500 million rights issue for our listed company. The company has 1 billion shares outstanding with a market cap of HK$8 billion. We need to raise funds for expansion and debt refinancing. The transaction should be completed within 3 months.'"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            rows={4}
-            className="resize-none text-sm"
-          />
-        </div>
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Brain className="h-6 w-6 text-primary" />
+            Enhanced Transaction Analysis & Optimization
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="basic" className="flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Basic Details
+              </TabsTrigger>
+              <TabsTrigger value="documents" className="flex items-center gap-2">
+                <Upload className="h-4 w-4" />
+                Documents
+              </TabsTrigger>
+              <TabsTrigger value="optimization" className="flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" />
+                Optimization
+              </TabsTrigger>
+            </TabsList>
 
-        {/* Document Upload */}
-        <div className="space-y-3">
-          <Label className="text-sm">Upload Transaction Documents (Optional)</Label>
-          
-          {/* Drag & Drop Zone - Compact */}
-          <div
-            className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
-              isDragOver 
-                ? 'border-primary bg-primary/5' 
-                : 'border-gray-300 hover:border-gray-400'
-            }`}
-            onDrop={handleDrop}
-            onDragOver={handleDragOver}
-            onDragLeave={handleDragLeave}
-          >
-            <Upload className="h-8 w-8 mx-auto text-gray-400 mb-2" />
-            <p className="text-sm font-medium text-gray-900 dark:text-white mb-1">
-              Drop your documents here
-            </p>
-            <p className="text-xs text-gray-500 mb-2">
-              or click to browse files
-            </p>
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
-              onChange={handleFileInput}
-              className="hidden"
-              id="file-upload"
-            />
-            <label htmlFor="file-upload">
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                Browse Files
-              </Button>
-            </label>
-            <p className="text-xs text-gray-400 mt-1">
-              Supports: PDF, Word, Excel, Text files
-            </p>
-          </div>
+            <TabsContent value="basic" className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="transaction-type">Transaction Type</Label>
+                  <Select value={transactionType} onValueChange={setTransactionType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select transaction type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="merger">Merger</SelectItem>
+                      <SelectItem value="acquisition">Acquisition</SelectItem>
+                      <SelectItem value="rights-issue">Rights Issue</SelectItem>
+                      <SelectItem value="open-offer">Open Offer</SelectItem>
+                      <SelectItem value="takeover-offer">Takeover Offer</SelectItem>
+                      <SelectItem value="spin-off">Spin-off</SelectItem>
+                      <SelectItem value="ipo">IPO</SelectItem>
+                      <SelectItem value="capital-reorganization">Capital Reorganization</SelectItem>
+                      <SelectItem value="other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          {/* Uploaded Files List */}
-          {uploadedFiles.length > 0 && (
-            <div className="space-y-2">
-              <Label className="text-sm">Uploaded Documents</Label>
-              <div className="max-h-20 overflow-y-auto space-y-1">
-                {uploadedFiles.map((file, index) => (
-                  <div key={index} className="flex items-center justify-between p-2 border rounded-lg">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4 text-blue-500" />
-                      <div>
-                        <p className="font-medium text-sm">{file.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(file.size / 1024 / 1024).toFixed(2)} MB
-                        </p>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => removeFile(index)}
-                      className="text-xs"
-                    >
-                      Remove
-                    </Button>
+                <div className="space-y-2">
+                  <Label htmlFor="amount">Transaction Value</Label>
+                  <div className="flex gap-2">
+                    <Select value={currency} onValueChange={setCurrency}>
+                      <SelectTrigger className="w-24">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="HKD">HKD</SelectItem>
+                        <SelectItem value="USD">USD</SelectItem>
+                        <SelectItem value="RMB">RMB</SelectItem>
+                        <SelectItem value="EUR">EUR</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="amount"
+                      placeholder="e.g., 100000000"
+                      value={amount}
+                      onChange={(e) => setAmount(e.target.value)}
+                      type="number"
+                    />
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
-        </div>
 
-        {/* Analyze Button */}
-        <div className="flex justify-end pt-2">
-          <Button 
-            onClick={handleSubmit}
-            disabled={isAnalyzing || (!description.trim() && uploadedFiles.length === 0)}
-            className="flex items-center space-x-2"
-          >
-            {isAnalyzing ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span>Analyzing...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="h-4 w-4" />
-                <span>Analyze with AI</span>
-              </>
+              <div className="space-y-2">
+                <Label htmlFor="description">Transaction Description</Label>
+                <Textarea
+                  id="description"
+                  placeholder="Describe your transaction in detail. Include objectives, constraints, timeline requirements, and any specific considerations..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={8}
+                  className="resize-none"
+                />
+                <div className="text-sm text-gray-500">
+                  {description.length}/500+ characters recommended for comprehensive analysis
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="documents" className="space-y-4">
+              <div className="space-y-4">
+                <div>
+                  <Label>Upload Supporting Documents</Label>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Upload term sheets, agreements, financial statements, or other relevant documents
+                  </p>
+                  
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                    <input
+                      type="file"
+                      multiple
+                      accept=".pdf,.doc,.docx,.txt,.csv,.xlsx"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                      <p className="text-lg font-medium text-gray-700">Click to upload files</p>
+                      <p className="text-sm text-gray-500">PDF, Word, Excel, or text files</p>
+                    </label>
+                  </div>
+                </div>
+
+                {files.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Uploaded Files</Label>
+                    {files.map((file, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div>
+                          <p className="font-medium">{file.name}</p>
+                          <p className="text-sm text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeFile(index)}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {extractedContent.length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Extracted Content Preview</Label>
+                    <div className="max-h-32 overflow-y-auto p-3 bg-gray-50 rounded-lg text-sm">
+                      {extractedContent.map((content, index) => (
+                        <div key={index} className="mb-2">
+                          <strong>Document {index + 1}:</strong> {content.substring(0, 200)}...
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="optimization">
+              <OptimizationPreferences
+                preferences={optimizationParams}
+                onPreferencesChange={setOptimizationParams}
+              />
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6 pt-4 border-t">
+            <Button
+              onClick={handleAnalyze}
+              disabled={!isReadyToAnalyze || isAnalyzing || isUploading}
+              className="w-full"
+              size="lg"
+            >
+              {isAnalyzing ? (
+                <>
+                  <Brain className="mr-2 h-4 w-4 animate-spin" />
+                  Analyzing with AI Optimization...
+                </>
+              ) : (
+                <>
+                  <Brain className="mr-2 h-4 w-4" />
+                  Analyze & Optimize Transaction
+                </>
+              )}
+            </Button>
+            
+            {!isReadyToAnalyze && (
+              <p className="text-sm text-gray-500 text-center mt-2">
+                Please provide a detailed transaction description to begin analysis
+              </p>
             )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
