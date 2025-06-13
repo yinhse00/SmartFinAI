@@ -46,37 +46,25 @@ const EnhancedTransactionEdge: React.FC<EnhancedTransactionEdgeProps> = ({
     
     switch (rel.type) {
       case 'ownership':
+        // Solid lines for ownership
         return { 
-          stroke: '#2563eb', 
-          strokeWidth: Math.max(2, Math.min(6, (rel.percentage || 20) / 10)),
-          strokeOpacity: 0.8
+          stroke: '#1f2937', 
+          strokeWidth: Math.max(2, Math.min(4, (rel.percentage || 20) / 15)),
+          strokeOpacity: 1
         };
       case 'consideration':
+        // Dotted lines for transaction terms
         return { 
-          stroke: '#eab308', 
-          strokeWidth: 4, 
-          strokeDasharray: '8,4',
-          strokeOpacity: 0.9
+          stroke: '#dc2626', 
+          strokeWidth: 3, 
+          strokeDasharray: '6,6',
+          strokeOpacity: 0.8
         };
       case 'control':
         return { 
-          stroke: '#dc2626', 
-          strokeWidth: 3,
-          strokeDasharray: '12,3',
-          strokeOpacity: 0.8
-        };
-      case 'management':
-        return { 
-          stroke: '#7c3aed', 
+          stroke: '#7c2d12', 
           strokeWidth: 2,
-          strokeDasharray: '6,6',
-          strokeOpacity: 0.7
-        };
-      case 'voting':
-        return { 
-          stroke: '#059669', 
-          strokeWidth: 2,
-          strokeDasharray: '4,4,12,4',
+          strokeDasharray: '8,4',
           strokeOpacity: 0.8
         };
       default:
@@ -88,21 +76,25 @@ const EnhancedTransactionEdge: React.FC<EnhancedTransactionEdgeProps> = ({
     if (!data?.relationship) return '';
 
     const rel = data.relationship;
-    const parts = [];
 
-    if (rel.percentage) {
-      parts.push(`${rel.percentage.toFixed(1)}%`);
+    if (rel.type === 'ownership' && rel.percentage) {
+      // Show percentage on ownership lines
+      return `${rel.percentage.toFixed(1)}%`;
     }
 
-    if (rel.value && rel.currency) {
-      parts.push(`${rel.currency} ${(rel.value / 1000000).toFixed(0)}M`);
+    if (rel.type === 'consideration') {
+      // Show consideration amount and terms on dotted lines
+      const parts = [];
+      if (rel.value && rel.currency) {
+        parts.push(`${rel.currency} ${(rel.value / 1000000).toFixed(0)}M`);
+      }
+      if (rel.paymentMethod) {
+        parts.push(rel.paymentMethod);
+      }
+      return parts.join(' • ');
     }
 
-    if (rel.terms && rel.type === 'consideration') {
-      parts.push(rel.paymentMethod || 'Cash');
-    }
-
-    return parts.join(' • ');
+    return '';
   };
 
   const getLabelStyle = () => {
@@ -113,39 +105,26 @@ const EnhancedTransactionEdge: React.FC<EnhancedTransactionEdgeProps> = ({
     switch (rel.type) {
       case 'ownership':
         return {
-          backgroundColor: '#dbeafe',
-          color: '#1e40af',
-          borderColor: '#2563eb'
+          backgroundColor: '#f8fafc',
+          color: '#1f2937',
+          borderColor: '#e2e8f0',
+          fontWeight: '600',
+          fontSize: '12px'
         };
       case 'consideration':
         return {
-          backgroundColor: '#fef3c7',
-          color: '#92400e',
-          borderColor: '#eab308'
-        };
-      case 'control':
-        return {
-          backgroundColor: '#fecaca',
+          backgroundColor: '#fef2f2',
           color: '#991b1b',
-          borderColor: '#dc2626'
-        };
-      case 'management':
-        return {
-          backgroundColor: '#e0e7ff',
-          color: '#5b21b6',
-          borderColor: '#7c3aed'
-        };
-      case 'voting':
-        return {
-          backgroundColor: '#d1fae5',
-          color: '#065f46',
-          borderColor: '#059669'
+          borderColor: '#dc2626',
+          fontWeight: '500',
+          fontSize: '11px'
         };
       default:
         return {
           backgroundColor: '#f3f4f6',
           color: '#374151',
-          borderColor: '#6b7280'
+          borderColor: '#6b7280',
+          fontSize: '11px'
         };
     }
   };
@@ -166,25 +145,18 @@ const EnhancedTransactionEdge: React.FC<EnhancedTransactionEdgeProps> = ({
             style={{
               position: 'absolute',
               transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-              fontSize: '11px',
-              fontWeight: 600,
-              padding: '3px 8px',
-              borderRadius: '6px',
+              padding: '2px 6px',
+              borderRadius: '4px',
               border: `1px solid ${labelStyle.borderColor}`,
               ...labelStyle,
-              maxWidth: '120px',
               textAlign: 'center',
               lineHeight: '1.2',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+              boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+              whiteSpace: 'nowrap'
             }}
             className="nodrag nopan"
           >
             {label}
-            {data?.relationship.timing && (
-              <div style={{ fontSize: '9px', opacity: 0.8, marginTop: '2px' }}>
-                {data.relationship.timing}
-              </div>
-            )}
           </div>
         </EdgeLabelRenderer>
       )}

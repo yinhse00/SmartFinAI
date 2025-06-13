@@ -33,50 +33,23 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     const nodes: Node[] = [];
     const edges: Edge[] = [];
 
-    // Add section headers
+    // Add clean section headers
     nodes.push({
       id: 'before-header',
       type: 'default',
       position: { x: layout.sections.before.x, y: layout.sections.before.y },
       data: { 
         label: (
-          <div className="text-lg font-bold text-gray-800 text-center">
+          <div className="text-lg font-semibold text-gray-700 text-center">
             BEFORE TRANSACTION
-            <div className="text-sm font-normal text-gray-600 mt-1">
-              Current Structure
-            </div>
           </div>
         )
       },
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '350px',
-        height: '50px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    nodes.push({
-      id: 'transaction-header',
-      type: 'default',
-      position: { x: layout.sections.transaction.x, y: layout.sections.transaction.y },
-      data: { 
-        label: (
-          <div className="text-lg font-bold text-blue-800 text-center">
-            TRANSACTION
-            <div className="text-sm font-normal text-blue-600 mt-1">
-              {transactionFlow.transactionType}
-            </div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '350px',
-        height: '50px'
+        width: '300px',
+        height: '40px'
       },
       draggable: false,
       selectable: false
@@ -88,68 +61,16 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       position: { x: layout.sections.after.x, y: layout.sections.after.y },
       data: { 
         label: (
-          <div className="text-lg font-bold text-gray-800 text-center">
+          <div className="text-lg font-semibold text-gray-700 text-center">
             AFTER TRANSACTION
-            <div className="text-sm font-normal text-gray-600 mt-1">
-              Resulting Structure
-            </div>
           </div>
         )
       },
       style: {
         backgroundColor: 'transparent',
         border: 'none',
-        width: '350px',
-        height: '50px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // Add transaction summary
-    nodes.push({
-      id: 'transaction-summary',
-      type: 'default',
-      position: layout.entityPositions.get('transaction-summary') || { x: 500, y: 250 },
-      data: {
-        label: (
-          <div className="text-center p-4">
-            <div className="text-lg font-bold mb-3 text-blue-900">
-              {transactionFlow.title}
-            </div>
-            <div className="space-y-2 text-sm text-left">
-              <div className="bg-blue-50 p-2 rounded">
-                <strong className="text-blue-800">Type:</strong>
-                <div className="text-blue-700">{transactionFlow.transactionType}</div>
-              </div>
-              <div className="bg-green-50 p-2 rounded">
-                <strong className="text-green-800">Consideration:</strong>
-                <div className="text-green-700">
-                  {transactionFlow.keyMetrics.currency} {(transactionFlow.keyMetrics.totalConsideration / 1000000).toFixed(0)}M
-                </div>
-              </div>
-              <div className="bg-orange-50 p-2 rounded">
-                <strong className="text-orange-800">Stake:</strong>
-                <div className="text-orange-700">
-                  {transactionFlow.keyMetrics.acquisitionPercentage.toFixed(1)}%
-                </div>
-              </div>
-              <div className="bg-purple-50 p-2 rounded">
-                <strong className="text-purple-800">Control:</strong>
-                <div className="text-purple-700">
-                  {transactionFlow.keyMetrics.controlChange ? 'Change in Control' : 'No Control Change'}
-                </div>
-              </div>
-            </div>
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: '#f8fafc',
-        border: '3px solid #2563eb',
-        borderRadius: '12px',
         width: '300px',
-        height: '220px'
+        height: '40px'
       },
       draggable: false,
       selectable: false
@@ -193,7 +114,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       }
     });
 
-    // Add before relationships
+    // Add before relationships (solid ownership lines)
     transactionFlow.before.relationships.forEach((relationship) => {
       if (nodes.find(n => n.id === relationship.source) && nodes.find(n => n.id === relationship.target)) {
         edges.push({
@@ -207,7 +128,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       }
     });
 
-    // Add after relationships
+    // Add after relationships (ownership and transaction terms)
     transactionFlow.after.relationships.forEach((relationship) => {
       if (nodes.find(n => n.id === relationship.source) && nodes.find(n => n.id === relationship.target)) {
         edges.push({
@@ -220,52 +141,6 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
         });
       }
     });
-
-    // Add transaction flow connections
-    const beforeMainEntity = transactionFlow.before.entities.find(e => e.type === 'buyer');
-    const afterMainEntity = transactionFlow.after.entities.find(e => e.type === 'buyer');
-    
-    if (beforeMainEntity && afterMainEntity) {
-      edges.push({
-        id: 'transaction-flow',
-        source: beforeMainEntity.id,
-        target: 'transaction-summary',
-        type: 'enhanced',
-        data: {
-          relationship: {
-            id: 'transaction-initiation',
-            source: beforeMainEntity.id,
-            target: 'transaction-summary',
-            type: 'consideration',
-            terms: 'Initiates Transaction',
-            isPreTransaction: false,
-            isPostTransaction: true
-          }
-        },
-        style: { strokeDasharray: '8,4' },
-        animated: true
-      });
-
-      edges.push({
-        id: 'transaction-result',
-        source: 'transaction-summary',
-        target: afterMainEntity.id,
-        type: 'enhanced',
-        data: {
-          relationship: {
-            id: 'transaction-completion',
-            source: 'transaction-summary',
-            target: afterMainEntity.id,
-            type: 'consideration',
-            terms: 'Results In',
-            isPreTransaction: false,
-            isPostTransaction: true
-          }
-        },
-        style: { strokeDasharray: '8,4' },
-        animated: true
-      });
-    }
 
     const optimalZoom = intelligentLayoutEngine.calculateOptimalZoom(layout.entityPositions);
 
@@ -285,20 +160,20 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}
-        className="bg-gray-50"
+        className="bg-white"
         defaultViewport={{ x: 0, y: 0, zoom: optimalZoom }}
-        minZoom={0.3}
+        minZoom={0.4}
         maxZoom={1.5}
       >
-        <Background color="#e5e7eb" gap={20} size={1} />
+        <Background color="#f1f5f9" gap={25} size={1} />
         <Controls showInteractive={false} />
       </ReactFlow>
 
       {/* Validation Status Overlay */}
       {!transactionFlow.validationResults.isValid && (
-        <div className="absolute top-4 right-4 bg-yellow-100 border border-yellow-400 text-yellow-800 px-3 py-2 rounded-lg text-sm">
-          <div className="font-semibold">Data Validation Warnings:</div>
-          <ul className="list-disc ml-4 mt-1">
+        <div className="absolute top-4 right-4 bg-yellow-50 border border-yellow-300 text-yellow-800 px-3 py-2 rounded-lg text-sm max-w-xs">
+          <div className="font-medium">Data Validation Warnings:</div>
+          <ul className="list-disc ml-4 mt-1 text-xs">
             {transactionFlow.validationResults.warnings.map((warning, index) => (
               <li key={index}>{warning}</li>
             ))}
@@ -306,25 +181,17 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
         </div>
       )}
 
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg p-3 text-xs shadow-lg">
-        <div className="font-semibold mb-2">Legend:</div>
-        <div className="space-y-1">
+      {/* Clean Legend */}
+      <div className="absolute bottom-4 left-4 bg-white border border-gray-200 rounded-lg p-3 text-xs shadow-sm">
+        <div className="font-medium mb-2 text-gray-700">Legend:</div>
+        <div className="space-y-1.5">
           <div className="flex items-center gap-2">
-            <div className="w-4 h-0.5 bg-blue-500"></div>
-            <span>Ownership (solid)</span>
+            <div className="w-6 h-0.5 bg-gray-800"></div>
+            <span className="text-gray-600">Ownership (%)</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-4 h-0.5 bg-yellow-500" style={{ borderBottom: '2px dashed' }}></div>
-            <span>Consideration (dashed)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-0.5 bg-red-500" style={{ borderBottom: '2px dashed' }}></div>
-            <span>Control (dashed)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-4 h-0.5 bg-green-500" style={{ borderBottom: '2px dotted' }}></div>
-            <span>Voting (dotted)</span>
+            <div className="w-6 h-0.5 bg-red-600" style={{ borderBottom: '2px dotted' }}></div>
+            <span className="text-gray-600">Transaction Terms</span>
           </div>
         </div>
       </div>

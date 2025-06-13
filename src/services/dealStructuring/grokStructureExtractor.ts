@@ -80,18 +80,7 @@ export class GrokStructureExtractor {
       });
     }
 
-    // Add consideration entity for after phase
-    if (phase === 'after' && results.costs?.total) {
-      entities.push({
-        id: 'consideration-payment',
-        name: `Consideration Payment`,
-        type: 'consideration',
-        entityClass: 'corporate',
-        value: results.costs.total,
-        currency: 'HKD',
-        description: `Total consideration of HKD ${(results.costs.total / 1000000).toFixed(0)}M`
-      });
-    }
+    // Note: No separate consideration entities - this will be shown on transaction lines
 
     return entities;
   }
@@ -119,7 +108,7 @@ export class GrokStructureExtractor {
       });
     }
 
-    // Extract consideration relationships for after phase
+    // Add transaction consideration relationships for after phase
     if (phase === 'after' && results.costs?.total) {
       const acquiringEntity = shareholdingData?.find(s => 
         s.name.toLowerCase().includes('acquir') || s.name.toLowerCase().includes('buyer')
@@ -127,14 +116,14 @@ export class GrokStructureExtractor {
       
       if (acquiringEntity) {
         relationships.push({
-          id: 'consideration-flow',
+          id: 'consideration-transaction',
           source: `${phase}-shareholder-0`, // Assuming first is acquirer
-          target: 'consideration-payment',
+          target: `${phase}-target-company`,
           type: 'consideration',
           value: results.costs.total,
           currency: 'HKD',
           paymentMethod: 'cash',
-          terms: `Payment of HKD ${(results.costs.total / 1000000).toFixed(0)}M consideration`,
+          terms: `HKD ${(results.costs.total / 1000000).toFixed(0)}M consideration`,
           timing: 'At completion',
           isPostTransaction: true
         });
