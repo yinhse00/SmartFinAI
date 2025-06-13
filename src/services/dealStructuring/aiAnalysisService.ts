@@ -1,3 +1,4 @@
+
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -90,118 +91,155 @@ export const aiAnalysisService = {
 };
 
 /**
- * Build comprehensive analysis prompt for Grok
+ * Build enhanced analysis prompt focused on major deal terms
  */
 function buildAnalysisPrompt(description: string, documentContent: string): string {
   return `
-As a Hong Kong financial regulatory expert and investment banking advisor, analyze the following transaction and provide comprehensive structuring advice.
+As a Hong Kong investment banking advisor and financial regulatory expert, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS and commercial considerations.
 
 TRANSACTION DESCRIPTION:
 ${description}
 
 ${documentContent ? `UPLOADED DOCUMENTS CONTENT:\n${documentContent}\n` : ''}
 
-Please provide a detailed analysis covering:
+Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution. Provide investment banking-quality recommendations covering:
 
-1. TRANSACTION STRUCTURE:
-   - Recommended optimal structure
-   - Alternative structures with pros/cons
-   - Rationale for recommendation
+1. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS:
+   - Optimal structure with clear commercial rationale
+   - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out)
+   - MAJOR PAYMENT TERMS (cash/stock mix, payment schedule, escrow arrangements)
+   - CRITICAL CONDITIONS PRECEDENT that affect deal completion
+   - KEY STRUCTURAL DECISIONS (merger vs acquisition, tax optimization)
+   - Alternative structures with material trade-offs
 
-2. COST ANALYSIS:
-   - Regulatory fees (HKEX, SFC, etc.)
-   - Professional fees (legal, accounting, financial advisory)
-   - Timing-related costs
-   - Total estimated costs with breakdown
+2. MAJOR COST ANALYSIS (Focus on decision-impacting amounts):
+   - Key regulatory fees (HKEX, SFC, government stamps)
+   - Major professional fees by category (legal, accounting, financial advisory)
+   - Material timing-related costs
+   - Cost optimization opportunities
+   - Total estimated range with key drivers
 
-3. EXECUTION TIMETABLE:
-   - Key milestones with dates
-   - Critical path items
-   - Regulatory approval timelines
-   - Total duration estimate
+3. CRITICAL PATH EXECUTION TIMETABLE:
+   - DEAL-CRITICAL MILESTONES with impact on timing/cost
+   - Key regulatory approvals that affect structure
+   - Critical dependencies and resource requirements
+   - Material timing risks and mitigation strategies
+   - Overall execution timeline with key decision points
 
-4. SHAREHOLDING IMPACT:
-   - Before and after shareholding structure
-   - Dilution analysis
-   - Control implications
+4. MAJOR SHAREHOLDING IMPACT:
+   - Key ownership changes and control implications
+   - Material dilution analysis for existing shareholders
+   - Voting control and governance implications
+   - Impact on connected persons and disclosure requirements
 
-5. REGULATORY COMPLIANCE:
-   - Applicable Listing Rules requirements
-   - Takeovers Code implications (if any)
-   - Key regulatory risks
-   - Compliance recommendations
+5. KEY REGULATORY REQUIREMENTS:
+   - Material Listing Rules requirements (Chapter 14/14A thresholds)
+   - Takeovers Code implications if applicable
+   - Critical regulatory approvals and timeline impact
+   - Key compliance risks that affect structure
+   - Actionable regulatory strategy recommendations
 
-6. TRANSACTION FLOW DATA (REQUIRED for visualization):
-   - Detailed before/after transaction flow with entities and relationships
-   - Entity types: target, buyer, stockholder, subsidiary, newco, consideration
-   - Relationship types: ownership, control, subsidiary, consideration
-   - Include consideration amounts and ownership percentages
-   - Transaction steps with entity involvement
+6. MAJOR RISKS & MITIGATION:
+   - Material execution risks with probability assessment
+   - Key market/timing risks
+   - Regulatory and approval risks
+   - Structural risk mitigation strategies
 
-7. DIAGRAM DATA (REQUIRED for visualization):
-   - Enhanced shareholding changes with entity types and control implications
-   - Corporate structure with entity relationships and ownership percentages
-   - Detailed before/after comparison with change indicators
+7. TRANSACTION FLOW DATA (for visualization):
+   - Before/after entity structures with major ownership changes
+   - Key consideration flows and payment mechanisms
+   - Material control and ownership relationships
+   - Transaction steps focusing on critical milestones
 
-FORMAT your response as a structured JSON object with the following schema:
+FORMAT your response as a structured JSON object with enhanced major terms data:
 {
   "transactionType": "string",
   "structure": {
-    "recommended": "string",
-    "alternatives": ["string"],
-    "rationale": "string"
+    "recommended": "string with clear commercial rationale",
+    "majorTerms": {
+      "pricingMechanism": "fixed|formula|collar|earnout|hybrid",
+      "paymentStructure": {
+        "cashPercentage": number,
+        "stockPercentage": number,
+        "paymentSchedule": "string",
+        "escrowArrangements": "string"
+      },
+      "keyConditions": ["string"],
+      "structuralDecisions": ["string"]
+    },
+    "alternatives": [{"structure": "string", "tradeOffs": "string"}],
+    "rationale": "string focusing on commercial benefits"
   },
   "costs": {
     "regulatory": number,
     "professional": number,
     "timing": number,
     "total": number,
-    "breakdown": [{"category": "string", "amount": number, "description": "string"}]
+    "majorDrivers": ["string"],
+    "optimizationOpportunities": ["string"],
+    "breakdown": [{"category": "string", "amount": number, "description": "string", "impact": "high|medium|low"}]
   },
   "timetable": {
     "totalDuration": "string",
-    "keyMilestones": [{"date": "string", "event": "string", "description": "string"}]
+    "criticalPath": [{"date": "string", "milestone": "string", "description": "string", "impact": "high|medium|low"}],
+    "keyDependencies": ["string"],
+    "timingRisks": ["string"]
   },
   "shareholding": {
     "before": [{"name": "string", "percentage": number}],
     "after": [{"name": "string", "percentage": number}],
-    "impact": "string"
+    "majorChanges": ["string"],
+    "controlImplications": ["string"],
+    "dilutionImpact": "string"
   },
   "compliance": {
-    "listingRules": ["string"],
-    "takeoversCode": ["string"],
-    "risks": ["string"],
-    "recommendations": ["string"]
+    "keyListingRules": ["string with rule numbers"],
+    "materialApprovals": ["string"],
+    "criticalRisks": ["string"],
+    "actionableRecommendations": ["string"]
+  },
+  "risks": {
+    "executionRisks": [{"risk": "string", "probability": "high|medium|low", "mitigation": "string"}],
+    "marketRisks": ["string"],
+    "regulatoryRisks": ["string"]
   },
   "confidence": number,
   "shareholdingChanges": {
     "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
     "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
-    "keyChanges": [{"shareholder": "string", "change": number, "type": "increase|decrease|new|exit"}],
+    "keyChanges": [{"shareholder": "string", "change": number, "type": "increase|decrease|new|exit", "impact": "material|minor"}],
     "controlImplications": ["string"]
   },
   "corporateStructure": {
-    "entities": [{"id": "string", "name": "string", "type": "parent|subsidiary|target|issuer", "ownership": number}],
-    "relationships": [{"parent": "string", "child": "string", "ownershipPercentage": number}],
+    "entities": [{"id": "string", "name": "string", "type": "parent|subsidiary|target|issuer", "ownership": number, "role": "string"}],
+    "relationships": [{"parent": "string", "child": "string", "ownershipPercentage": number, "controlType": "majority|minority|joint"}],
     "mainIssuer": "string",
-    "targetEntities": ["string"]
+    "targetEntities": ["string"],
+    "keyStructuralFeatures": ["string"]
   },
   "transactionFlow": {
     "before": {
-      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string"}],
-      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary", "percentage": number}]
+      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string", "role": "string"}],
+      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary", "percentage": number, "nature": "string"}]
     },
     "after": {
-      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string"}],
-      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary|consideration", "percentage": number, "value": number}]
+      "entities": [{"id": "string", "name": "string", "type": "target|buyer|stockholder|subsidiary|newco|consideration", "value": number, "percentage": number, "description": "string", "role": "string"}],
+      "relationships": [{"source": "string", "target": "string", "type": "ownership|control|subsidiary|consideration", "percentage": number, "value": number, "nature": "string"}]
     },
-    "transactionSteps": [{"id": "string", "title": "string", "description": "string", "entities": ["string"]}]
+    "majorTransactionSteps": [{"id": "string", "title": "string", "description": "string", "entities": ["string"], "criticalPath": boolean}],
+    "paymentFlows": [{"from": "string", "to": "string", "amount": number, "mechanism": "string", "timing": "string"}]
   }
 }
 
-IMPORTANT: You MUST include "shareholdingChanges", "corporateStructure", and "transactionFlow" objects in your response for the diagrams to display properly. Generate realistic sample data that reflects the transaction described, including proper entity relationships and flow structures.
+CRITICAL REQUIREMENTS:
+- Focus on MAJOR TERMS that impact deal economics and execution
+- Provide clear commercial rationale for all recommendations
+- Include realistic financial projections and cost estimates in HKD
+- Ensure all regulatory references are accurate for Hong Kong
+- Generate comprehensive but focused diagram data for proper visualization
+- Emphasize actionable insights for deal structuring decisions
 
-Ensure all monetary amounts are in HKD and all dates follow Hong Kong business day calendar. Include comprehensive diagram data for proper visualization of the transaction structure and flow.
+Ensure your analysis is comprehensive yet focused on major commercial terms, providing investment banking-quality insights that enable informed deal structuring decisions.
 `;
 }
 
@@ -233,9 +271,6 @@ function parseAnalysisResponse(responseText: string): AnalysisResults {
   return createFallbackAnalysis(responseText);
 }
 
-/**
- * Create fallback shareholding changes when data is missing
- */
 function createFallbackShareholdingChanges(): ShareholdingChanges {
   return {
     before: [
@@ -253,9 +288,6 @@ function createFallbackShareholdingChanges(): ShareholdingChanges {
   };
 }
 
-/**
- * Create fallback corporate structure when data is missing
- */
 function createFallbackCorporateStructure(): CorporateStructure {
   return {
     entities: [
@@ -270,9 +302,6 @@ function createFallbackCorporateStructure(): CorporateStructure {
   };
 }
 
-/**
- * Create fallback transaction flow when data is missing
- */
 function createFallbackTransactionFlow() {
   return {
     before: {
@@ -306,9 +335,6 @@ function createFallbackTransactionFlow() {
   };
 }
 
-/**
- * Create fallback analysis when JSON parsing fails
- */
 function createFallbackAnalysis(responseText: string): AnalysisResults {
   return {
     transactionType: "Transaction Analysis",
