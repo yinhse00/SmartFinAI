@@ -32,13 +32,13 @@ export const EnhancedTransactionInput: React.FC<EnhancedTransactionInputProps> =
   const [amount, setAmount] = useState('');
   const [currency, setCurrency] = useState('HKD');
   
-  // Default optimization parameters
+  // Default optimization parameters with proper initialization
   const [optimizationParams, setOptimizationParams] = useState<OptimizationParameters>({
     priority: 'control',
     riskTolerance: 'medium',
     timeConstraints: 'normal',
     budgetConstraints: 'moderate',
-    strategicObjectives: ['value creation'],
+    strategicObjectives: ['value creation'], // Ensure this is always an array
     marketConditions: 'neutral'
   });
 
