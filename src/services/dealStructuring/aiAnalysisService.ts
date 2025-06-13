@@ -107,6 +107,8 @@ Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal ec
 1. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS:
    - Optimal structure with clear commercial rationale
    - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out)
+   - TARGET PERCENTAGE being acquired or affected by the transaction
+   - STRATEGIC CONSIDERATIONS and suggestions for deal optimization
    - MAJOR PAYMENT TERMS (cash/stock mix, payment schedule, escrow arrangements)
    - CRITICAL CONDITIONS PRECEDENT that affect deal completion
    - KEY STRUCTURAL DECISIONS (merger vs acquisition, tax optimization)
@@ -158,6 +160,8 @@ FORMAT your response as a structured JSON object with enhanced major terms data:
     "recommended": "string with clear commercial rationale",
     "majorTerms": {
       "pricingMechanism": "fixed|formula|collar|earnout|hybrid",
+      "targetPercentage": number (percentage of target being acquired/affected),
+      "suggestionConsideration": "string with strategic considerations and deal optimization suggestions",
       "paymentStructure": {
         "cashPercentage": number,
         "stockPercentage": number,
@@ -233,6 +237,8 @@ FORMAT your response as a structured JSON object with enhanced major terms data:
 
 CRITICAL REQUIREMENTS:
 - Focus on MAJOR TERMS that impact deal economics and execution
+- Include specific TARGET PERCENTAGE being acquired or affected
+- Provide STRATEGIC CONSIDERATIONS and deal optimization suggestions
 - Provide clear commercial rationale for all recommendations
 - Include realistic financial projections and cost estimates in HKD
 - Ensure all regulatory references are accurate for Hong Kong

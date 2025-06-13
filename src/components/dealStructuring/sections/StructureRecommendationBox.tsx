@@ -1,21 +1,177 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Target, Banknote, FileCheck, TrendingUp } from 'lucide-react';
+import { Target, Banknote, FileCheck, TrendingUp, Percent } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
+import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 
 interface StructureRecommendationBoxProps {
   results: AnalysisResults;
 }
 
+const EnlargedStructureContent = ({ results }: { results: AnalysisResults }) => (
+  <div className="space-y-8 p-6">
+    <div>
+      <h3 className="text-2xl font-semibold mb-4 text-green-700">
+        {results.structure.recommended}
+      </h3>
+      <p className="text-base text-gray-600 leading-relaxed mb-6">
+        {results.structure.rationale}
+      </p>
+    </div>
+
+    {results.structure.majorTerms && (
+      <div className="space-y-6">
+        <h4 className="text-xl font-semibold flex items-center gap-2">
+          <Banknote className="h-5 w-5 text-green-600" />
+          Major Deal Terms - Detailed View
+        </h4>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Pricing Mechanism */}
+          <div className="p-4 border rounded-lg">
+            <h5 className="font-semibold mb-3">Pricing Mechanism</h5>
+            <Badge variant="outline" className="capitalize border-green-600 text-green-700 text-base px-4 py-2">
+              {results.structure.majorTerms.pricingMechanism}
+            </Badge>
+            <p className="text-sm text-gray-600 mt-2">
+              The valuation methodology determines how the transaction value is established and adjusted.
+            </p>
+          </div>
+
+          {/* Target Percentage */}
+          {results.structure.majorTerms.targetPercentage && (
+            <div className="p-4 border rounded-lg">
+              <h5 className="font-semibold mb-3 flex items-center gap-2">
+                <Percent className="h-4 w-4" />
+                Target Percentage
+              </h5>
+              <div className="text-2xl font-bold text-green-600">
+                {results.structure.majorTerms.targetPercentage}%
+              </div>
+              <p className="text-sm text-gray-600 mt-2">
+                Percentage of the target company being acquired or affected by this transaction.
+              </p>
+            </div>
+          )}
+
+          {/* Payment Structure */}
+          <div className="p-4 border rounded-lg md:col-span-2">
+            <h5 className="font-semibold mb-3">Payment Structure</h5>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="bg-green-50 rounded p-3 border">
+                <div className="text-gray-600 text-sm">Cash Component</div>
+                <div className="text-xl font-bold text-green-600">
+                  {results.structure.majorTerms.paymentStructure.cashPercentage}%
+                </div>
+              </div>
+              <div className="bg-blue-50 rounded p-3 border">
+                <div className="text-gray-600 text-sm">Stock Component</div>
+                <div className="text-xl font-bold text-blue-600">
+                  {results.structure.majorTerms.paymentStructure.stockPercentage}%
+                </div>
+              </div>
+            </div>
+            
+            {results.structure.majorTerms.paymentStructure.paymentSchedule && (
+              <div className="mt-4">
+                <h6 className="font-medium mb-2">Payment Schedule</h6>
+                <p className="text-sm text-gray-600 bg-gray-50 rounded p-3 border">
+                  {results.structure.majorTerms.paymentStructure.paymentSchedule}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Suggestion Consideration */}
+        {results.structure.majorTerms.suggestionConsideration && (
+          <div className="p-4 border-l-4 border-green-400 bg-green-50">
+            <h5 className="font-semibold mb-2">Strategic Considerations</h5>
+            <p className="text-gray-700 leading-relaxed">
+              {results.structure.majorTerms.suggestionConsideration}
+            </p>
+          </div>
+        )}
+
+        {/* Key Conditions */}
+        {results.structure.majorTerms.keyConditions.length > 0 && (
+          <div>
+            <h5 className="font-semibold mb-3 flex items-center gap-2">
+              <FileCheck className="h-4 w-4" />
+              Key Conditions Precedent
+            </h5>
+            <div className="space-y-2">
+              {results.structure.majorTerms.keyConditions.map((condition, index) => (
+                <div key={index} className="p-3 bg-gray-50 rounded border">
+                  <p className="text-sm text-gray-700">• {condition}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Structural Decisions */}
+        {results.structure.majorTerms.structuralDecisions.length > 0 && (
+          <div>
+            <h5 className="font-semibold mb-3">Key Structural Decisions</h5>
+            <div className="flex flex-wrap gap-2">
+              {results.structure.majorTerms.structuralDecisions.map((decision, index) => (
+                <Badge key={index} variant="secondary" className="text-sm px-3 py-1">
+                  {decision}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    )}
+
+    {/* Alternative Structures */}
+    {results.structure.alternatives.length > 0 && (
+      <div>
+        <h4 className="text-xl font-semibold mb-4 flex items-center gap-2">
+          <TrendingUp className="h-5 w-5 text-blue-500" />
+          Alternative Structures
+        </h4>
+        <div className="space-y-4">
+          {results.structure.alternatives.map((alt, index) => (
+            <div key={index} className="p-4 border rounded-lg">
+              {typeof alt === 'string' ? (
+                <Badge variant="outline" className="border-blue-600 text-blue-700 text-base px-4 py-2">
+                  {alt}
+                </Badge>
+              ) : (
+                <div>
+                  <h5 className="font-semibold text-blue-800 mb-2">{alt.structure}</h5>
+                  <p className="text-gray-600">{alt.tradeOffs}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    )}
+  </div>
+);
+
 export const StructureRecommendationBox = ({ results }: StructureRecommendationBoxProps) => {
   return (
     <Card className="h-[500px]">
       <CardHeader className="pb-4">
-        <CardTitle className="flex items-center gap-2">
-          <Target className="h-5 w-5 text-green-500" />
-          Structure & Major Terms
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2">
+            <Target className="h-5 w-5 text-green-500" />
+            Structure & Major Terms
+          </CardTitle>
+          <EnlargedContentDialog
+            title="Comprehensive Structure & Major Terms Analysis"
+            enlargedContent={<EnlargedStructureContent results={results} />}
+            size="large"
+          >
+            <div />
+          </EnlargedContentDialog>
+        </div>
       </CardHeader>
       <CardContent className="h-[400px] overflow-y-auto space-y-4">
         {/* Recommended Structure */}
@@ -36,12 +192,27 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
               Major Deal Terms
             </h5>
             
-            {/* Pricing Mechanism */}
-            <div>
-              <h6 className="font-medium text-sm mb-1">Pricing Mechanism</h6>
-              <Badge variant="outline" className="capitalize border-green-600 text-green-700">
-                {results.structure.majorTerms.pricingMechanism}
-              </Badge>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Pricing Mechanism */}
+              <div>
+                <h6 className="font-medium text-sm mb-1">Pricing Mechanism</h6>
+                <Badge variant="outline" className="capitalize border-green-600 text-green-700">
+                  {results.structure.majorTerms.pricingMechanism}
+                </Badge>
+              </div>
+
+              {/* Target Percentage */}
+              {results.structure.majorTerms.targetPercentage && (
+                <div>
+                  <h6 className="font-medium text-sm mb-1 flex items-center gap-1">
+                    <Percent className="h-3 w-3" />
+                    Target %
+                  </h6>
+                  <div className="text-lg font-bold text-green-600">
+                    {results.structure.majorTerms.targetPercentage}%
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Structure */}
@@ -62,6 +233,16 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
                 </div>
               </div>
             </div>
+
+            {/* Suggestion Consideration */}
+            {results.structure.majorTerms.suggestionConsideration && (
+              <div>
+                <h6 className="font-medium text-sm mb-1">Strategic Considerations</h6>
+                <p className="text-xs text-gray-600 bg-white rounded p-2 border">
+                  {results.structure.majorTerms.suggestionConsideration}
+                </p>
+              </div>
+            )}
 
             {/* Payment Schedule */}
             {results.structure.majorTerms.paymentStructure.paymentSchedule && (

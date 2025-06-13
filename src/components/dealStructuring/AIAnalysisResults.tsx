@@ -30,6 +30,8 @@ export interface AnalysisResults {
       };
       keyConditions: string[];
       structuralDecisions: string[];
+      suggestionConsideration?: string;
+      targetPercentage?: number;
     };
     alternatives: Array<{ structure: string; tradeOffs: string }> | string[];
     rationale: string;
