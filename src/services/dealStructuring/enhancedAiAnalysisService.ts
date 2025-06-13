@@ -1,5 +1,6 @@
 
-import { aiAnalysisService, TransactionAnalysisRequest, AnalysisResults } from './aiAnalysisService';
+import { aiAnalysisService, TransactionAnalysisRequest } from './aiAnalysisService';
+import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
 
 export interface EnhancedAnalysisResult {

@@ -1,6 +1,5 @@
-
-import { TransactionAnalysisRequest, AnalysisResults } from './aiAnalysisService';
-import { liveSearchService } from '../api/xai/liveSearchService';
+import { TransactionAnalysisRequest } from './aiAnalysisService';
+import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 
 export interface OptimizationParameters {
   priority: 'cost' | 'speed' | 'control' | 'flexibility' | 'regulatory_certainty';
