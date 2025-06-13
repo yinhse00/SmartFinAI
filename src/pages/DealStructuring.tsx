@@ -1,9 +1,11 @@
+
 import MainLayout from '@/components/layout/MainLayout';
 import { useState } from 'react';
 import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedTransactionInput';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { DealStructuringDashboard } from '@/components/dealStructuring/DealStructuringDashboard';
 import { enhancedAiAnalysisService, EnhancedAnalysisResult } from '@/services/dealStructuring/enhancedAiAnalysisService';
+import { optimizationEngine, OptimizationParameters } from '@/services/dealStructuring/optimizationEngine';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';

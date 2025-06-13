@@ -1,4 +1,5 @@
 
+import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 
 interface FileValidationOptions {
@@ -7,6 +8,10 @@ interface FileValidationOptions {
 }
 
 export const useFileUpload = (options: FileValidationOptions = {}) => {
+  const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+
   const {
     maxSize = 20 * 1024 * 1024, // 20MB default
     allowedTypes = [
@@ -15,15 +20,17 @@ export const useFileUpload = (options: FileValidationOptions = {}) => {
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'text/plain',
+      'text/csv',
       'image/jpeg',
       'image/png',
       'image/gif'
     ]
   } = options;
 
-  const validateFiles = (files: FileList): boolean => {
+  const validateFiles = (fileList: FileList): boolean => {
     // Validate file types
-    const invalidFiles = Array.from(files).filter(
+    const invalidFiles = Array.from(fileList).filter(
       file => !allowedTypes.includes(file.type)
     );
 
@@ -37,7 +44,7 @@ export const useFileUpload = (options: FileValidationOptions = {}) => {
     }
 
     // Check file sizes
-    const oversizedFiles = Array.from(files).filter(
+    const oversizedFiles = Array.from(fileList).filter(
       file => file.size > maxSize
     );
 
@@ -53,5 +60,66 @@ export const useFileUpload = (options: FileValidationOptions = {}) => {
     return true;
   };
 
-  return { validateFiles };
+  const uploadFile = async (file: File): Promise<void> => {
+    if (!validateFiles(new DataTransfer().files)) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      if (!validateFiles(dt.files)) return;
+    }
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      // Simulate upload progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          if (prev >= 90) {
+            clearInterval(progressInterval);
+            return 90;
+          }
+          return prev + 10;
+        });
+      }, 100);
+
+      // Simulate upload delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+      
+      setFiles(prev => [...prev, file]);
+      
+      toast({
+        title: "File uploaded successfully",
+        description: `${file.name} has been uploaded.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Upload failed",
+        description: "There was an error uploading your file. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const removeFile = (index: number): void => {
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    toast({
+      title: "File removed",
+      description: "File has been removed from upload list.",
+    });
+  };
+
+  return {
+    files,
+    uploadFile,
+    removeFile,
+    isUploading,
+    uploadProgress,
+    validateFiles
+  };
 };

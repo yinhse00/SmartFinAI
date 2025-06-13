@@ -527,7 +527,7 @@ export const optimizationEngine = {
 
   calculateCostEstimate: (request: TransactionAnalysisRequest, scenarioType: string): number => {
     const baseAmount = request.amount || 10000000;
-    const multipliers = {
+    const multipliers: Record<string, number> = {
       'cost-optimized': 0.015, // Reduced from 0.02 for better cost efficiency
       'speed-optimized': 0.035,
       'risk-optimized': 0.04,
