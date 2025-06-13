@@ -274,8 +274,7 @@ export class TransactionFlowConverter {
       entities.push({
         id: 'optimization-insights',
         name: `Optimization: ${optimizationResult.optimizationInsights[0].substring(0, 50)}...`,
-        type: 'consideration' as const,
-        description: optimizationResult.recommendedStructure.name
+        type: 'consideration' as const
       });
     }
 
