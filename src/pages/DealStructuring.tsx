@@ -10,14 +10,14 @@ import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, Check
 
 // Export the TransactionData type for other components
 export type { TransactionData } from '@/types/dealStructuring';
+
 const DealStructuring = () => {
   const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [enhancedResults, setEnhancedResults] = useState<EnhancedAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const {
-    toast
-  } = useToast();
+  const { toast } = useToast();
+
   const handleTransactionAnalysis = async (data: {
     description: string;
     uploadedFiles: File[];
@@ -80,40 +80,52 @@ const DealStructuring = () => {
       setIsAnalyzing(false);
     }
   };
+
   const handleNewAnalysis = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
     setEnhancedResults(null);
   };
+
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
     setAnalysisResults(updatedResults);
   };
-  const featureCards = [{
-    icon: Brain,
-    title: "AI Analysis",
-    description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
-  }, {
-    icon: FileText,
-    title: "Document Intelligence",
-    description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
-  }, {
-    icon: Calculator,
-    title: "Cost Analysis",
-    description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
-  }, {
-    icon: Clock,
-    title: "Timeline Planning",
-    description: "Detailed execution timetable with key milestones and critical path analysis."
-  }, {
-    icon: Users,
-    title: "Shareholding Impact",
-    description: "Before and after shareholding analysis with dilution impact assessment."
-  }, {
-    icon: Shield,
-    title: "Compliance Guide",
-    description: "Regulatory compliance requirements including listing rules and takeovers code."
-  }];
-  return <MainLayout>
+
+  const featureCards = [
+    {
+      icon: Brain,
+      title: "AI Analysis",
+      description: "Advanced AI processes your transaction requirements and provides intelligent structuring recommendations."
+    },
+    {
+      icon: FileText,
+      title: "Document Intelligence", 
+      description: "Upload and analyze transaction documents with AI-powered extraction and interpretation."
+    },
+    {
+      icon: Calculator,
+      title: "Cost Analysis",
+      description: "Comprehensive breakdown of regulatory, professional, and timing costs for your transaction."
+    },
+    {
+      icon: Clock,
+      title: "Timeline Planning",
+      description: "Detailed execution timetable with key milestones and critical path analysis."
+    },
+    {
+      icon: Users,
+      title: "Shareholding Impact",
+      description: "Before and after shareholding analysis with dilution impact assessment."
+    },
+    {
+      icon: Shield,
+      title: "Compliance Guide",
+      description: "Regulatory compliance requirements including listing rules and takeovers code."
+    }
+  ];
+
+  return (
+    <MainLayout>
       <div className="container mx-auto px-4 py-4">
         <div className="mb-4">
           {/* Show introductory content only during input phase */}
@@ -147,7 +159,12 @@ const DealStructuring = () => {
 
         {/* Main Content */}
         <div className="space-y-6">
-          {currentStep === 'input' && <EnhancedTransactionInput onAnalyze={handleTransactionAnalysis} isAnalyzing={isAnalyzing} />}
+          {currentStep === 'input' && (
+            <EnhancedTransactionInput 
+              onAnalyze={handleTransactionAnalysis} 
+              isAnalyzing={isAnalyzing} 
+            />
+          )}
           
           {currentStep === 'analysis' && analysisResults && (
             <div className="space-y-6">
@@ -181,11 +198,17 @@ const DealStructuring = () => {
                   New Analysis
                 </button>
               </div>
-              <DealStructuringDashboard results={analysisResults} onResultsUpdate={handleResultsUpdate} />
+              <DealStructuringDashboard 
+                results={analysisResults} 
+                onResultsUpdate={handleResultsUpdate}
+                optimizationResult={enhancedResults?.optimization}
+              />
             </div>
           )}
         </div>
       </div>
-    </MainLayout>;
+    </MainLayout>
+  );
 };
+
 export default DealStructuring;

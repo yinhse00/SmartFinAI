@@ -7,13 +7,19 @@ import { ShareholdingImpactBox } from './sections/ShareholdingImpactBox';
 import { RegulatoryComplianceBox } from './sections/RegulatoryComplianceBox';
 import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
 import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
+import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
   onResultsUpdate: (updatedResults: AnalysisResults) => void;
+  optimizationResult?: OptimizationResult;
 }
 
-export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStructuringDashboardProps) => {
+export const DealStructuringDashboard = ({ 
+  results, 
+  onResultsUpdate, 
+  optimizationResult 
+}: DealStructuringDashboardProps) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:grid-rows-4 lg:items-start">
       {/* Row 1, Col 1: Structure Recommendation */}
@@ -46,13 +52,15 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <ExecutionTimetableBox results={results} />
       </div>
 
-      {/* Row 3, Col 2: Transaction Flow Diagram */}
+      {/* Row 3, Col 2: Transaction Flow Diagram - Now with optimization data */}
       <div className="lg:col-start-2 lg:row-start-3">
-        <TransactionFlowDiagramBox results={results} />
+        <TransactionFlowDiagramBox 
+          results={results} 
+          optimizationResult={optimizationResult}
+        />
       </div>
       
-      {/* Row 4, Col 1-2: Optimization Results (spans 2 columns) - Hidden for now, will be shown when optimization data is available */}
-      {/* This will be activated when the enhanced analysis service is integrated */}
+      {/* Row 4, Col 1-2: Future expansion for optimization results */}
     </div>
   );
 };

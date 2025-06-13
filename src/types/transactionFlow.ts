@@ -37,7 +37,7 @@ export interface TransactionFlow {
     description: string;
     entities: string[];
   }>;
-  // Add transaction context for real data
+  // Enhanced transaction context with optimization data
   transactionContext?: {
     type: string;
     amount: number;
@@ -45,6 +45,9 @@ export interface TransactionFlow {
     targetName: string;
     buyerName: string;
     description: string;
+    optimizationInsights?: string[];
+    recommendedStructure?: string;
+    optimizationScore?: number;
   };
 }
 

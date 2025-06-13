@@ -1,16 +1,18 @@
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Network, AlertTriangle, CheckCircle } from 'lucide-react';
+import { Network, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 import CombinedTransactionFlowDiagram from '../flow/CombinedTransactionFlowDiagram';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { transactionFlowConverter } from '@/services/dealStructuring/transactionFlowConverter';
 import { transactionDataValidator } from '@/services/dealStructuring/transactionDataValidator';
 import { Badge } from '@/components/ui/badge';
+import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
+  optimizationResult?: OptimizationResult;
 }
 
 const ValidationIndicator = ({ results }: { results: AnalysisResults }) => {
@@ -37,8 +39,29 @@ const ValidationIndicator = ({ results }: { results: AnalysisResults }) => {
   return null;
 };
 
-const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
-  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results);
+const OptimizationIndicator = ({ optimizationResult }: { optimizationResult?: OptimizationResult }) => {
+  if (!optimizationResult) return null;
+
+  const score = optimizationResult.recommendedStructure.optimizationScore;
+  const precedentCount = optimizationResult.marketIntelligence.precedentTransactions.length;
+
+  return (
+    <div className="flex gap-2">
+      <Badge variant="outline" className="text-blue-600 border-blue-600">
+        <TrendingUp className="h-3 w-3 mr-1" />
+        Optimized: {(score * 100).toFixed(0)}%
+      </Badge>
+      {precedentCount > 0 && (
+        <Badge variant="outline" className="text-purple-600 border-purple-600">
+          {precedentCount} Precedents
+        </Badge>
+      )}
+    </div>
+  );
+};
+
+const EnlargedFlowContent = ({ results, optimizationResult }: { results: AnalysisResults; optimizationResult?: OptimizationResult }) => {
+  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results, optimizationResult);
 
   return (
     <div className="h-full flex flex-col">
@@ -53,8 +76,11 @@ const EnlargedFlowContent = ({ results }: { results: AnalysisResults }) => {
   );
 };
 
-export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps> = ({ results }) => {
-  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results);
+export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps> = ({ 
+  results, 
+  optimizationResult 
+}) => {
+  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results, optimizationResult);
 
   return (
     <Card className="h-[500px]">
@@ -66,15 +92,21 @@ export const TransactionFlowDiagramBox: React.FC<TransactionFlowDiagramBoxProps>
               Transaction Structure Diagram
             </CardTitle>
             <ValidationIndicator results={results} />
+            <OptimizationIndicator optimizationResult={optimizationResult} />
           </div>
           <EnlargedContentDialog
             title="Complete Transaction Structure & Flow"
-            enlargedContent={<EnlargedFlowContent results={results} />}
+            enlargedContent={<EnlargedFlowContent results={results} optimizationResult={optimizationResult} />}
             size="full"
           >
             <div />
           </EnlargedContentDialog>
         </div>
+        {optimizationResult && (
+          <div className="text-xs text-gray-600 mt-1">
+            Showing: {optimizationResult.recommendedStructure.name}
+          </div>
+        )}
       </CardHeader>
       <CardContent className="h-[400px]">
         <div className="h-full">
