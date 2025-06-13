@@ -13,7 +13,7 @@ interface RegulatoryComplianceBoxProps {
 const EnlargedComplianceContent = ({ results }: { results: AnalysisResults }) => (
   <div className="space-y-8 p-6">
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-      {results.compliance.listingRules.length > 0 && (
+      {results.compliance?.listingRules?.length > 0 && (
         <div className="p-6 border rounded-lg">
           <div className="flex items-center mb-4">
             <FileText className="h-6 w-6 text-blue-500 mr-2" />
@@ -32,7 +32,7 @@ const EnlargedComplianceContent = ({ results }: { results: AnalysisResults }) =>
         </div>
       )}
       
-      {results.compliance.takeoversCode.length > 0 && (
+      {results.compliance?.takeoversCode?.length > 0 && (
         <div className="p-6 border rounded-lg">
           <div className="flex items-center mb-4">
             <Shield className="h-6 w-6 text-purple-500 mr-2" />
@@ -52,7 +52,7 @@ const EnlargedComplianceContent = ({ results }: { results: AnalysisResults }) =>
       )}
     </div>
     
-    {results.compliance.risks.length > 0 && (
+    {results.compliance?.risks?.length > 0 && (
       <div>
         <div className="flex items-center mb-6">
           <AlertTriangle className="h-6 w-6 text-orange-500 mr-2" />
@@ -76,7 +76,7 @@ const EnlargedComplianceContent = ({ results }: { results: AnalysisResults }) =>
       </div>
     )}
     
-    {results.compliance.recommendations.length > 0 && (
+    {results.compliance?.recommendations?.length > 0 && (
       <div>
         <div className="flex items-center mb-6">
           <CheckCircle className="h-6 w-6 text-green-500 mr-2" />
@@ -121,6 +121,14 @@ const EnlargedComplianceContent = ({ results }: { results: AnalysisResults }) =>
 );
 
 export const RegulatoryComplianceBox = ({ results }: RegulatoryComplianceBoxProps) => {
+  // Ensure compliance object exists with default values
+  const compliance = results.compliance || {
+    listingRules: [],
+    takeoversCode: [],
+    risks: [],
+    recommendations: []
+  };
+
   return (
     <Card className="h-[300px] flex flex-col min-h-0">
       <CardHeader className="pb-4 flex-shrink-0">
@@ -141,50 +149,58 @@ export const RegulatoryComplianceBox = ({ results }: RegulatoryComplianceBoxProp
       <CardContent className="flex-1 p-0 min-h-0">
         <ScrollArea className="h-full px-6 pb-6" type="always">
           <div className="space-y-6">
-            {results.compliance.listingRules.length > 0 && (
+            {compliance.listingRules?.length > 0 && (
               <div>
                 <h5 className="font-medium mb-4 text-base">Listing Rules</h5>
                 <div className="flex flex-wrap gap-2">
-                  {results.compliance.listingRules.map((rule, index) => (
+                  {compliance.listingRules.map((rule, index) => (
                     <Badge key={index} variant="outline" className="text-sm px-3 py-1">{rule}</Badge>
                   ))}
                 </div>
               </div>
             )}
             
-            {results.compliance.takeoversCode.length > 0 && (
+            {compliance.takeoversCode?.length > 0 && (
               <div>
                 <h5 className="font-medium mb-4 text-base">Takeovers Code</h5>
                 <div className="flex flex-wrap gap-2">
-                  {results.compliance.takeoversCode.map((code, index) => (
+                  {compliance.takeoversCode.map((code, index) => (
                     <Badge key={index} variant="outline" className="text-sm px-3 py-1">{code}</Badge>
                   ))}
                 </div>
               </div>
             )}
             
-            {results.compliance.risks.length > 0 && (
+            {compliance.risks?.length > 0 && (
               <div>
                 <h5 className="font-medium mb-4 flex items-center gap-1 text-base">
                   <AlertTriangle className="h-4 w-4 text-orange-500" />
                   Key Risks
                 </h5>
                 <ul className="space-y-2">
-                  {results.compliance.risks.map((risk, index) => (
+                  {compliance.risks.map((risk, index) => (
                     <li key={index} className="text-sm text-gray-600 leading-relaxed">• {risk}</li>
                   ))}
                 </ul>
               </div>
             )}
             
-            {results.compliance.recommendations.length > 0 && (
+            {compliance.recommendations?.length > 0 && (
               <div>
                 <h5 className="font-medium mb-4 text-base">Recommendations</h5>
                 <ul className="space-y-2">
-                  {results.compliance.recommendations.map((rec, index) => (
+                  {compliance.recommendations.map((rec, index) => (
                     <li key={index} className="text-sm text-gray-600 leading-relaxed">• {rec}</li>
                   ))}
                 </ul>
+              </div>
+            )}
+
+            {(!compliance.listingRules?.length && !compliance.takeoversCode?.length && 
+              !compliance.risks?.length && !compliance.recommendations?.length) && (
+              <div className="text-center text-gray-500 py-8">
+                <Shield className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p>Compliance analysis will appear here after transaction analysis</p>
               </div>
             )}
           </div>
