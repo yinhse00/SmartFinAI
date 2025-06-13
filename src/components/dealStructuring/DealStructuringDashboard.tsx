@@ -46,10 +46,13 @@ export const DealStructuringDashboard = ({ results, onResultsUpdate }: DealStruc
         <ExecutionTimetableBox results={results} />
       </div>
 
-      {/* Row 3, Col 2: Transaction Flow Diagram (Updated) */}
+      {/* Row 3, Col 2: Transaction Flow Diagram */}
       <div className="lg:col-start-2 lg:row-start-3">
         <TransactionFlowDiagramBox results={results} />
       </div>
+      
+      {/* Row 4, Col 1-2: Optimization Results (spans 2 columns) - Hidden for now, will be shown when optimization data is available */}
+      {/* This will be activated when the enhanced analysis service is integrated */}
     </div>
   );
 };

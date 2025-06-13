@@ -1,4 +1,3 @@
-
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -91,88 +90,110 @@ export const aiAnalysisService = {
 };
 
 /**
- * Build enhanced analysis prompt focused on major deal terms
+ * Build enhanced analysis prompt focused on major deal terms with market intelligence
  */
 function buildAnalysisPrompt(description: string, documentContent: string): string {
   return `
-As a Hong Kong investment banking advisor and financial regulatory expert, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS and commercial considerations.
+As a Hong Kong investment banking advisor and financial regulatory expert with access to real-time market intelligence, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS, commercial considerations, and market-optimized recommendations.
 
 TRANSACTION DESCRIPTION:
 ${description}
 
 ${documentContent ? `UPLOADED DOCUMENTS CONTENT:\n${documentContent}\n` : ''}
 
-Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution. Provide investment banking-quality recommendations covering:
+Perform a comprehensive analysis that incorporates MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES. Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution, considering current market conditions and precedent transactions.
 
-1. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS:
-   - Optimal structure with clear commercial rationale
-   - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out)
-   - TARGET PERCENTAGE being acquired or affected by the transaction
-   - STRATEGIC CONSIDERATIONS and suggestions for deal optimization
-   - MAJOR PAYMENT TERMS (cash/stock mix, payment schedule, escrow arrangements)
-   - CRITICAL CONDITIONS PRECEDENT that affect deal completion
-   - KEY STRUCTURAL DECISIONS (merger vs acquisition, tax optimization)
-   - Alternative structures with material trade-offs
+Your analysis should include OPTIMIZATION-FOCUSED recommendations covering:
 
-2. MAJOR COST ANALYSIS (Focus on decision-impacting amounts):
-   - Key regulatory fees (HKEX, SFC, government stamps)
-   - Major professional fees by category (legal, accounting, financial advisory)
-   - Material timing-related costs
-   - Cost optimization opportunities
-   - Total estimated range with key drivers
+1. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS (OPTIMIZED):
+   - Optimal structure with clear commercial rationale based on market conditions
+   - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out) with market benchmarks
+   - TARGET PERCENTAGE being acquired or affected by the transaction (specify exact percentage)
+   - STRATEGIC CONSIDERATIONS and deal optimization suggestions based on current market trends
+   - MAJOR PAYMENT TERMS (cash/stock mix, payment schedule, escrow arrangements) aligned with market standards
+   - CRITICAL CONDITIONS PRECEDENT that affect deal completion and market acceptance
+   - KEY STRUCTURAL DECISIONS (merger vs acquisition, tax optimization) considering regulatory environment
+   - Alternative structures with material trade-offs and market viability assessment
+   - MARKET-TESTED APPROACHES based on successful precedent transactions
 
-3. CRITICAL PATH EXECUTION TIMETABLE:
-   - DEAL-CRITICAL MILESTONES with impact on timing/cost
-   - Key regulatory approvals that affect structure
-   - Critical dependencies and resource requirements
-   - Material timing risks and mitigation strategies
-   - Overall execution timeline with key decision points
+2. MARKET-INFORMED COST ANALYSIS (Focus on current market rates):
+   - Key regulatory fees (HKEX, SFC, government stamps) at current rates
+   - Major professional fees by category based on current market pricing
+   - Material timing-related costs considering market conditions
+   - Cost optimization opportunities using market intelligence
+   - Total estimated range with key drivers and market benchmarks
+   - COMPARATIVE ANALYSIS with recent similar transactions
 
-4. MAJOR SHAREHOLDING IMPACT:
-   - Key ownership changes and control implications
-   - Material dilution analysis for existing shareholders
-   - Voting control and governance implications
+3. MARKET-CALIBRATED EXECUTION TIMETABLE:
+   - DEAL-CRITICAL MILESTONES considering current regulatory processing times
+   - Key regulatory approvals timeline based on recent market experience
+   - Critical dependencies and resource requirements in current market
+   - Material timing risks and mitigation strategies considering market volatility
+   - Overall execution timeline with market-tested decision points
+   - PRECEDENT-BASED timeline optimization recommendations
+
+4. OPTIMIZED SHAREHOLDING IMPACT ANALYSIS:
+   - Key ownership changes and control implications optimized for market acceptance
+   - Material dilution analysis for existing shareholders with market comparables
+   - Voting control and governance implications considering market best practices
    - Impact on connected persons and disclosure requirements
+   - MARKET BENCHMARKS for similar shareholding structures
 
-5. KEY REGULATORY REQUIREMENTS:
-   - Material Listing Rules requirements (Chapter 14/14A thresholds)
-   - Takeovers Code implications if applicable
-   - Critical regulatory approvals and timeline impact
-   - Key compliance risks that affect structure
-   - Actionable regulatory strategy recommendations
+5. MARKET-AWARE REGULATORY REQUIREMENTS:
+   - Material Listing Rules requirements with recent regulatory guidance
+   - Takeovers Code implications considering recent precedents
+   - Critical regulatory approvals and timeline impact based on current processing
+   - Key compliance risks considering recent regulatory changes
+   - Actionable regulatory strategy recommendations using market intelligence
 
-6. MAJOR RISKS & MITIGATION:
-   - Material execution risks with probability assessment
-   - Key market/timing risks
-   - Regulatory and approval risks
-   - Structural risk mitigation strategies
+6. MARKET-INFORMED RISK ANALYSIS & OPTIMIZATION:
+   - Material execution risks with market-calibrated probability assessment
+   - Key market/timing risks based on current market conditions
+   - Regulatory and approval risks considering recent market trends
+   - OPTIMIZATION STRATEGIES for risk mitigation based on successful market practices
+   - Market condition sensitivity analysis
 
-7. TRANSACTION FLOW DATA (for visualization):
-   - Before/after entity structures with major ownership changes
-   - Key consideration flows and payment mechanisms
-   - Material control and ownership relationships
-   - Transaction steps focusing on critical milestones
+7. COMPREHENSIVE TRANSACTION FLOW DATA (optimized for market conditions):
+   - Before/after entity structures with market-standard ownership patterns
+   - Key consideration flows and payment mechanisms aligned with market practice
+   - Material control and ownership relationships considering regulatory trends
+   - Transaction steps focusing on market-tested critical milestones
+   - OPTIMIZATION INSIGHTS for structure efficiency
 
-FORMAT your response as a structured JSON object with enhanced major terms data:
+8. MARKET INTELLIGENCE INTEGRATION:
+   - Analysis of PRECEDENT TRANSACTIONS and their outcomes
+   - Current MARKET TRENDS affecting transaction structuring
+   - REGULATORY ENVIRONMENT assessment based on recent developments
+   - OPTIMIZATION OPPORTUNITIES identified from market analysis
+   - Success probability calibration based on market data
+
+FORMAT your response as a structured JSON object with enhanced market intelligence and optimization data:
+
 {
   "transactionType": "string",
   "structure": {
-    "recommended": "string with clear commercial rationale",
+    "recommended": "string with clear commercial rationale and market context",
     "majorTerms": {
       "pricingMechanism": "fixed|formula|collar|earnout|hybrid",
-      "targetPercentage": number (percentage of target being acquired/affected),
-      "suggestionConsideration": "string with strategic considerations and deal optimization suggestions",
+      "targetPercentage": number (REQUIRED - exact percentage of target being acquired/affected),
+      "suggestionConsideration": "string with strategic considerations, deal optimization suggestions, and market intelligence insights",
       "paymentStructure": {
         "cashPercentage": number,
         "stockPercentage": number,
-        "paymentSchedule": "string",
-        "escrowArrangements": "string"
+        "paymentSchedule": "string with market-standard timing",
+        "escrowArrangements": "string based on market practice"
       },
-      "keyConditions": ["string"],
-      "structuralDecisions": ["string"]
+      "keyConditions": ["string with market-informed conditions"],
+      "structuralDecisions": ["string with optimization rationale"],
+      "marketBenchmarks": {
+        "similarDeals": number,
+        "averagePricingMultiple": number,
+        "marketSuccessRate": number
+      }
     },
-    "alternatives": [{"structure": "string", "tradeOffs": "string"}],
-    "rationale": "string focusing on commercial benefits"
+    "alternatives": [{"structure": "string", "tradeOffs": "string", "marketViability": "string"}],
+    "rationale": "string focusing on commercial benefits and market optimization",
+    "optimizationInsights": ["string with market-informed optimization recommendations"]
   },
   "costs": {
     "regulatory": number,
@@ -180,34 +201,60 @@ FORMAT your response as a structured JSON object with enhanced major terms data:
     "timing": number,
     "total": number,
     "majorDrivers": ["string"],
-    "optimizationOpportunities": ["string"],
-    "breakdown": [{"category": "string", "amount": number, "description": "string", "impact": "high|medium|low"}]
+    "optimizationOpportunities": ["string with market-based cost savings"],
+    "marketBenchmarks": {
+      "averageCostSimilarDeals": number,
+      "costEfficiencyRating": "high|medium|low"
+    },
+    "breakdown": [{"category": "string", "amount": number, "description": "string", "impact": "high|medium|low", "marketRate": "above|at|below"}]
   },
   "timetable": {
     "totalDuration": "string",
-    "criticalPath": [{"date": "string", "milestone": "string", "description": "string", "impact": "high|medium|low"}],
+    "criticalPath": [{"date": "string", "milestone": "string", "description": "string", "impact": "high|medium|low", "marketStandard": boolean}],
     "keyDependencies": ["string"],
-    "timingRisks": ["string"]
+    "timingRisks": ["string"],
+    "marketOptimization": {
+      "fastestMarketPrecedent": "string",
+      "averageMarketTiming": "string",
+      "optimizationPotential": "string"
+    }
   },
   "shareholding": {
     "before": [{"name": "string", "percentage": number}],
     "after": [{"name": "string", "percentage": number}],
     "majorChanges": ["string"],
     "controlImplications": ["string"],
-    "dilutionImpact": "string"
+    "dilutionImpact": "string",
+    "marketComparables": {
+      "typicalOwnershipStructure": "string",
+      "marketAcceptance": "high|medium|low"
+    }
   },
   "compliance": {
     "keyListingRules": ["string with rule numbers"],
     "materialApprovals": ["string"],
     "criticalRisks": ["string"],
-    "actionableRecommendations": ["string"]
+    "actionableRecommendations": ["string"],
+    "marketIntelligence": {
+      "recentRegulatoryChanges": ["string"],
+      "processingTimesTrends": "string",
+      "successFactors": ["string"]
+    }
   },
   "risks": {
-    "executionRisks": [{"risk": "string", "probability": "high|medium|low", "mitigation": "string"}],
-    "marketRisks": ["string"],
-    "regulatoryRisks": ["string"]
+    "executionRisks": [{"risk": "string", "probability": "high|medium|low", "mitigation": "string", "marketPrecedent": "string"}],
+    "marketRisks": ["string with current market conditions"],
+    "regulatoryRisks": ["string considering recent regulatory environment"],
+    "optimizationStrategies": ["string with market-tested mitigation approaches"]
   },
   "confidence": number,
+  "marketIntelligence": {
+    "precedentAnalysis": "string analyzing relevant precedent transactions",
+    "marketConditions": "string assessing current market environment",
+    "regulatoryEnvironment": "string evaluating current regulatory landscape",
+    "optimizationPotential": "string identifying optimization opportunities",
+    "successProbability": number
+  },
   "shareholdingChanges": {
     "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
     "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
@@ -235,17 +282,20 @@ FORMAT your response as a structured JSON object with enhanced major terms data:
   }
 }
 
-CRITICAL REQUIREMENTS:
-- Focus on MAJOR TERMS that impact deal economics and execution
-- Include specific TARGET PERCENTAGE being acquired or affected
-- Provide STRATEGIC CONSIDERATIONS and deal optimization suggestions
-- Provide clear commercial rationale for all recommendations
-- Include realistic financial projections and cost estimates in HKD
-- Ensure all regulatory references are accurate for Hong Kong
-- Generate comprehensive but focused diagram data for proper visualization
-- Emphasize actionable insights for deal structuring decisions
+CRITICAL REQUIREMENTS FOR OPTIMIZATION:
+- MANDATORY: Include specific TARGET PERCENTAGE being acquired or affected (not optional)
+- MANDATORY: Provide STRATEGIC CONSIDERATIONS with specific deal optimization suggestions
+- Incorporate MARKET INTELLIGENCE from recent transactions and current conditions
+- Provide OPTIMIZATION-BASED recommendations for all major deal terms
+- Include MARKET BENCHMARKS and comparative analysis where relevant
+- Focus on ACTIONABLE OPTIMIZATION insights that improve deal outcomes
+- Ensure all recommendations are MARKET-TESTED and commercially viable
+- Provide clear commercial rationale for all structural and optimization decisions
+- Include realistic financial projections calibrated to current market rates
+- Emphasize OPTIMIZATION OPPORTUNITIES that create additional value
+- Generate comprehensive market intelligence for proper optimization analysis
 
-Ensure your analysis is comprehensive yet focused on major commercial terms, providing investment banking-quality insights that enable informed deal structuring decisions.
+Your analysis should demonstrate how MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES lead to superior deal structuring decisions that maximize value while minimizing risk and cost in the current market environment.
 `;
 }
 
