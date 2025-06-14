@@ -72,6 +72,7 @@ export interface AnalysisResults {
     professional: number;
     timing: number;
     total: number;
+    majorDrivers?: string[];
     breakdown: Array<{
       category: string;
       amount: number;
@@ -96,6 +97,7 @@ export interface AnalysisResults {
     takeoversCode: string[];
     risks: string[];
     recommendations: string[];
+    actionableRecommendations?: string[];
   };
   confidence: number;
   shareholdingChanges: ShareholdingChanges;
