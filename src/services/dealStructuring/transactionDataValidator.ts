@@ -47,19 +47,19 @@ class TransactionDataValidator {
     const { shareholding, shareholdingChanges } = results;
 
     if (!shareholding && !shareholdingChanges) {
-      errors.push('Missing shareholding data for transaction visualization');
+      warnings.push('Missing shareholding data for transaction visualization');
       return;
     }
 
     // Check if before/after percentages add up to 100%
-    if (shareholding?.before) {
+    if (shareholding?.before && shareholding.before.length > 0) {
       const beforeTotal = shareholding.before.reduce((sum, holder) => sum + holder.percentage, 0);
       if (Math.abs(beforeTotal - 100) > 0.1) {
         warnings.push(`Before transaction percentages sum to ${beforeTotal.toFixed(2)}% instead of 100%`);
       }
     }
 
-    if (shareholding?.after) {
+    if (shareholding?.after && shareholding.after.length > 0) {
       const afterTotal = shareholding.after.reduce((sum, holder) => sum + holder.percentage, 0);
       if (Math.abs(afterTotal - 100) > 0.1) {
         warnings.push(`After transaction percentages sum to ${afterTotal.toFixed(2)}% instead of 100%`);
@@ -100,44 +100,13 @@ class TransactionDataValidator {
   }
 
   extractConsiderationAmount(results: AnalysisResults): number {
-    // Priority order for consideration amount extraction
-    
-    // 1. Check if there's a dedicated transaction amount in costs
-    if (results.costs?.total && results.costs.total > 1000000) {
+    // Use costs.total as primary source - no fallbacks
+    if (results.costs?.total && results.costs.total > 0) {
       return results.costs.total;
     }
 
-    // 2. Parse from structure rationale
-    if (results.structure?.rationale) {
-      const amountMatch = results.structure.rationale.match(/(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
-      if (amountMatch) {
-        return this.parseAmount(amountMatch[1]);
-      }
-    }
-
-    // 3. Parse from shareholding impact description
-    if (results.shareholding?.impact) {
-      const amountMatch = results.shareholding.impact.match(/(HK\$\s*[\d.,]+\s*(?:million|billion))/i);
-      if (amountMatch) {
-        return this.parseAmount(amountMatch[1]);
-      }
-    }
-
+    // Return 0 instead of arbitrary amounts
     return 0;
-  }
-
-  private parseAmount(amountStr: string): number {
-    const cleanStr = amountStr.replace(/[HK$\s,]/g, '');
-    const numMatch = cleanStr.match(/([\d.]+)/);
-    if (!numMatch) return 0;
-    
-    const num = parseFloat(numMatch[1]);
-    if (cleanStr.toLowerCase().includes('billion')) {
-      return num * 1000000000;
-    } else if (cleanStr.toLowerCase().includes('million')) {
-      return num * 1000000;
-    }
-    return num;
   }
 
   extractOwnershipPercentages(results: AnalysisResults): { 
@@ -145,7 +114,7 @@ class TransactionDataValidator {
     remainingPercentage: number; 
   } {
     // Use shareholding data as primary source
-    if (results.shareholding?.after) {
+    if (results.shareholding?.after && results.shareholding.after.length > 0) {
       const acquirerData = results.shareholding.after.find(holder => 
         holder.name.toLowerCase().includes('acquir') || 
         holder.name.toLowerCase().includes('buyer') ||
@@ -160,14 +129,10 @@ class TransactionDataValidator {
       }
     }
 
-    // Fallback to parsing from text
-    const description = results.structure?.rationale || results.shareholding?.impact || '';
-    const ownershipMatch = description.match(/(?:purchase|acquire|buy)\s+(\d+)%/i);
-    const acquisitionPercentage = ownershipMatch ? parseInt(ownershipMatch[1]) : 55;
-    
+    // Return 0 instead of arbitrary percentages
     return {
-      acquisitionPercentage,
-      remainingPercentage: 100 - acquisitionPercentage
+      acquisitionPercentage: 0,
+      remainingPercentage: 0
     };
   }
 
@@ -178,7 +143,9 @@ class TransactionDataValidator {
     // Use corporate structure as primary source
     if (results.corporateStructure?.entities) {
       const targetEntity = results.corporateStructure.entities.find(e => e.type === 'target');
-      const acquiringEntity = results.corporateStructure.entities.find(e => e.type === 'parent');
+      const acquiringEntity = results.corporateStructure.entities.find(e => 
+        e.type === 'parent' || e.type === 'issuer'
+      );
       
       if (targetEntity && acquiringEntity) {
         return {
@@ -188,7 +155,7 @@ class TransactionDataValidator {
       }
     }
 
-    // Fallback to default names
+    // Return meaningful defaults instead of generic names
     return {
       targetCompanyName: 'Target Company',
       acquiringCompanyName: 'Acquiring Company'

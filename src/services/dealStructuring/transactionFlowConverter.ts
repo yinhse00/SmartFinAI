@@ -1,7 +1,6 @@
 
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow } from '@/types/transactionFlow';
-import { transactionDataValidator } from './transactionDataValidator';
 import { OptimizationResult } from './optimizationEngine';
 
 export interface EnhancedTransactionFlowData {
@@ -14,42 +13,27 @@ export class TransactionFlowConverter {
     results: AnalysisResults, 
     optimizationResult?: OptimizationResult
   ): TransactionFlow | undefined {
-    // Validate data first
-    const validation = transactionDataValidator.validateConsistency(results);
-    
-    if (!validation.isValid) {
-      console.warn('Transaction data validation failed:', validation.errors);
-    }
+    console.log('Converting analysis results to transaction flow...');
+    console.log('Shareholding before:', results.shareholding?.before);
+    console.log('Shareholding after:', results.shareholding?.after);
+    console.log('Corporate structure:', results.corporateStructure);
+    console.log('Costs:', results.costs);
 
-    if (validation.warnings.length > 0) {
-      console.warn('Transaction data warnings:', validation.warnings);
-    }
+    // Extract data directly from analysis results
+    const considerationAmount = this.extractConsiderationAmount(results);
+    const entityNames = this.extractEntityNames(results);
+    const ownershipData = this.extractOwnershipData(results);
 
-    // Extract data with optimization priority
-    const considerationAmount = this.extractOptimizedConsiderationAmount(results, optimizationResult);
-    const { acquisitionPercentage, remainingPercentage } = this.extractOptimizedOwnershipPercentages(results, optimizationResult);
-    const { targetCompanyName, acquiringCompanyName } = this.extractOptimizedEntityNames(results, optimizationResult);
-    const recommendedStructure = optimizationResult?.recommendedStructure?.structure || results.structure?.recommended || 'Standard Transaction Structure';
-
-    // Build transaction flow with optimized data
-    const before = this.buildBeforeStructure(results, acquiringCompanyName, targetCompanyName);
-    const after = this.buildAfterStructure(
-      results, 
-      acquiringCompanyName, 
-      targetCompanyName, 
-      acquisitionPercentage, 
-      remainingPercentage, 
+    console.log('Extracted data:', {
       considerationAmount,
-      optimizationResult
-    );
+      entityNames,
+      ownershipData
+    });
 
-    const transactionSteps = this.generateOptimizedTransactionSteps(
-      acquiringCompanyName, 
-      acquisitionPercentage, 
-      considerationAmount,
-      recommendedStructure,
-      optimizationResult
-    );
+    // Build transaction flow with actual analysis data
+    const before = this.buildBeforeStructure(results, entityNames);
+    const after = this.buildAfterStructure(results, entityNames, considerationAmount, ownershipData);
+    const transactionSteps = this.generateTransactionSteps(results, entityNames, considerationAmount);
 
     return {
       before,
@@ -59,302 +43,278 @@ export class TransactionFlowConverter {
         type: results.transactionType || 'Transaction Analysis',
         amount: considerationAmount,
         currency: 'HKD',
-        targetName: targetCompanyName,
-        buyerName: acquiringCompanyName,
-        description: this.generateOptimizedDescription(acquisitionPercentage, considerationAmount, recommendedStructure),
+        targetName: entityNames.targetCompanyName,
+        buyerName: entityNames.acquiringCompanyName,
+        description: this.generateTransactionDescription(results, considerationAmount),
         optimizationInsights: optimizationResult?.optimizationInsights || [],
-        recommendedStructure: recommendedStructure,
+        recommendedStructure: optimizationResult?.recommendedStructure?.structure || results.structure?.recommended,
         optimizationScore: optimizationResult?.recommendedStructure?.optimizationScore
       }
     };
   }
 
-  private extractOptimizedConsiderationAmount(
-    results: AnalysisResults, 
-    optimizationResult?: OptimizationResult
-  ): number {
-    // Priority 1: Optimization result
-    if (optimizationResult?.recommendedStructure?.estimatedCost) {
-      return optimizationResult.recommendedStructure.estimatedCost;
+  private extractConsiderationAmount(results: AnalysisResults): number {
+    // Use costs total as primary source
+    if (results.costs?.total && results.costs.total > 0) {
+      return results.costs.total;
     }
 
-    // Priority 2: Original analysis extraction
-    return transactionDataValidator.extractConsiderationAmount(results) || 50000000; // 50M default only if no data
+    // If no cost data, return 0 rather than inventing amounts
+    console.warn('No consideration amount found in analysis results');
+    return 0;
   }
 
-  private extractOptimizedOwnershipPercentages(
-    results: AnalysisResults,
-    optimizationResult?: OptimizationResult
-  ): { acquisitionPercentage: number; remainingPercentage: number } {
-    // Priority 1: Extract from optimization structure description
-    if (optimizationResult?.recommendedStructure?.structure) {
-      const structureText = optimizationResult.recommendedStructure.structure;
-      const percentageMatch = structureText.match(/(\d+)%/);
-      if (percentageMatch) {
-        const acquisitionPercentage = parseInt(percentageMatch[1]);
+  private extractEntityNames(results: AnalysisResults): {
+    targetCompanyName: string;
+    acquiringCompanyName: string;
+  } {
+    // Use corporate structure as primary source
+    if (results.corporateStructure?.entities) {
+      const targetEntity = results.corporateStructure.entities.find(e => e.type === 'target');
+      const acquiringEntity = results.corporateStructure.entities.find(e => 
+        e.type === 'parent' || e.type === 'issuer'
+      );
+      
+      if (targetEntity && acquiringEntity) {
         return {
-          acquisitionPercentage,
-          remainingPercentage: 100 - acquisitionPercentage
+          targetCompanyName: targetEntity.name,
+          acquiringCompanyName: acquiringEntity.name
         };
       }
     }
 
-    // Priority 2: Original analysis data
-    return transactionDataValidator.extractOwnershipPercentages(results);
-  }
-
-  private extractOptimizedEntityNames(
-    results: AnalysisResults,
-    optimizationResult?: OptimizationResult
-  ): { targetCompanyName: string; acquiringCompanyName: string } {
-    // Priority 1: Extract from optimization context
-    if (optimizationResult?.marketIntelligence?.precedentTransactions?.length > 0) {
-      const precedent = optimizationResult.marketIntelligence.precedentTransactions[0];
-      // Try to extract company names from precedent descriptions
-      const names = this.extractCompanyNamesFromText(precedent.description);
-      if (names.targetCompanyName && names.acquiringCompanyName) {
-        return names;
-      }
-    }
-
-    // Priority 2: Original analysis data
-    const originalNames = transactionDataValidator.extractEntityNames(results);
-    
-    // Only use defaults if absolutely no data available
-    if (originalNames.targetCompanyName === 'Target Company' && originalNames.acquiringCompanyName === 'Acquiring Company') {
-      // Try to extract from analysis description or structure rationale
-      const analysisText = results.structure?.rationale || results.shareholding?.impact || '';
-      const extractedNames = this.extractCompanyNamesFromText(analysisText);
-      if (extractedNames.targetCompanyName !== 'Target Company') {
-        return extractedNames;
-      }
-    }
-
-    return originalNames;
-  }
-
-  private extractCompanyNamesFromText(text: string): { targetCompanyName: string; acquiringCompanyName: string } {
-    // Simple extraction logic - could be enhanced with more sophisticated NLP
-    const companyPattern = /([A-Z][a-zA-Z\s&]+(?:Limited|Ltd|Corporation|Corp|Company|Co|Group|Holdings))/g;
-    const matches = text.match(companyPattern);
-    
-    if (matches && matches.length >= 2) {
-      return {
-        acquiringCompanyName: matches[0].trim(),
-        targetCompanyName: matches[1].trim()
-      };
-    }
-    
+    // Fallback to meaningful defaults
     return {
       targetCompanyName: 'Target Company',
       acquiringCompanyName: 'Acquiring Company'
     };
   }
 
-  private generateOptimizedDescription(
-    acquisitionPercentage: number,
-    considerationAmount: number,
-    recommendedStructure: string
-  ): string {
-    const amountText = `HKD ${(considerationAmount / 1000000).toFixed(0)}M`;
-    return `${acquisitionPercentage}% acquisition for ${amountText} via ${recommendedStructure}`;
-  }
+  private extractOwnershipData(results: AnalysisResults): {
+    hasBeforeData: boolean;
+    hasAfterData: boolean;
+    isFullAcquisition: boolean;
+    acquisitionPercentage: number;
+  } {
+    const beforeData = results.shareholding?.before || [];
+    const afterData = results.shareholding?.after || [];
+    
+    let acquisitionPercentage = 0;
+    let isFullAcquisition = false;
 
-  private buildBeforeStructure(
-    results: AnalysisResults, 
-    acquiringCompanyName: string, 
-    targetCompanyName: string
-  ) {
-    // Use actual shareholding data or intelligent defaults
-    const controllingPercentage = results.shareholding?.before?.[0]?.percentage || 65;
-    const publicPercentage = 100 - controllingPercentage;
+    if (afterData.length > 0) {
+      // Find the acquirer in after data
+      const acquirer = afterData.find(holder => 
+        holder.name.toLowerCase().includes('acquir') || 
+        holder.name.toLowerCase().includes('buyer') ||
+        holder.name.toLowerCase().includes('purchas')
+      );
+      
+      if (acquirer) {
+        acquisitionPercentage = acquirer.percentage;
+        isFullAcquisition = acquisitionPercentage >= 100;
+      }
+    }
 
     return {
-      entities: [
-        { 
-          id: 'before-controlling-shareholder', 
-          name: results.shareholding?.before?.[0]?.name || 'Controlling Shareholder', 
+      hasBeforeData: beforeData.length > 0,
+      hasAfterData: afterData.length > 0,
+      isFullAcquisition,
+      acquisitionPercentage
+    };
+  }
+
+  private buildBeforeStructure(results: AnalysisResults, entityNames: any) {
+    const entities = [];
+    const relationships = [];
+
+    // Use actual shareholding before data if available
+    if (results.shareholding?.before && results.shareholding.before.length > 0) {
+      results.shareholding.before.forEach((holder, index) => {
+        entities.push({
+          id: `before-shareholder-${index}`,
+          name: holder.name,
           type: 'stockholder' as const
-        },
-        { 
-          id: 'before-public-shareholders', 
-          name: 'Public Shareholders', 
-          type: 'stockholder' as const
-        },
-        { 
-          id: 'before-acquiring-company', 
-          name: acquiringCompanyName, 
-          type: 'buyer' as const,
-          description: 'Listed Entity'
-        },
-        { 
-          id: 'before-target-shareholders', 
-          name: 'Existing Target Shareholders', 
-          type: 'stockholder' as const
-        },
-        { 
-          id: 'before-target-company', 
-          name: targetCompanyName, 
-          type: 'target' as const 
-        }
-      ],
-      relationships: [
-        {
-          source: 'before-controlling-shareholder',
-          target: 'before-acquiring-company',
-          type: 'ownership' as const,
-          percentage: controllingPercentage
-        },
-        {
-          source: 'before-public-shareholders',
-          target: 'before-acquiring-company',
-          type: 'ownership' as const,
-          percentage: publicPercentage
-        },
-        {
-          source: 'before-target-shareholders',
+        });
+      });
+
+      // Add the acquiring company as separate entity
+      entities.push({
+        id: 'before-acquiring-company',
+        name: entityNames.acquiringCompanyName,
+        type: 'buyer' as const,
+        description: 'Acquiring Entity'
+      });
+
+      // Add target company
+      entities.push({
+        id: 'before-target-company',
+        name: entityNames.targetCompanyName,
+        type: 'target' as const
+      });
+
+      // Create relationships for target company shareholding
+      results.shareholding.before.forEach((holder, index) => {
+        relationships.push({
+          source: `before-shareholder-${index}`,
           target: 'before-target-company',
           type: 'ownership' as const,
-          percentage: 100
+          percentage: holder.percentage
+        });
+      });
+    } else {
+      // Minimal structure when no shareholding data
+      entities.push(
+        {
+          id: 'before-acquiring-company',
+          name: entityNames.acquiringCompanyName,
+          type: 'buyer' as const
+        },
+        {
+          id: 'before-target-company',
+          name: entityNames.targetCompanyName,
+          type: 'target' as const
         }
-      ]
-    };
+      );
+    }
+
+    return { entities, relationships };
   }
 
   private buildAfterStructure(
     results: AnalysisResults,
-    acquiringCompanyName: string,
-    targetCompanyName: string,
-    acquisitionPercentage: number,
-    remainingPercentage: number,
+    entityNames: any,
     considerationAmount: number,
-    optimizationResult?: OptimizationResult
+    ownershipData: any
   ) {
-    // Use actual shareholding data for controlling structure
-    const controllingPercentage = results.shareholding?.before?.[0]?.percentage || 65;
-    const publicPercentage = 100 - controllingPercentage;
+    const entities = [];
+    const relationships = [];
 
-    const entities = [
-      { 
-        id: 'after-target-company', 
-        name: targetCompanyName, 
-        type: 'target' as const 
-      },
-      { 
-        id: 'after-acquiring-company', 
-        name: acquiringCompanyName, 
-        type: 'buyer' as const
-      },
-      { 
-        id: 'after-remaining-shareholders', 
-        name: 'Remaining Target Shareholders', 
-        type: 'stockholder' as const
-      },
-      { 
-        id: 'after-controlling-shareholder', 
-        name: results.shareholding?.before?.[0]?.name || 'Controlling Shareholder', 
-        type: 'stockholder' as const
-      },
-      { 
-        id: 'after-public-shareholders', 
-        name: 'Public Shareholders', 
-        type: 'stockholder' as const
-      },
-      { 
-        id: 'consideration-payment', 
-        name: `HKD ${(considerationAmount / 1000000).toFixed(0)}M Consideration`, 
-        type: 'consideration' as const,
-        value: considerationAmount,
-        currency: 'HKD'
-      }
-    ];
-
-    // Add optimization insights as entities if available
-    if (optimizationResult?.optimizationInsights?.length > 0) {
-      entities.push({
-        id: 'optimization-insights',
-        name: `Optimization: ${optimizationResult.optimizationInsights[0].substring(0, 50)}...`,
-        type: 'consideration' as const,
-        description: optimizationResult.recommendedStructure.name
+    // Use actual shareholding after data if available
+    if (results.shareholding?.after && results.shareholding.after.length > 0) {
+      // Add all shareholders from after data
+      results.shareholding.after.forEach((holder, index) => {
+        entities.push({
+          id: `after-shareholder-${index}`,
+          name: holder.name,
+          type: holder.name.toLowerCase().includes('acquir') || 
+                holder.name.toLowerCase().includes('buyer') ? 'buyer' as const : 'stockholder' as const
+        });
       });
+
+      // Add target company
+      entities.push({
+        id: 'after-target-company',
+        name: entityNames.targetCompanyName,
+        type: 'target' as const
+      });
+
+      // Add consideration if amount is available
+      if (considerationAmount > 0) {
+        entities.push({
+          id: 'consideration-payment',
+          name: `HKD ${(considerationAmount / 1000000).toFixed(0)}M Consideration`,
+          type: 'consideration' as const,
+          value: considerationAmount,
+          currency: 'HKD'
+        });
+      }
+
+      // Create ownership relationships
+      results.shareholding.after.forEach((holder, index) => {
+        relationships.push({
+          source: `after-shareholder-${index}`,
+          target: 'after-target-company',
+          type: 'ownership' as const,
+          percentage: holder.percentage
+        });
+      });
+
+      // Add consideration relationship if applicable
+      if (considerationAmount > 0) {
+        const acquirer = results.shareholding.after.find(holder => 
+          holder.name.toLowerCase().includes('acquir') || 
+          holder.name.toLowerCase().includes('buyer')
+        );
+        
+        if (acquirer) {
+          const acquirerIndex = results.shareholding.after.indexOf(acquirer);
+          relationships.push({
+            source: `after-shareholder-${acquirerIndex}`,
+            target: 'consideration-payment',
+            type: 'consideration' as const,
+            value: considerationAmount
+          });
+        }
+      }
+    } else {
+      // Minimal structure when no after data
+      entities.push(
+        {
+          id: 'after-acquiring-company',
+          name: entityNames.acquiringCompanyName,
+          type: 'buyer' as const
+        },
+        {
+          id: 'after-target-company',
+          name: entityNames.targetCompanyName,
+          type: 'target' as const
+        }
+      );
+
+      if (considerationAmount > 0) {
+        entities.push({
+          id: 'consideration-payment',
+          name: `HKD ${(considerationAmount / 1000000).toFixed(0)}M Consideration`,
+          type: 'consideration' as const,
+          value: considerationAmount,
+          currency: 'HKD'
+        });
+      }
     }
 
-    return {
-      entities,
-      relationships: [
-        {
-          source: 'after-acquiring-company',
-          target: 'after-target-company',
-          type: 'ownership' as const,
-          percentage: acquisitionPercentage
-        },
-        {
-          source: 'after-remaining-shareholders',
-          target: 'after-target-company',
-          type: 'ownership' as const,
-          percentage: remainingPercentage
-        },
-        {
-          source: 'after-controlling-shareholder',
-          target: 'after-acquiring-company',
-          type: 'ownership' as const,
-          percentage: controllingPercentage
-        },
-        {
-          source: 'after-public-shareholders',
-          target: 'after-acquiring-company',
-          type: 'ownership' as const,
-          percentage: publicPercentage
-        },
-        {
-          source: 'after-acquiring-company',
-          target: 'consideration-payment',
-          type: 'consideration' as const,
-          value: considerationAmount
-        }
-      ]
-    };
+    return { entities, relationships };
   }
 
-  private generateOptimizedTransactionSteps(
-    acquiringCompanyName: string,
-    acquisitionPercentage: number,
-    considerationAmount: number,
-    recommendedStructure: string,
-    optimizationResult?: OptimizationResult
-  ) {
+  private generateTransactionDescription(results: AnalysisResults, considerationAmount: number): string {
+    const transactionType = results.transactionType || 'Transaction';
+    const amountText = considerationAmount > 0 ? `HKD ${(considerationAmount / 1000000).toFixed(0)}M` : '';
+    const structure = results.structure?.recommended || 'Standard Structure';
+    
+    return `${transactionType} ${amountText} via ${structure}`.trim();
+  }
+
+  private generateTransactionSteps(results: AnalysisResults, entityNames: any, considerationAmount: number) {
     const steps = [
       {
         id: 'step-1',
         title: 'Due Diligence & Negotiation',
-        description: `${acquiringCompanyName} conducts due diligence and negotiates acquisition terms`,
+        description: `${entityNames.acquiringCompanyName} conducts due diligence and negotiates transaction terms`,
+        entities: ['before-acquiring-company', 'before-target-company']
+      },
+      {
+        id: 'step-2',
+        title: 'Transaction Execution',
+        description: `Implementation of ${results.structure?.recommended || 'transaction structure'}`,
         entities: ['before-acquiring-company', 'before-target-company']
       }
     ];
 
-    // Add optimization-specific step if available
-    if (optimizationResult?.recommendedStructure) {
+    if (considerationAmount > 0) {
       steps.push({
-        id: 'step-2',
-        title: optimizationResult.recommendedStructure.name,
-        description: optimizationResult.recommendedStructure.description,
-        entities: ['before-acquiring-company', 'before-target-company']
+        id: 'step-3',
+        title: 'Completion & Payment',
+        description: `Transfer of ownership and payment of HKD ${(considerationAmount / 1000000).toFixed(0)}M consideration`,
+        entities: ['after-target-company', 'consideration-payment']
       });
     } else {
       steps.push({
-        id: 'step-2',
-        title: 'Transaction Execution',
-        description: `Implementation of ${recommendedStructure}`,
-        entities: ['before-acquiring-company', 'before-target-company']
+        id: 'step-3',
+        title: 'Completion',
+        description: 'Transfer of ownership and transaction completion',
+        entities: ['after-target-company']
       });
     }
-
-    steps.push({
-      id: 'step-3',
-      title: 'Completion & Payment',
-      description: `Transfer of ${acquisitionPercentage}% ownership and payment of HKD ${(considerationAmount / 1000000).toFixed(0)}M consideration`,
-      entities: ['after-acquiring-company', 'after-target-company', 'consideration-payment']
-    });
 
     return steps;
   }
