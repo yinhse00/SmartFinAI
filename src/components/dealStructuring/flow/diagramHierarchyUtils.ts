@@ -1,6 +1,7 @@
+
 // Utility to generate entity hierarchy levels based on relationships
 
-import { TransactionEntity, TransactionFlow, AnyTransactionRelationship } from "@/types/transactionFlow";
+import { TransactionEntity, TransactionFlow } from "@/types/transactionFlow";
 
 /**
  * Builds a mapping of entity ID to hierarchy depth for vertical positioning.
@@ -58,30 +59,30 @@ export function computeEntityHierarchyLevels(
 }
 
 /**
- * Builds a hierarchy for the "After Transaction" section based on business entity types
- * and their ownership relationships. This overrides the generic parent-child relationship 
- * hierarchy to enforce a specific visual layout where stockholders are placed directly 
- * above the entities they own, preventing visually confusing "skipping" of levels.
+ * Builds a hierarchy for the "After Transaction" section based on business entity types.
+ * This overrides the generic parent-child relationship hierarchy to enforce a specific
+ * visual layout (e.g., stockholders always at the top).
  *
  * @param entities The entities in the "After" section.
- * @param relationships The relationships in the "After" section.
  * @returns A Map of entity ID to its hierarchy level.
  */
 export function computeAfterTransactionHierarchy(
-  entities: TransactionEntity[],
-  relationships: AnyTransactionRelationship[]
+  entities: TransactionEntity[]
 ): Map<string, number> {
   const levels = new Map<string, number>();
-  const stockholderEntities = entities.filter(e => e.type === 'stockholder');
-  const otherEntities = entities.filter(e => e.type !== 'stockholder');
 
-  // 1. Assign base levels for all non-stockholder entities to establish the main corporate structure
-  otherEntities.forEach((entity) => {
+  // Assign levels based on entity type with a clear business hierarchy
+  entities.forEach((entity) => {
     switch (entity.type) {
+      // Level 0: All individual shareholders and groups of shareholders
+      case 'stockholder':
+        levels.set(entity.id, 0);
+        break;
+
       // Level 1: The main acquiring entities
       case 'buyer':
       case 'parent':
-      case 'newco':
+      case 'newco': // New holding company is often at this level
         levels.set(entity.id, 1);
         break;
 
@@ -103,43 +104,6 @@ export function computeAfterTransactionHierarchy(
         }
         break;
     }
-  });
-
-  // 2. Position stockholders dynamically based on the level of the entities they own
-  stockholderEntities.forEach((stockholder) => {
-    const ownerships = relationships.filter(
-      rel => rel.source === stockholder.id && rel.type === 'ownership'
-    );
-
-    if (ownerships.length > 0) {
-      const potentialLevels = ownerships.map(ownership => {
-        const targetLevel = levels.get(ownership.target);
-        // Place stockholder 1 level above the entity it owns.
-        return targetLevel !== undefined ? targetLevel - 1 : -1;
-      }).filter(level => level >= 0); // Ignore invalid levels
-
-      if (potentialLevels.length > 0) {
-        // If a stockholder owns entities at different levels (e.g., a level-1 parent
-        // and a level-2 target), place it above the HIGHEST entity it owns in the hierarchy
-        // (i.e., the one with the lowest level number).
-        // Math.min achieves this: min(level 0, level 1) = level 0.
-        levels.set(stockholder.id, Math.min(...potentialLevels));
-      } else {
-        // Fallback for stockholders with malformed ownerships
-        levels.set(stockholder.id, 0);
-      }
-    } else {
-      // If a stockholder owns nothing (e.g., only received cash), place at the top.
-      levels.set(stockholder.id, 0);
-    }
-  });
-
-  // Final validation pass to ensure every single entity has a level assigned.
-  entities.forEach(entity => {
-      if (!levels.has(entity.id)) {
-          console.warn(`[computeAfterTransactionHierarchy] Entity ${entity.id} ('${entity.name}') was not assigned a level, defaulting to 5.`);
-          levels.set(entity.id, 5);
-      }
   });
 
   return levels;

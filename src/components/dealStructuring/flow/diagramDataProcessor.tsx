@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
@@ -230,7 +231,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
     console.warn('⚠️  Former Target Shareholders entity not found in AFTER entities');
   }
   
-  const afterLevels = computeAfterTransactionHierarchy(afterEntities, transactionFlow.after.relationships);
+  const afterLevels = computeAfterTransactionHierarchy(afterEntities);
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
   newNodes.push(...afterNodes);
