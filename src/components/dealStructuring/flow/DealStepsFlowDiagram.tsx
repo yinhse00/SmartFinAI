@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import TransactionFlowNode from './TransactionFlowNode';
 import TransactionFlowEdge from './TransactionFlowEdge';
-import { TransactionFlow } from '@/types/transactionFlow';
+import { TransactionFlow, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow'; // Added AnyTransactionRelationship
 
 const nodeTypes = {
   transactionNode: TransactionFlowNode,
@@ -56,20 +56,27 @@ const DealStepsFlowDiagram: React.FC<DealStepsFlowDiagramProps> = ({
     }));
 
     // Create edges from relationships
-    const flowEdges: Edge[] = currentState.relationships.map((rel, index) => ({
-      id: `edge-${index}`,
-      source: rel.source,
-      target: rel.target,
-      type: 'transactionEdge',
-      markerEnd: {
-        type: MarkerType.ArrowClosed,
-      },
-      data: {
-        type: rel.type,
-        percentage: rel.percentage,
-        value: 'value' in rel ? rel.value : undefined,
-      },
-    }));
+    const flowEdges: Edge[] = currentState.relationships.map((rel: AnyTransactionRelationship, index: number) => {
+      let percentageData: number | undefined = undefined;
+      if (rel.type === 'ownership' || rel.type === 'control') {
+        percentageData = (rel as OwnershipRelationship).percentage;
+      }
+
+      return {
+        id: `edge-${index}`,
+        source: rel.source,
+        target: rel.target,
+        type: 'transactionEdge',
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+        },
+        data: {
+          type: rel.type,
+          percentage: percentageData,
+          value: 'value' in rel ? rel.value : undefined,
+        },
+      };
+    });
 
     return { nodes: flowNodes, edges: flowEdges };
   }, [transactionFlow, showBefore]);
@@ -115,3 +122,4 @@ const DealStepsFlowDiagram: React.FC<DealStepsFlowDiagramProps> = ({
 };
 
 export default DealStepsFlowDiagram;
+

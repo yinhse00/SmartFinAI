@@ -344,8 +344,8 @@ function createFallbackShareholdingChanges(): ShareholdingChanges {
       { name: "New Investors", percentage: 20, type: "institutional" as const, isConnected: false }
     ],
     keyChanges: [
-      { shareholder: "Existing Shareholders", change: -20, type: "decrease" as const },
-      { shareholder: "New Investors", change: 20, type: "new" as const }
+      { shareholder: "Existing Shareholders", before: 100, after: 80, change: -20 },
+      { shareholder: "New Investors", before: 0, after: 20, change: 20 }
     ],
     controlImplications: ["Dilution of existing shareholders", "Introduction of new institutional investors"]
   };
