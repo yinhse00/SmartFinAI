@@ -1,7 +1,5 @@
 
-// Utility to generate entity hierarchy levels based on relationships
-
-import { TransactionEntity, TransactionFlow } from "@/types/transactionFlow";
+import { TransactionEntity, AnyTransactionRelationship } from "@/types/transactionFlow";
 
 /**
  * Builds a mapping of entity ID to hierarchy depth for vertical positioning.
@@ -11,7 +9,7 @@ import { TransactionEntity, TransactionFlow } from "@/types/transactionFlow";
  */
 export function computeEntityHierarchyLevels(
   entities: TransactionEntity[],
-  relationships: { source: string; target: string }[]
+  relationships: AnyTransactionRelationship[]
 ): Map<string, number> {
   // Build an adjacency list: child -> parent(s), because we want to traverse upwards to roots
   const parentMap = new Map<string, string[]>();
@@ -57,6 +55,83 @@ export function computeEntityHierarchyLevels(
 
   return levels;
 }
+
+/**
+ * A specialized hierarchy computer for the "After" transaction view.
+ * It ensures that all owners of the target company are aligned at the same vertical level,
+ * and the target company is placed directly below them, without being hardcoded.
+ * @param entities Full array of entities in the diagram section.
+ * @param relationships Array of relationships for the section.
+ * @returns Map of entity id => hierarchy depth.
+ */
+export function computeAfterHierarchyWithTargetLogic(
+  entities: TransactionEntity[],
+  relationships: AnyTransactionRelationship[]
+): Map<string, number> {
+  // Start with a baseline hierarchy using the generic algorithm.
+  const levels = computeEntityHierarchyLevels(entities, relationships);
+
+  const target = entities.find(e => e.type === 'target');
+  if (!target) {
+    return levels; // No target found, no special logic needed.
+  }
+
+  const ownershipRels = relationships.filter(r => r.type === 'ownership');
+  
+  // Find all direct owners of the target company.
+  const targetOwners = ownershipRels
+    .filter(r => r.target === target.id)
+    .map(r => r.source);
+  
+  // If there are less than two owners, the default layout is likely fine.
+  if (targetOwners.length < 2) {
+    return levels;
+  }
+
+  // Find the 'highest' level (i.e., smallest level number) among all owners.
+  // This establishes the baseline for alignment.
+  let highestOwnerLevel = Infinity;
+  targetOwners.forEach(ownerId => {
+    const level = levels.get(ownerId);
+    if (level !== undefined && level < highestOwnerLevel) {
+      highestOwnerLevel = level;
+    }
+  });
+
+  // Fallback if no owner levels could be determined.
+  if (highestOwnerLevel === Infinity) {
+    const buyer = entities.find(e => e.type === 'buyer' || e.type === 'parent');
+    highestOwnerLevel = (buyer && levels.get(buyer.id)) ?? 0;
+  }
+
+  // --- Apply Alignment Logic ---
+
+  // 1. Align all owners of the target to the same `highestOwnerLevel`.
+  targetOwners.forEach(ownerId => levels.set(ownerId, highestOwnerLevel));
+  
+  // 2. Place the target one level below its owners.
+  const newTargetLevel = highestOwnerLevel + 1;
+  levels.set(target.id, newTargetLevel);
+
+  // 3. Propagate level changes downwards from the target to its own children/subsidiaries.
+  const queue: { id: string; level: number }[] = [{ id: target.id, level: newTargetLevel }];
+  const visited = new Set<string>([target.id]);
+
+  while(queue.length > 0) {
+    const { id, level } = queue.shift()!;
+    const children = relationships.filter(r => r.source === id).map(r => r.target);
+    for (const childId of children) {
+      if (!visited.has(childId)) {
+        visited.add(childId);
+        levels.set(childId, level + 1);
+        queue.push({ id: childId, level: level + 1 });
+      }
+    }
+  }
+
+  return levels;
+}
+
 
 /**
  * Returns max hierarchy level (deepest), used for layout spacing.

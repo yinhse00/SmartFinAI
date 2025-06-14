@@ -8,7 +8,7 @@ import {
   SECTION_X_SPACING,
   LEVEL_Y_SPACING
 } from './diagramLayoutUtils';
-import { computeEntityHierarchyLevels, getMaxHierarchyLevel } from './diagramHierarchyUtils';
+import { computeEntityHierarchyLevels, getMaxHierarchyLevel, computeAfterHierarchyWithTargetLogic } from './diagramHierarchyUtils';
 
 /**
  * Given an entity hierarchy, calculate the Y position based on level, with buffers.
@@ -154,7 +154,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
 
   // AFTER Section
   const afterEntities = transactionFlow.after.entities;
-  const afterLevels = computeEntityHierarchyLevels(afterEntities, transactionFlow.after.relationships);
+  const afterLevels = computeAfterHierarchyWithTargetLogic(afterEntities, transactionFlow.after.relationships);
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
   newNodes.push(...afterNodes);
