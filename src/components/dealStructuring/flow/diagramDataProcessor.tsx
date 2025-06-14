@@ -4,7 +4,6 @@ import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, Ownersh
 import { createEntityNode, addSectionHeaderNode } from './nodeUtils';
 import {
   ENTITY_WIDTH,
-  ENTITY_HEIGHT,
   SIBLING_X_SPACING,
   SECTION_X_SPACING,
   LEVEL_Y_SPACING
@@ -19,57 +18,76 @@ function getYPositionForLevel(level: number): number {
   return 30 + level * LEVEL_Y_SPACING;
 }
 
+/**
+ * Calculates the layout for a single section (e.g., "Before" or "After")
+ * to ensure nodes are centered and do not overlap.
+ */
+const calculateSectionLayout = (
+  entities: TransactionEntity[],
+  levels: Map<string, number>,
+  startX: number
+): { nodes: Node[], sectionWidth: number } => {
+  const groupByLevel: Record<number, TransactionEntity[]> = {};
+  entities.forEach(e => {
+    const lvl = levels.get(e.id) ?? 0;
+    if (!groupByLevel[lvl]) groupByLevel[lvl] = [];
+    groupByLevel[lvl].push(e);
+  });
+  
+  const maxLevel = getMaxHierarchyLevel(levels);
+  const levelLayouts: { nodes: TransactionEntity[]; width: number }[] = [];
+  let sectionWidth = 0;
+
+  for (let i = 0; i <= maxLevel; i++) {
+    const nodesAtLevel = groupByLevel[i] || [];
+    const width = nodesAtLevel.length > 0
+      ? ((nodesAtLevel.length - 1) * SIBLING_X_SPACING) + ENTITY_WIDTH
+      : 0;
+    levelLayouts.push({ nodes: nodesAtLevel, width });
+    sectionWidth = Math.max(sectionWidth, width);
+  }
+
+  const newNodes: Node[] = [];
+  for (let lvl = 0; lvl <= maxLevel; lvl++) {
+    const { nodes: nodesAtLevel, width: levelWidth } = levelLayouts[lvl];
+    if (nodesAtLevel.length === 0) continue;
+
+    const levelStartX = startX + (sectionWidth / 2) - (levelWidth / 2);
+    nodesAtLevel.forEach((entity, idx) => {
+      const x = levelStartX + idx * SIBLING_X_SPACING;
+      const y = getYPositionForLevel(lvl);
+      newNodes.push(createEntityNode(entity, x, y));
+    });
+  }
+
+  return { nodes: newNodes, sectionWidth };
+};
+
 export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlow): { nodes: Node[], edges: Edge[] } => {
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
   let currentXOffset = 50;
 
   // Helper to add section header and update nodes array
-  const addSectionHeader = (id: string, label: string, x: number, y: number) => {
+  const addSectionHeader = (id: string, label: string, x: number, y: number, width: number) => {
       newNodes.push(addSectionHeaderNode(id, label, x, y));
   };
 
   // BEFORE Section
-  addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   const beforeEntities = transactionFlow.before.entities;
-  const beforeRelationships = transactionFlow.before.relationships;
-
-  // Compute hierarchy for "before"
-  const beforeLevels = computeEntityHierarchyLevels(beforeEntities, beforeRelationships);
-
-  // Group entities by their hierarchy (so we can space x-axis efficiently per layer)
-  const beforeGroupByLevel: Record<number, TransactionEntity[]> = {};
-  beforeEntities.forEach((e) => {
-    const lvl = beforeLevels.get(e.id) ?? 0;
-    if (!beforeGroupByLevel[lvl]) beforeGroupByLevel[lvl] = [];
-    beforeGroupByLevel[lvl].push(e);
-  });
-  const beforeMaxLevel = getMaxHierarchyLevel(beforeLevels);
-
-  // Place nodes per level vertically
-  let beforeXStart = currentXOffset;
-  let beforeSectionWidth = 0;
-
-  for (let lvl = 0; lvl <= beforeMaxLevel; lvl++) {
-    const nodesAtLevel = beforeGroupByLevel[lvl] || [];
-    const levelStartX = beforeXStart + ((Math.max(0, nodesAtLevel.length - 1) * SIBLING_X_SPACING) / 2);
-    nodesAtLevel.forEach((entity, idx) => {
-      const x = beforeXStart + idx * SIBLING_X_SPACING;
-      const y = getYPositionForLevel(lvl);
-      newNodes.push(createEntityNode(entity, x, y));
-    });
-    beforeSectionWidth = Math.max(beforeSectionWidth, nodesAtLevel.length * SIBLING_X_SPACING + ENTITY_WIDTH);
-  }
+  const beforeLevels = computeEntityHierarchyLevels(beforeEntities, transactionFlow.before.relationships);
+  const { nodes: beforeNodes, sectionWidth: beforeSectionWidth } = calculateSectionLayout(beforeEntities, beforeLevels, currentXOffset);
+  addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, 0, beforeSectionWidth);
+  newNodes.push(...beforeNodes);
 
   // Edges for BEFORE section
   transactionFlow.before.relationships.forEach((rel, index) => {
     if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
-      let edgeLabel = rel.label || rel.type;
+      let edgeLabel: string | React.ReactNode = rel.label || rel.type;
       if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
-        edgeLabel = `${(rel as OwnershipRelationship).percentage}% ${rel.type}`;
-      } else if ((rel.type === 'consideration' || rel.type === 'funding') && (rel as ConsiderationRelationship).value !== undefined) {
-         // Assuming value might be large, format if needed, or just show type if no value
-         edgeLabel = `${rel.type}`; // Or format value: `${(rel as ConsiderationRelationship).value} ${rel.type}`
+        edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
+      } else if (rel.type === 'consideration' || rel.type === 'funding') {
+        edgeLabel = rel.type; // Value is shown on the node itself
       }
 
       newEdges.push({
@@ -87,7 +105,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
   // TRANSACTION Section
-  addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
+  addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset, 0, ENTITY_WIDTH);
   if (transactionFlow.transactionContext) {
       const tc = transactionFlow.transactionContext;
       const transactionNodeId = 'node-transaction-process';
@@ -135,34 +153,11 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
 
   // AFTER Section
-  addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   const afterEntities = transactionFlow.after.entities;
-  const afterRelationships = transactionFlow.after.relationships;
-
-  // Compute hierarchy for "after"
-  const afterLevels = computeEntityHierarchyLevels(afterEntities, afterRelationships);
-
-  // Group entities by their hierarchy
-  const afterGroupByLevel: Record<number, TransactionEntity[]> = {};
-  afterEntities.forEach((e) => {
-    const lvl = afterLevels.get(e.id) ?? 0;
-    if (!afterGroupByLevel[lvl]) afterGroupByLevel[lvl] = [];
-    afterGroupByLevel[lvl].push(e);
-  });
-  const afterMaxLevel = getMaxHierarchyLevel(afterLevels);
-
-  // Place nodes per level vertically in "after"
-  let afterXStart = currentXOffset;
-  let afterSectionWidth = 0;
-  for (let lvl = 0; lvl <= afterMaxLevel; lvl++) {
-    const nodesAtLevel = afterGroupByLevel[lvl] || [];
-    nodesAtLevel.forEach((entity, idx) => {
-      const x = afterXStart + idx * SIBLING_X_SPACING;
-      const y = getYPositionForLevel(lvl);
-      newNodes.push(createEntityNode(entity, x, y));
-    });
-    afterSectionWidth = Math.max(afterSectionWidth, nodesAtLevel.length * SIBLING_X_SPACING + ENTITY_WIDTH);
-  }
+  const afterLevels = computeEntityHierarchyLevels(afterEntities, transactionFlow.after.relationships);
+  const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
+  addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
+  newNodes.push(...afterNodes);
 
   // Edges for AFTER section
   transactionFlow.after.relationships.forEach((rel, index) => {
@@ -174,11 +169,11 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           if (rel.type === 'consideration')
             strokeColor = '#16a34a';
 
-          let edgeLabel = rel.label || rel.type;
+          let edgeLabel: string | React.ReactNode = rel.label || rel.type;
           if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
-            edgeLabel = `${(rel as OwnershipRelationship).percentage}% ${rel.type}`;
-          } else if ((rel.type === 'consideration' || rel.type === 'funding') && (rel as ConsiderationRelationship).value !== undefined) {
-            edgeLabel = `${((rel as ConsiderationRelationship).value || 0)/1000000}M ${rel.type}`;
+            edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
+          } else if (rel.type === 'consideration' || rel.type === 'funding') {
+            edgeLabel = rel.type; // Value is shown on the node itself
           }
           
           newEdges.push({

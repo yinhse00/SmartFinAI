@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Node, Position } from '@xyflow/react';
 import { TransactionEntity } from '@/types/transactionFlow';
@@ -80,11 +79,7 @@ export const createEntityNode = (entity: TransactionEntity, x: number, y: number
       <div className="text-xs text-gray-500 italic">{entity.type}</div>
       {entity.description && <div className="text-xs text-gray-600 mt-1">{entity.description}</div>}
       {additionalDescription && <div className="text-xs text-gray-600 mt-1">{additionalDescription}</div>}
-      {entity.percentage !== undefined && (
-        <div className="text-xs font-medium text-blue-700 mt-1">
-          {entity.percentage.toFixed(1)}%
-        </div>
-      )}
+      {/* Percentage display removed from here to avoid duplication with edge label */}
       {entity.value !== undefined && (
         <div className="text-xs font-medium text-green-700 mt-1">
           {entity.currency || '...'} {(entity.value / 1000000).toFixed(1)}M
