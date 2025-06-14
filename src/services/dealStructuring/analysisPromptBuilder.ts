@@ -167,7 +167,7 @@ FORMAT your response as a structured JSON object with enhanced market intelligen
   },
   "shareholdingChanges": {
     "before": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
-    "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}],
+    "after": [{"name": "string", "percentage": number, "type": "individual|institutional|connected|public|fund", "isConnected": false}], // IMPORTANT: If stock consideration is used, this 'after' state MUST reflect the dilution of existing shareholders and the addition of new shareholders receiving stock, based on deal value and estimated acquirer valuation.
     "keyChanges": [{"shareholder": "string", "change": number, "type": "increase|decrease|new|exit", "impact": "material|minor"}],
     "controlImplications": ["string"]
   },
