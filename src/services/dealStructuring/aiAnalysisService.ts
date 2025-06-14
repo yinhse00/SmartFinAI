@@ -1,6 +1,10 @@
+
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { buildAnalysisPrompt } from './analysisPromptBuilder'; // Added import
+import { parseAnalysisResponse } from './analysisResponseParser'; // Added import
+// Fallback functions are in analysisFallbackData.ts and used by parseAnalysisResponse
 
 export interface TransactionAnalysisRequest {
   transactionType: string;
@@ -92,3 +96,4 @@ export const aiAnalysisService = {
 // - analysisPromptBuilder.ts
 // - analysisResponseParser.ts
 // - analysisFallbackData.ts
+

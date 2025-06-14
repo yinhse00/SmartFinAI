@@ -30,7 +30,7 @@ export interface MajorTerms {
 
 export interface EnhancedTimetable {
   totalDuration: string;
-  keyMilestones: Array<{
+  keyMilestones: Array<{ // This is required
     date: string;
     event: string;
     description: string;
@@ -63,6 +63,52 @@ export interface EnhancedStructure {
   optimizationInsights?: string[];
 }
 
+// Define types for the AI's transactionFlow structure
+interface AITransactionFlowStep {
+  id: string;
+  title: string;
+  description: string;
+  entities: string[];
+  criticalPath?: boolean;
+}
+
+interface AITransactionFlowEntity {
+  id: string;
+  name: string;
+  type: string; // Simplified for AI response flexibility
+  value?: number;
+  percentage?: number;
+  description?: string;
+  role?: string;
+}
+
+interface AITransactionFlowRelationship {
+  source: string;
+  target: string;
+  type: string; // Simplified
+  percentage?: number;
+  value?: number;
+  nature?: string;
+}
+
+interface AITransactionFlowSection {
+  entities: AITransactionFlowEntity[];
+  relationships: AITransactionFlowRelationship[];
+}
+
+interface AITransactionFlow {
+  before?: AITransactionFlowSection;
+  after?: AITransactionFlowSection;
+  majorTransactionSteps?: AITransactionFlowStep[];
+  paymentFlows?: Array<{
+    from: string;
+    to: string;
+    amount: number;
+    mechanism: string;
+    timing: string;
+  }>;
+}
+
 export interface AnalysisResults {
   transactionType: string;
   dealEconomics?: DealEconomics;
@@ -79,6 +125,7 @@ export interface AnalysisResults {
       description: string;
       impact?: 'high' | 'medium' | 'low';
     }>;
+    optimizationOpportunities?: string[]; // Added
   };
   timetable: EnhancedTimetable;
   shareholding: {
@@ -91,9 +138,10 @@ export interface AnalysisResults {
       percentage: number;
     }>;
     impact: string;
+    majorChanges?: string[]; // Added
   };
   compliance: {
-    listingRules: string[];
+    listingRules: string[]; // Kept as listingRules to match error, prompt might need alignment later
     takeoversCode: string[];
     risks: string[];
     recommendations: string[];
@@ -102,5 +150,6 @@ export interface AnalysisResults {
   confidence: number;
   shareholdingChanges: ShareholdingChanges;
   corporateStructure: CorporateStructure;
-  transactionFlow?: any;
+  transactionFlow?: AITransactionFlow; // Updated from any
 }
+
