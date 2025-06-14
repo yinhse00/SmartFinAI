@@ -1,9 +1,8 @@
-
 import React, { useMemo } from 'react';
 import { ReactFlow, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TransactionFlow } from '@/types/transactionFlow';
-import { processTransactionFlowForDiagram } from './diagramDataProcessor';
+import { processTransactionFlowForDiagram } from './diagramDataProcessor.tsx';
 
 interface EnhancedTransactionFlowDiagramProps {
   transactionFlow?: TransactionFlow;

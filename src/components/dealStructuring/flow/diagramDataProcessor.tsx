@@ -1,7 +1,7 @@
-
+import React from 'react'; // Added React import for JSX
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity } from '@/types/transactionFlow';
-import { createEntityNode, addSectionHeaderNode } from './nodeUtils';
+import { createEntityNode, addSectionHeaderNode } from './nodeUtils.tsx'; // Updated import
 import {
   ENTITY_WIDTH,
   ENTITY_HEIGHT,
