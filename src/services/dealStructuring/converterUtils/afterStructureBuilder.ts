@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
@@ -69,34 +68,48 @@ export const buildAfterStructure = (
   const visitedAncestry = new Set<string>();
   const visitedChildren = new Set<string>();
 
-  // 1. Target Company (now acquired)
-  const targetId = generateEntityId('target', entityNames.targetCompanyName, prefix);
-  entities.push({
-    id: targetId,
-    name: entityNames.targetCompanyName,
-    type: 'target', // Still 'target' type, but its relationships define its new status
-    description: 'Target Company (Post-Transaction, Acquired)',
-  });
-  const targetCorpEntityData = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.targetCompanyName);
-  if (targetCorpEntityData) {
-      // Add children of the target (its original subsidiaries, now part of acquirer's group via target)
-      addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, visitedChildren);
-  }
-
-
-  // 2. Acquiring Company and its structure
+  // (1) Build shareholders for the acquirer (Listed Company) from "before" if they continue to exist after
+  // We'll carry forward only those who were previously shareholders of the acquirer.
+  // This assumes that 100% of acquirer continues to own the acquirer "after" the transaction.
+  // We'll look through before relationship/entities for acquirer shareholders.
+  // First, try to detect acquirer in corporate map
   const acquirerName = entityNames.acquiringCompanyName;
   const acquirerCorpEntityData = Array.from(corporateStructureMap.values()).find(ce => ce.name === acquirerName);
-  
   let acquirerId: string;
-  let acquirerDiagramType: TransactionEntity['type'] = 'buyer'; // Default for acquirer
+  let acquirerDiagramType: TransactionEntity['type'] = 'buyer';
 
   if (acquirerCorpEntityData) {
-    if (acquirerCorpEntityData.type === 'issuer') acquirerDiagramType = 'parent'; // An issuer as main acquirer node can be 'parent'
+    if (acquirerCorpEntityData.type === 'issuer') acquirerDiagramType = 'parent';
     else if (acquirerCorpEntityData.type === 'parent') acquirerDiagramType = 'parent';
-    else acquirerDiagramType = 'buyer'; // Default to buyer
-    
+    else acquirerDiagramType = 'buyer';
+
     acquirerId = generateEntityId(acquirerDiagramType, acquirerName, prefix);
+
+    // Detect all shareholders of the acquirer from before structure
+    // We'll add them as stockholders and link them to acquirer in after
+    // We'll attempt to detect these from results.shareholding.before, assuming these refer to acquirer
+    if (results.shareholding?.before && results.shareholding.before.length > 0) {
+      results.shareholding.before.forEach((holder) => {
+        // Carry forward as after-stockholder if not already created
+        const shareholderId = generateEntityId('stockholder', holder.name, prefix);
+        if (!entities.find(e => e.id === shareholderId)) {
+          entities.push({
+            id: shareholderId,
+            name: holder.name,
+            type: 'stockholder',
+            percentage: holder.percentage,
+            description: `${holder.percentage}% Continuing Shareholder of ${acquirerName}`,
+          });
+        }
+        relationships.push({
+          source: shareholderId,
+          target: acquirerId,
+          type: 'ownership',
+          percentage: holder.percentage,
+        });
+      });
+    }
+    // Add acquirer entity
     if (!entities.find(e => e.id === acquirerId)) {
       entities.push({
         id: acquirerId,
@@ -120,6 +133,41 @@ export const buildAfterStructure = (
         description: 'Acquiring Entity',
       });
     }
+    // Also pull forward stockholders if present
+    if (results.shareholding?.before && results.shareholding.before.length > 0) {
+      results.shareholding.before.forEach((holder) => {
+        const shareholderId = generateEntityId('stockholder', holder.name, prefix);
+        if (!entities.find(e => e.id === shareholderId)) {
+          entities.push({
+            id: shareholderId,
+            name: holder.name,
+            type: 'stockholder',
+            percentage: holder.percentage,
+            description: `${holder.percentage}% Continuing Shareholder of ${acquirerName}`,
+          });
+        }
+        relationships.push({
+          source: shareholderId,
+          target: acquirerId,
+          type: 'ownership',
+          percentage: holder.percentage,
+        });
+      });
+    }
+  }
+
+  // 2. Target Company (now acquired)
+  const targetId = generateEntityId('target', entityNames.targetCompanyName, prefix);
+  entities.push({
+    id: targetId,
+    name: entityNames.targetCompanyName,
+    type: 'target', // Still 'target' type, but its relationships define its new status
+    description: 'Target Company (Post-Transaction, Acquired)',
+  });
+  const targetCorpEntityData = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.targetCompanyName);
+  if (targetCorpEntityData) {
+      // Add children of the target (its original subsidiaries, now part of acquirer's group via target)
+      addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, visitedChildren);
   }
 
   // 3. Link Acquirer to Target

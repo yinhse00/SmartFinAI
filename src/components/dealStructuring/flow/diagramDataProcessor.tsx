@@ -1,17 +1,24 @@
-import React from 'react'; // Added React import for JSX
+
+import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity } from '@/types/transactionFlow';
-import { createEntityNode, addSectionHeaderNode } from './nodeUtils.tsx'; // Updated import
+import { createEntityNode, addSectionHeaderNode } from './nodeUtils.tsx';
 import {
   ENTITY_WIDTH,
   ENTITY_HEIGHT,
   SIBLING_X_SPACING,
   SECTION_X_SPACING,
-  BASE_Y_SHAREHOLDER,
-  BASE_Y_COMPANY,
-  BASE_Y_CONSIDERATION,
-  BASE_Y_SUBSIDIARY,
+  LEVEL_Y_SPACING
 } from './diagramLayoutUtils';
+import { computeEntityHierarchyLevels, getMaxHierarchyLevel } from './diagramHierarchyUtils';
+
+/**
+ * Given an entity hierarchy, calculate the Y position based on level, with buffers.
+ * @param level Hierarchy depth (0=top/shareholder, 1=company, etc.)
+ */
+function getYPositionForLevel(level: number): number {
+  return 30 + level * LEVEL_Y_SPACING;
+}
 
 export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlow): { nodes: Node[], edges: Edge[] } => {
   const newNodes: Node[] = [];
@@ -23,47 +30,56 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       newNodes.push(addSectionHeaderNode(id, label, x, y));
   };
 
-  // BEFORE Section
+  // BEFORE Section (vertical: shareholders above acquirer/target, above subs)
   addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
-  const beforeTarget = transactionFlow.before.entities.find(e => e.type === 'target');
-  const beforeShareholdersAndParents = transactionFlow.before.entities.filter(e => e.type === 'stockholder' || e.type === 'parent');
-  const beforeSubsidiaries = transactionFlow.before.entities.filter(e => e.type === 'subsidiary');
+  const beforeEntities = transactionFlow.before.entities;
+  const beforeRelationships = transactionFlow.before.relationships;
 
-  if (beforeTarget) {
-    const targetX = currentXOffset + (Math.max(0, beforeShareholdersAndParents.length - 1) * SIBLING_X_SPACING) / 2;
-    newNodes.push(createEntityNode(beforeTarget, targetX, BASE_Y_COMPANY));
+  // Compute hierarchy for "before"
+  const beforeLevels = computeEntityHierarchyLevels(beforeEntities, beforeRelationships);
 
-    beforeShareholdersAndParents.forEach((shOrParent, idx) => {
-      const shX = currentXOffset + idx * SIBLING_X_SPACING;
-      newNodes.push(createEntityNode(shOrParent, shX, BASE_Y_SHAREHOLDER));
-    });
-    
-    beforeSubsidiaries.forEach((sub, idx) => {
-      const parentRel = transactionFlow.before.relationships.find(r => r.target === sub.id);
-      const parentEntityNode = newNodes.find(n => n.id === parentRel?.source);
-      const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
-      newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
-    });
-  }
-  
-  transactionFlow.before.relationships.forEach((rel, index) => {
-      if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
-          newEdges.push({
-              id: `edge-before-${rel.source}-${rel.target}-${index}`,
-              source: rel.source,
-              target: rel.target,
-              type: 'smoothstep', 
-              label: rel.percentage ? `${rel.percentage}% ${rel.type}` : rel.type,
-              style: { stroke: '#525252', strokeWidth: 1.5 },
-              markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
-          });
-      }
+  // Group entities by their hierarchy (so we can space x-axis efficiently per layer)
+  const beforeGroupByLevel: Record<number, TransactionEntity[]> = {};
+  beforeEntities.forEach((e) => {
+    const lvl = beforeLevels.get(e.id) ?? 0;
+    if (!beforeGroupByLevel[lvl]) beforeGroupByLevel[lvl] = [];
+    beforeGroupByLevel[lvl].push(e);
   });
-  
-  const beforeSectionWidth = Math.max(beforeShareholdersAndParents.length, 1) * SIBLING_X_SPACING;
+  const beforeMaxLevel = getMaxHierarchyLevel(beforeLevels);
+
+  // Place nodes per level vertically
+  let beforeXStart = currentXOffset;
+  let beforeSectionWidth = 0;
+
+  for (let lvl = 0; lvl <= beforeMaxLevel; lvl++) {
+    const nodesAtLevel = beforeGroupByLevel[lvl] || [];
+    const levelStartX = beforeXStart + ((Math.max(0, nodesAtLevel.length - 1) * SIBLING_X_SPACING) / 2);
+    nodesAtLevel.forEach((entity, idx) => {
+      const x = beforeXStart + idx * SIBLING_X_SPACING;
+      const y = getYPositionForLevel(lvl);
+      newNodes.push(createEntityNode(entity, x, y));
+    });
+    beforeSectionWidth = Math.max(beforeSectionWidth, nodesAtLevel.length * SIBLING_X_SPACING + ENTITY_WIDTH);
+  }
+
+  // Edges for BEFORE section
+  transactionFlow.before.relationships.forEach((rel, index) => {
+    if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
+      newEdges.push({
+        id: `edge-before-${rel.source}-${rel.target}-${index}`,
+        source: rel.source,
+        target: rel.target,
+        type: 'smoothstep',
+        label: rel.percentage ? `${rel.percentage}% ${rel.type}` : rel.type,
+        style: { stroke: '#525252', strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
+      });
+    }
+  });
+
   currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
-  // TRANSACTION Section
+  // TRANSACTION Section (simple, horizontal anchor)
   addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   if (transactionFlow.transactionContext) {
       const tc = transactionFlow.transactionContext;
@@ -71,7 +87,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       newNodes.push({
           id: transactionNodeId,
           type: 'default',
-          position: { x: currentXOffset, y: BASE_Y_COMPANY },
+          position: { x: currentXOffset, y: getYPositionForLevel(1) },
           data: {
               label: (
                   <div className="text-center p-3">
@@ -94,12 +110,14 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
               textAlign: 'center' as const,
           }
       });
-      
-      const beforeTargetNode = newNodes.find(n => n.data.entityType === 'target' && n.id.startsWith('before-')); // Simplified find
-      if (beforeTargetNode) {
+
+      // Add edge from BEFORE target (or company node at lowest level) to transaction node
+      // (try to find deepest node of type 'target' if exists)
+      const beforeTarget = beforeEntities.find(e => e.type === 'target');
+      if (beforeTarget) {
           newEdges.push({
               id: 'edge-before-to-tx',
-              source: beforeTargetNode.id,
+              source: beforeTarget.id,
               target: transactionNodeId,
               type: 'smoothstep',
               animated: true,
@@ -107,81 +125,67 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           });
       }
   }
-  const transactionSectionWidth = ENTITY_WIDTH;
-  currentXOffset += transactionSectionWidth + SECTION_X_SPACING;
+  currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
 
-  // AFTER Section
+  // AFTER Section (vertical: shareholders -> acquirer -> target)
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
-  const afterTarget = transactionFlow.after.entities.find(e => e.type === 'target');
-  const afterBuyers = transactionFlow.after.entities.filter(e => e.type === 'buyer');
-  const afterStockholders = transactionFlow.after.entities.filter(e => e.type === 'stockholder');
-  const afterParents = transactionFlow.after.entities.filter(e => e.type === 'parent');
-  const afterConsiderations = transactionFlow.after.entities.filter(e => e.type === 'consideration');
-  const afterSubsidiaries = transactionFlow.after.entities.filter(e => e.type === 'subsidiary');
+  const afterEntities = transactionFlow.after.entities;
+  const afterRelationships = transactionFlow.after.relationships;
 
-  const allAfterOwners = [...afterBuyers, ...afterStockholders, ...afterParents];
+  // Compute hierarchy for "after"
+  const afterLevels = computeEntityHierarchyLevels(afterEntities, afterRelationships);
 
-  if (afterTarget) {
-    const targetX = currentXOffset + (Math.max(0, allAfterOwners.length - 1) * SIBLING_X_SPACING) / 2;
-    newNodes.push(createEntityNode(afterTarget, targetX, BASE_Y_COMPANY));
+  // Group entities by their hierarchy
+  const afterGroupByLevel: Record<number, TransactionEntity[]> = {};
+  afterEntities.forEach((e) => {
+    const lvl = afterLevels.get(e.id) ?? 0;
+    if (!afterGroupByLevel[lvl]) afterGroupByLevel[lvl] = [];
+    afterGroupByLevel[lvl].push(e);
+  });
+  const afterMaxLevel = getMaxHierarchyLevel(afterLevels);
 
-    allAfterOwners.forEach((owner, idx) => {
-      const ownerX = currentXOffset + idx * SIBLING_X_SPACING;
-      newNodes.push(createEntityNode(owner, ownerX, BASE_Y_SHAREHOLDER));
+  // Place nodes per level vertically in "after"
+  let afterXStart = currentXOffset;
+  let afterSectionWidth = 0;
+  for (let lvl = 0; lvl <= afterMaxLevel; lvl++) {
+    const nodesAtLevel = afterGroupByLevel[lvl] || [];
+    nodesAtLevel.forEach((entity, idx) => {
+      const x = afterXStart + idx * SIBLING_X_SPACING;
+      const y = getYPositionForLevel(lvl);
+      newNodes.push(createEntityNode(entity, x, y));
     });
-    
-    afterConsiderations.forEach((con, idx) => {
-      const conX = targetX + idx * SIBLING_X_SPACING; 
-      newNodes.push(createEntityNode(con, conX, BASE_Y_CONSIDERATION));
-    });
-
-    afterSubsidiaries.forEach((sub, idx) => {
-      const parentRel = transactionFlow.after.relationships.find(r => r.target === sub.id);
-      const parentEntityNode = newNodes.find(n => n.id === parentRel?.source);
-      const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
-      newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
-    });
-
-    const transactionNode = newNodes.find(n => n.id === 'node-transaction-process');
-    const afterTargetNode = newNodes.find(n => n.id === afterTarget.id);
-    if (transactionNode && afterTargetNode) {
-        newEdges.push({
-            id: 'edge-tx-to-after',
-            source: transactionNode.id,
-            target: afterTargetNode.id, 
-            type: 'smoothstep',
-            animated: true,
-            style: { stroke: '#8b5cf6', strokeWidth: 2 },
-        });
-    }
+    afterSectionWidth = Math.max(afterSectionWidth, nodesAtLevel.length * SIBLING_X_SPACING + ENTITY_WIDTH);
   }
 
+  // Edges for AFTER section
   transactionFlow.after.relationships.forEach((rel, index) => {
       if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
           const sourceNode = newNodes.find(n => n.id === rel.source);
           let strokeColor = '#525252'; 
-          if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer') strokeColor = '#2563eb';
-          if (rel.type === 'consideration') strokeColor = '#16a34a';
+          if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer')
+            strokeColor = '#2563eb';
+          if (rel.type === 'consideration')
+            strokeColor = '#16a34a';
 
           newEdges.push({
               id: `edge-after-${rel.source}-${rel.target}-${index}`,
               source: rel.source,
               target: rel.target,
               type: 'smoothstep',
-              label: rel.percentage ? `${rel.percentage}% ${rel.type}` : (rel.value ? `${(rel.value/1000000).toFixed(0)}M ${rel.type}` : rel.type),
+              label: rel.percentage
+                ? `${rel.percentage}% ${rel.type}`
+                : (rel.value ? `${(rel.value/1000000).toFixed(0)}M ${rel.type}` : rel.type),
               style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
               markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           });
-      } else {
-          console.warn(`Skipping edge due to missing node: source=${rel.source}, target=${rel.target}`);
       }
   });
 
-  // Connect continuing shareholders (Before -> After)
-  transactionFlow.before.entities
+  // Connect continuing shareholders (Before -> After) if entity id & name matches and both are "stockholder"
+  beforeEntities
     .filter(e => e.type === 'stockholder')
     .forEach(beforeSH => {
-      const afterSH = transactionFlow.after.entities.find(
+      const afterSH = afterEntities.find(
         afterE => afterE.name === beforeSH.name && afterE.type === 'stockholder'
       );
       if (afterSH && newNodes.find(n => n.id === beforeSH.id) && newNodes.find(n => n.id === afterSH.id)) {
@@ -192,11 +196,10 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           type: 'straight',
           style: { stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '5 3' },
           label: 'Continues',
-          labelStyle: { fontSize: '10px', fill: '#f59e0b'},
+          labelStyle: { fontSize: '10px', fill: '#f59e0b' },
         });
       }
     });
-  
-  console.log("Generated Diagram Nodes (from processor):", newNodes.length, "Edges:", newEdges.length);
+
   return { nodes: newNodes, edges: newEdges };
 };
