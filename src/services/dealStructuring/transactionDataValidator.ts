@@ -100,12 +100,36 @@ class TransactionDataValidator {
   }
 
   extractConsiderationAmount(results: AnalysisResults): number {
-    // Use costs.total as primary source - no fallbacks
-    if (results.costs?.total && results.costs.total > 0) {
-      return results.costs.total;
+    // Primary source: dealEconomics.purchasePrice
+    if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
+      console.log('Using purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
+      return results.dealEconomics.purchasePrice;
     }
 
-    // Return 0 instead of arbitrary amounts
+    // Fallback: Try to extract from transaction description or structure
+    if (results.structure?.rationale) {
+      const amountMatches = results.structure.rationale.match(/(?:HKD|HK\$|USD|\$)\s*([0-9,.]+)(?:\s*million|M|billion|B)?/gi);
+      if (amountMatches && amountMatches.length > 0) {
+        const firstMatch = amountMatches[0];
+        const numberMatch = firstMatch.match(/([0-9,.]+)/);
+        if (numberMatch) {
+          let amount = parseFloat(numberMatch[1].replace(/,/g, ''));
+          
+          // Convert millions/billions to actual amount
+          if (firstMatch.toLowerCase().includes('million') || firstMatch.toLowerCase().includes('m')) {
+            amount *= 1000000;
+          } else if (firstMatch.toLowerCase().includes('billion') || firstMatch.toLowerCase().includes('b')) {
+            amount *= 1000000000;
+          }
+          
+          console.log('Extracted consideration from rationale:', amount);
+          return amount;
+        }
+      }
+    }
+
+    // Last resort: Return 0 instead of using costs (which are execution fees, not purchase price)
+    console.warn('No purchase price found in analysis results');
     return 0;
   }
 

@@ -1,7 +1,7 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow } from '@/types/transactionFlow';
 import { OptimizationResult } from './optimizationEngine';
+import { transactionDataValidator } from './transactionDataValidator';
 
 export interface EnhancedTransactionFlowData {
   analysisResults: AnalysisResults;
@@ -14,12 +14,12 @@ export class TransactionFlowConverter {
     optimizationResult?: OptimizationResult
   ): TransactionFlow | undefined {
     console.log('Converting analysis results to transaction flow...');
+    console.log('Deal Economics:', results.dealEconomics);
     console.log('Shareholding before:', results.shareholding?.before);
     console.log('Shareholding after:', results.shareholding?.after);
     console.log('Corporate structure:', results.corporateStructure);
-    console.log('Costs:', results.costs);
 
-    // Extract data directly from analysis results
+    // Extract data using proper purchase price
     const considerationAmount = this.extractConsiderationAmount(results);
     const entityNames = this.extractEntityNames(results);
     const ownershipData = this.extractOwnershipData(results);
@@ -30,7 +30,7 @@ export class TransactionFlowConverter {
       ownershipData
     });
 
-    // Build transaction flow with actual analysis data
+    // Build transaction flow with proper purchase price
     const before = this.buildBeforeStructure(results, entityNames);
     const after = this.buildAfterStructure(results, entityNames, considerationAmount, ownershipData);
     const transactionSteps = this.generateTransactionSteps(results, entityNames, considerationAmount);
@@ -42,7 +42,7 @@ export class TransactionFlowConverter {
       transactionContext: {
         type: results.transactionType || 'Transaction Analysis',
         amount: considerationAmount,
-        currency: 'HKD',
+        currency: results.dealEconomics?.currency || 'HKD',
         targetName: entityNames.targetCompanyName,
         buyerName: entityNames.acquiringCompanyName,
         description: this.generateTransactionDescription(results, considerationAmount),
@@ -54,31 +54,68 @@ export class TransactionFlowConverter {
   }
 
   private extractConsiderationAmount(results: AnalysisResults): number {
-    // Use costs total as primary source
-    if (results.costs?.total && results.costs.total > 0) {
-      return results.costs.total;
+    // Use dealEconomics.purchasePrice as primary source
+    if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
+      console.log('Using purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
+      return results.dealEconomics.purchasePrice;
     }
 
-    // If no cost data, return 0 rather than inventing amounts
-    console.warn('No consideration amount found in analysis results');
-    return 0;
+    // Fallback to validator logic
+    return transactionDataValidator.extractConsiderationAmount(results);
   }
 
   private extractEntityNames(results: AnalysisResults): {
     targetCompanyName: string;
     acquiringCompanyName: string;
   } {
-    // Use corporate structure as primary source
+    // Enhanced entity name extraction with better fallbacks
     if (results.corporateStructure?.entities) {
-      const targetEntity = results.corporateStructure.entities.find(e => e.type === 'target');
+      const targetEntity = results.corporateStructure.entities.find(e => 
+        e.type === 'target' || e.name.toLowerCase().includes('target')
+      );
       const acquiringEntity = results.corporateStructure.entities.find(e => 
-        e.type === 'parent' || e.type === 'issuer'
+        e.type === 'parent' || e.type === 'issuer' || 
+        e.name.toLowerCase().includes('acquir') ||
+        e.name.toLowerCase().includes('buyer') ||
+        e.name.toLowerCase().includes('purchas')
       );
       
       if (targetEntity && acquiringEntity) {
         return {
           targetCompanyName: targetEntity.name,
           acquiringCompanyName: acquiringEntity.name
+        };
+      }
+
+      // If we only have target, try to extract acquirer from shareholding data
+      if (targetEntity && results.shareholding?.after) {
+        const potentialAcquirer = results.shareholding.after.find(holder =>
+          holder.name.toLowerCase().includes('acquir') ||
+          holder.name.toLowerCase().includes('buyer') ||
+          holder.percentage > 50 // Assume controlling shareholder is acquirer
+        );
+        
+        if (potentialAcquirer) {
+          return {
+            targetCompanyName: targetEntity.name,
+            acquiringCompanyName: potentialAcquirer.name
+          };
+        }
+      }
+    }
+
+    // Extract from shareholding data if corporate structure is incomplete
+    if (results.shareholding?.after) {
+      const acquirer = results.shareholding.after.find(holder =>
+        holder.name.toLowerCase().includes('acquir') ||
+        holder.name.toLowerCase().includes('buyer') ||
+        holder.name.toLowerCase().includes('purchas')
+      );
+      
+      if (acquirer) {
+        return {
+          targetCompanyName: 'Target Company',
+          acquiringCompanyName: acquirer.name
         };
       }
     }
@@ -278,10 +315,24 @@ export class TransactionFlowConverter {
 
   private generateTransactionDescription(results: AnalysisResults, considerationAmount: number): string {
     const transactionType = results.transactionType || 'Transaction';
-    const amountText = considerationAmount > 0 ? `HKD ${(considerationAmount / 1000000).toFixed(0)}M` : '';
+    const currency = results.dealEconomics?.currency || 'HKD';
+    const targetPercentage = results.dealEconomics?.targetPercentage;
+    
+    let amountText = '';
+    if (considerationAmount > 0) {
+      if (considerationAmount >= 1000000000) {
+        amountText = `${currency} ${(considerationAmount / 1000000000).toFixed(1)}B`;
+      } else if (considerationAmount >= 1000000) {
+        amountText = `${currency} ${(considerationAmount / 1000000).toFixed(0)}M`;
+      } else {
+        amountText = `${currency} ${(considerationAmount / 1000).toFixed(0)}K`;
+      }
+    }
+    
+    const percentageText = targetPercentage ? `${targetPercentage}% acquisition` : '';
     const structure = results.structure?.recommended || 'Standard Structure';
     
-    return `${transactionType} ${amountText} via ${structure}`.trim();
+    return `${transactionType} ${amountText} ${percentageText} via ${structure}`.trim();
   }
 
   private generateTransactionSteps(results: AnalysisResults, entityNames: any, considerationAmount: number) {

@@ -165,7 +165,7 @@ Your analysis should include OPTIMIZATION-FOCUSED recommendations covering:
    - Current MARKET TRENDS affecting transaction structuring
    - REGULATORY ENVIRONMENT assessment based on recent developments
    - OPTIMIZATION OPPORTUNITIES identified from market analysis
-   - Success probability calibration based on market data
+   - SUCCESS PROBABILITY calibration based on market data
 
 FORMAT your response as a structured JSON object with enhanced market intelligence and optimization data:
 
@@ -300,7 +300,7 @@ Your analysis should demonstrate how MARKET INTELLIGENCE and OPTIMIZATION PRINCI
 }
 
 /**
- * Parse AI response into structured analysis results
+ * Parse AI response into structured analysis results with proper dealEconomics handling
  */
 function parseAnalysisResponse(responseText: string): AnalysisResults {
   try {
@@ -315,6 +315,13 @@ function parseAnalysisResponse(responseText: string): AnalysisResults {
       }
       if (!parsed.corporateStructure) {
         parsed.corporateStructure = createFallbackCorporateStructure();
+      }
+      
+      // Log extracted deal economics for debugging
+      if (parsed.dealEconomics) {
+        console.log('Extracted deal economics:', parsed.dealEconomics);
+      } else {
+        console.warn('No dealEconomics found in AI response');
       }
       
       return parsed;
