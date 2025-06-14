@@ -1,11 +1,9 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { TransactionEntity, TransactionFlow } from '@/types/transactionFlow';
+import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
-import { generateEntityId, identifyAcquirer } from './entityHelpers';
-import { addCorporateChildren, AnyTransactionRelationship } from './corporateStructureProcessor'; 
+import { generateEntityId } from './entityHelpers';
+import { addCorporateChildren } from './corporateStructureProcessor';
 
-// Re-define or import addAncestors if it's not globally available from beforeStructureBuilder
-// For simplicity, assuming it might be needed here too.
 const addAncestors = (
   corpEntity: CorporateEntity & { parentLink?: string },
   entityIdInDiagram: string,
@@ -45,8 +43,7 @@ const addAncestors = (
         source: parentEntityId,
         target: childNodeIdForParentLink,
         type: 'ownership',
-      } as AnyTransactionRelationship);
-
+      } as OwnershipRelationship);
       childNodeIdForParentLink = parentEntityId;
       currentCorpParentId = parentCorpData.parentLink;
     } else {
@@ -95,14 +92,10 @@ export const buildAfterStructure = (
   const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
 
   // Handle Acquirer's Shareholders (Original shareholders before new equity issuance for target)
-  // results.shareholding.before typically refers to target's shareholders.
-  // For acquirer's shareholders, we might need to use results.shareholding.after if it represents pre-dilution acquirer shareholders,
-  // or ideally, a separate field like results.acquirerShareholding.before
   const acquirerOriginalShareholders = results.shareholdingChanges?.before || results.shareholding?.after || [];
 
   if (acquirerOriginalShareholders.length > 0) {
     acquirerOriginalShareholders.forEach((holder) => {
-      // Filter out the target and acquirer themselves if they appear in this list.
       if (holder.name.toLowerCase() !== acquirerName.toLowerCase() && holder.name.toLowerCase() !== entityNames.targetCompanyName.toLowerCase()) {
         const shareholderId = generateEntityId('stockholder', holder.name, prefix);
         let description = `${holder.percentage}% Shareholder of ${acquirerName} (pre-new equity for target)`;
@@ -124,12 +117,12 @@ export const buildAfterStructure = (
           target: acquirerId,
           type: 'ownership',
           percentage: holder.percentage,
-        });
+        } as OwnershipRelationship);
       }
     });
   }
 
-  if (stockPaymentPercentage > 0 && purchasePrice > 0) { // Ensure there's a stock component and a price context
+  if (stockPaymentPercentage > 0 && purchasePrice > 0) {
     console.log(`Stock consideration payment detected: ${stockPaymentPercentage}% of deal value.`);
     const stockRecipientName = `Target Sellers (Equity Recipient in ${acquirerName})`;
     const stockRecipientId = generateEntityId('stockholder', stockRecipientName, prefix);
@@ -137,31 +130,23 @@ export const buildAfterStructure = (
       entities.push({
         id: stockRecipientId,
         name: stockRecipientName,
-        type: 'stockholder', // Representing them as stockholders of the acquirer
+        type: 'stockholder',
         description: `Former target shareholders who received ${stockPaymentPercentage}% of deal consideration in ${acquirerName} stock.`,
-        // The actual percentage ownership in the acquirer is complex and depends on relative valuations.
-        // This node represents their new stake.
       });
     }
     relationships.push({
       source: stockRecipientId,
       target: acquirerId,
       type: 'ownership',
-      // The 'label' field is now correctly typed.
       label: `${stockPaymentPercentage}% of consideration as stock`,
-      // Not adding 'percentage' here unless we have the post-dilution % of acquirer owned by them.
-    } as AnyTransactionRelationship); // Cast to ensure type compatibility
+    } as OwnershipRelationship);
   }
   
-  // Add children (subsidiaries) of the Acquirer
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
-    // Add parents (owners) of the Acquirer - this should now reflect the potentially new structure
     addAncestors(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedAncestry));
   }
 
-
-  // 2. Target Company (now acquired)
   const targetId = generateEntityId('target', entityNames.targetCompanyName, prefix);
   if (!entities.find(e => e.id === targetId)) {
     entities.push({
@@ -176,26 +161,15 @@ export const buildAfterStructure = (
       addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, visitedChildren);
   }
 
-  // 3. Link Acquirer to Target
   const acquiredPercentage = results.dealEconomics?.targetPercentage || 100;
   relationships.push({
     source: acquirerId,
     target: targetId,
     type: 'ownership',
     percentage: acquiredPercentage,
-  } as AnyTransactionRelationship);
+  } as OwnershipRelationship);
 
-  // 4. Handle remaining shareholders of the Target (if not 100% acquisition AND no stock swap for them)
-  // This logic might need to be smarter if target shareholders received acquirer stock.
-  // For now, this handles cases where a portion of target remains independently owned.
   if (acquiredPercentage < 100) {
-    // Only add remaining shareholders of target if they didn't become acquirer's shareholders via stock swap.
-    // This is a complex interaction. If stockPaymentPercentage > 0, it's assumed Target Sellers got Acquirer stock.
-    // So, they wouldn't also be "Remaining Original Shareholders of Target" in the same way.
-    // This block might be redundant if stock swap covers all selling shareholders.
-    // For simplicity, if stock payment is made, we assume it covers the sellers,
-    // and any remaining % is a distinct group.
-    
     const remainingOriginalShareholderId = generateEntityId('stockholder', `Remaining Shareholders of ${entityNames.targetCompanyName}`, prefix);
     if (!entities.find(e => e.id === remainingOriginalShareholderId)) {
       entities.push({
@@ -211,10 +185,9 @@ export const buildAfterStructure = (
       target: targetId,
       type: 'ownership',
       percentage: 100 - acquiredPercentage,
-    } as AnyTransactionRelationship);
+    } as OwnershipRelationship);
   }
   
-  // 5. Add Consideration entity (cash portion, or total if no stock breakdown)
   let cashConsiderationAmount = considerationAmount;
   if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100 && purchasePrice > 0) {
     cashConsiderationAmount = purchasePrice * ((100 - stockPaymentPercentage) / 100);
@@ -241,14 +214,22 @@ export const buildAfterStructure = (
     relationships.push({
       source: acquirerId, 
       target: considerationId,
-      type: 'consideration', // This should be ConsiderationRelationship
+      type: 'consideration',
       value: cashConsiderationAmount,
-    } as ConsiderationRelationship); // Cast for type safety
+    } as ConsiderationRelationship);
   }
   
   console.log(`After Structure (Revamped for Stock Consideration): Entities - ${entities.length}, Relationships - ${relationships.length}`);
   entities.forEach(e => console.log(`After Entity (Stock Consideration Logic): ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
-  relationships.forEach(r => console.log(`After Relationship (Stock Consideration Logic): ${r.source} -> ${r.target} (${r.type}) Label: ${r.label || (r as OwnershipRelationship).percentage || (r as ConsiderationRelationship).value}`));
+  relationships.forEach(r => {
+    let labelContent = r.label || '';
+    if (r.type === 'ownership' && (r as OwnershipRelationship).percentage !== undefined) {
+        labelContent += ` ${(r as OwnershipRelationship).percentage}%`;
+    } else if ((r.type === 'consideration' || r.type === 'funding') && (r as ConsiderationRelationship).value !== undefined) {
+        labelContent += ` ${(r as ConsiderationRelationship).value}`;
+    }
+    console.log(`After Relationship (Stock Consideration Logic): ${r.source} -> ${r.target} (${r.type}) Label: ${labelContent}`);
+  });
   
   return { entities, relationships };
 };

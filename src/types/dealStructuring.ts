@@ -19,7 +19,7 @@ export interface TransactionData {
 export interface ShareholderData {
   name: string;
   percentage: number;
-  type: 'individual' | 'institutional' | 'connected' | 'public' | 'fund';
+  type: 'individual' | 'institutional' | 'connected' | 'public' | 'fund' | 'new_equity_recipient';
   isConnected?: boolean;
 }
 
@@ -56,10 +56,10 @@ export interface ShareholdingChanges {
   after: ShareholderData[];
   keyChanges: Array<{
     shareholder: string;
-    before: number; // Added before percentage
-    after: number;  // Added after percentage
+    before: number;
+    after: number;
     change: number;
-    // type: 'increase' | 'decrease' | 'new' | 'exit'; // Type can be inferred or simplified
+    // type: 'increase' | 'decrease' | 'new' | 'exit'; // Type is inferred
   }>;
   controlImplications: string[];
 }

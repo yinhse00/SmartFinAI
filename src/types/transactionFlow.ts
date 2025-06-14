@@ -1,4 +1,3 @@
-
 import { CorporateEntity } from './dealStructuring';
 
 export interface TransactionEntity {
@@ -20,7 +19,8 @@ export interface TransactionEntity {
     | 'consideration' // For cash/asset payments
     | 'debt' // For debt instruments
     | 'equity_instrument' // For specific equity like preferred shares
-    | 'other_stakeholder';
+    | 'other_stakeholder'
+    | 'newco'; // Added 'newco'
   description?: string;
   percentage?: number; // e.g. ownership percentage for shareholders
   value?: number; // e.g. for consideration nodes
@@ -34,7 +34,7 @@ interface TransactionRelationshipBase {
   target: string;
   type: 'subsidiary' | 'consideration' | 'ownership' | 'control' | 'funding' | 'security' | 'merger_into' | 'receives_from' | 'provides_to' | 'other';
   description?: string;
-  label?: string; // Added optional label for diagramming
+  label?: string;
 }
 
 export interface OwnershipRelationship extends TransactionRelationshipBase {

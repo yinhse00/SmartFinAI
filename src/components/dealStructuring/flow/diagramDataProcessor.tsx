@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
-import { TransactionFlow, TransactionEntity } from '@/types/transactionFlow';
-import { createEntityNode, addSectionHeaderNode } from './nodeUtils.tsx';
+import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
+import { createEntityNode, addSectionHeaderNode } from './nodeUtils';
 import {
   ENTITY_WIDTH,
   ENTITY_HEIGHT,
@@ -30,7 +29,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       newNodes.push(addSectionHeaderNode(id, label, x, y));
   };
 
-  // BEFORE Section (vertical: shareholders above acquirer/target, above subs)
+  // BEFORE Section
   addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   const beforeEntities = transactionFlow.before.entities;
   const beforeRelationships = transactionFlow.before.relationships;
@@ -65,12 +64,20 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   // Edges for BEFORE section
   transactionFlow.before.relationships.forEach((rel, index) => {
     if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
+      let edgeLabel = rel.label || rel.type;
+      if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
+        edgeLabel = `${(rel as OwnershipRelationship).percentage}% ${rel.type}`;
+      } else if ((rel.type === 'consideration' || rel.type === 'funding') && (rel as ConsiderationRelationship).value !== undefined) {
+         // Assuming value might be large, format if needed, or just show type if no value
+         edgeLabel = `${rel.type}`; // Or format value: `${(rel as ConsiderationRelationship).value} ${rel.type}`
+      }
+
       newEdges.push({
         id: `edge-before-${rel.source}-${rel.target}-${index}`,
         source: rel.source,
         target: rel.target,
         type: 'smoothstep',
-        label: rel.percentage ? `${rel.percentage}% ${rel.type}` : rel.type,
+        label: edgeLabel,
         style: { stroke: '#525252', strokeWidth: 1.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
       });
@@ -79,7 +86,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
 
   currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
-  // TRANSACTION Section (simple, horizontal anchor)
+  // TRANSACTION Section
   addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   if (transactionFlow.transactionContext) {
       const tc = transactionFlow.transactionContext;
@@ -127,7 +134,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   }
   currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
 
-  // AFTER Section (vertical: shareholders -> acquirer -> target)
+  // AFTER Section
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
   const afterEntities = transactionFlow.after.entities;
   const afterRelationships = transactionFlow.after.relationships;
@@ -167,14 +174,19 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           if (rel.type === 'consideration')
             strokeColor = '#16a34a';
 
+          let edgeLabel = rel.label || rel.type;
+          if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
+            edgeLabel = `${(rel as OwnershipRelationship).percentage}% ${rel.type}`;
+          } else if ((rel.type === 'consideration' || rel.type === 'funding') && (rel as ConsiderationRelationship).value !== undefined) {
+            edgeLabel = `${((rel as ConsiderationRelationship).value || 0)/1000000}M ${rel.type}`;
+          }
+          
           newEdges.push({
               id: `edge-after-${rel.source}-${rel.target}-${index}`,
               source: rel.source,
               target: rel.target,
               type: 'smoothstep',
-              label: rel.percentage
-                ? `${rel.percentage}% ${rel.type}`
-                : (rel.value ? `${(rel.value/1000000).toFixed(0)}M ${rel.type}` : rel.type),
+              label: edgeLabel,
               style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
               markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           });
