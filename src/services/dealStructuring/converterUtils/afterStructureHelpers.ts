@@ -21,7 +21,6 @@ const isContinuingOrRemainingShareholder = (name: string) =>
 const isTargetShareholderGroup = (name: string) =>
     /target shareholder/i.test(name);
 
-
 export const createAcquirerEntity = (
     acquirerName: string,
     corporateStructureMap: CorporateStructureMap,
@@ -57,43 +56,54 @@ export const addAcquirerShareholders = (
     acquirerName: string,
     prefix: string,
     entities: Entities,
-    relationships: Relationships
+    relationships: Relationships,
+    processedEntities: Set<string>
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockConsiderationExists = (paymentStructure?.stockPercentage ?? 0) > 0;
+    const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
+    const isPartialAcquisition = acquiredPercentage < 100;
 
     acquirerNewShareholders.forEach((holder) => {
         // Skip shareholders explicitly marked as 'continuing' or 'remaining'.
-        // Their stake is in the Target company and is handled by `addTargetWithOwnership`.
         if (isContinuingOrRemainingShareholder(holder.name)) {
             return;
         }
 
         const isTargetShareholder = isTargetShareholderGroup(holder.name);
+        const normalizedName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
+
+        // Check if this entity has already been processed
+        if (processedEntities.has(normalizedName)) {
+            console.log(`⚠️  Skipping duplicate processing of "${normalizedName}" in addAcquirerShareholders`);
+            return;
+        }
+
+        // In partial acquisitions, target shareholders should only retain ownership in the target company
+        // Skip processing them here to avoid duplicate ownership
+        if (isPartialAcquisition && isTargetShareholder) {
+            console.log(`⚠️  Skipping target shareholders in partial acquisition - will be handled by addTargetWithOwnership`);
+            return;
+        }
 
         // If this is a generic 'Target Shareholder' group, we must be careful.
-        // Only link them to the Acquirer if there are clear signs they received stock,
-        // otherwise, we assume it's rollover equity in the Target that should be handled elsewhere.
         if (isTargetShareholder) {
             const isExplicitNewRecipient = holder.type === 'new_equity_recipient';
-            // If there's no stock in the deal AND this isn't an explicit new recipient,
-            // then we should not create an ownership link to the Acquirer for this group.
             if (!stockConsiderationExists && !isExplicitNewRecipient) {
                 return;
             }
         }
 
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
-            const shareholderName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
-            const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
+            const shareholderId = generateEntityId('stockholder', normalizedName, prefix);
             
             const existingEntity = entities.find(e => e.id === shareholderId);
 
             if (!existingEntity) {
                 entities.push({
                     id: shareholderId,
-                    name: shareholderName,
+                    name: normalizedName,
                     type: 'stockholder',
                     percentage: holder.percentage,
                     description: isTargetShareholder
@@ -101,10 +111,18 @@ export const addAcquirerShareholders = (
                         : `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
                 });
             } else if (isTargetShareholder && existingEntity.description) {
-                // If entity exists and was created by addTargetWithOwnership, enhance its description.
                 if (!existingEntity.description.includes(`equity in ${acquirerName}`)) {
                     existingEntity.description += ` They also received equity in ${acquirerName}.`;
                 }
+            }
+
+            // Validate before creating relationship
+            const existingOwnership = relationships
+                .filter(r => r.type === 'ownership' && r.target === acquirerId)
+                .reduce((sum, r) => sum + ((r as OwnershipRelationship).percentage || 0), 0);
+            
+            if (existingOwnership + holder.percentage > 100) {
+                console.warn(`⚠️  Ownership validation: Adding ${holder.percentage}% for ${normalizedName} would exceed 100% for ${acquirerName} (current: ${existingOwnership}%)`);
             }
 
             relationships.push({
@@ -113,6 +131,9 @@ export const addAcquirerShareholders = (
                 type: 'ownership',
                 percentage: holder.percentage,
             } as OwnershipRelationship);
+
+            // Mark this entity as processed
+            processedEntities.add(normalizedName);
         }
     });
 };
@@ -125,7 +146,8 @@ export const addTargetWithOwnership = (
     prefix: string,
     entities: Entities,
     relationships: Relationships,
-    visitedChildren: Set<string>
+    visitedChildren: Set<string>,
+    processedEntities: Set<string>
 ): void => {
     const targetId = generateEntityId('target', targetCompanyName, prefix);
     if (!entities.find(e => e.id === targetId)) {
@@ -154,11 +176,16 @@ export const addTargetWithOwnership = (
         const allAfterShareholders = results.shareholdingChanges?.after || [];
         const continuingShareholders = allAfterShareholders.filter(holder => isContinuingOrRemainingShareholder(holder.name));
 
-        // If we find specific continuing shareholders in the analysis results, use them.
         if (continuingShareholders.length > 0) {
             continuingShareholders.forEach(holder => {
-                // Normalize name to consolidate with shareholders who may have received acquirer stock.
                 const shareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
+                
+                // Check if this entity has already been processed
+                if (processedEntities.has(shareholderName)) {
+                    console.log(`⚠️  Entity "${shareholderName}" already processed, skipping in addTargetWithOwnership`);
+                    return;
+                }
+
                 const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
                 const existingEntity = entities.find(e => e.id === shareholderId);
 
@@ -171,7 +198,6 @@ export const addTargetWithOwnership = (
                         description: `Former Target Shareholders who retain a ${holder.percentage}% stake in ${targetCompanyName}.`,
                     });
                 } else if (existingEntity.description) {
-                     // If entity exists and was created by addAcquirerShareholders, enhance its description, preventing duplicates.
                     if (!existingEntity.description.includes(`stake in ${targetCompanyName}`)) {
                         existingEntity.description += ` They also retain a ${holder.percentage}% stake in ${targetCompanyName}.`;
                     }
@@ -183,26 +209,35 @@ export const addTargetWithOwnership = (
                     type: 'ownership',
                     percentage: holder.percentage,
                 } as OwnershipRelationship);
+
+                // Mark this entity as processed
+                processedEntities.add(shareholderName);
             });
         } else {
-            // Fallback to generic entity if no specific continuing shareholders are found in results.
-            const continuingShareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME; // Use normalized name
-            const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
-            if (!entities.find(e => e.id === continuingShareholderId)) {
-                entities.push({
-                    id: continuingShareholderId,
-                    name: continuingShareholderName,
-                    type: 'stockholder',
+            const continuingShareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
+            
+            // Check if this entity has already been processed
+            if (!processedEntities.has(continuingShareholderName)) {
+                const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
+                if (!entities.find(e => e.id === continuingShareholderId)) {
+                    entities.push({
+                        id: continuingShareholderId,
+                        name: continuingShareholderName,
+                        type: 'stockholder',
+                        percentage: 100 - acquiredPercentage,
+                        description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
+                    });
+                }
+                relationships.push({
+                    source: continuingShareholderId,
+                    target: targetId,
+                    type: 'ownership',
                     percentage: 100 - acquiredPercentage,
-                    description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
-                });
+                } as OwnershipRelationship);
+
+                // Mark this entity as processed
+                processedEntities.add(continuingShareholderName);
             }
-            relationships.push({
-                source: continuingShareholderId,
-                target: targetId,
-                type: 'ownership',
-                percentage: 100 - acquiredPercentage,
-            } as OwnershipRelationship);
         }
     }
 };

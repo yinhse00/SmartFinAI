@@ -20,6 +20,7 @@ export const buildAfterStructure = (
   const relationships: AnyTransactionRelationship[] = [];
   const prefix = 'after';
   const visitedChildren = new Set<string>();
+  const processedEntities = new Set<string>(); // Shared tracking for processed entities
 
   // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
   const { acquirerId, acquirerCorpEntityData } = createAcquirerEntity(
@@ -35,14 +36,13 @@ export const buildAfterStructure = (
     entityNames.acquiringCompanyName,
     prefix,
     entities,
-    relationships
+    relationships,
+    processedEntities
   );
 
   // 2. Add corporate hierarchy (children only) for the acquirer
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
-    // The `addAncestors` call for the acquirer has been removed to prevent double-counting its owners.
-    // `addAcquirerShareholders` is now the single source of truth for the acquirer's direct ownership post-transaction.
   }
 
   // 3. Process the target company and its new ownership structure (Level 2 Ownership)
@@ -54,7 +54,8 @@ export const buildAfterStructure = (
     prefix,
     entities,
     relationships,
-    visitedChildren
+    visitedChildren,
+    processedEntities
   );
 
   // 4. Add consideration/payment details
@@ -67,7 +68,10 @@ export const buildAfterStructure = (
     relationships
   );
 
-  // 5. Logging
+  // 5. Validate ownership percentages
+  validateOwnershipPercentages(entities, relationships);
+
+  // 6. Logging
   console.log(`After Structure (refactored): Entities - ${entities.length}, Relationships - ${relationships.length}`);
   entities.forEach(e => console.log(`After Entity: ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
   relationships.forEach(r => {
@@ -81,4 +85,37 @@ export const buildAfterStructure = (
   });
   
   return { entities, relationships };
+};
+
+const validateOwnershipPercentages = (
+  entities: TransactionEntity[],
+  relationships: AnyTransactionRelationship[]
+): void => {
+  const ownershipRelationships = relationships.filter(r => r.type === 'ownership') as OwnershipRelationship[];
+  
+  // Group relationships by target (the entity being owned)
+  const ownershipByTarget = new Map<string, OwnershipRelationship[]>();
+  
+  ownershipRelationships.forEach(rel => {
+    if (!ownershipByTarget.has(rel.target)) {
+      ownershipByTarget.set(rel.target, []);
+    }
+    ownershipByTarget.get(rel.target)!.push(rel);
+  });
+  
+  // Check each target entity's total ownership
+  ownershipByTarget.forEach((ownerships, targetId) => {
+    const totalOwnership = ownerships.reduce((sum, rel) => sum + (rel.percentage || 0), 0);
+    const targetEntity = entities.find(e => e.id === targetId);
+    
+    if (totalOwnership > 100) {
+      console.warn(`⚠️  Ownership validation failed for ${targetEntity?.name || targetId}: Total ownership is ${totalOwnership}% (exceeds 100%)`);
+      console.warn(`   Ownership breakdown:`, ownerships.map(rel => {
+        const sourceEntity = entities.find(e => e.id === rel.source);
+        return `${sourceEntity?.name || rel.source}: ${rel.percentage}%`;
+      }));
+    } else if (totalOwnership < 95 && totalOwnership > 0) {
+      console.warn(`⚠️  Ownership validation warning for ${targetEntity?.name || targetId}: Total ownership is ${totalOwnership}% (less than 100%)`);
+    }
+  });
 };
