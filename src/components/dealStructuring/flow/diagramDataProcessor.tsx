@@ -64,22 +64,81 @@ const calculateSectionLayout = (
   return { nodes: newNodes, sectionWidth };
 };
 
+/**
+ * Validates that all relationships have corresponding nodes
+ */
+const validateRelationships = (
+  relationships: AnyTransactionRelationship[],
+  nodes: Node[],
+  sectionName: string
+): void => {
+  console.log(`🔍 Validating ${sectionName} relationships...`);
+  
+  const nodeIds = new Set(nodes.map(n => n.id));
+  console.log(`📋 Available node IDs in ${sectionName}:`, Array.from(nodeIds));
+  
+  const missingNodes: { relationshipIndex: number; missingType: 'source' | 'target'; missingId: string; relationship: AnyTransactionRelationship }[] = [];
+  
+  relationships.forEach((rel, index) => {
+    if (!nodeIds.has(rel.source)) {
+      missingNodes.push({ 
+        relationshipIndex: index, 
+        missingType: 'source', 
+        missingId: rel.source, 
+        relationship: rel 
+      });
+    }
+    if (!nodeIds.has(rel.target)) {
+      missingNodes.push({ 
+        relationshipIndex: index, 
+        missingType: 'target', 
+        missingId: rel.target, 
+        relationship: rel 
+      });
+    }
+  });
+  
+  if (missingNodes.length > 0) {
+    console.error(`❌ ${sectionName} validation failed - Missing nodes for relationships:`);
+    missingNodes.forEach(({ relationshipIndex, missingType, missingId, relationship }) => {
+      console.error(`  Relationship #${relationshipIndex}: Missing ${missingType} node "${missingId}"`);
+      console.error(`  Relationship details:`, {
+        source: relationship.source,
+        target: relationship.target,
+        type: relationship.type,
+        percentage: (relationship as OwnershipRelationship).percentage,
+        value: (relationship as ConsiderationRelationship).value
+      });
+    });
+  } else {
+    console.log(`✅ ${sectionName} relationship validation passed - all nodes exist`);
+  }
+};
+
 export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlow): { nodes: Node[], edges: Edge[] } => {
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
   let currentXOffset = 50;
 
+  console.log('🚀 Starting diagram processing...');
+  
   // Helper to add section header and update nodes array
   const addSectionHeader = (id: string, label: string, x: number, y: number, width: number) => {
       newNodes.push(addSectionHeaderNode(id, label, x, y));
   };
 
   // BEFORE Section
+  console.log('📍 Processing BEFORE section...');
   const beforeEntities = transactionFlow.before.entities;
+  console.log(`📋 BEFORE entities (${beforeEntities.length}):`, beforeEntities.map(e => ({ id: e.id, name: e.name, type: e.type })));
+  
   const beforeLevels = computeEntityHierarchyLevels(beforeEntities, transactionFlow.before.relationships);
   const { nodes: beforeNodes, sectionWidth: beforeSectionWidth } = calculateSectionLayout(beforeEntities, beforeLevels, currentXOffset);
   addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, 0, beforeSectionWidth);
   newNodes.push(...beforeNodes);
+
+  // Validate BEFORE relationships
+  validateRelationships(transactionFlow.before.relationships, beforeNodes, 'BEFORE');
 
   // Edges for BEFORE section
   transactionFlow.before.relationships.forEach((rel, index) => {
@@ -154,15 +213,66 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
 
   // AFTER Section
+  console.log('📍 Processing AFTER section...');
   const afterEntities = transactionFlow.after.entities;
+  console.log(`📋 AFTER entities (${afterEntities.length}):`, afterEntities.map(e => ({ id: e.id, name: e.name, type: e.type, percentage: e.percentage })));
+  
+  // Special focus on Former Target Shareholders entity
+  const formerTargetShareholders = afterEntities.find(e => e.name === 'Former Target Shareholders');
+  if (formerTargetShareholders) {
+    console.log('🎯 Found Former Target Shareholders entity:', {
+      id: formerTargetShareholders.id,
+      name: formerTargetShareholders.name,
+      type: formerTargetShareholders.type,
+      percentage: formerTargetShareholders.percentage,
+      description: formerTargetShareholders.description
+    });
+  } else {
+    console.warn('⚠️  Former Target Shareholders entity not found in AFTER entities');
+  }
+  
   const afterLevels = computeAfterTransactionHierarchy(afterEntities);
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
   newNodes.push(...afterNodes);
 
+  // Validate AFTER relationships
+  console.log(`📋 AFTER relationships (${transactionFlow.after.relationships.length}):`, 
+    transactionFlow.after.relationships.map((rel, idx) => ({
+      index: idx,
+      source: rel.source,
+      target: rel.target,
+      type: rel.type,
+      percentage: (rel as OwnershipRelationship).percentage,
+      value: (rel as ConsiderationRelationship).value
+    }))
+  );
+  
+  // Special focus on relationships involving Former Target Shareholders
+  const formerTargetRelationships = transactionFlow.after.relationships.filter(rel => 
+    rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders') ||
+    rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders')
+  );
+  
+  if (formerTargetRelationships.length > 0) {
+    console.log('🎯 Relationships involving Former Target Shareholders:', formerTargetRelationships);
+  } else {
+    console.warn('⚠️  No relationships found involving Former Target Shareholders');
+    console.log('🔍 All relationship sources:', transactionFlow.after.relationships.map(r => r.source));
+    console.log('🔍 All relationship targets:', transactionFlow.after.relationships.map(r => r.target));
+  }
+  
+  validateRelationships(transactionFlow.after.relationships, afterNodes, 'AFTER');
+
   // Edges for AFTER section
+  let createdEdges = 0;
+  let skippedEdges = 0;
+  
   transactionFlow.after.relationships.forEach((rel, index) => {
-      if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
+      const sourceNodeExists = newNodes.find(n => n.id === rel.source);
+      const targetNodeExists = newNodes.find(n => n.id === rel.target);
+      
+      if (sourceNodeExists && targetNodeExists) {
           const sourceNode = newNodes.find(n => n.id === rel.source);
           let strokeColor = '#525252'; 
           if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer')
@@ -186,8 +296,38 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
               style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
               markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           });
+          
+          createdEdges++;
+          
+          // Log when we successfully create an edge involving Former Target Shareholders
+          if (rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders') ||
+              rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders')) {
+            console.log('✅ Created edge for Former Target Shareholders:', {
+              edgeId: `edge-after-${rel.source}-${rel.target}-${index}`,
+              source: rel.source,
+              target: rel.target,
+              type: rel.type,
+              percentage: (rel as OwnershipRelationship).percentage,
+              label: edgeLabel
+            });
+          }
+      } else {
+          skippedEdges++;
+          console.warn(`❌ Skipped edge #${index} - missing nodes:`, {
+            relationship: { source: rel.source, target: rel.target, type: rel.type },
+            sourceExists: !!sourceNodeExists,
+            targetExists: !!targetNodeExists
+          });
+          
+          // Special warning for Former Target Shareholders relationships
+          if (rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders') ||
+              rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders')) {
+            console.error('🚨 CRITICAL: Skipped Former Target Shareholders relationship due to missing nodes!');
+          }
       }
   });
+  
+  console.log(`📊 AFTER section edge summary: ${createdEdges} created, ${skippedEdges} skipped`);
 
   // Connect continuing shareholders (Before -> After) if entity id & name matches and both are "stockholder"
   beforeEntities
@@ -209,5 +349,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       }
     });
 
+  console.log(`🏁 Diagram processing complete: ${newNodes.length} nodes, ${newEdges.length} edges`);
+  
   return { nodes: newNodes, edges: newEdges };
 };

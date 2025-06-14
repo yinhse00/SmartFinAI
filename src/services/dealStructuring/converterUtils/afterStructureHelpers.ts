@@ -107,6 +107,14 @@ export const addAcquirerShareholders = (
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
             const shareholderId = generateEntityId('stockholder', normalizedName, prefix);
             
+            console.log(`🔧 Creating/updating shareholder entity for ${normalizedName}:`, {
+                shareholderId,
+                normalizedName,
+                originalHolderName: holder.name,
+                percentage: holder.percentage,
+                isTargetShareholder
+            });
+            
             const existingEntity = entities.find(e => e.id === shareholderId);
 
             if (!existingEntity) {
@@ -119,10 +127,12 @@ export const addAcquirerShareholders = (
                         ? `Former Target Shareholders who received ${holder.percentage}% equity in ${acquirerName}.`
                         : `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
                 });
+                console.log(`✅ Created new entity: ${shareholderId} (${normalizedName})`);
             } else if (isTargetShareholder && existingEntity.description) {
                 if (!existingEntity.description.includes(`equity in ${acquirerName}`)) {
                     existingEntity.description += ` They also received ${holder.percentage}% equity in ${acquirerName}.`;
                 }
+                console.log(`✅ Updated existing entity: ${shareholderId} (${normalizedName})`);
             }
 
             // Validate before creating relationship
@@ -143,7 +153,7 @@ export const addAcquirerShareholders = (
 
             // Mark this entity as processed in this context
             processedEntities.add(trackingKey);
-            console.log(`✅ Added ${holder.percentage}% ownership: ${normalizedName} -> ${acquirerName}`);
+            console.log(`✅ Added ${holder.percentage}% ownership: ${normalizedName} (${shareholderId}) -> ${acquirerName} (${acquirerId})`);
         }
     });
 };
@@ -196,8 +206,19 @@ export const addTargetWithOwnership = (
             allAfterShareholders: allAfterShareholders.length
         });
 
-        // Create a unique tracking key for this specific context (target shareholding)
+        // CRITICAL: Use the exact same entity ID generation as in addAcquirerShareholders
         const shareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
+        const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
+        
+        console.log(`🔧 Processing remaining ownership for ${shareholderName}:`, {
+            shareholderId,
+            shareholderName,
+            targetId,
+            targetCompanyName,
+            remainingPercentage
+        });
+        
+        // Create a unique tracking key for this specific context (target shareholding)
         const trackingKey = `${shareholderName}_in_${targetCompanyName}`;
 
         // Check if this entity has already been processed in this context
@@ -211,7 +232,6 @@ export const addTargetWithOwnership = (
             const continungShareholderData = continuingShareholders[0];
             const actualRemainingPercentage = continungShareholderData.percentage || remainingPercentage;
             
-            const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
             const existingEntity = entities.find(e => e.id === shareholderId);
 
             if (!existingEntity) {
@@ -222,10 +242,12 @@ export const addTargetWithOwnership = (
                     percentage: actualRemainingPercentage,
                     description: `Former Target Shareholders who retain a ${actualRemainingPercentage}% stake in ${targetCompanyName}.`,
                 });
+                console.log(`✅ Created new entity for remaining ownership: ${shareholderId} (${shareholderName})`);
             } else if (existingEntity.description) {
                 if (!existingEntity.description.includes(`stake in ${targetCompanyName}`)) {
                     existingEntity.description += ` They also retain a ${actualRemainingPercentage}% stake in ${targetCompanyName}.`;
                 }
+                console.log(`✅ Updated existing entity for remaining ownership: ${shareholderId} (${shareholderName})`);
             }
 
             relationships.push({
@@ -235,10 +257,9 @@ export const addTargetWithOwnership = (
                 percentage: actualRemainingPercentage,
             } as OwnershipRelationship);
 
-            console.log(`✅ Added ${actualRemainingPercentage}% remaining ownership: ${shareholderName} -> ${targetCompanyName}`);
+            console.log(`✅ Added ${actualRemainingPercentage}% remaining ownership: ${shareholderName} (${shareholderId}) -> ${targetCompanyName} (${targetId})`);
         } else {
             // Fallback: create remaining ownership based on calculation
-            const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
             if (!entities.find(e => e.id === shareholderId)) {
                 entities.push({
                     id: shareholderId,
@@ -247,6 +268,7 @@ export const addTargetWithOwnership = (
                     percentage: remainingPercentage,
                     description: `Original shareholders of ${targetCompanyName} who retain a ${remainingPercentage}% stake.`,
                 });
+                console.log(`✅ Created fallback entity for remaining ownership: ${shareholderId} (${shareholderName})`);
             }
             relationships.push({
                 source: shareholderId,
@@ -255,7 +277,7 @@ export const addTargetWithOwnership = (
                 percentage: remainingPercentage,
             } as OwnershipRelationship);
 
-            console.log(`✅ Added ${remainingPercentage}% calculated remaining ownership: ${shareholderName} -> ${targetCompanyName}`);
+            console.log(`✅ Added ${remainingPercentage}% calculated remaining ownership: ${shareholderName} (${shareholderId}) -> ${targetCompanyName} (${targetId})`);
         }
 
         // Mark this entity as processed in this context
