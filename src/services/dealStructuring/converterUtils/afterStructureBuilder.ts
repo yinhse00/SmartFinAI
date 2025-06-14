@@ -21,6 +21,9 @@ export const buildAfterStructure = (
   const prefix = 'after';
   const visitedChildren = new Set<string>();
 
+  // Determine acquired percentage early to inform shareholder processing.
+  const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
+
   // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
   const { acquirerId, acquirerCorpEntityData } = createAcquirerEntity(
     entityNames.acquiringCompanyName,
@@ -35,7 +38,8 @@ export const buildAfterStructure = (
     entityNames.acquiringCompanyName,
     prefix,
     entities,
-    relationships
+    relationships,
+    acquiredPercentage // Pass acquired percentage as context
   );
 
   // 2. Add corporate hierarchy (children only) for the acquirer
