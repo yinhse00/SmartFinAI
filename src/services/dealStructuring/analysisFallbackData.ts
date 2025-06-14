@@ -120,20 +120,7 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
       risks: ["Detailed risk analysis in response (fallback)"],
       recommendations: ["See comprehensive recommendations (fallback)"],
     },
-    risks: { 
-      executionRisks: [],
-      marketRisks: [],
-      regulatoryRisks: [],
-      optimizationStrategies: []
-    },
     confidence: 0.5, 
-    marketIntelligence: { 
-        precedentAnalysis: "N/A",
-        marketConditions: "N/A",
-        regulatoryEnvironment: "N/A",
-        optimizationPotential: "N/A",
-        successProbability: 0
-    },
     shareholdingChanges: createFallbackShareholdingChanges(),
     corporateStructure: createFallbackCorporateStructure(),
     transactionFlow: createFallbackTransactionFlow()
