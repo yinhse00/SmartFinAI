@@ -57,8 +57,7 @@ export const addAcquirerShareholders = (
     acquirerName: string,
     prefix: string,
     entities: Entities,
-    relationships: Relationships,
-    acquiredPercentage: number
+    relationships: Relationships
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
     
@@ -70,19 +69,8 @@ export const addAcquirerShareholders = (
         // STRONGER FILTERING:
         // Skip any shareholder group that is explicitly 'continuing', 'remaining', or is a generic 'Target Shareholder' group.
         // These entities represent ownership in the Target company, not the Acquirer.
-        if (isContinuingOrRemainingShareholder(holder.name)) {
+        if (isContinuingOrRemainingShareholder(holder.name) || isTargetShareholderGroup(holder.name)) {
             return;
-        }
-
-        // NEW HEURISTIC: If this is a generic 'Target Shareholder' group, be cautious.
-        // If it's a partial acquisition (implying rollover equity exists), we assume this
-        // group is the rollover portion unless explicitly marked as receiving new acquirer equity.
-        if (isTargetShareholderGroup(holder.name)) {
-            if (acquiredPercentage < 100 && holder.type !== 'new_equity_recipient') {
-                // This is likely the rollover group handled by `addTargetWithOwnership`.
-                // Do not create an ownership link to the Acquirer here.
-                return;
-            }
         }
 
         // The remaining logic now only applies to legitimate new shareholders of the Acquirer.
