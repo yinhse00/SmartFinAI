@@ -57,42 +57,37 @@ export const addAcquirerShareholders = (
     acquirerName: string,
     prefix: string,
     entities: Entities,
-    relationships: Relationships
+    relationships: Relationships,
+    acquiredPercentage: number
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
-    const paymentStructure = results.structure?.majorTerms?.paymentStructure;
-    const stockConsiderationExists = (paymentStructure?.stockPercentage ?? 0) > 0;
-    const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
+    
+    // This function's responsibility is to add shareholders of the ACQUIRER.
+    // We must be careful to filter out entities that represent rollover/continuing equity
+    // in the TARGET, as those are handled by `addTargetWithOwnership`.
 
     acquirerNewShareholders.forEach((holder) => {
-        // Skip shareholders explicitly marked as 'continuing' or 'remaining', as their stake is in the Target.
+        // STRONGER FILTERING:
+        // Skip any shareholder group that is explicitly 'continuing', 'remaining', or is a generic 'Target Shareholder' group.
+        // These entities represent ownership in the Target company, not the Acquirer.
         if (isContinuingOrRemainingShareholder(holder.name)) {
             return;
         }
 
-        const isTargetShareholder = isTargetShareholderGroup(holder.name);
-
-        // If the holder is a generic "Target Shareholder" group, apply stricter rules
-        // to prevent incorrectly linking them to the acquirer.
-        if (isTargetShareholder) {
-            // If it's a partial acquisition (less than 100%), we assume this group represents
-            // the retained stake in the Target company. This stake is handled exclusively by
-            // `addTargetWithOwnership`, so we must skip them here to avoid a wrong link.
-            if (acquiredPercentage < 100) {
-                console.log(`Skipping acquirer ownership for "${holder.name}" due to partial acquisition. Retained stake is handled separately.`);
-                return;
-            }
-            // If it's a 100% acquisition, we only link them to the acquirer if there was stock consideration.
-            // A 100% cash deal means they are no longer shareholders of any entity.
-            if (acquiredPercentage === 100 && !stockConsiderationExists) {
-                console.log(`Skipping acquirer ownership for "${holder.name}" in 100% acquisition as no stock consideration was found.`);
+        // NEW HEURISTIC: If this is a generic 'Target Shareholder' group, be cautious.
+        // If it's a partial acquisition (implying rollover equity exists), we assume this
+        // group is the rollover portion unless explicitly marked as receiving new acquirer equity.
+        if (isTargetShareholderGroup(holder.name)) {
+            if (acquiredPercentage < 100 && holder.type !== 'new_equity_recipient') {
+                // This is likely the rollover group handled by `addTargetWithOwnership`.
+                // Do not create an ownership link to the Acquirer here.
                 return;
             }
         }
 
-
+        // The remaining logic now only applies to legitimate new shareholders of the Acquirer.
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
-            const shareholderName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
+            const shareholderName = holder.name;
             const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
             
             const existingEntity = entities.find(e => e.id === shareholderId);
@@ -103,15 +98,8 @@ export const addAcquirerShareholders = (
                     name: shareholderName,
                     type: 'stockholder',
                     percentage: holder.percentage,
-                    description: isTargetShareholder
-                        ? `Former Target Shareholders who received equity in ${acquirerName}.`
-                        : `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
+                    description: `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
                 });
-            } else if (isTargetShareholder && existingEntity.description) {
-                // If entity exists and was created by addTargetWithOwnership, enhance its description.
-                if (!existingEntity.description.includes(`equity in ${acquirerName}`)) {
-                    existingEntity.description += ` They also received equity in ${acquirerName}.`;
-                }
             }
 
             relationships.push({
