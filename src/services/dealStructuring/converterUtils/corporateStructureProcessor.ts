@@ -1,12 +1,12 @@
 import { CorporateEntity } from '@/types/dealStructuring';
 import { TransactionEntity, TransactionFlow } from '@/types/transactionFlow';
-import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'; // Added for type
+import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { generateEntityId } from './entityHelpers';
 
 export type AnyTransactionRelationship = TransactionFlow['before']['relationships'][0] | TransactionFlow['after']['relationships'][0];
 
 export const processCorporateStructure = (
-  corporateStructureData?: AnalysisResults['corporateStructure'] // Corrected parameter type
+  corporateStructureData?: AnalysisResults['corporateStructure']
 ): Map<string, CorporateEntity & { children?: string[], parentLink?: string }> => {
   const structureMap = new Map<string, CorporateEntity & { children?: string[], parentLink?: string }>();
   
@@ -54,30 +54,29 @@ export const addCorporateChildren = (
   parentCorpEntity.children.forEach(childId => {
     const childCorpEntity = corporateStructureMap.get(childId);
     if (childCorpEntity) {
-      // Ensure childCorpEntity.type is a valid TransactionEntity['type']
-      // Mapping 'issuer' to 'subsidiary' or another valid type if necessary
-      let childEntityType = childCorpEntity.type as TransactionEntity['type'];
-      if (childCorpEntity.type === 'issuer') { // 'issuer' is not in TransactionEntity['type']
-          // Decide on a mapping. 'subsidiary' seems reasonable, or 'parent' if it's a holding co.
-          // For now, let's map to 'subsidiary' if it's a child.
-          // Or, more generically, use 'parent' if it can act as one, otherwise 'subsidiary'.
-          // This mapping depends on the context which is not fully available here.
-          // A safer bet might be to ensure 'issuer' is added to TransactionEntityType or handled by caller.
-          // The original code did `acquirerCorpEntityFromMap.type as TransactionEntity['type']`
-          // which could lead to runtime errors if `acquirerCorpEntityFromMap.type` was 'issuer'.
-          // Let's be explicit:
-          if (childEntityType === 'issuer') childEntityType = 'subsidiary'; // Default mapping for now
+      let finalChildEntityType: TransactionEntity['type'];
+
+      // childCorpEntity.type can be 'parent', 'subsidiary', 'target', or 'issuer'.
+      // We need to map it to a valid TransactionEntity['type'].
+      if (childCorpEntity.type === 'issuer') {
+        // 'issuer' is not a valid TransactionEntity['type'], so map it.
+        // 'subsidiary' is used here as per the previous logic's intent.
+        // Depending on context, 'parent' could also be a valid mapping.
+        finalChildEntityType = 'subsidiary';
+      } else {
+        // If childCorpEntity.type is 'parent', 'subsidiary', or 'target',
+        // these are already valid TransactionEntity['type']s.
+        finalChildEntityType = childCorpEntity.type;
       }
-
-
-      const childEntityId = generateEntityId(childEntityType, childCorpEntity.name, prefix);
+      
+      const childEntityId = generateEntityId(finalChildEntityType, childCorpEntity.name, prefix);
       
       if (!entities.find(e => e.id === childEntityId)) {
         entities.push({
           id: childEntityId,
           name: childCorpEntity.name,
-          type: childEntityType, // Use the mapped type
-          description: `${childCorpEntity.type} of ${parentCorpEntity.name}`, // Original type for description
+          type: finalChildEntityType, // Use the correctly mapped type
+          description: `${childCorpEntity.type} of ${parentCorpEntity.name}`, // Original type in description
         });
       }
       relationships.push({
