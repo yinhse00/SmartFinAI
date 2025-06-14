@@ -1,9 +1,8 @@
-
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { buildAnalysisPrompt } from './analysisPromptBuilder'; // Added import
-import { parseAnalysisResponse } from './analysisResponseParser'; // Added import
+import { buildAnalysisPrompt } from './analysisPromptBuilder'; // Ensured correct import
+import { parseAnalysisResponse } from './analysisResponseParser'; // Ensured correct import
 // Fallback functions are in analysisFallbackData.ts and used by parseAnalysisResponse
 
 export interface TransactionAnalysisRequest {
@@ -45,7 +44,7 @@ export const aiAnalysisService = {
           .join('\n\n');
       }
       
-      const analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
+      const analysisPrompt = buildAnalysisPrompt(request.description, documentContent); // Uses imported function
       
       const response = await grokService.generateResponse({
         prompt: analysisPrompt,
@@ -55,7 +54,7 @@ export const aiAnalysisService = {
         }
       });
       
-      const analysisResults = parseAnalysisResponse(response.text);
+      const analysisResults = parseAnalysisResponse(response.text); // Uses imported function
       
       console.log('AI transaction analysis completed');
       return analysisResults;
@@ -96,4 +95,3 @@ export const aiAnalysisService = {
 // - analysisPromptBuilder.ts
 // - analysisResponseParser.ts
 // - analysisFallbackData.ts
-

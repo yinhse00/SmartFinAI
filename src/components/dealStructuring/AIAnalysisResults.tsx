@@ -1,4 +1,3 @@
-
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface DealEconomics {
@@ -141,7 +140,7 @@ export interface AnalysisResults {
     majorChanges?: string[]; // Added
   };
   compliance: {
-    listingRules: string[]; // Kept as listingRules to match error, prompt might need alignment later
+    listingRules: string[]; 
     takeoversCode: string[];
     risks: string[];
     recommendations: string[];
@@ -150,6 +149,5 @@ export interface AnalysisResults {
   confidence: number;
   shareholdingChanges: ShareholdingChanges;
   corporateStructure: CorporateStructure;
-  transactionFlow?: AITransactionFlow; // Updated from any
+  transactionFlow?: AITransactionFlow; // This was updated in the previous attempt and should remain
 }
-

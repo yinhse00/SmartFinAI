@@ -1,6 +1,5 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring'; // Removed ShareholderData as it's not directly used here for fallbacks that were causing issues.
-// TransactionFlowSection, TransactionStep also removed as createFallbackTransactionFlow directly uses AnalysisResults['transactionFlow']
+import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 // Fallback for shareholding changes
 export function createFallbackShareholdingChanges(): ShareholdingChanges {
@@ -36,7 +35,7 @@ export function createFallbackCorporateStructure(): CorporateStructure {
 }
 
 // Fallback for transaction flow (simplified as it's complex)
-export function createFallbackTransactionFlow(): AnalysisResults['transactionFlow'] { // Matching type from AnalysisResults
+export function createFallbackTransactionFlow(): AnalysisResults['transactionFlow'] {
   return {
     before: {
       entities: [
@@ -112,17 +111,14 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
     shareholding: { 
       before: [],
       after: [],
-      impact: "Shareholding impact analysis included in detailed response (fallback)", // Corrected field for consistency
+      impact: "Shareholding impact analysis included in detailed response (fallback)",
       majorChanges: ["N/A"], // Added to match type
-      // controlImplications: [], // Removed as not in simplified fallback shareholding type
-      // dilutionImpact: "Shareholding impact analysis included in detailed response (fallback)" // covered by impact
     },
     compliance: {
-      listingRules: ["Review required"], // Corrected from keyListingRules
-      takeoversCode: ["Assessment needed"], // Corrected field name to match type
-      risks: ["Detailed risk analysis in response (fallback)"], // Corrected field name
-      recommendations: ["See comprehensive recommendations (fallback)"], // Corrected field name
-      // actionableRecommendations is optional and can be omitted from fallback
+      listingRules: ["Review required"], // Corrected from keyListingRules to listingRules
+      takeoversCode: ["Assessment needed"],
+      risks: ["Detailed risk analysis in response (fallback)"],
+      recommendations: ["See comprehensive recommendations (fallback)"],
     },
     risks: { 
       executionRisks: [],
