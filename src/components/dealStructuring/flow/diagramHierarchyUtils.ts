@@ -59,6 +59,58 @@ export function computeEntityHierarchyLevels(
 }
 
 /**
+ * Builds a hierarchy for the "After Transaction" section based on business entity types.
+ * This overrides the generic parent-child relationship hierarchy to enforce a specific
+ * visual layout (e.g., stockholders always at the top).
+ *
+ * @param entities The entities in the "After" section.
+ * @returns A Map of entity ID to its hierarchy level.
+ */
+export function computeAfterTransactionHierarchy(
+  entities: TransactionEntity[]
+): Map<string, number> {
+  const levels = new Map<string, number>();
+
+  // Assign levels based on entity type with a clear business hierarchy
+  entities.forEach((entity) => {
+    switch (entity.type) {
+      // Level 0: All individual shareholders and groups of shareholders
+      case 'stockholder':
+        levels.set(entity.id, 0);
+        break;
+
+      // Level 1: The main acquiring entities
+      case 'buyer':
+      case 'parent':
+      case 'newco': // New holding company is often at this level
+        levels.set(entity.id, 1);
+        break;
+
+      // Level 2: The company that was acquired
+      case 'target':
+        levels.set(entity.id, 2);
+        break;
+
+      // Level 3: Entities receiving payment or subsidiaries of the target
+      case 'consideration':
+      case 'subsidiary':
+        levels.set(entity.id, 3);
+        break;
+
+      // Default/fallback for any other types
+      default:
+        if (!levels.has(entity.id)) {
+          levels.set(entity.id, 4); // Put unknown types at the bottom
+        }
+        break;
+    }
+  });
+
+  return levels;
+}
+
+
+/**
  * Returns max hierarchy level (deepest), used for layout spacing.
  */
 export function getMaxHierarchyLevel(levelMap: Map<string, number>): number {
