@@ -76,9 +76,12 @@ export const addAcquirerShareholders = (
 
         const isTargetShareholder = isTargetShareholderGroup(holder.name);
 
-        // NEW: In partial acquisitions, do NOT add any generic/group target shareholders as acquirer shareholders.
+        // In partial acquisitions, exclude any generic target shareholder groups.
         if (isTargetShareholder && acquiredPercentage < 100) {
-            if (ownershipExclusionList) ownershipExclusionList.add(holder.name);
+            if (ownershipExclusionList) {
+                ownershipExclusionList.add(holder.name);
+                ownershipExclusionList.add(NORMALIZED_TARGET_SHAREHOLDER_NAME); // Explicitly add normalized name as well
+            }
             return;
         }
 
@@ -158,18 +161,28 @@ export const addTargetWithOwnership = (
 
     if (acquiredPercentage < 100) {
         const allAfterShareholders = results.shareholdingChanges?.after || [];
-        const continuingShareholders = allAfterShareholders.filter(holder =>
-            isContinuingOrRemainingShareholder(holder.name) ||
-            (isTargetShareholderGroup(holder.name) &&
-             (!ownershipExclusionList || !ownershipExclusionList.has(holder.name)))
-        );
+        const continuingShareholders = allAfterShareholders.filter(holder => {
+            const origName = holder.name;
+            const normalizedName = isTargetShareholderGroup(origName) ? NORMALIZED_TARGET_SHAREHOLDER_NAME : origName;
+            // Exclude the group if either original or normalized name is excluded
+            const isExcluded = ownershipExclusionList && (
+                ownershipExclusionList.has(origName) || ownershipExclusionList.has(normalizedName)
+            );
+            return (
+                (isContinuingOrRemainingShareholder(origName) ||
+                 isTargetShareholderGroup(origName)) &&
+                !isExcluded
+            );
+        });
 
         if (continuingShareholders.length > 0) {
             continuingShareholders.forEach(holder => {
+                const origName = holder.name;
+                const normalizedName = isTargetShareholderGroup(origName) ? NORMALIZED_TARGET_SHAREHOLDER_NAME : origName;
                 // Only process if not excluded:
-                if (ownershipExclusionList && ownershipExclusionList.has(holder.name)) return;
+                if (ownershipExclusionList && (ownershipExclusionList.has(origName) || ownershipExclusionList.has(normalizedName))) return;
 
-                const shareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
+                const shareholderName = normalizedName;
                 const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
                 const existingEntity = entities.find(e => e.id === shareholderId);
 
@@ -195,24 +208,27 @@ export const addTargetWithOwnership = (
                 } as OwnershipRelationship);
             });
         } else {
-            // Fallback to generic entity if no specific continuing shareholders are found in results.
+            // Fallback to generic entity if no specific continuing shareholders are found in results OR all are excluded.
             const continuingShareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
-            const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
-            if (!entities.find(e => e.id === continuingShareholderId)) {
-                entities.push({
-                    id: continuingShareholderId,
-                    name: continuingShareholderName,
-                    type: 'stockholder',
+            // Only create generic fallback if not in exclusion list:
+            if (!ownershipExclusionList || !ownershipExclusionList.has(continuingShareholderName)) {
+                const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
+                if (!entities.find(e => e.id === continuingShareholderId)) {
+                    entities.push({
+                        id: continuingShareholderId,
+                        name: continuingShareholderName,
+                        type: 'stockholder',
+                        percentage: 100 - acquiredPercentage,
+                        description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
+                    });
+                }
+                relationships.push({
+                    source: continuingShareholderId,
+                    target: targetId,
+                    type: 'ownership',
                     percentage: 100 - acquiredPercentage,
-                    description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
-                });
+                } as OwnershipRelationship);
             }
-            relationships.push({
-                source: continuingShareholderId,
-                target: targetId,
-                type: 'ownership',
-                percentage: 100 - acquiredPercentage,
-            } as OwnershipRelationship);
         }
     }
 };
