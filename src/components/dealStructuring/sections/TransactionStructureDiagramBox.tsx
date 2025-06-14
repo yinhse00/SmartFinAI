@@ -5,12 +5,15 @@ import { Network, PieChart } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 import { ShareholdingDiagramVisualization } from './ShareholdingDiagramVisualization';
 import { CorporateStructureDiagram } from './CorporateStructureDiagram';
+import { extractEntityNames } from '@/services/dealStructuring/converterUtils/entityHelpers'; // Added import
 
 interface TransactionStructureDiagramBoxProps {
   results: AnalysisResults;
 }
 
 export const TransactionStructureDiagramBox = ({ results }: TransactionStructureDiagramBoxProps) => {
+  const entityNames = extractEntityNames(results); // Extract entity names
+
   return (
     <Card className="h-[500px]">
       <CardHeader className="pb-4">
@@ -36,6 +39,10 @@ export const TransactionStructureDiagramBox = ({ results }: TransactionStructure
             <ShareholdingDiagramVisualization 
               shareholdingChanges={results.shareholdingChanges}
               fallbackData={results.shareholding}
+              paymentStructure={results.structure?.majorTerms?.paymentStructure}
+              dealEconomics={results.dealEconomics}
+              acquiringCompanyName={entityNames.acquiringCompanyName}
+              targetCompanyName={entityNames.targetCompanyName}
             />
           </TabsContent>
           
@@ -50,3 +57,4 @@ export const TransactionStructureDiagramBox = ({ results }: TransactionStructure
     </Card>
   );
 };
+
