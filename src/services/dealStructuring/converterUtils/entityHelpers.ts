@@ -13,34 +13,57 @@ export const generateEntityId = (type: string, name: string, prefix: string): st
 };
 
 export const extractEntityNames = (results: AnalysisResults): EntityNames => {
-  const targetCompanyName = results.targetDetails?.companyName || 'Target Company';
-  
-  // Determine acquiring company name and if it's listed
-  let acquiringCompanyName = 'Acquiring Company'; // Default
-  let isAcquirerListed = false; // Default
+  let targetCompanyName = 'Target Company';
+  const targetEntityFromCS = results.corporateStructure?.entities?.find(e => e.type === 'target');
+  if (targetEntityFromCS) {
+    targetCompanyName = targetEntityFromCS.name;
+  } else if (results.corporateStructure?.targetEntities && results.corporateStructure.targetEntities.length > 0) {
+    // Assuming targetEntities contains the name of the primary target
+    targetCompanyName = results.corporateStructure.targetEntities[0];
+  }
 
-  if (results.acquirerDetails?.companyName) {
-    acquiringCompanyName = results.acquirerDetails.companyName;
-    isAcquirerListed = results.acquirerDetails.isListed || false;
-  } else if (results.transactionParties?.buyer) {
-    // Fallback to transactionParties if acquirerDetails is not specific
-    acquiringCompanyName = results.transactionParties.buyer;
-    // Attempt to infer if listed from corporate structure if buyer is an 'issuer'
-    const potentialAcquirerInCS = results.corporateStructure?.entities.find(e => e.name === acquiringCompanyName);
-    if (potentialAcquirerInCS?.type === 'issuer') {
+  let acquiringCompanyName = 'Acquiring Company';
+  let isAcquirerListed = false;
+
+  // 1. Specific transaction type pattern indicating a known acquirer name and status
+  // This handles the specific case from previous prompts like "Listed Company acquires Target Company"
+  if (results.transactionType === "Listed Company acquires Target Company") {
+    acquiringCompanyName = "Listed Company";
+    isAcquirerListed = true;
+  } else {
+    // 2. Try to infer from corporateStructure.mainIssuer (if it's not the target itself)
+    if (results.corporateStructure?.mainIssuer) {
+      const issuerEntity = results.corporateStructure.entities?.find(
+        e => (e.id === results.corporateStructure.mainIssuer || e.name === results.corporateStructure.mainIssuer) && e.name !== targetCompanyName
+      );
+      if (issuerEntity) {
+        acquiringCompanyName = issuerEntity.name;
+        isAcquirerListed = true; // mainIssuer is generally considered a listed entity
+      }
+    }
+
+    // 3. If not found via mainIssuer, try any other 'issuer' entity in corporateStructure (if it's not the target)
+    if (acquiringCompanyName === 'Acquiring Company') { // Only if not already identified
+      const potentialAcquirerIssuer = results.corporateStructure?.entities?.find(
+        e => e.type === 'issuer' && e.name !== targetCompanyName
+      );
+      if (potentialAcquirerIssuer) {
+        acquiringCompanyName = potentialAcquirerIssuer.name;
+        isAcquirerListed = true; // 'issuer' type implies listed status
+      }
+    }
+    
+    // 4. General hints from transactionType if acquirer is still default or its listed status isn't confirmed
+    // This sets `isAcquirerListed` if the transactionType strongly implies it, even if the name is generic.
+    if (results.transactionType?.toLowerCase().includes('listed company') &&
+        (results.transactionType?.toLowerCase().includes('acquire') || results.transactionType?.toLowerCase().includes('acquisition'))) {
+      // If the transaction type clearly indicates a listed company is acquiring, set the flag.
+      // The acquiringCompanyName might be specific (if found above) or remain generic ('Acquiring Company').
       isAcquirerListed = true;
     }
   }
-  
-  // Specific override for "Listed Company" scenario from prompt
-  if (results.scenarioContext === "Listed Company acquires Target Company") {
-    acquiringCompanyName = "Listed Company"; // Ensure this matches the intended name
-    isAcquirerListed = true; 
-    // If results.shareholding.before for "Listed Company" is provided, it should be used.
-    // Example: Shareholder A (75%), Other Investors (25%) for "Listed Company"
-  }
 
-  console.log("Extracted Entity Names:", { targetCompanyName, acquiringCompanyName, isAcquirerListed });
+  console.log("Extracted Entity Names (v3 logic):", { targetCompanyName, acquiringCompanyName, isAcquirerListed });
   return { targetCompanyName, acquiringCompanyName, isAcquirerListed };
 };
 
