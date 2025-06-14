@@ -1,4 +1,3 @@
-
 export interface TransactionData {
   type: string;
   subtype: string;
@@ -32,13 +31,35 @@ export interface CorporateEntity {
   parentId?: string;
 }
 
+export type Shareholder = ShareholderData; // Alias for ShareholderData
+
+export interface PaymentStructure { // Added PaymentStructure interface
+  cashPercentage?: number;
+  stockPercentage?: number;
+  otherConsideration?: string;
+  details?: string;
+}
+
+export interface DealEconomics { // Added DealEconomics interface
+  purchasePrice?: number;
+  currency?: string;
+  targetPercentage?: number;
+  valuationMetrics?: Record<string, string | number>;
+  synergies?: {
+    description: string;
+    estimatedValue: number;
+  }[];
+}
+
 export interface ShareholdingChanges {
   before: ShareholderData[];
   after: ShareholderData[];
   keyChanges: Array<{
     shareholder: string;
+    before: number; // Added before percentage
+    after: number;  // Added after percentage
     change: number;
-    type: 'increase' | 'decrease' | 'new' | 'exit';
+    // type: 'increase' | 'decrease' | 'new' | 'exit'; // Type can be inferred or simplified
   }>;
   controlImplications: string[];
 }
