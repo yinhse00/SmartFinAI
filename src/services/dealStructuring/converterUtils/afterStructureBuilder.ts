@@ -135,7 +135,9 @@ export const buildAfterStructure = (
       addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, visitedChildren);
   }
 
-  const acquiredPercentage = results.dealEconomics?.targetPercentage || 100;
+  // Prioritize the specific percentage from major terms if available, otherwise use deal economics, default to 100
+  const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
+  
   relationships.push({
     source: acquirerId,
     target: targetId,
