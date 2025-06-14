@@ -57,28 +57,34 @@ export const addAcquirerShareholders = (
     acquirerName: string,
     prefix: string,
     entities: Entities,
-    relationships: Relationships
+    relationships: Relationships,
+    ownershipExclusionList?: Set<string>
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockConsiderationExists = (paymentStructure?.stockPercentage ?? 0) > 0;
+    const acquiredPercentage =
+      results.structure?.majorTerms?.targetPercentage ??
+      results.dealEconomics?.targetPercentage ??
+      100;
 
     acquirerNewShareholders.forEach((holder) => {
         // Skip shareholders explicitly marked as 'continuing' or 'remaining'.
-        // Their stake is in the Target company and is handled by `addTargetWithOwnership`.
         if (isContinuingOrRemainingShareholder(holder.name)) {
             return;
         }
 
         const isTargetShareholder = isTargetShareholderGroup(holder.name);
 
-        // If this is a generic 'Target Shareholder' group, we must be careful.
-        // Only link them to the Acquirer if there are clear signs they received stock,
-        // otherwise, we assume it's rollover equity in the Target that should be handled elsewhere.
+        // NEW: In partial acquisitions, do NOT add any generic/group target shareholders as acquirer shareholders.
+        if (isTargetShareholder && acquiredPercentage < 100) {
+            if (ownershipExclusionList) ownershipExclusionList.add(holder.name);
+            return;
+        }
+
+        // If this is a generic 'Target Shareholder' group, only link if clearly new equity recipient or stock consideration.
         if (isTargetShareholder) {
             const isExplicitNewRecipient = holder.type === 'new_equity_recipient';
-            // If there's no stock in the deal AND this isn't an explicit new recipient,
-            // then we should not create an ownership link to the Acquirer for this group.
             if (!stockConsiderationExists && !isExplicitNewRecipient) {
                 return;
             }
@@ -87,7 +93,7 @@ export const addAcquirerShareholders = (
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
             const shareholderName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
             const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
-            
+
             const existingEntity = entities.find(e => e.id === shareholderId);
 
             if (!existingEntity) {
@@ -101,7 +107,6 @@ export const addAcquirerShareholders = (
                         : `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
                 });
             } else if (isTargetShareholder && existingEntity.description) {
-                // If entity exists and was created by addTargetWithOwnership, enhance its description.
                 if (!existingEntity.description.includes(`equity in ${acquirerName}`)) {
                     existingEntity.description += ` They also received equity in ${acquirerName}.`;
                 }
@@ -125,7 +130,8 @@ export const addTargetWithOwnership = (
     prefix: string,
     entities: Entities,
     relationships: Relationships,
-    visitedChildren: Set<string>
+    visitedChildren: Set<string>,
+    ownershipExclusionList?: Set<string>
 ): void => {
     const targetId = generateEntityId('target', targetCompanyName, prefix);
     if (!entities.find(e => e.id === targetId)) {
@@ -142,7 +148,7 @@ export const addTargetWithOwnership = (
     }
 
     const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
-    
+
     relationships.push({
         source: acquirerId,
         target: targetId,
@@ -152,12 +158,17 @@ export const addTargetWithOwnership = (
 
     if (acquiredPercentage < 100) {
         const allAfterShareholders = results.shareholdingChanges?.after || [];
-        const continuingShareholders = allAfterShareholders.filter(holder => isContinuingOrRemainingShareholder(holder.name));
+        const continuingShareholders = allAfterShareholders.filter(holder =>
+            isContinuingOrRemainingShareholder(holder.name) ||
+            (isTargetShareholderGroup(holder.name) &&
+             (!ownershipExclusionList || !ownershipExclusionList.has(holder.name)))
+        );
 
-        // If we find specific continuing shareholders in the analysis results, use them.
         if (continuingShareholders.length > 0) {
             continuingShareholders.forEach(holder => {
-                // Normalize name to consolidate with shareholders who may have received acquirer stock.
+                // Only process if not excluded:
+                if (ownershipExclusionList && ownershipExclusionList.has(holder.name)) return;
+
                 const shareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
                 const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
                 const existingEntity = entities.find(e => e.id === shareholderId);
@@ -171,7 +182,6 @@ export const addTargetWithOwnership = (
                         description: `Former Target Shareholders who retain a ${holder.percentage}% stake in ${targetCompanyName}.`,
                     });
                 } else if (existingEntity.description) {
-                     // If entity exists and was created by addAcquirerShareholders, enhance its description, preventing duplicates.
                     if (!existingEntity.description.includes(`stake in ${targetCompanyName}`)) {
                         existingEntity.description += ` They also retain a ${holder.percentage}% stake in ${targetCompanyName}.`;
                     }
@@ -186,7 +196,7 @@ export const addTargetWithOwnership = (
             });
         } else {
             // Fallback to generic entity if no specific continuing shareholders are found in results.
-            const continuingShareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME; // Use normalized name
+            const continuingShareholderName = NORMALIZED_TARGET_SHAREHOLDER_NAME;
             const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
             if (!entities.find(e => e.id === continuingShareholderId)) {
                 entities.push({
