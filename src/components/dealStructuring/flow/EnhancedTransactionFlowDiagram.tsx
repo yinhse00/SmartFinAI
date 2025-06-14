@@ -1,8 +1,7 @@
-
 import React, { useMemo } from 'react';
-import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
+import { ReactFlow, Node, Edge, Background, Controls, Position } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { TransactionFlow } from '@/types/transactionFlow';
+import { TransactionFlow, TransactionEntity } from '@/types/transactionFlow';
 
 interface EnhancedTransactionFlowDiagramProps {
   transactionFlow?: TransactionFlow;
@@ -13,70 +12,76 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
 }) => {
   const { nodes, edges } = useMemo(() => {
     if (!transactionFlow) {
+      console.log("Transaction flow data is undefined in diagram.");
       return { nodes: [], edges: [] };
     }
+    console.log("Processing transactionFlow in diagram:", JSON.stringify(transactionFlow, null, 2));
 
-    const nodes: Node[] = [];
-    const edges: Edge[] = [];
+    const newNodes: Node[] = [];
+    const newEdges: Edge[] = [];
 
-    // Enhanced layout configuration for hierarchical positioning
-    const SECTION_WIDTH = 350;
-    const SECTION_SPACING = 200;
-    const SHAREHOLDER_LEVEL_Y = 50;
-    const COMPANY_LEVEL_Y = 200;
-    const CONSIDERATION_LEVEL_Y = 350;
-    const ENTITY_WIDTH = 180;
-    const ENTITY_HEIGHT = 80;
-    const HORIZONTAL_SPACING = 200;
+    const ENTITY_WIDTH = 200;
+    const ENTITY_HEIGHT = 90;
+    const LEVEL_Y_SPACING = 180; // Vertical space between levels (shareholders, company, consideration)
+    const SIBLING_X_SPACING = ENTITY_WIDTH + 50; // Horizontal space between sibling entities on the same level
+    const SECTION_X_SPACING = ENTITY_WIDTH + 150; // Horizontal space between Before, Transaction, After sections
 
-    // Section positions
-    const BEFORE_X = 50;
-    const TRANSACTION_X = BEFORE_X + SECTION_WIDTH + SECTION_SPACING;
-    const AFTER_X = TRANSACTION_X + SECTION_WIDTH + SECTION_SPACING;
+    const BASE_Y_SHAREHOLDER = 50;
+    const BASE_Y_COMPANY = BASE_Y_SHAREHOLDER + LEVEL_Y_SPACING;
+    const BASE_Y_CONSIDERATION = BASE_Y_COMPANY + LEVEL_Y_SPACING;
+    const BASE_Y_SUBSIDIARY = BASE_Y_COMPANY + LEVEL_Y_SPACING;
 
-    const beforeEntities = transactionFlow.before.entities;
-    const afterEntities = transactionFlow.after.entities;
-    const beforeRelationships = transactionFlow.before.relationships;
-    const afterRelationships = transactionFlow.after.relationships;
-    const transactionContext = transactionFlow.transactionContext;
 
-    // Color schemes for different entity types with enhanced styling
-    const getNodeColors = (type: string, isNewOwner?: boolean, isTransaction?: boolean) => {
+    const getNodeColors = (type: string, isAcquirer?: boolean) => {
       switch (type) {
         case 'target':
           return {
-            backgroundColor: isTransaction ? '#fef3c7' : '#fef3c7',
-            borderColor: isTransaction ? '#f59e0b' : '#f59e0b',
-            textColor: '#92400e',
-            borderWidth: isTransaction ? '3px' : '2px'
+            backgroundColor: '#fef3c7', // Light yellow
+            borderColor: '#f59e0b', // Amber
+            textColor: '#92400e', // Dark amber
+            borderWidth: '2px'
           };
         case 'buyer':
           return {
-            backgroundColor: '#dbeafe',
-            borderColor: '#2563eb',
-            textColor: '#1e40af',
+            backgroundColor: '#dbeafe', // Light blue
+            borderColor: '#2563eb', // Blue
+            textColor: '#1e40af', // Dark blue
             borderWidth: '2px'
           };
         case 'stockholder':
-          return isNewOwner ? {
-            backgroundColor: '#ecfdf5',
-            borderColor: '#10b981',
-            textColor: '#047857',
+          return isAcquirer ? { // This case might be redundant if 'buyer' type is consistently used
+            backgroundColor: '#ecfdf5', // Light green
+            borderColor: '#10b981', // Green
+            textColor: '#047857', // Dark green
             borderWidth: '2px'
           } : {
-            backgroundColor: '#f3f4f6',
-            borderColor: '#6b7280',
-            textColor: '#374151',
+            backgroundColor: '#f3f4f6', // Light gray
+            borderColor: '#6b7280', // Gray
+            textColor: '#374151', // Dark gray
+            borderWidth: '2px'
+          };
+        case 'subsidiary':
+           return {
+            backgroundColor: '#e0f2fe', // Lighter blue than buyer
+            borderColor: '#0ea5e9',   // Sky blue
+            textColor: '#0c4a6e',   // Darker sky blue
+            borderWidth: '1.5px'
+          };
+        case 'newco':
+          return {
+            backgroundColor: '#ede9fe', // Light purple
+            borderColor: '#7c3aed', // Purple
+            textColor: '#5b21b6', // Dark purple
             borderWidth: '2px'
           };
         case 'consideration':
           return {
-            backgroundColor: '#f0fdf4',
-            borderColor: '#16a34a',
-            textColor: '#15803d',
+            backgroundColor: '#f0fdf4', // Very light green
+            borderColor: '#16a34a', // Strong green
+            textColor: '#15803d', // Dark green
             borderWidth: '2px'
           };
-        default:
+        default: // For any other types or fallbacks
           return {
             backgroundColor: '#f3f4f6',
             borderColor: '#6b7280',
@@ -86,392 +91,270 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       }
     };
 
-    // Helper function to create positioned entities with hierarchical layout
-    const createEntityNode = (entity: any, x: number, y: number, label: string, isTransaction = false) => {
-      const colors = getNodeColors(entity.type, entity.type === 'buyer', isTransaction);
+    const createEntityNode = (entity: TransactionEntity, x: number, y: number, additionalDescription?: string) => {
+      const colors = getNodeColors(entity.type, entity.type === 'buyer');
+      const labelContent = (
+        <div className="text-center p-2">
+          <div className="font-semibold text-sm" style={{ color: colors.textColor }}>
+            {entity.name}
+          </div>
+          <div className="text-xs text-gray-500 italic">{entity.type}</div>
+          {entity.description && <div className="text-xs text-gray-600 mt-1">{entity.description}</div>}
+          {additionalDescription && <div className="text-xs text-gray-600 mt-1">{additionalDescription}</div>}
+          {entity.percentage !== undefined && (
+            <div className="text-xs font-medium text-blue-700 mt-1">
+              {entity.percentage.toFixed(1)}%
+            </div>
+          )}
+          {entity.value !== undefined && (
+            <div className="text-xs font-medium text-green-700 mt-1">
+              {entity.currency || '...'} {(entity.value / 1000000).toFixed(1)}M
+            </div>
+          )}
+        </div>
+      );
+
       return {
         id: entity.id,
-        type: 'default',
+        type: 'default', // Using default nodes for simplicity, can be custom
         position: { x, y },
-        data: {
-          label: (
-            <div className="text-center p-3">
-              <div className="font-semibold text-sm" style={{ color: colors.textColor }}>
-                {entity.name}
-              </div>
-              <div className="text-xs text-gray-600">{label}</div>
-              {entity.percentage && (
-                <div className="text-xs font-medium text-blue-600">
-                  {entity.percentage}%
-                </div>
-              )}
-              {entity.value && (
-                <div className="text-xs font-medium text-green-600">
-                  {entity.currency} {(entity.value / 1000000).toFixed(0)}M
-                </div>
-              )}
-            </div>
-          )
-        },
+        data: { label: labelContent },
         style: {
           backgroundColor: colors.backgroundColor,
           border: `${colors.borderWidth} solid ${colors.borderColor}`,
-          borderRadius: '10px',
+          borderRadius: '8px',
           width: `${ENTITY_WIDTH}px`,
-          height: `${ENTITY_HEIGHT}px`,
-          boxShadow: isTransaction ? '0 4px 12px rgba(0,0,0,0.15)' : '0 2px 8px rgba(0,0,0,0.1)'
-        }
+          // height: `${ENTITY_HEIGHT}px`, // Auto-height based on content
+          boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+          textAlign: 'center',
+        },
+        sourcePosition: Position.Bottom,
+        targetPosition: Position.Top,
       };
     };
-
-    // BEFORE SECTION HEADER
-    nodes.push({
-      id: 'before-header',
-      type: 'default',
-      position: { x: BEFORE_X + 50, y: 10 },
-      data: { 
-        label: (
-          <div className="text-lg font-bold text-gray-800 text-center">
-            BEFORE TRANSACTION
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '250px',
-        height: '30px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // BEFORE STRUCTURE: Hierarchical layout with shareholders above companies
-    const beforeTarget = beforeEntities.find(e => e.type === 'target');
-    const beforeShareholders = beforeEntities.filter(e => e.type === 'stockholder');
-
-    // Position target company
-    if (beforeTarget) {
-      nodes.push(createEntityNode(
-        beforeTarget,
-        BEFORE_X + 85,
-        COMPANY_LEVEL_Y,
-        'Target Company'
-      ));
-    }
-
-    // Position shareholders above target company (same level, horizontally aligned)
-    beforeShareholders.forEach((shareholder, index) => {
-      const totalShareholders = beforeShareholders.length;
-      const startX = BEFORE_X + 85 - ((totalShareholders - 1) * HORIZONTAL_SPACING / 2);
-      const shareholderX = startX + (index * HORIZONTAL_SPACING);
-      
-      nodes.push(createEntityNode(
-        shareholder,
-        shareholderX,
-        SHAREHOLDER_LEVEL_Y,
-        `${shareholder.percentage}% Owner`
-      ));
-    });
-
-    // TRANSACTION SECTION HEADER
-    nodes.push({
-      id: 'transaction-header',
-      type: 'default',
-      position: { x: TRANSACTION_X + 50, y: 10 },
-      data: { 
-        label: (
-          <div className="text-lg font-bold text-purple-800 text-center">
-            TRANSACTION
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '250px',
-        height: '30px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // Transaction process indicator
-    nodes.push({
-      id: 'transaction-process',
-      type: 'default',
-      position: { x: TRANSACTION_X + 85, y: COMPANY_LEVEL_Y },
-      data: {
-        label: (
-          <div className="text-center p-3">
-            <div className="font-semibold text-sm text-purple-700">
-              {transactionContext?.type || 'Transaction'}
-            </div>
-            <div className="text-xs text-gray-600">In Progress</div>
-            {transactionContext?.amount && (
-              <div className="text-xs font-medium text-purple-600">
-                {transactionContext.currency} {(transactionContext.amount / 1000000).toFixed(0)}M
-              </div>
-            )}
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: '#f3e8ff',
-        border: '3px dashed #7c3aed',
-        borderRadius: '10px',
-        width: `${ENTITY_WIDTH}px`,
-        height: `${ENTITY_HEIGHT}px`,
-        boxShadow: '0 4px 12px rgba(124,58,237,0.2)'
-      }
-    });
-
-    // AFTER SECTION HEADER
-    nodes.push({
-      id: 'after-header',
-      type: 'default',
-      position: { x: AFTER_X + 50, y: 10 },
-      data: { 
-        label: (
-          <div className="text-lg font-bold text-gray-800 text-center">
-            AFTER TRANSACTION
-          </div>
-        )
-      },
-      style: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        width: '250px',
-        height: '30px'
-      },
-      draggable: false,
-      selectable: false
-    });
-
-    // AFTER STRUCTURE: Hierarchical layout with new ownership structure
-    const afterTarget = afterEntities.find(e => e.type === 'target');
-    const afterShareholders = afterEntities.filter(e => e.type === 'stockholder' || e.type === 'buyer');
-    const considerationEntity = afterEntities.find(e => e.type === 'consideration');
-
-    // Position target company (after)
-    if (afterTarget) {
-      nodes.push(createEntityNode(
-        afterTarget,
-        AFTER_X + 85,
-        COMPANY_LEVEL_Y,
-        'Post-Transaction',
-        true
-      ));
-    }
-
-    // Position new shareholders above target company (same level, horizontally aligned)
-    afterShareholders.forEach((shareholder, index) => {
-      const totalShareholders = afterShareholders.length;
-      const startX = AFTER_X + 85 - ((totalShareholders - 1) * HORIZONTAL_SPACING / 2);
-      const shareholderX = startX + (index * HORIZONTAL_SPACING);
-      
-      const label = shareholder.type === 'buyer' ? 'New Owner' : 'Continuing Owner';
-      nodes.push(createEntityNode(
-        shareholder,
-        shareholderX,
-        SHAREHOLDER_LEVEL_Y,
-        `${shareholder.percentage}% ${label}`
-      ));
-    });
-
-    // Position consideration entity
-    if (considerationEntity) {
-      nodes.push(createEntityNode(
-        considerationEntity,
-        AFTER_X + 85,
-        CONSIDERATION_LEVEL_Y,
-        'Transaction Consideration'
-      ));
-    }
-
-    // EDGES - Enhanced relationship visualization
-
-    // Before structure ownership relationships (shareholders → target)
-    beforeRelationships.forEach((rel, index) => {
-      if (nodes.find(n => n.id === rel.source) && nodes.find(n => n.id === rel.target)) {
-        edges.push({
-          id: `before-ownership-${index}`,
-          source: rel.source,
-          target: rel.target,
-          type: 'straight',
-          style: {
-            stroke: '#6b7280',
-            strokeWidth: 3
-          },
-          label: rel.percentage ? `${rel.percentage}%` : '',
-          labelStyle: {
-            fontSize: '11px',
-            fontWeight: 'bold',
-            fill: '#6b7280',
-            backgroundColor: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px'
-          }
-        });
-      }
-    });
-
-    // After structure ownership relationships (new shareholders → target)
-    afterRelationships.forEach((rel, index) => {
-      if (nodes.find(n => n.id === rel.source) && nodes.find(n => n.id === rel.target)) {
-        const isConsideration = rel.type === 'consideration';
-        const isBuyer = afterEntities.find(e => e.id === rel.source)?.type === 'buyer';
-        
-        edges.push({
-          id: `after-ownership-${index}`,
-          source: rel.source,
-          target: rel.target,
-          type: 'straight',
-          style: {
-            stroke: isConsideration ? '#16a34a' : isBuyer ? '#2563eb' : '#6b7280',
-            strokeWidth: isConsideration ? 4 : 3
-          },
-          label: rel.percentage ? `${rel.percentage}%` : rel.value ? `${transactionContext?.currency} ${(rel.value / 1000000).toFixed(0)}M` : '',
-          labelStyle: {
-            fontSize: '11px',
-            fontWeight: 'bold',
-            fill: isConsideration ? '#16a34a' : isBuyer ? '#2563eb' : '#6b7280',
-            backgroundColor: 'white',
-            padding: '2px 6px',
-            borderRadius: '4px'
-          }
-        });
-      }
-    });
-
-    // TRANSACTION FLOW CONNECTIONS (showing the transformation)
     
-    // Connect before target to transaction process
-    if (beforeTarget) {
-      edges.push({
-        id: 'before-to-transaction',
-        source: beforeTarget.id,
-        target: 'transaction-process',
-        type: 'straight',
-        style: {
-          stroke: '#7c3aed',
-          strokeWidth: 3,
-          strokeDasharray: '8,4'
-        },
-        label: 'Acquisition',
-        labelStyle: {
-          fontSize: '11px',
-          fontWeight: 'bold',
-          fill: '#7c3aed',
-          backgroundColor: 'white',
-          padding: '2px 6px',
-          borderRadius: '4px'
-        }
-      });
-    }
-
-    // Connect transaction process to after target
-    if (afterTarget) {
-      edges.push({
-        id: 'transaction-to-after',
-        source: 'transaction-process',
-        target: afterTarget.id,
-        type: 'straight',
-        style: {
-          stroke: '#7c3aed',
-          strokeWidth: 3,
-          strokeDasharray: '8,4'
-        },
-        label: 'Completion',
-        labelStyle: {
-          fontSize: '11px',
-          fontWeight: 'bold',
-          fill: '#7c3aed',
-          backgroundColor: 'white',
-          padding: '2px 6px',
-          borderRadius: '4px'
-        }
-      });
-    }
-
-    // Connect continuing shareholders (before → after)
-    beforeShareholders.forEach(beforeSh => {
-      const afterSh = afterShareholders.find(afterSh => 
-        afterSh.name === beforeSh.name && afterSh.type === 'stockholder'
-      );
-      
-      if (afterSh) {
-        edges.push({
-          id: `shareholder-continuation-${beforeSh.id}`,
-          source: beforeSh.id,
-          target: afterSh.id,
-          type: 'straight',
-          style: {
-            stroke: '#f59e0b',
-            strokeWidth: 2,
-            strokeDasharray: '6,3'
-          },
-          label: 'Continues',
-          labelStyle: {
-            fontSize: '10px',
-            fontWeight: 'bold',
-            fill: '#f59e0b',
-            backgroundColor: 'white',
-            padding: '1px 4px',
-            borderRadius: '3px'
-          }
+    const addSectionHeader = (id: string, label: string, x: number, y: number) => {
+        newNodes.push({
+            id: id,
+            type: 'default', // Could be a custom type 'sectionHeaderNode'
+            position: { x, y },
+            data: { label: <div className="text-lg font-bold text-gray-700">{label}</div> },
+            style: {
+                backgroundColor: 'transparent',
+                border: 'none',
+                width: ENTITY_WIDTH,
+                pointerEvents: 'none',
+            },
+            draggable: false,
+            selectable: false,
         });
+    };
+
+    let currentXOffset = 50;
+
+    // BEFORE Section
+    addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2) , 0);
+    const beforeTarget = transactionFlow.before.entities.find(e => e.type === 'target');
+    const beforeShareholders = transactionFlow.before.entities.filter(e => e.type === 'stockholder' || e.type === 'parent'); // include parent as potential holder
+    const beforeSubsidiaries = transactionFlow.before.entities.filter(e => e.type === 'subsidiary');
+
+
+    if (beforeTarget) {
+      const targetX = currentXOffset + (Math.max(0, beforeShareholders.length - 1) * SIBLING_X_SPACING) / 2;
+      newNodes.push(createEntityNode(beforeTarget, targetX, BASE_Y_COMPANY));
+
+      beforeShareholders.forEach((sh, idx) => {
+        const shX = currentXOffset + idx * SIBLING_X_SPACING;
+        newNodes.push(createEntityNode(sh, shX, BASE_Y_SHAREHOLDER));
+      });
+      
+      beforeSubsidiaries.forEach((sub, idx) => {
+        // Position subsidiaries below the target or their respective parent
+        const parentNode = transactionFlow.before.relationships.find(r => r.target === sub.id);
+        const parentEntityNode = newNodes.find(n => n.id === parentNode?.source);
+        const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
+        newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
+      });
+    }
+    
+    transactionFlow.before.relationships.forEach((rel, index) => {
+        if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
+            newEdges.push({
+                id: `edge-before-${rel.source}-${rel.target}-${index}`,
+                source: rel.source,
+                target: rel.target,
+                type: 'smoothstep', // or 'straight'
+                label: rel.percentage ? `${rel.percentage}% ${rel.type}` : rel.type,
+                style: { stroke: '#525252', strokeWidth: 1.5 },
+                markerEnd: { type: 'arrowclosed', color: '#525252' },
+            });
+        }
+    });
+    
+    const beforeSectionWidth = Math.max(beforeShareholders.length, 1) * SIBLING_X_SPACING;
+    currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
+
+    // TRANSACTION Section
+    addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
+    if (transactionFlow.transactionContext) {
+        const tc = transactionFlow.transactionContext;
+        const transactionNodeId = 'node-transaction-process';
+        newNodes.push({
+            id: transactionNodeId,
+            type: 'default',
+            position: { x: currentXOffset, y: BASE_Y_COMPANY },
+            data: {
+                label: (
+                    <div className="text-center p-3">
+                        <div className="font-semibold text-sm text-purple-700">{tc.type}</div>
+                        <div className="text-xs text-gray-600">{tc.description.split(" via ")[0]}</div>
+                        {tc.amount > 0 && (
+                            <div className="text-xs font-medium text-purple-600">
+                                {tc.currency} {(tc.amount / 1000000).toFixed(0)}M
+                            </div>
+                        )}
+                        <div className="text-xs text-gray-500 italic mt-1">Structure: {tc.recommendedStructure}</div>
+                    </div>
+                )
+            },
+            style: {
+                backgroundColor: '#f3e8ff', border: '2px dashed #8b5cf6', borderRadius: '8px', width: ENTITY_WIDTH,
+            }
+        });
+        // Edges from Before Target to Transaction & from Transaction to After Target
+        const beforeTargetNode = newNodes.find(n => n.id.startsWith('before-target-'));
+        if (beforeTargetNode) {
+            newEdges.push({
+                id: 'edge-before-to-tx',
+                source: beforeTargetNode.id,
+                target: transactionNodeId,
+                type: 'smoothstep',
+                animated: true,
+                style: { stroke: '#8b5cf6', strokeWidth: 2 },
+            });
+        }
+    }
+    const transactionSectionWidth = ENTITY_WIDTH;
+    currentXOffset += transactionSectionWidth + SECTION_X_SPACING;
+
+    // AFTER Section
+    addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2), 0);
+    const afterTarget = transactionFlow.after.entities.find(e => e.type === 'target');
+    const afterBuyers = transactionFlow.after.entities.filter(e => e.type === 'buyer');
+    const afterStockholders = transactionFlow.after.entities.filter(e => e.type === 'stockholder');
+    const afterConsiderations = transactionFlow.after.entities.filter(e => e.type === 'consideration');
+    const afterSubsidiaries = transactionFlow.after.entities.filter(e => e.type === 'subsidiary');
+
+    const allAfterOwners = [...afterBuyers, ...afterStockholders];
+
+    if (afterTarget) {
+      const targetX = currentXOffset + (Math.max(0, allAfterOwners.length - 1) * SIBLING_X_SPACING) / 2;
+      newNodes.push(createEntityNode(afterTarget, targetX, BASE_Y_COMPANY));
+
+      allAfterOwners.forEach((owner, idx) => {
+        const ownerX = currentXOffset + idx * SIBLING_X_SPACING;
+        newNodes.push(createEntityNode(owner, ownerX, BASE_Y_SHAREHOLDER));
+      });
+      
+      afterConsiderations.forEach((con, idx) => {
+        const conX = targetX + idx * SIBLING_X_SPACING; // Align with target or slightly offset
+        newNodes.push(createEntityNode(con, conX, BASE_Y_CONSIDERATION));
+      });
+
+      afterSubsidiaries.forEach((sub, idx) => {
+        const parentNode = transactionFlow.after.relationships.find(r => r.target === sub.id);
+        const parentEntityNode = newNodes.find(n => n.id === parentNode?.source);
+        const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
+        newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
+      });
+
+      // Edge from Transaction to After Target
+      const transactionNode = newNodes.find(n => n.id === 'node-transaction-process');
+      if (transactionNode) {
+          newEdges.push({
+              id: 'edge-tx-to-after',
+              source: transactionNode.id,
+              target: afterTarget.id, // ID of the after-target node
+              type: 'smoothstep',
+              animated: true,
+              style: { stroke: '#8b5cf6', strokeWidth: 2 },
+          });
       }
+    }
+
+    transactionFlow.after.relationships.forEach((rel, index) => {
+        if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
+            const sourceNode = newNodes.find(n => n.id === rel.source);
+            const targetNode = newNodes.find(n => n.id === rel.target);
+            let strokeColor = '#525252'; // Default
+            if (rel.type === 'ownership') strokeColor = sourceNode?.data?.label?.props?.children[1]?.props?.children === 'buyer' ? '#2563eb' : '#525252'; // Blue for buyer ownership
+            if (rel.type === 'consideration') strokeColor = '#16a34a'; // Green for consideration
+
+            newEdges.push({
+                id: `edge-after-${rel.source}-${rel.target}-${index}`,
+                source: rel.source,
+                target: rel.target,
+                type: 'smoothstep',
+                label: rel.percentage ? `${rel.percentage}% ${rel.type}` : (rel.value ? `${(rel.value/1000000).toFixed(0)}M ${rel.type}` : rel.type),
+                style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
+                markerEnd: { type: 'arrowclosed', color: strokeColor },
+            });
+        } else {
+            console.warn(`Skipping edge due to missing node: source=${rel.source}, target=${rel.target}`);
+        }
     });
 
-    // Connect consideration flows
-    if (considerationEntity) {
-      const buyer = afterShareholders.find(sh => sh.type === 'buyer');
-      if (buyer) {
-        edges.push({
-          id: 'consideration-flow',
-          source: buyer.id,
-          target: considerationEntity.id,
-          type: 'straight',
-          style: {
-            stroke: '#16a34a',
-            strokeWidth: 3,
-            strokeDasharray: '5,2'
-          },
-          label: 'Payment',
-          labelStyle: {
-            fontSize: '10px',
-            fontWeight: 'bold',
-            fill: '#16a34a',
-            backgroundColor: 'white',
-            padding: '1px 4px',
-            borderRadius: '3px'
-          }
-        });
-      }
-    }
+    // Connect continuing shareholders (Before -> After)
+    transactionFlow.before.entities
+      .filter(e => e.type === 'stockholder')
+      .forEach(beforeSH => {
+        const afterSH = transactionFlow.after.entities.find(
+          afterE => afterE.name === beforeSH.name && afterE.type === 'stockholder'
+        );
+        if (afterSH && newNodes.find(n => n.id === beforeSH.id) && newNodes.find(n => n.id === afterSH.id)) {
+          newEdges.push({
+            id: `edge-continuation-${beforeSH.id}-${afterSH.id}`,
+            source: beforeSH.id,
+            target: afterSH.id,
+            type: 'straight',
+            style: { stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '5 3' }, // Orange, dashed
+            label: 'Continues',
+            labelStyle: { fontSize: '10px', fill: '#f59e0b'},
+          });
+        }
+      });
 
-    return { nodes, edges };
+    console.log("Generated Diagram Nodes:", newNodes.length, "Edges:", newEdges.length);
+    return { nodes: newNodes, edges: newEdges };
   }, [transactionFlow]);
 
+  if (!transactionFlow) {
+    return <div className="flex items-center justify-center h-full text-gray-500">Loading transaction flow data...</div>;
+  }
+  
+  if (nodes.length === 0 && edges.length === 0 && transactionFlow) {
+    return <div className="flex items-center justify-center h-full text-gray-500">No diagram to display. Check data processing.</div>;
+  }
+
   return (
-    <div className="h-full w-full relative">
+    <div className="h-full w-full relative border rounded-md">
       <ReactFlow
         nodes={nodes}
         edges={edges}
         fitView
-        nodesDraggable={false}
+        nodesDraggable={true} // Allow dragging for manual adjustments if needed
         nodesConnectable={false}
         elementsSelectable={true}
         zoomOnScroll={true}
         panOnDrag={true}
-        className="bg-gray-50"
-        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
-        minZoom={0.3}
-        maxZoom={1.5}
+        className="bg-white"
+        defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
+        minZoom={0.2}
+        maxZoom={2}
+        attributionPosition="bottom-left"
       >
-        <Background color="#e5e7eb" gap={20} />
-        <Controls showInteractive={false} />
+        <Background color="#e2e8f0" gap={24} size={1.5} />
+        <Controls showInteractive={true} />
       </ReactFlow>
     </div>
   );
