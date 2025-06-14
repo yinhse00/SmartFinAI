@@ -119,11 +119,11 @@ export function computeAfterTransactionHierarchy(
       }).filter(level => level >= 0); // Ignore invalid levels
 
       if (potentialLevels.length > 0) {
-        // If a stockholder owns entities at different levels (e.g., owns a level-1 parent
-        // and a level-2 target), place it at the 'lower' parent position (higher level number)
-        // to ensure its relationship to the lower entity is a clean parent-child link.
-        // Math.max achieves this: max(level 0, level 1) = level 1.
-        levels.set(stockholder.id, Math.max(...potentialLevels));
+        // If a stockholder owns entities at different levels (e.g., a level-1 parent
+        // and a level-2 target), place it above the HIGHEST entity it owns in the hierarchy
+        // (i.e., the one with the lowest level number).
+        // Math.min achieves this: min(level 0, level 1) = level 0.
+        levels.set(stockholder.id, Math.min(...potentialLevels));
       } else {
         // Fallback for stockholders with malformed ownerships
         levels.set(stockholder.id, 0);
