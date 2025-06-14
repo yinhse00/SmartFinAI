@@ -87,60 +87,34 @@ export const buildAfterStructure = (
     });
   }
 
-  const paymentStructure = results.structure?.majorTerms?.paymentStructure;
-  const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
-  const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
-
-  // Handle Acquirer's Shareholders (Original shareholders before new equity issuance for target)
-  const acquirerOriginalShareholders = results.shareholdingChanges?.before || results.shareholding?.after || [];
-
-  if (acquirerOriginalShareholders.length > 0) {
-    acquirerOriginalShareholders.forEach((holder) => {
-      if (holder.name.toLowerCase() !== acquirerName.toLowerCase() && holder.name.toLowerCase() !== entityNames.targetCompanyName.toLowerCase()) {
-        const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-        let description = `${holder.percentage}% Shareholder of ${acquirerName} (pre-new equity for target)`;
-        if (stockPaymentPercentage > 0) {
-          description += ` (Note: Subject to dilution from new equity issuance to target sellers.)`;
-        }
-        
-        if (!entities.find(e => e.id === shareholderId)) {
-          entities.push({
-            id: shareholderId,
-            name: holder.name,
-            type: 'stockholder',
-            percentage: holder.percentage,
-            description: description,
-          });
-        }
-        relationships.push({
-          source: shareholderId,
-          target: acquirerId,
-          type: 'ownership',
+  // --- REVISED LOGIC ---
+  // Use `shareholdingChanges.after` directly to represent the acquirer's new shareholder base.
+  // This trusts the AI to have correctly calculated dilution and added new equity recipients.
+  const acquirerNewShareholders = results.shareholdingChanges?.after || [];
+  
+  acquirerNewShareholders.forEach((holder) => {
+    // Avoid adding the acquirer itself as its own shareholder.
+    if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
+      const shareholderId = generateEntityId('stockholder', holder.name, prefix);
+      
+      if (!entities.find(e => e.id === shareholderId)) {
+        entities.push({
+          id: shareholderId,
+          name: holder.name,
+          type: 'stockholder', // Map all shareholder types to 'stockholder' for the diagram
           percentage: holder.percentage,
-        } as OwnershipRelationship);
+          description: `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
+        });
       }
-    });
-  }
-
-  if (stockPaymentPercentage > 0 && purchasePrice > 0) {
-    console.log(`Stock consideration payment detected: ${stockPaymentPercentage}% of deal value.`);
-    const stockRecipientName = `Target Sellers (Equity Recipient in ${acquirerName})`;
-    const stockRecipientId = generateEntityId('stockholder', stockRecipientName, prefix);
-    if (!entities.find(e => e.id === stockRecipientId)) {
-      entities.push({
-        id: stockRecipientId,
-        name: stockRecipientName,
-        type: 'stockholder',
-        description: `Former target shareholders who received ${stockPaymentPercentage}% of deal consideration in ${acquirerName} stock.`,
-      });
+      
+      relationships.push({
+        source: shareholderId,
+        target: acquirerId,
+        type: 'ownership',
+        percentage: holder.percentage,
+      } as OwnershipRelationship);
     }
-    relationships.push({
-      source: stockRecipientId,
-      target: acquirerId,
-      type: 'ownership',
-      label: `${stockPaymentPercentage}% of consideration as stock`,
-    } as OwnershipRelationship);
-  }
+  });
   
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
@@ -188,6 +162,10 @@ export const buildAfterStructure = (
     } as OwnershipRelationship);
   }
   
+  const paymentStructure = results.structure?.majorTerms?.paymentStructure;
+  const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
+  const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
+
   let cashConsiderationAmount = considerationAmount;
   if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100 && purchasePrice > 0) {
     cashConsiderationAmount = purchasePrice * ((100 - stockPaymentPercentage) / 100);
@@ -219,8 +197,8 @@ export const buildAfterStructure = (
     } as ConsiderationRelationship);
   }
   
-  console.log(`After Structure (Revamped for Stock Consideration): Entities - ${entities.length}, Relationships - ${relationships.length}`);
-  entities.forEach(e => console.log(`After Entity (Stock Consideration Logic): ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
+  console.log(`After Structure (v3 - AI-driven dilution): Entities - ${entities.length}, Relationships - ${relationships.length}`);
+  entities.forEach(e => console.log(`After Entity: ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
   relationships.forEach(r => {
     let labelContent = r.label || '';
     if (r.type === 'ownership' && (r as OwnershipRelationship).percentage !== undefined) {
@@ -228,7 +206,7 @@ export const buildAfterStructure = (
     } else if ((r.type === 'consideration' || r.type === 'funding') && (r as ConsiderationRelationship).value !== undefined) {
         labelContent += ` ${(r as ConsiderationRelationship).value}`;
     }
-    console.log(`After Relationship (Stock Consideration Logic): ${r.source} -> ${r.target} (${r.type}) Label: ${labelContent}`);
+    console.log(`After Relationship: ${r.source} -> ${r.target} (${r.type}) Label: ${labelContent}`);
   });
   
   return { entities, relationships };
