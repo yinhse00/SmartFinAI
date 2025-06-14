@@ -1,3 +1,4 @@
+
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface DealEconomics {
@@ -63,7 +64,7 @@ export interface EnhancedStructure {
 }
 
 // Define types for the AI's transactionFlow structure
-interface AITransactionFlowStep {
+export interface AITransactionFlowStep {
   id: string;
   title: string;
   description: string;
@@ -71,7 +72,7 @@ interface AITransactionFlowStep {
   criticalPath?: boolean;
 }
 
-interface AITransactionFlowEntity {
+export interface AITransactionFlowEntity {
   id: string;
   name: string;
   type: string; // Simplified for AI response flexibility
@@ -81,7 +82,7 @@ interface AITransactionFlowEntity {
   role?: string;
 }
 
-interface AITransactionFlowRelationship {
+export interface AITransactionFlowRelationship {
   source: string;
   target: string;
   type: string; // Simplified
@@ -90,12 +91,12 @@ interface AITransactionFlowRelationship {
   nature?: string;
 }
 
-interface AITransactionFlowSection {
+export interface AITransactionFlowSection {
   entities: AITransactionFlowEntity[];
   relationships: AITransactionFlowRelationship[];
 }
 
-interface AITransactionFlow {
+export interface AITransactionFlow {
   before?: AITransactionFlowSection;
   after?: AITransactionFlowSection;
   majorTransactionSteps?: AITransactionFlowStep[];
