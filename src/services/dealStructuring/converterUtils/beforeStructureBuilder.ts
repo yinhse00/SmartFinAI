@@ -1,9 +1,9 @@
 
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { TransactionEntity, TransactionFlow, AnyTransactionRelationship } from '@/types/transactionFlow';
+import { TransactionEntity, TransactionFlow } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
 import { generateEntityId, extractEntityNames, EntityNames } from './entityHelpers'; // Added EntityNames import
-import { addCorporateChildren } from './corporateStructureProcessor';
+import { addCorporateChildren, AnyTransactionRelationship } from './corporateStructureProcessor';
 
 // Helper function to add parent hierarchy for a given entity
 const addAncestors = (
