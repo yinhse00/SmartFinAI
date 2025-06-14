@@ -62,27 +62,34 @@ export const addAcquirerShareholders = (
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockConsiderationExists = (paymentStructure?.stockPercentage ?? 0) > 0;
+    const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
 
     acquirerNewShareholders.forEach((holder) => {
-        // Skip shareholders explicitly marked as 'continuing' or 'remaining'.
-        // Their stake is in the Target company and is handled by `addTargetWithOwnership`.
+        // Skip shareholders explicitly marked as 'continuing' or 'remaining', as their stake is in the Target.
         if (isContinuingOrRemainingShareholder(holder.name)) {
             return;
         }
 
         const isTargetShareholder = isTargetShareholderGroup(holder.name);
 
-        // If this is a generic 'Target Shareholder' group, we must be careful.
-        // Only link them to the Acquirer if there are clear signs they received stock,
-        // otherwise, we assume it's rollover equity in the Target that should be handled elsewhere.
+        // If the holder is a generic "Target Shareholder" group, apply stricter rules
+        // to prevent incorrectly linking them to the acquirer.
         if (isTargetShareholder) {
-            const isExplicitNewRecipient = holder.type === 'new_equity_recipient';
-            // If there's no stock in the deal AND this isn't an explicit new recipient,
-            // then we should not create an ownership link to the Acquirer for this group.
-            if (!stockConsiderationExists && !isExplicitNewRecipient) {
+            // If it's a partial acquisition (less than 100%), we assume this group represents
+            // the retained stake in the Target company. This stake is handled exclusively by
+            // `addTargetWithOwnership`, so we must skip them here to avoid a wrong link.
+            if (acquiredPercentage < 100) {
+                console.log(`Skipping acquirer ownership for "${holder.name}" due to partial acquisition. Retained stake is handled separately.`);
+                return;
+            }
+            // If it's a 100% acquisition, we only link them to the acquirer if there was stock consideration.
+            // A 100% cash deal means they are no longer shareholders of any entity.
+            if (acquiredPercentage === 100 && !stockConsiderationExists) {
+                console.log(`Skipping acquirer ownership for "${holder.name}" in 100% acquisition as no stock consideration was found.`);
                 return;
             }
         }
+
 
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
             const shareholderName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
