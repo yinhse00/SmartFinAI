@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
@@ -20,8 +21,8 @@ export const buildAfterStructure = (
   const prefix = 'after';
   const visitedChildren = new Set<string>();
 
-  // NEW: Track which target shareholder group names (strings) should be excluded from acquirer shareholders in partial acquisitions
-  const ownershipExclusionList = new Set<string>();
+  // Determine acquired percentage early to inform shareholder processing.
+  const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
 
   // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
   const { acquirerId, acquirerCorpEntityData } = createAcquirerEntity(
@@ -38,12 +39,14 @@ export const buildAfterStructure = (
     prefix,
     entities,
     relationships,
-    ownershipExclusionList // <-- Provide set to function
+    acquiredPercentage // Pass acquired percentage as context
   );
 
   // 2. Add corporate hierarchy (children only) for the acquirer
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
+    // The `addAncestors` call for the acquirer has been removed to prevent double-counting its owners.
+    // `addAcquirerShareholders` is now the single source of truth for the acquirer's direct ownership post-transaction.
   }
 
   // 3. Process the target company and its new ownership structure (Level 2 Ownership)
@@ -55,8 +58,7 @@ export const buildAfterStructure = (
     prefix,
     entities,
     relationships,
-    visitedChildren,
-    ownershipExclusionList // <-- Provide set to function
+    visitedChildren
   );
 
   // 4. Add consideration/payment details
