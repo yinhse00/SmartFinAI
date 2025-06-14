@@ -2,7 +2,7 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
-import { addCorporateChildren } from './corporateStructureProcessor';
+import { addCorporateChildren, addAncestors } from './corporateStructureProcessor';
 import {
   createAcquirerEntity,
   addAcquirerShareholders,
@@ -19,6 +19,7 @@ export const buildAfterStructure = (
   const entities: TransactionEntity[] = [];
   const relationships: AnyTransactionRelationship[] = [];
   const prefix = 'after';
+  const visitedAncestry = new Set<string>();
   const visitedChildren = new Set<string>();
 
   // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
@@ -38,11 +39,10 @@ export const buildAfterStructure = (
     relationships
   );
 
-  // 2. Add corporate hierarchy (children only) for the acquirer
+  // 2. Add corporate hierarchy (parents and children) for the acquirer
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
-    // The `addAncestors` call for the acquirer has been removed to prevent double-counting its owners.
-    // `addAcquirerShareholders` is now the single source of truth for the acquirer's direct ownership post-transaction.
+    addAncestors(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedAncestry));
   }
 
   // 3. Process the target company and its new ownership structure (Level 2 Ownership)
