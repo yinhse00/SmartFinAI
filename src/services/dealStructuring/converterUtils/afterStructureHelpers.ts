@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, OwnershipRelationship, ConsiderationRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
@@ -61,6 +60,8 @@ export const addAcquirerShareholders = (
     relationships: Relationships
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
+    const paymentStructure = results.structure?.majorTerms?.paymentStructure;
+    const stockConsiderationExists = (paymentStructure?.stockPercentage ?? 0) > 0;
 
     acquirerNewShareholders.forEach((holder) => {
         // Skip shareholders explicitly marked as 'continuing' or 'remaining'.
@@ -69,8 +70,21 @@ export const addAcquirerShareholders = (
             return;
         }
 
+        const isTargetShareholder = isTargetShareholderGroup(holder.name);
+
+        // If this is a generic 'Target Shareholder' group, we must be careful.
+        // Only link them to the Acquirer if there are clear signs they received stock,
+        // otherwise, we assume it's rollover equity in the Target that should be handled elsewhere.
+        if (isTargetShareholder) {
+            const isExplicitNewRecipient = holder.type === 'new_equity_recipient';
+            // If there's no stock in the deal AND this isn't an explicit new recipient,
+            // then we should not create an ownership link to the Acquirer for this group.
+            if (!stockConsiderationExists && !isExplicitNewRecipient) {
+                return;
+            }
+        }
+
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
-            const isTargetShareholder = isTargetShareholderGroup(holder.name);
             const shareholderName = isTargetShareholder ? NORMALIZED_TARGET_SHAREHOLDER_NAME : holder.name;
             const shareholderId = generateEntityId('stockholder', shareholderName, prefix);
             
@@ -88,7 +102,9 @@ export const addAcquirerShareholders = (
                 });
             } else if (isTargetShareholder && existingEntity.description) {
                 // If entity exists and was created by addTargetWithOwnership, enhance its description.
-                existingEntity.description += ` They also received equity in ${acquirerName}.`;
+                if (!existingEntity.description.includes(`equity in ${acquirerName}`)) {
+                    existingEntity.description += ` They also received equity in ${acquirerName}.`;
+                }
             }
 
             relationships.push({
@@ -155,8 +171,10 @@ export const addTargetWithOwnership = (
                         description: `Former Target Shareholders who retain a ${holder.percentage}% stake in ${targetCompanyName}.`,
                     });
                 } else if (existingEntity.description) {
-                     // If entity exists and was created by addAcquirerShareholders, enhance its description.
-                    existingEntity.description += ` They also retain a ${holder.percentage}% stake in ${targetCompanyName}.`;
+                     // If entity exists and was created by addAcquirerShareholders, enhance its description, preventing duplicates.
+                    if (!existingEntity.description.includes(`stake in ${targetCompanyName}`)) {
+                        existingEntity.description += ` They also retain a ${holder.percentage}% stake in ${targetCompanyName}.`;
+                    }
                 }
 
                 relationships.push({
