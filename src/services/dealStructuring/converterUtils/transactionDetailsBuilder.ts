@@ -1,5 +1,17 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { generateEntityId } from './entityHelpers'; // Assuming entityNames contain companyName properties
+import { generateEntityId } from './entityHelpers';
+
+// Define the structure of step data processed by this builder
+interface IntermediateStepData {
+  id: string;
+  title: string;
+  description: string;
+  entities: string[];
+  criticalPath?: boolean;    // Expected from AI (results.transactionFlow.majorTransactionSteps)
+  durationEstimate?: string; // Optional, for TransactionStep compatibility
+  keyDocuments?: string[];   // Optional, for TransactionStep compatibility
+  details?: Record<string, any>; // Optional, for TransactionStep compatibility
+}
 
 export const generateTransactionDescription = (results: AnalysisResults, considerationAmount: number): string => {
   const transactionType = results.transactionType || 'Transaction';
@@ -27,38 +39,22 @@ export const generateEnhancedTransactionSteps = (
   results: AnalysisResults,
   entityNames: { targetCompanyName: string; acquiringCompanyName: string },
   considerationAmount: number
-) => {
-  // Use the correct entity types for ID generation based on how they are created in builders
-  // Target is always 'target'
-  // Acquirer in 'before' could be 'parent' (if it's a group/listed co) or 'buyer'
-  // Acquirer in 'after' is typically 'buyer' or 'parent' (if it's a group/listed co that bought)
-  
+): IntermediateStepData[] => {
   const beforeTargetId = generateEntityId('target', entityNames.targetCompanyName, 'before');
-  // Acquirer's ID in 'before' state. Its type might be 'parent' if it's e.g. a Listed Co.
-  // The entityNames.isAcquirerListed could help determine this, but relying on actual builder logic is better.
-  // Let's assume the acquirer will be generated with type 'parent' if it's a significant entity like Listed Co, or 'buyer' if simpler.
-  // For consistency, we need to know what type it will be assigned in beforeStructureBuilder.
-  // It's complex to predict the exact type here. Let's use a likely type.
-  // The actual acquirer entity in the 'before' diagram should be used.
-  // For now, let's assume it's identified as 'parent' if it's a corporate acquirer.
-  // This ID needs to match what's actually created in `beforeStructureBuilder`.
-  // The `beforeStructureBuilder` uses `acquirerDiagramType` which can be 'parent' or 'buyer'.
-  // To be safe, we should derive this type from `results.corporateStructure` for the acquiring company.
-  let beforeAcquirerType: string = 'buyer'; // default
-  const acquirerCorpEntity = results.corporateStructure?.entities.find(e => e.name === entityNames.acquiringCompanyName);
-  if (acquirerCorpEntity) {
-      if (acquirerCorpEntity.type === 'issuer' || acquirerCorpEntity.type === 'parent') {
-          beforeAcquirerType = 'parent';
-      }
+  let beforeAcquirerType: string = 'buyer';
+  const acquirerCorpEntityBefore = results.corporateStructure?.entities.find(e => e.name === entityNames.acquiringCompanyName);
+  if (acquirerCorpEntityBefore) {
+    if (acquirerCorpEntityBefore.type === 'issuer' || acquirerCorpEntityBefore.type === 'parent') {
+      beforeAcquirerType = 'parent';
+    }
   }
   const beforeAcquirerId = generateEntityId(beforeAcquirerType, entityNames.acquiringCompanyName, 'before');
 
-
   const afterTargetId = generateEntityId('target', entityNames.targetCompanyName, 'after');
-  // Acquirer's ID in 'after' state.
-  let afterAcquirerType: string = 'buyer'; // default
-   if (acquirerCorpEntity) {
-      if (acquirerCorpEntity.type === 'issuer' || acquirerCorpEntity.type === 'parent') {
+  let afterAcquirerType: string = 'buyer';
+  const acquirerCorpEntityAfter = results.corporateStructure?.entities.find(e => e.name === entityNames.acquiringCompanyName);
+   if (acquirerCorpEntityAfter) {
+      if (acquirerCorpEntityAfter.type === 'issuer' || acquirerCorpEntityAfter.type === 'parent') {
           afterAcquirerType = 'parent';
       }
   }
@@ -66,27 +62,54 @@ export const generateEnhancedTransactionSteps = (
   
   const considerationNodeId = considerationAmount > 0 ? generateEntityId('consideration', `Payment-${(considerationAmount / 1000000).toFixed(0)}M`, 'after') : undefined;
 
-  const steps = [
+  // Prioritize steps from AI analysis results if available
+  if (results.transactionFlow?.majorTransactionSteps && results.transactionFlow.majorTransactionSteps.length > 0) {
+    console.log("Using majorTransactionSteps from AI results for enhanced transaction steps.");
+    return results.transactionFlow.majorTransactionSteps.map(aiStep => ({
+      id: aiStep.id,
+      title: aiStep.title,
+      description: aiStep.description,
+      entities: aiStep.entities || [], // Ensure entities is always an array
+      criticalPath: aiStep.criticalPath,
+      // durationEstimate, keyDocuments, details would be undefined here
+      // unless AI starts providing them directly in majorTransactionSteps
+      // or they are derived/mapped from other AI response fields.
+      // For now, they remain undefined if not in aiStep.
+    }));
+  }
+  
+  // Fallback to default generated steps if AI doesn't provide them
+  console.log("Falling back to default generated enhanced transaction steps.");
+  const defaultSteps: IntermediateStepData[] = [
     {
       id: 'step-1',
       title: 'Due Diligence & Negotiation',
       description: `${entityNames.acquiringCompanyName} (Acquirer) conducts due diligence and negotiates with ${entityNames.targetCompanyName} (Target).`,
-      // Ensure these IDs will actually exist in the 'before' diagram.
-      entities: [beforeTargetId, beforeAcquirerId].filter(Boolean) as string[]
+      entities: [beforeTargetId, beforeAcquirerId].filter(Boolean) as string[],
+      criticalPath: true, // Default value
+      durationEstimate: undefined,
+      keyDocuments: undefined,
+      details: undefined,
     },
     {
       id: 'step-2',
       title: 'Transaction Structuring & Approvals',
       description: `Parties agree on the acquisition of ${entityNames.targetCompanyName} by ${entityNames.acquiringCompanyName}. Implementation of ${results.structure?.recommended || 'optimized transaction structure'} and obtaining necessary regulatory approvals.`,
-      // Refers to conceptual state change and entities involved overall
-      entities: [beforeTargetId, afterTargetId, beforeAcquirerId, afterAcquirerId].filter(Boolean) as string[]
+      entities: [beforeTargetId, afterTargetId, beforeAcquirerId, afterAcquirerId].filter(Boolean) as string[],
+      criticalPath: true, // Default value
+      durationEstimate: undefined,
+      keyDocuments: undefined,
+      details: undefined,
     },
     {
       id: 'step-3',
       title: 'Completion & Settlement',
       description: `Transfer of ${results.dealEconomics?.targetPercentage ? results.dealEconomics.targetPercentage + '%' : 'control'} of ${entityNames.targetCompanyName} to ${entityNames.acquiringCompanyName}. ${considerationAmount > 0 ? `Payment of ${results.dealEconomics?.currency || 'HKD'} ${(considerationAmount / 1000000).toFixed(0)}M consideration by ${entityNames.acquiringCompanyName}.` : 'Completion of transaction terms.'}`,
-      // These entities should exist in the 'after' diagram.
-      entities: [afterTargetId, afterAcquirerId, considerationNodeId].filter(Boolean) as string[]
+      entities: [afterTargetId, afterAcquirerId, considerationNodeId].filter(Boolean) as string[],
+      criticalPath: true, // Default value
+      durationEstimate: undefined,
+      keyDocuments: undefined,
+      details: undefined,
     }
   ];
   
@@ -97,5 +120,5 @@ export const generateEnhancedTransactionSteps = (
   console.log("After Acquirer ID:", afterAcquirerId, "(type used:", afterAcquirerType +")");
   console.log("Consideration Node ID:", considerationNodeId);
 
-  return steps;
+  return defaultSteps;
 };
