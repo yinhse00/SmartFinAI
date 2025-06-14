@@ -14,8 +14,6 @@ interface TransactionFlowDiagramBoxProps {
 }
 
 export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  
   // Convert analysis results to transaction flow format
   const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results, optimizationResult);
 
@@ -26,35 +24,31 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult }: Trans
   );
 
   return (
-    <>
-      <Card className="h-full">
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-lg">Transaction Flow</CardTitle>
+    <Card className="h-full">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-lg">Transaction Flow</CardTitle>
+          <EnlargedContentDialog
+            title="Transaction Flow Diagram"
+            size="full"
+            enlargedContent={
+              <div className="h-[80vh] w-full">
+                <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
+              </div>
+            }
+          >
             <button
-              onClick={() => setIsDialogOpen(true)}
               className="p-1 hover:bg-gray-100 rounded transition-colors"
               title="Expand diagram"
             >
               <Maximize2 className="h-4 w-4" />
             </button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-4 h-[400px]">
-          {diagramContent}
-        </CardContent>
-      </Card>
-
-      <EnlargedContentDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        title="Transaction Flow Diagram"
-        content={
-          <div className="h-[80vh] w-full">
-            <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
-          </div>
-        }
-      />
-    </>
+          </EnlargedContentDialog>
+        </div>
+      </CardHeader>
+      <CardContent className="p-4 h-[400px]">
+        {diagramContent}
+      </CardContent>
+    </Card>
   );
 };
