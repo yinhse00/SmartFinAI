@@ -1,5 +1,5 @@
 import { CorporateEntity } from '@/types/dealStructuring';
-import { TransactionEntity, TransactionFlow } from '@/types/transactionFlow';
+import { TransactionEntity, TransactionFlow, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { generateEntityId } from './entityHelpers';
 
@@ -85,4 +85,52 @@ export const addCorporateChildren = (
       addCorporateChildren(childCorpEntity, childEntityIdInDiagram, entities, relationships, corporateStructureMap, prefix, visited);
     }
   });
+};
+
+export const addAncestors = (
+  corpEntity: CorporateEntity & { parentLink?: string },
+  entityIdInDiagram: string,
+  entities: TransactionEntity[],
+  relationships: AnyTransactionRelationship[],
+  corporateStructureMap: Map<string, CorporateEntity & { children?: string[], parentLink?: string }>,
+  prefix: string,
+  visited: Set<string>
+): void => {
+  if (!corpEntity.parentLink || visited.has(corpEntity.id + '-ancestors')) {
+    return;
+  }
+  visited.add(corpEntity.id + '-ancestors');
+
+  let currentCorpParentId = corpEntity.parentLink;
+  let childNodeIdForParentLink = entityIdInDiagram;
+
+  while (currentCorpParentId) {
+    const parentCorpData = corporateStructureMap.get(currentCorpParentId);
+    if (parentCorpData && !visited.has(parentCorpData.id)) {
+      visited.add(parentCorpData.id);
+
+      let parentEntityType = parentCorpData.type as TransactionEntity['type'];
+       // In 'after' structure, if an 'issuer' is an ancestor of the buyer, it's likely a 'parent'
+      if (parentCorpData.type === 'issuer') parentEntityType = 'parent';
+      
+      const parentEntityId = generateEntityId(parentEntityType, parentCorpData.name, prefix);
+      if (!entities.find(e => e.id === parentEntityId)) {
+        entities.push({
+          id: parentEntityId,
+          name: parentCorpData.name,
+          type: parentEntityType,
+          description: `${parentCorpData.type} of ${entities.find(e => e.id === childNodeIdForParentLink)?.name || corpEntity.name}`,
+        });
+      }
+      relationships.push({
+        source: parentEntityId,
+        target: childNodeIdForParentLink,
+        type: 'ownership',
+      } as OwnershipRelationship);
+      childNodeIdForParentLink = parentEntityId;
+      currentCorpParentId = parentCorpData.parentLink;
+    } else {
+      currentCorpParentId = undefined;
+    }
+  }
 };

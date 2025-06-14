@@ -1,57 +1,14 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
-import { generateEntityId } from './entityHelpers';
-import { addCorporateChildren } from './corporateStructureProcessor';
-
-const addAncestors = (
-  corpEntity: CorporateEntity & { parentLink?: string },
-  entityIdInDiagram: string,
-  entities: TransactionEntity[],
-  relationships: AnyTransactionRelationship[],
-  corporateStructureMap: Map<string, CorporateEntity & { children?: string[], parentLink?: string }>,
-  prefix: string,
-  visited: Set<string>
-): void => {
-  if (!corpEntity.parentLink || visited.has(corpEntity.id + '-ancestors')) {
-    return;
-  }
-  visited.add(corpEntity.id + '-ancestors');
-
-  let currentCorpParentId = corpEntity.parentLink;
-  let childNodeIdForParentLink = entityIdInDiagram;
-
-  while (currentCorpParentId) {
-    const parentCorpData = corporateStructureMap.get(currentCorpParentId);
-    if (parentCorpData && !visited.has(parentCorpData.id)) {
-      visited.add(parentCorpData.id);
-
-      let parentEntityType = parentCorpData.type as TransactionEntity['type'];
-       // In 'after' structure, if an 'issuer' is an ancestor of the buyer, it's likely a 'parent'
-      if (parentCorpData.type === 'issuer') parentEntityType = 'parent';
-      
-      const parentEntityId = generateEntityId(parentEntityType, parentCorpData.name, prefix);
-      if (!entities.find(e => e.id === parentEntityId)) {
-        entities.push({
-          id: parentEntityId,
-          name: parentCorpData.name,
-          type: parentEntityType,
-          description: `${parentCorpData.type} of ${entities.find(e => e.id === childNodeIdForParentLink)?.name || corpEntity.name}`,
-        });
-      }
-      relationships.push({
-        source: parentEntityId,
-        target: childNodeIdForParentLink,
-        type: 'ownership',
-      } as OwnershipRelationship);
-      childNodeIdForParentLink = parentEntityId;
-      currentCorpParentId = parentCorpData.parentLink;
-    } else {
-      currentCorpParentId = undefined;
-    }
-  }
-};
-
+import { addCorporateChildren, addAncestors } from './corporateStructureProcessor';
+import {
+  createAcquirerEntity,
+  addAcquirerShareholders,
+  addTargetWithOwnership,
+  addConsiderationDetails
+} from './afterStructureHelpers';
 
 export const buildAfterStructure = (
   results: AnalysisResults,
@@ -60,153 +17,58 @@ export const buildAfterStructure = (
   considerationAmount: number
 ): TransactionFlow['after'] => {
   const entities: TransactionEntity[] = [];
-  const relationships: TransactionFlow['after']['relationships'] = [];
+  const relationships: AnyTransactionRelationship[] = [];
   const prefix = 'after';
   const visitedAncestry = new Set<string>();
   const visitedChildren = new Set<string>();
 
-  const acquirerName = entityNames.acquiringCompanyName;
-  const acquirerCorpEntityData = Array.from(corporateStructureMap.values()).find(ce => ce.name === acquirerName);
-  let acquirerId: string;
-  let acquirerDiagramType: TransactionEntity['type'] = 'buyer';
+  // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
+  const { acquirerId, acquirerCorpEntityData } = createAcquirerEntity(
+    entityNames.acquiringCompanyName,
+    corporateStructureMap,
+    prefix,
+    entities
+  );
 
-  if (acquirerCorpEntityData) {
-    acquirerDiagramType = acquirerCorpEntityData.type === 'issuer' || acquirerCorpEntityData.type === 'parent' ? 'parent' : 'buyer';
-    acquirerId = generateEntityId(acquirerDiagramType, acquirerName, prefix);
-  } else {
-    acquirerId = generateEntityId('buyer', acquirerName, prefix);
-  }
+  addAcquirerShareholders(
+    results,
+    acquirerId,
+    entityNames.acquiringCompanyName,
+    prefix,
+    entities,
+    relationships
+  );
 
-  // Add acquirer entity
-  if (!entities.find(e => e.id === acquirerId)) {
-    entities.push({
-      id: acquirerId,
-      name: acquirerName,
-      type: acquirerDiagramType,
-      description: `Acquiring Entity${acquirerCorpEntityData ? ` (${acquirerCorpEntityData.type} in source)` : ''}`,
-    });
-  }
-
-  // --- REVISED LOGIC ---
-  // Use `shareholdingChanges.after` to represent the acquirer's new shareholder base.
-  // This represents LEVEL 1 OWNERSHIP (Shareholders -> Acquirer).
-  const acquirerNewShareholders = results.shareholdingChanges?.after || [];
-  
-  acquirerNewShareholders.forEach((holder) => {
-    // Avoid adding the acquirer itself as its own shareholder.
-    if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
-      const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-      
-      if (!entities.find(e => e.id === shareholderId)) {
-        entities.push({
-          id: shareholderId,
-          name: holder.name,
-          type: 'stockholder', // Map all shareholder types to 'stockholder' for the diagram
-          percentage: holder.percentage,
-          description: `Shareholder of ${acquirerName} (post-transaction). Original Type: ${holder.type}`,
-        });
-      }
-      
-      // Link shareholder to the acquirer
-      relationships.push({
-        source: shareholderId,
-        target: acquirerId,
-        type: 'ownership',
-        percentage: holder.percentage,
-      } as OwnershipRelationship);
-    }
-  });
-  
+  // 2. Add corporate hierarchy (parents and children) for the acquirer
   if (acquirerCorpEntityData) {
     addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
     addAncestors(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedAncestry));
   }
 
-  const targetId = generateEntityId('target', entityNames.targetCompanyName, prefix);
-  if (!entities.find(e => e.id === targetId)) {
-    entities.push({
-      id: targetId,
-      name: entityNames.targetCompanyName,
-      type: 'target', 
-      description: 'Target Company (Post-Transaction, Acquired)',
-    });
-  }
-  const targetCorpEntityData = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.targetCompanyName);
-  if (targetCorpEntityData) {
-      addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, visitedChildren);
-  }
+  // 3. Process the target company and its new ownership structure (Level 2 Ownership)
+  addTargetWithOwnership(
+    results,
+    entityNames.targetCompanyName,
+    corporateStructureMap,
+    acquirerId,
+    prefix,
+    entities,
+    relationships,
+    visitedChildren
+  );
 
-  // Prioritize the specific percentage from major terms if available, otherwise use deal economics, default to 100
-  const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
-  
-  // Create LEVEL 2 OWNERSHIP link (Acquirer -> Target)
-  relationships.push({
-    source: acquirerId,
-    target: targetId,
-    type: 'ownership',
-    percentage: acquiredPercentage,
-  } as OwnershipRelationship);
+  // 4. Add consideration/payment details
+  addConsiderationDetails(
+    results,
+    considerationAmount,
+    acquirerId,
+    prefix,
+    entities,
+    relationships
+  );
 
-  // If the target is not 100% acquired, represent the continuing original shareholders.
-  if (acquiredPercentage < 100) {
-    const continuingShareholderName = 'Continuing Target Shareholders';
-    const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
-    
-    if (!entities.find(e => e.id === continuingShareholderId)) {
-      entities.push({
-        id: continuingShareholderId,
-        name: continuingShareholderName,
-        type: 'stockholder',
-        percentage: 100 - acquiredPercentage,
-        description: `Original shareholders of ${entityNames.targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
-      });
-    }
-    
-    // Create LEVEL 2 OWNERSHIP link (Continuing Shareholders -> Target)
-    relationships.push({
-      source: continuingShareholderId,
-      target: targetId,
-      type: 'ownership',
-      percentage: 100 - acquiredPercentage,
-    } as OwnershipRelationship);
-  }
-  
-  const paymentStructure = results.structure?.majorTerms?.paymentStructure;
-  const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
-  const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
-
-  let cashConsiderationAmount = considerationAmount;
-  if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100 && purchasePrice > 0) {
-    cashConsiderationAmount = purchasePrice * ((100 - stockPaymentPercentage) / 100);
-  } else if (stockPaymentPercentage === 100) {
-    cashConsiderationAmount = 0; // All stock
-  }
-
-  if (cashConsiderationAmount > 0) {
-    const considerationNodeName = stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ? 
-      `Cash Payment (${(cashConsiderationAmount / 1000000).toFixed(0)}M)` :
-      `Payment (${(cashConsiderationAmount / 1000000).toFixed(0)}M)`;
-    const considerationId = generateEntityId('consideration', considerationNodeName, prefix);
-    
-    if (!entities.find(e => e.id === considerationId)) {
-      entities.push({
-        id: considerationId,
-        name: `${results.dealEconomics?.currency || 'HKD'} ${(cashConsiderationAmount / 1000000).toFixed(0)}M`,
-        type: 'consideration',
-        value: cashConsiderationAmount,
-        currency: results.dealEconomics?.currency || 'HKD',
-        description: stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ? 'Cash portion of Transaction Consideration' : 'Transaction Consideration',
-      });
-    }
-    relationships.push({
-      source: acquirerId, 
-      target: considerationId,
-      type: 'consideration',
-      value: cashConsiderationAmount,
-    } as ConsiderationRelationship);
-  }
-  
-  console.log(`After Structure (v3 - AI-driven dilution): Entities - ${entities.length}, Relationships - ${relationships.length}`);
+  // 5. Logging
+  console.log(`After Structure (refactored): Entities - ${entities.length}, Relationships - ${relationships.length}`);
   entities.forEach(e => console.log(`After Entity: ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
   relationships.forEach(r => {
     let labelContent = r.label || '';
