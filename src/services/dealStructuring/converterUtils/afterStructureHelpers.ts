@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, OwnershipRelationship, ConsiderationRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
@@ -47,7 +46,20 @@ export const addAcquirerShareholders = (
     relationships: Relationships
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
+    const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
+
+    // This function identifies shareholders who are continuing to hold shares in the target company
+    // to prevent them from being incorrectly linked to the acquirer. Their ownership is handled
+    // separately in `addTargetWithOwnership`.
+    const isContinuingTargetShareholder = (name: string) => 
+        name.toLowerCase().includes('continuing') || name.toLowerCase().includes('remaining');
+
     acquirerNewShareholders.forEach((holder) => {
+        // In a partial acquisition, skip processing for continuing target shareholders.
+        if (acquiredPercentage < 100 && isContinuingTargetShareholder(holder.name)) {
+            return; 
+        }
+
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
             const shareholderId = generateEntityId('stockholder', holder.name, prefix);
             if (!entities.find(e => e.id === shareholderId)) {

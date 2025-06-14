@@ -3,9 +3,6 @@ import { TransactionEntity, TransactionFlow, OwnershipRelationship, AnyTransacti
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { generateEntityId } from './entityHelpers';
 
-// Ensure this type is exported
-export type AnyTransactionRelationship = TransactionFlow['before']['relationships'][0] | TransactionFlow['after']['relationships'][0];
-
 export const processCorporateStructure = (
   corporateStructureData?: AnalysisResults['corporateStructure']
 ): Map<string, CorporateEntity & { children?: string[], parentLink?: string }> => {
