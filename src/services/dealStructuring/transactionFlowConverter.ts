@@ -9,6 +9,9 @@ export interface EnhancedTransactionFlowData {
   optimizationResult?: OptimizationResult;
 }
 
+// Define a union type for relationships to be used in addCorporateChildren
+type AnyTransactionRelationship = TransactionFlow['before']['relationships'][0] | TransactionFlow['after']['relationships'][0];
+
 export class TransactionFlowConverter {
   convertToTransactionFlow(
     results: AnalysisResults,
@@ -125,7 +128,7 @@ export class TransactionFlowConverter {
 
   private generateEntityId(type: string, name: string, prefix: string): string {
     const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '');
-    return `${prefix}-${type}-${sanitizedName}`;
+    return `${prefix}-${type.toLowerCase()}-${sanitizedName}`; // Ensure type is lowercase for consistency
   }
   
   private buildBeforeStructure(
@@ -185,55 +188,53 @@ export class TransactionFlowConverter {
     }
 
     // 3. Add Acquirer's pre-transaction structure (if relevant and distinct from target's shareholders)
-    // For now, we assume the acquirer is an external entity not detailed in the 'before' shareholding of the target.
-    // If acquirer's own structure is needed pre-transaction, logic would go here.
-    // Example: if the acquirer itself is part of a group visible in corporateStructureMap
-    corporateStructureMap.forEach((corpEntity, corpId) => {
-      if (corpEntity.name === entityNames.acquiringCompanyName) {
-        const acquirerRootId = this.generateEntityId(corpEntity.type, corpEntity.name, prefix);
-        if (!entities.find(e => e.id === acquirerRootId)) {
+    const acquirerCorpEntityFromMap = Array.from(corporateStructureMap.values()).find(
+      ce => ce.name === entityNames.acquiringCompanyName
+    );
+
+    if (acquirerCorpEntityFromMap) {
+        const acquirerRootId = this.generateEntityId(acquirerCorpEntityFromMap.type as TransactionEntity['type'], acquirerCorpEntityFromMap.name, prefix);
+         if (!entities.find(e => e.id === acquirerRootId)) {
            entities.push({
              id: acquirerRootId,
-             name: corpEntity.name,
-             type: corpEntity.type === 'parent' ? 'buyer' : 'stockholder', // or a more generic type
-             description: `Acquiring Entity (Pre-Transaction Root)`,
+             name: acquirerCorpEntityFromMap.name,
+             type: acquirerCorpEntityFromMap.type as TransactionEntity['type'], // Use CorporateEntity type, ensure it's valid TransactionEntity type
+             description: `Acquiring Entity Root (${acquirerCorpEntityFromMap.type})`,
            });
         }
         // Add its parents/children if defined in corporate structure
-        this.addCorporateChildren(corpEntity, acquirerRootId, entities, relationships, corporateStructureMap, prefix, new Set());
-      }
-    });
+        this.addCorporateChildren(acquirerCorpEntityFromMap, acquirerRootId, entities, relationships, corporateStructureMap, prefix, new Set());
+    }
 
 
     // 4. Integrate other relevant corporate structure entities related to the Target
     const targetCorpEntity = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.targetCompanyName && ce.type === 'target');
     if (targetCorpEntity) {
         this.addCorporateChildren(targetCorpEntity, targetId, entities, relationships, corporateStructureMap, prefix, new Set());
-        // Add parents of the target if any
-        let currentParentId = targetCorpEntity.parentLink;
-        let childForParentLink = targetId; // The ID of the entity the parent owns
-        while(currentParentId) {
-            const parentCorpEntity = corporateStructureMap.get(currentParentId);
-            if (parentCorpEntity) {
-                const parentEntityId = this.generateEntityId(parentCorpEntity.type, parentCorpEntity.name, prefix);
+        
+        let currentCorpParentId = targetCorpEntity.parentLink;
+        let childNodeIdForParentLink = targetId; 
+        while(currentCorpParentId) {
+            const parentCorpData = corporateStructureMap.get(currentCorpParentId);
+            if (parentCorpData) {
+                const parentEntityId = this.generateEntityId(parentCorpData.type as TransactionEntity['type'], parentCorpData.name, prefix);
                  if (!entities.find(e => e.id === parentEntityId)) {
                     entities.push({
                         id: parentEntityId,
-                        name: parentCorpEntity.name,
-                        type: parentCorpEntity.type === 'parent' ? 'stockholder' : 'subsidiary', // Or map to TransactionEntity types
-                        description: `${parentCorpEntity.type} of ${entityNames.targetCompanyName}`
+                        name: parentCorpData.name,
+                        type: parentCorpData.type as TransactionEntity['type'], 
+                        description: `${parentCorpData.type} of ${entities.find(e=>e.id === childNodeIdForParentLink)?.name || 'child'}`,
                     });
                 }
                 relationships.push({
                     source: parentEntityId,
-                    target: childForParentLink, // Link to the child it owns
-                    type: 'ownership', // or 'control'
-                    // percentage: parentCorpEntity.ownership, // If available
+                    target: childNodeIdForParentLink, 
+                    type: 'ownership', 
                 });
-                childForParentLink = parentEntityId; // Next parent will own this entity
-                currentParentId = parentCorpEntity.parentLink;
+                childNodeIdForParentLink = parentEntityId; 
+                currentCorpParentId = parentCorpData.parentLink;
             } else {
-                currentParentId = undefined;
+                currentCorpParentId = undefined;
             }
         }
     }
@@ -246,7 +247,7 @@ export class TransactionFlowConverter {
     parentCorpEntity: CorporateEntity & { children?: string[] },
     parentElementId: string,
     entities: TransactionEntity[],
-    relationships: TransactionFlow['before']['relationships'], // Use the correct relationship type
+    relationships: AnyTransactionRelationship[], // Updated to use the union type
     corporateStructureMap: Map<string, CorporateEntity & { children?: string[], parentLink?: string }>,
     prefix: string,
     visited: Set<string>
@@ -259,22 +260,23 @@ export class TransactionFlowConverter {
     parentCorpEntity.children.forEach(childId => {
       const childCorpEntity = corporateStructureMap.get(childId);
       if (childCorpEntity) {
-        const childEntityId = this.generateEntityId(childCorpEntity.type, childCorpEntity.name, prefix);
+        // Ensure childCorpEntity.type is a valid TransactionEntity['type']
+        const childEntityType = childCorpEntity.type === 'issuer' ? 'subsidiary' : childCorpEntity.type; // Example mapping
+        const childEntityId = this.generateEntityId(childEntityType, childCorpEntity.name, prefix);
+        
         if (!entities.find(e => e.id === childEntityId)) {
           entities.push({
             id: childEntityId,
             name: childCorpEntity.name,
-            type: childCorpEntity.type === 'subsidiary' ? 'subsidiary' : 'stockholder', // Adjust type as needed
+            type: childEntityType as TransactionEntity['type'],
             description: `${childCorpEntity.type} of ${parentCorpEntity.name}`,
-            // percentage: childCorpEntity.ownership, // If available
           });
         }
         relationships.push({
           source: parentElementId,
           target: childEntityId,
-          type: 'control', // Or 'ownership' if percentage is known
-          // percentage: childCorpEntity.ownership, // If available
-        });
+          type: 'control', 
+        } as AnyTransactionRelationship); // Cast to ensure compatibility, 'control' is common
         // Recursively add children of this child
         this.addCorporateChildren(childCorpEntity, childEntityId, entities, relationships, corporateStructureMap, prefix, visited);
       }
@@ -288,7 +290,7 @@ export class TransactionFlowConverter {
     considerationAmount: number
   ): TransactionFlow['after'] {
     const entities: TransactionEntity[] = [];
-    const relationships: TransactionFlow['after']['relationships'] = [];
+    const relationships: TransactionFlow['after']['relationships'] = []; // Correctly typed for 'after'
     const prefix = 'after';
 
     // 1. Add Target Company (Post-Transaction)
@@ -324,17 +326,19 @@ export class TransactionFlowConverter {
         });
       });
     } else {
-      // Fallback if no shareholding.after: Acquirer takes a stake, previous shareholders might be diluted/exit
+      // Fallback if no shareholding.after: Acquirer takes a stake
       const acquirerId = this.generateEntityId('buyer', entityNames.acquiringCompanyName, prefix);
-      const acquiredPercentage = results.dealEconomics?.targetPercentage || 100; // Assume 100% if not specified
+      const acquiredPercentage = results.dealEconomics?.targetPercentage || 100; 
       
-      entities.push({
-        id: acquirerId,
-        name: entityNames.acquiringCompanyName,
-        type: 'buyer',
-        percentage: acquiredPercentage,
-        description: `${acquiredPercentage}% New Owner`,
-      });
+      if (!entities.find(e => e.id === acquirerId)) {
+        entities.push({
+          id: acquirerId,
+          name: entityNames.acquiringCompanyName,
+          type: 'buyer',
+          percentage: acquiredPercentage,
+          description: `${acquiredPercentage}% New Owner`,
+        });
+      }
       relationships.push({
         source: acquirerId,
         target: targetId,
@@ -344,13 +348,15 @@ export class TransactionFlowConverter {
 
       if (acquiredPercentage < 100) {
         const remainingShareholderId = this.generateEntityId('stockholder','RemainingShareholders',prefix);
-        entities.push({
-            id: remainingShareholderId,
-            name: "Remaining Original Shareholders",
-            type: "stockholder",
-            percentage: 100 - acquiredPercentage,
-            description: `${100 - acquiredPercentage}% ownership`
-        });
+        if (!entities.find(e => e.id === remainingShareholderId)) {
+            entities.push({
+                id: remainingShareholderId,
+                name: "Remaining Original Shareholders",
+                type: "stockholder",
+                percentage: 100 - acquiredPercentage,
+                description: `${100 - acquiredPercentage}% ownership`
+            });
+        }
         relationships.push({
             source: remainingShareholderId,
             target: targetId,
@@ -360,25 +366,13 @@ export class TransactionFlowConverter {
       }
     }
     
-    // 3. Add Acquirer's post-transaction corporate structure if it changes or integrates target
-    // This part would involve showing the Target as a new subsidiary of the Acquirer, if applicable.
-    const acquirerCorpEntity = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.acquiringCompanyName);
+    // 3. Add Acquirer's post-transaction corporate structure
+    const acquirerCorpEntityFromMap = Array.from(corporateStructureMap.values()).find(ce => ce.name === entityNames.acquiringCompanyName);
     const acquirerEntityNode = entities.find(e => e.name === entityNames.acquiringCompanyName && e.type === 'buyer');
 
-    if (acquirerCorpEntity && acquirerEntityNode) {
-        // Check if target becomes child of acquirer in corporate structure
-        const targetIsChildOfAcquirer = results.corporateStructure?.relationships?.some(
-            rel => rel.parent === acquirerCorpEntity.id && 
-                   corporateStructureMap.get(rel.child)?.name === entityNames.targetCompanyName
-        );
-
-        if (targetIsChildOfAcquirer) {
-            // Relationship might already be implicitly handled by target's ownership change.
-            // If explicit corporate link needed:
-            // relationships.push({ source: acquirerEntityNode.id, target: targetId, type: 'control' });
-        }
+    if (acquirerCorpEntityFromMap && acquirerEntityNode) {
         // Add acquirer's other children/parents from corporate structure
-        this.addCorporateChildren(acquirerCorpEntity, acquirerEntityNode.id, entities, relationships, corporateStructureMap, prefix, new Set());
+        this.addCorporateChildren(acquirerCorpEntityFromMap, acquirerEntityNode.id, entities, relationships, corporateStructureMap, prefix, new Set());
     }
 
 
@@ -394,21 +388,14 @@ export class TransactionFlowConverter {
         description: 'Transaction Consideration',
       });
 
-      // Link consideration from Buyer to former Target Shareholders (or Target itself if it's a share buyback by Target)
-      // For simplicity, linking from main buyer to a generic "Sellers" or the Target
       const mainBuyer = entities.find(e => e.type === 'buyer');
       if (mainBuyer) {
         relationships.push({
-          source: mainBuyer.id, // Buyer pays
-          target: considerationId, // The payment itself
-          type: 'consideration', // This edge type might need specific handling in diagram
+          source: mainBuyer.id, 
+          target: considerationId, 
+          type: 'consideration', 
           value: considerationAmount,
         });
-        // Typically, consideration flows TO sellers. If sellers are explicit:
-        const sellers = results.shareholding?.before?.map(s => this.generateEntityId('stockholder', s.name, 'before')) || [];
-        // This part is complex as sellers in 'before' structure are distinct from 'after' structure entities.
-        // For the diagram, it might be simpler to show payment from buyer, and then perhaps another edge from payment to target/sellers if needed.
-        // Or, the payment is an outcome benefiting the sellers of the 'before' state.
       }
     }
     
@@ -469,13 +456,16 @@ export class TransactionFlowConverter {
     const beforeTargetId = this.generateEntityId('target', entityNames.targetCompanyName, 'before');
     const afterTargetId = this.generateEntityId('target', entityNames.targetCompanyName, 'after');
     const considerationNodeId = considerationAmount > 0 ? this.generateEntityId('consideration', `Payment-${(considerationAmount / 1000000).toFixed(0)}M`, 'after') : undefined;
+    const beforeAcquirerId = this.generateEntityId('buyer', entityNames.acquiringCompanyName, 'before'); // Assuming buyer type for acquirer entity ID generation consistency
+    const afterAcquirerId = this.generateEntityId('buyer', entityNames.acquiringCompanyName, 'after');
+
 
     const steps = [
       {
         id: 'step-1',
         title: 'Due Diligence & Negotiation',
         description: `${entityNames.acquiringCompanyName} conducts due diligence and negotiates with ${entityNames.targetCompanyName}.`,
-        entities: [beforeTargetId, this.generateEntityId('buyer', entityNames.acquiringCompanyName, 'before')].filter(Boolean) as string[]
+        entities: [beforeTargetId, beforeAcquirerId].filter(Boolean) as string[]
       },
       {
         id: 'step-2',
@@ -486,8 +476,8 @@ export class TransactionFlowConverter {
       {
         id: 'step-3',
         title: 'Completion & Settlement',
-        description: `Transfer of ${results.dealEconomics?.targetPercentage || 'control'} and ${considerationAmount > 0 ? `payment of ${results.dealEconomics?.currency || 'HKD'} ${(considerationAmount / 1000000).toFixed(0)}M consideration` : 'completion of transaction'}.`,
-        entities: [afterTargetId, considerationNodeId, this.generateEntityId('buyer', entityNames.acquiringCompanyName, 'after')].filter(Boolean) as string[]
+        description: `Transfer of ${results.dealEconomics?.targetPercentage ? results.dealEconomics.targetPercentage + '%' : 'control'} and ${considerationAmount > 0 ? `payment of ${results.dealEconomics?.currency || 'HKD'} ${(considerationAmount / 1000000).toFixed(0)}M consideration` : 'completion of transaction'}.`,
+        entities: [afterTargetId, considerationNodeId, afterAcquirerId].filter(Boolean) as string[]
       }
     ];
     return steps;

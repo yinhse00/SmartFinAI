@@ -1,5 +1,5 @@
-import React, { useMemo } from 'react';
-import { ReactFlow, Node, Edge, Background, Controls, Position } from '@xyflow/react';
+import React, { useMemo, CSSProperties } from 'react';
+import { ReactFlow, Node, Edge, Background, Controls, Position, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TransactionFlow, TransactionEntity } from '@/types/transactionFlow';
 
@@ -21,10 +21,10 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     const newEdges: Edge[] = [];
 
     const ENTITY_WIDTH = 200;
-    const ENTITY_HEIGHT = 90;
-    const LEVEL_Y_SPACING = 180; // Vertical space between levels (shareholders, company, consideration)
-    const SIBLING_X_SPACING = ENTITY_WIDTH + 50; // Horizontal space between sibling entities on the same level
-    const SECTION_X_SPACING = ENTITY_WIDTH + 150; // Horizontal space between Before, Transaction, After sections
+    const ENTITY_HEIGHT = 90; // Base height, can be auto
+    const LEVEL_Y_SPACING = 180;
+    const SIBLING_X_SPACING = ENTITY_WIDTH + 50;
+    const SECTION_X_SPACING = ENTITY_WIDTH + 150;
 
     const BASE_Y_SHAREHOLDER = 50;
     const BASE_Y_COMPANY = BASE_Y_SHAREHOLDER + LEVEL_Y_SPACING;
@@ -32,7 +32,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     const BASE_Y_SUBSIDIARY = BASE_Y_COMPANY + LEVEL_Y_SPACING;
 
 
-    const getNodeColors = (type: string, isAcquirer?: boolean) => {
+    const getNodeColors = (type: TransactionEntity['type'], isAcquirer?: boolean) => {
       switch (type) {
         case 'target':
           return {
@@ -49,8 +49,8 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
             borderWidth: '2px'
           };
         case 'stockholder':
-          return isAcquirer ? { // This case might be redundant if 'buyer' type is consistently used
-            backgroundColor: '#ecfdf5', // Light green
+          return isAcquirer ? {
+            backgroundColor: '#ecfdf5', // Light green for acquirer-like stockholders
             borderColor: '#10b981', // Green
             textColor: '#047857', // Dark green
             borderWidth: '2px'
@@ -60,28 +60,35 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
             textColor: '#374151', // Dark gray
             borderWidth: '2px'
           };
+        case 'parent': // Added style for parent
+             return {
+                backgroundColor: '#e5e7eb', // Slightly different gray
+                borderColor: '#4b5563', // Darker gray
+                textColor: '#1f2937', // Very dark gray
+                borderWidth: '2px'
+            };
         case 'subsidiary':
            return {
-            backgroundColor: '#e0f2fe', // Lighter blue than buyer
-            borderColor: '#0ea5e9',   // Sky blue
-            textColor: '#0c4a6e',   // Darker sky blue
+            backgroundColor: '#e0f2fe', 
+            borderColor: '#0ea5e9',   
+            textColor: '#0c4a6e',   
             borderWidth: '1.5px'
           };
         case 'newco':
           return {
-            backgroundColor: '#ede9fe', // Light purple
-            borderColor: '#7c3aed', // Purple
-            textColor: '#5b21b6', // Dark purple
+            backgroundColor: '#ede9fe', 
+            borderColor: '#7c3aed', 
+            textColor: '#5b21b6', 
             borderWidth: '2px'
           };
         case 'consideration':
           return {
-            backgroundColor: '#f0fdf4', // Very light green
-            borderColor: '#16a34a', // Strong green
-            textColor: '#15803d', // Dark green
+            backgroundColor: '#f0fdf4', 
+            borderColor: '#16a34a', 
+            textColor: '#15803d', 
             borderWidth: '2px'
           };
-        default: // For any other types or fallbacks
+        default: 
           return {
             backgroundColor: '#f3f4f6',
             borderColor: '#6b7280',
@@ -91,8 +98,8 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       }
     };
 
-    const createEntityNode = (entity: TransactionEntity, x: number, y: number, additionalDescription?: string) => {
-      const colors = getNodeColors(entity.type, entity.type === 'buyer');
+    const createEntityNode = (entity: TransactionEntity, x: number, y: number, additionalDescription?: string): Node => {
+      const colors = getNodeColors(entity.type, entity.type === 'buyer' || entity.name.toLowerCase().includes('acquir')); // Simplified acquirer check
       const labelContent = (
         <div className="text-center p-2">
           <div className="font-semibold text-sm" style={{ color: colors.textColor }}>
@@ -116,17 +123,19 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
 
       return {
         id: entity.id,
-        type: 'default', // Using default nodes for simplicity, can be custom
+        type: 'default', 
         position: { x, y },
-        data: { label: labelContent },
+        data: { 
+          label: labelContent,
+          entityType: entity.type // Storing entityType directly in data
+        },
         style: {
           backgroundColor: colors.backgroundColor,
           border: `${colors.borderWidth} solid ${colors.borderColor}`,
           borderRadius: '8px',
           width: `${ENTITY_WIDTH}px`,
-          // height: `${ENTITY_HEIGHT}px`, // Auto-height based on content
           boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-          textAlign: 'center',
+          textAlign: 'center' as const, // Fixed textAlign type
         },
         sourcePosition: Position.Bottom,
         targetPosition: Position.Top,
@@ -155,24 +164,24 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     // BEFORE Section
     addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + (ENTITY_WIDTH / 2) , 0);
     const beforeTarget = transactionFlow.before.entities.find(e => e.type === 'target');
-    const beforeShareholders = transactionFlow.before.entities.filter(e => e.type === 'stockholder' || e.type === 'parent'); // include parent as potential holder
+    // Ensure shareholders also include parents for correct positioning
+    const beforeShareholdersAndParents = transactionFlow.before.entities.filter(e => e.type === 'stockholder' || e.type === 'parent');
     const beforeSubsidiaries = transactionFlow.before.entities.filter(e => e.type === 'subsidiary');
 
 
     if (beforeTarget) {
-      const targetX = currentXOffset + (Math.max(0, beforeShareholders.length - 1) * SIBLING_X_SPACING) / 2;
+      const targetX = currentXOffset + (Math.max(0, beforeShareholdersAndParents.length - 1) * SIBLING_X_SPACING) / 2;
       newNodes.push(createEntityNode(beforeTarget, targetX, BASE_Y_COMPANY));
 
-      beforeShareholders.forEach((sh, idx) => {
+      beforeShareholdersAndParents.forEach((shOrParent, idx) => {
         const shX = currentXOffset + idx * SIBLING_X_SPACING;
-        newNodes.push(createEntityNode(sh, shX, BASE_Y_SHAREHOLDER));
+        newNodes.push(createEntityNode(shOrParent, shX, BASE_Y_SHAREHOLDER));
       });
       
       beforeSubsidiaries.forEach((sub, idx) => {
-        // Position subsidiaries below the target or their respective parent
-        const parentNode = transactionFlow.before.relationships.find(r => r.target === sub.id);
-        const parentEntityNode = newNodes.find(n => n.id === parentNode?.source);
-        const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
+        const parentRel = transactionFlow.before.relationships.find(r => r.target === sub.id);
+        const parentEntityNode = newNodes.find(n => n.id === parentRel?.source);
+        const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING; // Fallback positioning
         newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
       });
     }
@@ -183,15 +192,15 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
                 id: `edge-before-${rel.source}-${rel.target}-${index}`,
                 source: rel.source,
                 target: rel.target,
-                type: 'smoothstep', // or 'straight'
+                type: 'smoothstep', 
                 label: rel.percentage ? `${rel.percentage}% ${rel.type}` : rel.type,
                 style: { stroke: '#525252', strokeWidth: 1.5 },
-                markerEnd: { type: 'arrowclosed', color: '#525252' },
+                markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' }, // Fixed marker type
             });
         }
     });
     
-    const beforeSectionWidth = Math.max(beforeShareholders.length, 1) * SIBLING_X_SPACING;
+    const beforeSectionWidth = Math.max(beforeShareholdersAndParents.length, 1) * SIBLING_X_SPACING;
     currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
     // TRANSACTION Section
@@ -202,7 +211,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
         newNodes.push({
             id: transactionNodeId,
             type: 'default',
-            position: { x: currentXOffset, y: BASE_Y_COMPANY },
+            position: { x: currentXOffset, y: BASE_Y_COMPANY }, // Positioned at the company level
             data: {
                 label: (
                     <div className="text-center p-3">
@@ -218,11 +227,17 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
                 )
             },
             style: {
-                backgroundColor: '#f3e8ff', border: '2px dashed #8b5cf6', borderRadius: '8px', width: ENTITY_WIDTH,
+                backgroundColor: '#f3e8ff', 
+                border: '2px dashed #8b5cf6', 
+                borderRadius: '8px', 
+                width: ENTITY_WIDTH,
+                textAlign: 'center' as const, // Ensure textAlign is correctly typed
             }
         });
         // Edges from Before Target to Transaction & from Transaction to After Target
-        const beforeTargetNode = newNodes.find(n => n.id.startsWith('before-target-'));
+        // Find before target node using its generated ID
+        const beforeTargetNode = newNodes.find(n => n.id === `before-target-${transactionFlow.transactionContext?.targetName.replace(/[^a-zA-Z0-9]/g, '')}`);
+
         if (beforeTargetNode) {
             newEdges.push({
                 id: 'edge-before-to-tx',
@@ -234,7 +249,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
             });
         }
     }
-    const transactionSectionWidth = ENTITY_WIDTH;
+    const transactionSectionWidth = ENTITY_WIDTH; // Assuming one node for transaction process
     currentXOffset += transactionSectionWidth + SECTION_X_SPACING;
 
     // AFTER Section
@@ -242,10 +257,11 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     const afterTarget = transactionFlow.after.entities.find(e => e.type === 'target');
     const afterBuyers = transactionFlow.after.entities.filter(e => e.type === 'buyer');
     const afterStockholders = transactionFlow.after.entities.filter(e => e.type === 'stockholder');
+    const afterParents = transactionFlow.after.entities.filter(e => e.type === 'parent'); // Include parents
     const afterConsiderations = transactionFlow.after.entities.filter(e => e.type === 'consideration');
     const afterSubsidiaries = transactionFlow.after.entities.filter(e => e.type === 'subsidiary');
 
-    const allAfterOwners = [...afterBuyers, ...afterStockholders];
+    const allAfterOwners = [...afterBuyers, ...afterStockholders, ...afterParents]; // Include parents as owners
 
     if (afterTarget) {
       const targetX = currentXOffset + (Math.max(0, allAfterOwners.length - 1) * SIBLING_X_SPACING) / 2;
@@ -257,24 +273,25 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
       });
       
       afterConsiderations.forEach((con, idx) => {
-        const conX = targetX + idx * SIBLING_X_SPACING; // Align with target or slightly offset
+        const conX = targetX + idx * SIBLING_X_SPACING; 
         newNodes.push(createEntityNode(con, conX, BASE_Y_CONSIDERATION));
       });
 
       afterSubsidiaries.forEach((sub, idx) => {
-        const parentNode = transactionFlow.after.relationships.find(r => r.target === sub.id);
-        const parentEntityNode = newNodes.find(n => n.id === parentNode?.source);
+        const parentRel = transactionFlow.after.relationships.find(r => r.target === sub.id);
+        const parentEntityNode = newNodes.find(n => n.id === parentRel?.source);
         const subX = parentEntityNode ? parentEntityNode.position.x : targetX + idx * SIBLING_X_SPACING;
         newNodes.push(createEntityNode(sub, subX, BASE_Y_SUBSIDIARY + (idx * (ENTITY_HEIGHT + 30))));
       });
 
-      // Edge from Transaction to After Target
       const transactionNode = newNodes.find(n => n.id === 'node-transaction-process');
-      if (transactionNode) {
+      // Ensure afterTarget.id is used from the entity pushed to newNodes
+      const afterTargetNode = newNodes.find(n => n.id === afterTarget.id);
+      if (transactionNode && afterTargetNode) {
           newEdges.push({
               id: 'edge-tx-to-after',
               source: transactionNode.id,
-              target: afterTarget.id, // ID of the after-target node
+              target: afterTargetNode.id, 
               type: 'smoothstep',
               animated: true,
               style: { stroke: '#8b5cf6', strokeWidth: 2 },
@@ -285,10 +302,11 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
     transactionFlow.after.relationships.forEach((rel, index) => {
         if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
             const sourceNode = newNodes.find(n => n.id === rel.source);
-            const targetNode = newNodes.find(n => n.id === rel.target);
-            let strokeColor = '#525252'; // Default
-            if (rel.type === 'ownership') strokeColor = sourceNode?.data?.label?.props?.children[1]?.props?.children === 'buyer' ? '#2563eb' : '#525252'; // Blue for buyer ownership
-            if (rel.type === 'consideration') strokeColor = '#16a34a'; // Green for consideration
+            // const targetNode = newNodes.find(n => n.id === rel.target); // Not used currently
+            let strokeColor = '#525252'; 
+            // Use stored entityType from node data
+            if (rel.type === 'ownership') strokeColor = sourceNode?.data?.entityType === 'buyer' ? '#2563eb' : '#525252'; 
+            if (rel.type === 'consideration') strokeColor = '#16a34a';
 
             newEdges.push({
                 id: `edge-after-${rel.source}-${rel.target}-${index}`,
@@ -297,7 +315,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
                 type: 'smoothstep',
                 label: rel.percentage ? `${rel.percentage}% ${rel.type}` : (rel.value ? `${(rel.value/1000000).toFixed(0)}M ${rel.type}` : rel.type),
                 style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
-                markerEnd: { type: 'arrowclosed', color: strokeColor },
+                markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor }, // Fixed marker type
             });
         } else {
             console.warn(`Skipping edge due to missing node: source=${rel.source}, target=${rel.target}`);
@@ -342,7 +360,7 @@ const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramPro
         nodes={nodes}
         edges={edges}
         fitView
-        nodesDraggable={true} // Allow dragging for manual adjustments if needed
+        nodesDraggable={true} 
         nodesConnectable={false}
         elementsSelectable={true}
         zoomOnScroll={true}

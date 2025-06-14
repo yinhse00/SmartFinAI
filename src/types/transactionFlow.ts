@@ -4,7 +4,7 @@ import { Node, Edge } from '@xyflow/react';
 export interface TransactionEntity {
   id: string;
   name: string;
-  type: 'target' | 'buyer' | 'stockholder' | 'subsidiary' | 'newco' | 'consideration';
+  type: 'target' | 'buyer' | 'stockholder' | 'subsidiary' | 'newco' | 'consideration' | 'parent'; // Added 'parent'
   value?: number;
   percentage?: number;
   description?: string;
