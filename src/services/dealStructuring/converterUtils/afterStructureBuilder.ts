@@ -88,8 +88,8 @@ export const buildAfterStructure = (
   }
 
   // --- REVISED LOGIC ---
-  // Use `shareholdingChanges.after` directly to represent the acquirer's new shareholder base.
-  // This trusts the AI to have correctly calculated dilution and added new equity recipients.
+  // Use `shareholdingChanges.after` to represent the acquirer's new shareholder base.
+  // This represents LEVEL 1 OWNERSHIP (Shareholders -> Acquirer).
   const acquirerNewShareholders = results.shareholdingChanges?.after || [];
   
   acquirerNewShareholders.forEach((holder) => {
@@ -107,6 +107,7 @@ export const buildAfterStructure = (
         });
       }
       
+      // Link shareholder to the acquirer
       relationships.push({
         source: shareholderId,
         target: acquirerId,
@@ -138,6 +139,7 @@ export const buildAfterStructure = (
   // Prioritize the specific percentage from major terms if available, otherwise use deal economics, default to 100
   const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
   
+  // Create LEVEL 2 OWNERSHIP link (Acquirer -> Target)
   relationships.push({
     source: acquirerId,
     target: targetId,
@@ -145,19 +147,24 @@ export const buildAfterStructure = (
     percentage: acquiredPercentage,
   } as OwnershipRelationship);
 
+  // If the target is not 100% acquired, represent the continuing original shareholders.
   if (acquiredPercentage < 100) {
-    const remainingOriginalShareholderId = generateEntityId('stockholder', `Remaining Shareholders of ${entityNames.targetCompanyName}`, prefix);
-    if (!entities.find(e => e.id === remainingOriginalShareholderId)) {
+    const continuingShareholderName = 'Continuing Target Shareholders';
+    const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
+    
+    if (!entities.find(e => e.id === continuingShareholderId)) {
       entities.push({
-        id: remainingOriginalShareholderId,
-        name: `Remaining Original Shareholders of ${entityNames.targetCompanyName}`,
+        id: continuingShareholderId,
+        name: continuingShareholderName,
         type: 'stockholder',
         percentage: 100 - acquiredPercentage,
-        description: `${100 - acquiredPercentage}% continuing ownership in Target`,
+        description: `Original shareholders of ${entityNames.targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
       });
     }
+    
+    // Create LEVEL 2 OWNERSHIP link (Continuing Shareholders -> Target)
     relationships.push({
-      source: remainingOriginalShareholderId,
+      source: continuingShareholderId,
       target: targetId,
       type: 'ownership',
       percentage: 100 - acquiredPercentage,
