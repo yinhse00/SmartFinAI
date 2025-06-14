@@ -8,11 +8,6 @@ type CorporateStructureMap = Map<string, CorporateEntity & { children?: string[]
 type Entities = TransactionEntity[];
 type Relationships = AnyTransactionRelationship[];
 
-// This function identifies shareholders who are continuing to hold shares in the target company.
-// Moved to module scope to be shared by `addAcquirerShareholders` and `addTargetWithOwnership`.
-const isContinuingTargetShareholder = (name: string) => 
-    name.toLowerCase().includes('continuing') || name.toLowerCase().includes('remaining');
-
 export const createAcquirerEntity = (
     acquirerName: string,
     corporateStructureMap: CorporateStructureMap,
@@ -53,9 +48,14 @@ export const addAcquirerShareholders = (
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
     const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
 
+    // This function identifies shareholders who are continuing to hold shares in the target company
+    // to prevent them from being incorrectly linked to the acquirer. Their ownership is handled
+    // separately in `addTargetWithOwnership`.
+    const isContinuingTargetShareholder = (name: string) => 
+        name.toLowerCase().includes('continuing') || name.toLowerCase().includes('remaining');
+
     acquirerNewShareholders.forEach((holder) => {
         // In a partial acquisition, skip processing for continuing target shareholders.
-        // Their ownership is handled in `addTargetWithOwnership`.
         if (acquiredPercentage < 100 && isContinuingTargetShareholder(holder.name)) {
             return; 
         }
@@ -115,49 +115,23 @@ export const addTargetWithOwnership = (
     } as OwnershipRelationship);
 
     if (acquiredPercentage < 100) {
-        const allAfterShareholders = results.shareholdingChanges?.after || [];
-        const continuingShareholders = allAfterShareholders.filter(holder => isContinuingTargetShareholder(holder.name));
-
-        // If we find specific continuing shareholders in the analysis results, use them.
-        if (continuingShareholders.length > 0) {
-            continuingShareholders.forEach(holder => {
-                const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-                if (!entities.find(e => e.id === shareholderId)) {
-                    entities.push({
-                        id: shareholderId,
-                        name: holder.name,
-                        type: 'stockholder',
-                        percentage: holder.percentage,
-                        description: `Continuing shareholder of ${targetCompanyName} retaining a ${holder.percentage}% stake.`,
-                    });
-                }
-                relationships.push({
-                    source: shareholderId,
-                    target: targetId,
-                    type: 'ownership',
-                    percentage: holder.percentage,
-                } as OwnershipRelationship);
-            });
-        } else {
-            // Fallback to generic entity if no specific continuing shareholders are found in results.
-            const continuingShareholderName = 'Continuing Target Shareholders';
-            const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
-            if (!entities.find(e => e.id === continuingShareholderId)) {
-                entities.push({
-                    id: continuingShareholderId,
-                    name: continuingShareholderName,
-                    type: 'stockholder',
-                    percentage: 100 - acquiredPercentage,
-                    description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
-                });
-            }
-            relationships.push({
-                source: continuingShareholderId,
-                target: targetId,
-                type: 'ownership',
+        const continuingShareholderName = 'Continuing Target Shareholders';
+        const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
+        if (!entities.find(e => e.id === continuingShareholderId)) {
+            entities.push({
+                id: continuingShareholderId,
+                name: continuingShareholderName,
+                type: 'stockholder',
                 percentage: 100 - acquiredPercentage,
-            } as OwnershipRelationship);
+                description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
+            });
         }
+        relationships.push({
+            source: continuingShareholderId,
+            target: targetId,
+            type: 'ownership',
+            percentage: 100 - acquiredPercentage,
+        } as OwnershipRelationship);
     }
 };
 
