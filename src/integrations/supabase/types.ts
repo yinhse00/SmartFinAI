@@ -48,21 +48,6 @@ export type Database = {
         }
         Relationships: []
       }
-      "Listing Rules": {
-        Row: {
-          created_at: string
-          id: number
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-        }
-        Update: {
-          created_at?: string
-          id?: number
-        }
-        Relationships: []
-      }
       listingrule_listed_faq: {
         Row: {
           category: string
@@ -338,31 +323,25 @@ export type Database = {
       }
       search_index: {
         Row: {
-          created_at: string
-          full_text: string | null
+          category: string | null
           id: string
-          keywords: string[] | null
-          last_indexed: string
-          provision_id: string
-          search_vector: unknown | null
+          particulars: string | null
+          party: string | null
+          tableindex: string | null
         }
         Insert: {
-          created_at?: string
-          full_text?: string | null
+          category?: string | null
           id?: string
-          keywords?: string[] | null
-          last_indexed?: string
-          provision_id: string
-          search_vector?: unknown | null
+          particulars?: string | null
+          party?: string | null
+          tableindex?: string | null
         }
         Update: {
-          created_at?: string
-          full_text?: string | null
+          category?: string | null
           id?: string
-          keywords?: string[] | null
-          last_indexed?: string
-          provision_id?: string
-          search_vector?: unknown | null
+          particulars?: string | null
+          party?: string | null
+          tableindex?: string | null
         }
         Relationships: []
       }
