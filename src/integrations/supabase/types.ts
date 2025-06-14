@@ -338,25 +338,31 @@ export type Database = {
       }
       search_index: {
         Row: {
-          category: string | null
+          created_at: string
+          full_text: string | null
           id: string
-          particulars: string | null
-          party: string | null
-          tableindex: string | null
+          keywords: string[] | null
+          last_indexed: string
+          provision_id: string
+          search_vector: unknown | null
         }
         Insert: {
-          category?: string | null
+          created_at?: string
+          full_text?: string | null
           id?: string
-          particulars?: string | null
-          party?: string | null
-          tableindex?: string | null
+          keywords?: string[] | null
+          last_indexed?: string
+          provision_id: string
+          search_vector?: unknown | null
         }
         Update: {
-          category?: string | null
+          created_at?: string
+          full_text?: string | null
           id?: string
-          particulars?: string | null
-          party?: string | null
-          tableindex?: string | null
+          keywords?: string[] | null
+          last_indexed?: string
+          provision_id?: string
+          search_vector?: unknown | null
         }
         Relationships: []
       }

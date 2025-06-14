@@ -69,9 +69,6 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   const newEdges: Edge[] = [];
   let currentXOffset = 50;
 
-  console.log('=== DIAGRAM PROCESSOR DEBUG START ===');
-  console.log('TransactionFlow input:', JSON.stringify(transactionFlow, null, 2));
-
   // Helper to add section header and update nodes array
   const addSectionHeader = (id: string, label: string, x: number, y: number, width: number) => {
       newNodes.push(addSectionHeaderNode(id, label, x, y));
@@ -80,27 +77,13 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   // BEFORE Section
   const beforeEntities = transactionFlow.before.entities;
   const beforeLevels = computeEntityHierarchyLevels(beforeEntities, transactionFlow.before.relationships);
-  
-  console.log('BEFORE Section Processing:');
-  console.log('- Entities count:', beforeEntities.length);
-  console.log('- Relationships count:', transactionFlow.before.relationships.length);
-  console.log('- Hierarchy levels:', Array.from(beforeLevels.entries()));
-  
   const { nodes: beforeNodes, sectionWidth: beforeSectionWidth } = calculateSectionLayout(beforeEntities, beforeLevels, currentXOffset);
   addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, 0, beforeSectionWidth);
   newNodes.push(...beforeNodes);
 
-  console.log('BEFORE nodes created:', beforeNodes.length);
-
   // Edges for BEFORE section
   transactionFlow.before.relationships.forEach((rel, index) => {
-    const sourceExists = newNodes.find(n => n.id === rel.source);
-    const targetExists = newNodes.find(n => n.id === rel.target);
-    
-    console.log(`BEFORE Relationship ${index}: ${rel.source} -> ${rel.target} (${rel.type})`);
-    console.log(`  Source exists: ${!!sourceExists}, Target exists: ${!!targetExists}`);
-    
-    if (sourceExists && targetExists) {
+    if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
       let edgeLabel: string | React.ReactNode = rel.label || rel.type;
       if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
         edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
@@ -117,9 +100,6 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
         style: { stroke: '#525252', strokeWidth: 1.5 },
         markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
       });
-      console.log(`  ✓ Edge created successfully`);
-    } else {
-      console.log(`  ✗ Edge NOT created - missing node(s)`);
     }
   });
 
@@ -176,35 +156,13 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   // AFTER Section
   const afterEntities = transactionFlow.after.entities;
   const afterLevels = computeAfterTransactionHierarchy(afterEntities);
-  
-  console.log('AFTER Section Processing:');
-  console.log('- Entities count:', afterEntities.length);
-  console.log('- Relationships count:', transactionFlow.after.relationships.length);
-  console.log('- Hierarchy levels:', Array.from(afterLevels.entries()));
-  
-  afterEntities.forEach((entity, idx) => {
-    console.log(`  Entity ${idx}: ${entity.id} (${entity.type}) - ${entity.name} - Level: ${afterLevels.get(entity.id)}`);
-    if (entity.percentage) console.log(`    Percentage: ${entity.percentage}%`);
-  });
-  
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
   newNodes.push(...afterNodes);
 
-  console.log('AFTER nodes created:', afterNodes.length);
-
   // Edges for AFTER section
   transactionFlow.after.relationships.forEach((rel, index) => {
-      const sourceExists = newNodes.find(n => n.id === rel.source);
-      const targetExists = newNodes.find(n => n.id === rel.target);
-      
-      console.log(`AFTER Relationship ${index}: ${rel.source} -> ${rel.target} (${rel.type})`);
-      console.log(`  Source exists: ${!!sourceExists}, Target exists: ${!!targetExists}`);
-      if ((rel as OwnershipRelationship).percentage) {
-        console.log(`  Percentage: ${(rel as OwnershipRelationship).percentage}%`);
-      }
-      
-      if (sourceExists && targetExists) {
+      if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
           const sourceNode = newNodes.find(n => n.id === rel.source);
           let strokeColor = '#525252'; 
           if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer')
@@ -228,11 +186,6 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
               style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
               markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           });
-          console.log(`  ✓ Edge created successfully with label: ${edgeLabel}`);
-      } else {
-          console.log(`  ✗ Edge NOT created - missing node(s)`);
-          if (!sourceExists) console.log(`    Missing source node: ${rel.source}`);
-          if (!targetExists) console.log(`    Missing target node: ${rel.target}`);
       }
   });
 
@@ -253,14 +206,8 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           label: 'Continues',
           labelStyle: { fontSize: '10px', fill: '#f59e0b' },
         });
-        console.log(`Continuation edge created: ${beforeSH.name}`);
       }
     });
-
-  console.log('=== FINAL DIAGRAM SUMMARY ===');
-  console.log(`Total nodes: ${newNodes.length}`);
-  console.log(`Total edges: ${newEdges.length}`);
-  console.log('=== DIAGRAM PROCESSOR DEBUG END ===');
 
   return { nodes: newNodes, edges: newEdges };
 };
