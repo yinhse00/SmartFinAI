@@ -120,7 +120,7 @@ export const ShareholdingDiagramVisualization = ({
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
-      const data = payload[0].payload as Shareholder;
+      const data = payload[0].payload as ShareholderData;
       return (
         <div className="bg-white p-3 border rounded-lg shadow-lg">
           <p className="font-medium">{data.name}</p>
