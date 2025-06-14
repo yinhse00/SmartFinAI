@@ -51,15 +51,8 @@ export const addAcquirerShareholders = (
     relationships: Relationships
 ) => {
     const acquirerNewShareholders = results.shareholdingChanges?.after || [];
-    const acquiredPercentage = results.structure?.majorTerms?.targetPercentage ?? results.dealEconomics?.targetPercentage ?? 100;
-
+    
     acquirerNewShareholders.forEach((holder) => {
-        // In a partial acquisition, skip processing for continuing target shareholders.
-        // Their ownership is handled in `addTargetWithOwnership`.
-        if (acquiredPercentage < 100 && isContinuingTargetShareholder(holder.name)) {
-            return; 
-        }
-
         if (holder.name.toLowerCase() !== acquirerName.toLowerCase()) {
             const shareholderId = generateEntityId('stockholder', holder.name, prefix);
             if (!entities.find(e => e.id === shareholderId)) {
@@ -115,49 +108,25 @@ export const addTargetWithOwnership = (
     } as OwnershipRelationship);
 
     if (acquiredPercentage < 100) {
-        const allAfterShareholders = results.shareholdingChanges?.after || [];
-        const continuingShareholders = allAfterShareholders.filter(holder => isContinuingTargetShareholder(holder.name));
+        const continuingShareholderName = 'Continuing Target Shareholders';
+        const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
+        const remainingPercentage = 100 - acquiredPercentage;
 
-        // If we find specific continuing shareholders in the analysis results, use them.
-        if (continuingShareholders.length > 0) {
-            continuingShareholders.forEach(holder => {
-                const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-                if (!entities.find(e => e.id === shareholderId)) {
-                    entities.push({
-                        id: shareholderId,
-                        name: holder.name,
-                        type: 'stockholder',
-                        percentage: holder.percentage,
-                        description: `Continuing shareholder of ${targetCompanyName} retaining a ${holder.percentage}% stake.`,
-                    });
-                }
-                relationships.push({
-                    source: shareholderId,
-                    target: targetId,
-                    type: 'ownership',
-                    percentage: holder.percentage,
-                } as OwnershipRelationship);
+        if (!entities.find(e => e.id === continuingShareholderId)) {
+            entities.push({
+                id: continuingShareholderId,
+                name: continuingShareholderName,
+                type: 'stockholder',
+                percentage: remainingPercentage,
+                description: `Original shareholders of ${targetCompanyName} who retain a ${remainingPercentage.toFixed(1)}% stake.`,
             });
-        } else {
-            // Fallback to generic entity if no specific continuing shareholders are found in results.
-            const continuingShareholderName = 'Continuing Target Shareholders';
-            const continuingShareholderId = generateEntityId('stockholder', continuingShareholderName, prefix);
-            if (!entities.find(e => e.id === continuingShareholderId)) {
-                entities.push({
-                    id: continuingShareholderId,
-                    name: continuingShareholderName,
-                    type: 'stockholder',
-                    percentage: 100 - acquiredPercentage,
-                    description: `Original shareholders of ${targetCompanyName} who retain a ${100 - acquiredPercentage}% stake.`,
-                });
-            }
-            relationships.push({
-                source: continuingShareholderId,
-                target: targetId,
-                type: 'ownership',
-                percentage: 100 - acquiredPercentage,
-            } as OwnershipRelationship);
         }
+        relationships.push({
+            source: continuingShareholderId,
+            target: targetId,
+            type: 'ownership',
+            percentage: remainingPercentage,
+        } as OwnershipRelationship);
     }
 };
 
