@@ -1,6 +1,7 @@
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
-import { ShareholdingChanges, Shareholder, PaymentStructure, DealEconomics, ShareholderData } from '@/types/dealStructuring';
+import { ShareholdingChanges, PaymentStructure, DealEconomics, ShareholderData } from '@/types/dealStructuring';
+import { AnalysisResults } from '../AIAnalysisResults';
 
 interface ShareholdingDiagramVisualizationProps {
   shareholdingChanges?: ShareholdingChanges;
@@ -13,6 +14,7 @@ interface ShareholdingDiagramVisualizationProps {
   dealEconomics?: DealEconomics;
   acquiringCompanyName?: string;
   targetCompanyName?: string;
+  transactionFlow?: AnalysisResults['transactionFlow'];
 }
 
 const COLORS = {
@@ -21,7 +23,9 @@ const COLORS = {
   connected: '#ffc658',
   public: '#ff7300',
   fund: '#00c49f',
-  new_equity_recipient: '#facc15'
+  new_equity_recipient: '#facc15',
+  buyer: '#3b82f6', // Color for the acquirer in the target chart
+  target: '#ef4444', // Color for the target
 };
 
 const getChangeIcon = (change: number) => {
@@ -48,10 +52,10 @@ const getShareholderTypeForColor = (type?: ShareholderData['type'] | string): ke
 export const ShareholdingDiagramVisualization = ({ 
   shareholdingChanges, 
   fallbackData,
-  // The following props are no longer used for calculations but are kept for API compatibility 
-  // with the read-only parent component that passes them.
-  // paymentStructure,
-  // acquiringCompanyName,
+  dealEconomics,
+  acquiringCompanyName,
+  targetCompanyName,
+  transactionFlow,
 }: ShareholdingDiagramVisualizationProps) => {
 
   const beforeData: ShareholderData[] = shareholdingChanges?.before || fallbackData?.before?.map(item => ({
@@ -65,6 +69,54 @@ export const ShareholdingDiagramVisualization = ({
   })) || [];
 
   const keyChanges = shareholdingChanges?.keyChanges || [];
+
+  // --- New logic for Target Ownership ---
+  const targetBeforeData: ShareholderData[] = [];
+  const targetAfterData: ShareholderData[] = [];
+  const acquiredPercentage = dealEconomics?.targetPercentage || 100;
+
+  if (transactionFlow?.before && targetCompanyName) {
+    const targetEntity = transactionFlow.before.entities.find(e => 
+      e.name?.toLowerCase() === targetCompanyName.toLowerCase() && (e.type === 'target' || e.role === 'target')
+    );
+    if (targetEntity) {
+      transactionFlow.before.relationships?.forEach(r => {
+        if (r.target === targetEntity.id && (r.type === 'ownership' || r.type === 'owner')) {
+          const shareholderEntity = transactionFlow.before.entities.find(e => e.id === r.source);
+          if (shareholderEntity) {
+            targetBeforeData.push({
+              name: shareholderEntity.name,
+              percentage: r.percentage || shareholderEntity.percentage || 0,
+              type: (shareholderEntity.type as ShareholderData['type']) || 'institutional'
+            });
+          }
+        }
+      });
+    }
+  }
+
+  // Fallback if no specific shareholders are found for the target
+  if (targetBeforeData.length === 0 && targetCompanyName) {
+    targetBeforeData.push({ name: `Original Shareholders`, percentage: 100, type: 'institutional' });
+  }
+  
+  // Calculate target's ownership *after* the transaction
+  if (acquiringCompanyName) {
+    targetAfterData.push({
+      name: acquiringCompanyName,
+      percentage: acquiredPercentage,
+      type: 'buyer' as ShareholderData['type'],
+    });
+  }
+  if (acquiredPercentage < 100) {
+    targetAfterData.push({
+      name: 'Remaining Original Shareholders',
+      percentage: 100 - acquiredPercentage,
+      type: 'institutional',
+    });
+  }
+  // --- End of new logic ---
+
 
   const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload[0]) {
@@ -80,6 +132,34 @@ export const ShareholdingDiagramVisualization = ({
     return null;
   };
 
+  const renderPieChart = (data: ShareholderData[], title: string) => (
+    <div className="text-center h-full flex flex-col">
+      <h4 className="font-medium mb-2 text-sm">{title}</h4>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={30}
+            outerRadius={60}
+            paddingAngle={2}
+            dataKey="percentage"
+            nameKey="name"
+          >
+            {data.map((entry, index) => (
+              <Cell 
+                key={`cell-${index}`} 
+                fill={COLORS[getShareholderTypeForColor(entry.type)] || '#8884d8'} 
+              />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
   if (beforeData.length === 0 && afterData.length === 0) {
     return (
       <div className="h-full flex items-center justify-center text-gray-500">
@@ -89,90 +169,55 @@ export const ShareholdingDiagramVisualization = ({
   }
 
   return (
-    <div className="h-full space-y-4">
-      {/* Before and After Pie Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[250px]">
-        {/* Before Transaction (Acquirer's Shareholders) */}
-        <div className="text-center">
-          <h4 className="font-medium mb-2">Acquirer: Before New Equity</h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={beforeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="percentage"
-                nameKey="name"
-              >
-                {beforeData.map((entry, index) => (
-                  <Cell 
-                    key={`before-${index}`} 
-                    fill={COLORS[getShareholderTypeForColor(entry.type)] || '#8884d8'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Arrow and Summary */}
-        <div className="flex flex-col items-center justify-center space-y-3">
-          <ArrowRight className="h-8 w-8 text-blue-500" />
-          <div className="text-center">
-            <p className="text-sm font-medium">Shareholding Impact</p>
-            {keyChanges.length > 0 && (
-              <div className="space-y-1 mt-2">
-                {keyChanges.slice(0, 3).map((changeItem, index) => (
-                  <div key={index} className="flex items-center gap-2 text-xs">
-                    {getChangeIcon(changeItem.change)}
-                    <span 
-                      className="truncate" 
-                      title={`${changeItem.shareholder}: ${changeItem.before?.toFixed(1)}% -> ${changeItem.after?.toFixed(1)}% (${changeItem.change > 0 ? '+' : ''}${changeItem.change.toFixed(1)}%)`}
-                    >
-                      {changeItem.shareholder}: {changeItem.change > 0 ? '+' : ''}{changeItem.change.toFixed(1)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+    <div className="h-full space-y-4 overflow-y-auto p-1">
+      {/* Acquirer Shareholding Section */}
+      <div className="border-b pb-4">
+        <h3 className="text-md font-semibold text-center mb-2">Acquirer Shareholding Impact</h3>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[200px]">
+          {renderPieChart(beforeData, "Before New Equity")}
+          
+          <div className="flex flex-col items-center justify-center space-y-3">
+            <ArrowRight className="h-8 w-8 text-blue-500" />
+            <div className="text-center">
+              <p className="text-sm font-medium">Shareholding Impact</p>
+              {keyChanges.length > 0 && (
+                <div className="space-y-1 mt-2">
+                  {keyChanges.slice(0, 2).map((changeItem, index) => (
+                    <div key={index} className="flex items-center gap-2 text-xs">
+                      {getChangeIcon(changeItem.change)}
+                      <span 
+                        className="truncate" 
+                        title={`${changeItem.shareholder}: ${changeItem.before?.toFixed(1)}% -> ${changeItem.after?.toFixed(1)}% (${changeItem.change > 0 ? '+' : ''}${changeItem.change.toFixed(1)}%)`}
+                      >
+                        {changeItem.shareholder}: {changeItem.change > 0 ? '+' : ''}{changeItem.change.toFixed(1)}%
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
+          
+          {renderPieChart(afterData, "After New Equity")}
         </div>
-
-        {/* After Transaction (Acquirer's Shareholders) */}
-        <div className="text-center">
-          <h4 className="font-medium mb-2">Acquirer: After New Equity</h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={afterData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="percentage"
-                nameKey="name"
-              >
-                {afterData.map((entry, index) => (
-                  <Cell 
-                    key={`after-${index}`} 
-                    fill={COLORS[getShareholderTypeForColor(entry.type)] || '#8884d8'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
+      </div>
+      
+      {/* Target Ownership Section */}
+      <div className="pt-4 border-b pb-4">
+         <h3 className="text-md font-semibold text-center mb-2">Target Ownership Change</h3>
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 h-[200px]">
+           {renderPieChart(targetBeforeData, `Before Acquisition`)}
+           <div className="flex flex-col items-center justify-center space-y-3">
+             <ArrowRight className="h-8 w-8 text-blue-500" />
+             <p className="text-sm font-medium">Acquisition ({acquiredPercentage}%)</p>
+           </div>
+           {renderPieChart(targetAfterData, `After Acquisition`)}
+         </div>
       </div>
 
       {/* Legend and Key Changes */}
-      <div className="space-y-3">
-        <div className="flex flex-wrap justify-center gap-4 text-xs">
+      <div className="space-y-3 pt-2">
+        <div className="flex flex-wrap justify-center gap-x-4 gap-y-2 text-xs">
           {Object.entries(COLORS).map(([type, color]) => (
             <div key={type} className="flex items-center gap-1">
               <div 
