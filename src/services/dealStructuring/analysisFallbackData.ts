@@ -1,0 +1,143 @@
+
+import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { ShareholdingChanges, CorporateStructure, ShareholderData } from '@/types/dealStructuring';
+import { TransactionFlowSection, TransactionStep } from '@/types/transactionFlow'; // Ensure TransactionStep is imported if used by transactionFlow related fallbacks
+
+// Fallback for shareholding changes
+export function createFallbackShareholdingChanges(): ShareholdingChanges {
+  return {
+    before: [
+      { name: "Existing Shareholders", percentage: 100, type: "institutional" as const, isConnected: false }
+    ],
+    after: [
+      { name: "Existing Shareholders", percentage: 80, type: "institutional" as const, isConnected: false },
+      { name: "New Investors", percentage: 20, type: "institutional" as const, isConnected: false }
+    ],
+    // Corrected: 'type' property removed from keyChanges objects as it's not in the interface
+    keyChanges: [
+      { shareholder: "Existing Shareholders", before: 100, after: 80, change: -20 },
+      { shareholder: "New Investors", before: 0, after: 20, change: 20 }
+    ],
+    controlImplications: ["Dilution of existing shareholders", "Introduction of new institutional investors"]
+  };
+}
+
+// Fallback for corporate structure
+export function createFallbackCorporateStructure(): CorporateStructure {
+  return {
+    entities: [
+      { id: "issuer", name: "Main Company", type: "issuer" as const, ownership: 100 },
+      { id: "target", name: "Target Entity", type: "target" as const, ownership: 0 }
+    ],
+    relationships: [
+      { parent: "issuer", child: "target", ownershipPercentage: 100 }
+    ],
+    mainIssuer: "issuer",
+    targetEntities: ["target"]
+  };
+}
+
+// Fallback for transaction flow (simplified as it's complex)
+export function createFallbackTransactionFlow(): AnalysisResults['transactionFlow'] { // Matching type from AnalysisResults
+  return {
+    before: {
+      entities: [
+        { id: "target-1", name: "Target Company", type: "target" as const, percentage: 100, description: "Listed company to be acquired", role: "target" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder" as const, percentage: 100, description: "Current shareholders of target", role: "shareholder" }
+      ],
+      relationships: [
+        { source: "shareholders-1", target: "target-1", type: "ownership" as const, percentage: 100, nature: "direct ownership" }
+      ]
+    },
+    after: {
+      entities: [
+        { id: "target-1", name: "Target Company", type: "target" as const, percentage: 100, description: "Listed company acquired", role: "target" },
+        { id: "shareholders-1", name: "Existing Shareholders", type: "stockholder" as const, percentage: 30, description: "Remaining shareholders", role: "shareholder" },
+        { id: "buyer-1", name: "Acquiring Company", type: "buyer" as const, percentage: 70, description: "New controlling shareholder", role: "acquirer" },
+        { id: "consideration-1", name: "Cash Consideration", type: "consideration" as const, value: 1000, description: "Payment to selling shareholders", role: "payment" }
+      ],
+      relationships: [
+        { source: "buyer-1", target: "target-1", type: "ownership" as const, percentage: 70, nature: "controlling interest" },
+        { source: "shareholders-1", target: "target-1", type: "ownership" as const, percentage: 30, nature: "minority interest" },
+        { source: "buyer-1", target: "consideration-1", type: "consideration" as const, value: 1000, nature: "cash payment" }
+      ]
+    },
+    majorTransactionSteps: [ // This should map to TransactionStep[] if needed later
+      { id: "step-1", title: "Due Diligence", description: "Buyer conducts comprehensive due diligence", entities: ["buyer-1", "target-1"], criticalPath: true },
+      { id: "step-2", title: "Share Purchase Agreement", description: "Execution of binding agreement", entities: ["buyer-1", "shareholders-1"], criticalPath: true },
+    ],
+    paymentFlows: [
+        { from: "buyer-1", to: "shareholders-1", amount: 1000, mechanism: "cash", timing: "on completion" }
+    ]
+  };
+}
+
+// Fallback for overall analysis if parsing fails
+export function createFallbackAnalysis(responseText: string): AnalysisResults {
+  return {
+    transactionType: "Transaction Analysis",
+    structure: {
+      recommended: "Please review the detailed analysis below. Fallback data used.",
+      majorTerms: { // Added to satisfy the more detailed structure
+        pricingMechanism: "fixed",
+        targetPercentage: 0,
+        suggestionConsideration: "N/A for fallback",
+        paymentStructure: { cashPercentage: 100, stockPercentage: 0, paymentSchedule: "N/A", escrowArrangements: "N/A" },
+        keyConditions: ["N/A"],
+        structuralDecisions: ["N/A"],
+      },
+      alternatives: [],
+      rationale: responseText.substring(0, 500) + "..."
+    },
+    costs: {
+      regulatory: 0,
+      professional: 0,
+      timing: 0,
+      total: 0,
+      majorDrivers: ["N/A"],
+      optimizationOpportunities: ["N/A"],
+      breakdown: [{
+        category: "Analysis",
+        amount: 0,
+        description: "Detailed cost analysis available in full response (fallback)"
+      }]
+    },
+    timetable: { // Adjusted to satisfy the more detailed structure
+      totalDuration: "To be determined",
+      criticalPath: [{date: "TBD", milestone: "Analysis Review", description:"Review comprehensive analysis", impact: "high", marketStandard: false}],
+      keyDependencies: ["N/A"],
+      timingRisks: ["N/A"],
+    },
+    shareholding: { // Simplified as detailed shareholdingChanges is primary
+      before: [],
+      after: [],
+      majorChanges: [],
+      controlImplications: [],
+      dilutionImpact: "Shareholding impact analysis included in detailed response (fallback)"
+    },
+    compliance: {
+      keyListingRules: ["Review required"],
+      materialApprovals: ["Assessment needed"],
+      criticalRisks: ["Detailed risk analysis in response (fallback)"],
+      actionableRecommendations: ["See comprehensive recommendations (fallback)"]
+    },
+    risks: { // Added risks structure
+      executionRisks: [],
+      marketRisks: [],
+      regulatoryRisks: [],
+      optimizationStrategies: []
+    },
+    confidence: 0.5, // Adjusted confidence for fallback
+    marketIntelligence: { // Added marketIntelligence
+        precedentAnalysis: "N/A",
+        marketConditions: "N/A",
+        regulatoryEnvironment: "N/A",
+        optimizationPotential: "N/A",
+        successProbability: 0
+    },
+    shareholdingChanges: createFallbackShareholdingChanges(),
+    corporateStructure: createFallbackCorporateStructure(),
+    transactionFlow: createFallbackTransactionFlow()
+  };
+}
+
