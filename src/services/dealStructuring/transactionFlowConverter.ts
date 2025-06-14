@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow } from '@/types/transactionFlow';
 import { OptimizationResult } from './optimizationEngine';
@@ -17,22 +18,19 @@ export class TransactionFlowConverter {
     console.log('Deal Economics:', results.dealEconomics);
     console.log('Shareholding before:', results.shareholding?.before);
     console.log('Shareholding after:', results.shareholding?.after);
-    console.log('Corporate structure:', results.corporateStructure);
 
     // Extract data using proper purchase price
     const considerationAmount = this.extractConsiderationAmount(results);
     const entityNames = this.extractEntityNames(results);
-    const ownershipData = this.extractOwnershipData(results);
 
     console.log('Extracted data:', {
       considerationAmount,
-      entityNames,
-      ownershipData
+      entityNames
     });
 
-    // Build transaction flow with proper purchase price
+    // Build transaction flow with proper shareholder mapping
     const before = this.buildBeforeStructure(results, entityNames);
-    const after = this.buildAfterStructure(results, entityNames, considerationAmount, ownershipData);
+    const after = this.buildAfterStructure(results, entityNames, considerationAmount);
     const transactionSteps = this.generateTransactionSteps(results, entityNames, considerationAmount);
 
     return {
@@ -86,22 +84,6 @@ export class TransactionFlowConverter {
           acquiringCompanyName: acquiringEntity.name
         };
       }
-
-      // If we only have target, try to extract acquirer from shareholding data
-      if (targetEntity && results.shareholding?.after) {
-        const potentialAcquirer = results.shareholding.after.find(holder =>
-          holder.name.toLowerCase().includes('acquir') ||
-          holder.name.toLowerCase().includes('buyer') ||
-          holder.percentage > 50 // Assume controlling shareholder is acquirer
-        );
-        
-        if (potentialAcquirer) {
-          return {
-            targetCompanyName: targetEntity.name,
-            acquiringCompanyName: potentialAcquirer.name
-          };
-        }
-      }
     }
 
     // Extract from shareholding data if corporate structure is incomplete
@@ -127,92 +109,54 @@ export class TransactionFlowConverter {
     };
   }
 
-  private extractOwnershipData(results: AnalysisResults): {
-    hasBeforeData: boolean;
-    hasAfterData: boolean;
-    isFullAcquisition: boolean;
-    acquisitionPercentage: number;
-  } {
-    const beforeData = results.shareholding?.before || [];
-    const afterData = results.shareholding?.after || [];
-    
-    let acquisitionPercentage = 0;
-    let isFullAcquisition = false;
-
-    if (afterData.length > 0) {
-      // Find the acquirer in after data
-      const acquirer = afterData.find(holder => 
-        holder.name.toLowerCase().includes('acquir') || 
-        holder.name.toLowerCase().includes('buyer') ||
-        holder.name.toLowerCase().includes('purchas')
-      );
-      
-      if (acquirer) {
-        acquisitionPercentage = acquirer.percentage;
-        isFullAcquisition = acquisitionPercentage >= 100;
-      }
-    }
-
-    return {
-      hasBeforeData: beforeData.length > 0,
-      hasAfterData: afterData.length > 0,
-      isFullAcquisition,
-      acquisitionPercentage
-    };
-  }
-
   private buildBeforeStructure(results: AnalysisResults, entityNames: any) {
     const entities = [];
     const relationships = [];
 
+    // Add target company
+    entities.push({
+      id: 'before-target-company',
+      name: entityNames.targetCompanyName,
+      type: 'target' as const,
+      description: 'Target Company'
+    });
+
     // Use actual shareholding before data if available
     if (results.shareholding?.before && results.shareholding.before.length > 0) {
       results.shareholding.before.forEach((holder, index) => {
+        const shareholderId = `before-shareholder-${index}`;
         entities.push({
-          id: `before-shareholder-${index}`,
+          id: shareholderId,
           name: holder.name,
-          type: 'stockholder' as const
+          type: 'stockholder' as const,
+          percentage: holder.percentage,
+          description: `${holder.percentage}% shareholder`
         });
-      });
 
-      // Add the acquiring company as separate entity
-      entities.push({
-        id: 'before-acquiring-company',
-        name: entityNames.acquiringCompanyName,
-        type: 'buyer' as const,
-        description: 'Acquiring Entity'
-      });
-
-      // Add target company
-      entities.push({
-        id: 'before-target-company',
-        name: entityNames.targetCompanyName,
-        type: 'target' as const
-      });
-
-      // Create relationships for target company shareholding
-      results.shareholding.before.forEach((holder, index) => {
+        // Create ownership relationship
         relationships.push({
-          source: `before-shareholder-${index}`,
+          source: shareholderId,
           target: 'before-target-company',
           type: 'ownership' as const,
           percentage: holder.percentage
         });
       });
     } else {
-      // Minimal structure when no shareholding data
-      entities.push(
-        {
-          id: 'before-acquiring-company',
-          name: entityNames.acquiringCompanyName,
-          type: 'buyer' as const
-        },
-        {
-          id: 'before-target-company',
-          name: entityNames.targetCompanyName,
-          type: 'target' as const
-        }
-      );
+      // Fallback: create a generic existing shareholders entity
+      entities.push({
+        id: 'before-existing-shareholders',
+        name: 'Existing Shareholders',
+        type: 'stockholder' as const,
+        percentage: 100,
+        description: '100% shareholder'
+      });
+
+      relationships.push({
+        source: 'before-existing-shareholders',
+        target: 'before-target-company',
+        type: 'ownership' as const,
+        percentage: 100
+      });
     }
 
     return { entities, relationships };
@@ -221,91 +165,103 @@ export class TransactionFlowConverter {
   private buildAfterStructure(
     results: AnalysisResults,
     entityNames: any,
-    considerationAmount: number,
-    ownershipData: any
+    considerationAmount: number
   ) {
     const entities = [];
     const relationships = [];
+
+    // Add target company
+    entities.push({
+      id: 'after-target-company',
+      name: entityNames.targetCompanyName,
+      type: 'target' as const,
+      description: 'Target Company (Post-Transaction)'
+    });
 
     // Use actual shareholding after data if available
     if (results.shareholding?.after && results.shareholding.after.length > 0) {
       // Add all shareholders from after data
       results.shareholding.after.forEach((holder, index) => {
+        const shareholderId = `after-shareholder-${index}`;
+        const isAcquirer = holder.name.toLowerCase().includes('acquir') || 
+                          holder.name.toLowerCase().includes('buyer') ||
+                          holder.name.toLowerCase().includes('purchas');
+        
         entities.push({
-          id: `after-shareholder-${index}`,
+          id: shareholderId,
           name: holder.name,
-          type: holder.name.toLowerCase().includes('acquir') || 
-                holder.name.toLowerCase().includes('buyer') ? 'buyer' as const : 'stockholder' as const
+          type: isAcquirer ? 'buyer' as const : 'stockholder' as const,
+          percentage: holder.percentage,
+          description: `${holder.percentage}% shareholder`
         });
-      });
 
-      // Add target company
-      entities.push({
-        id: 'after-target-company',
-        name: entityNames.targetCompanyName,
-        type: 'target' as const
-      });
-
-      // Add consideration if amount is available
-      if (considerationAmount > 0) {
-        entities.push({
-          id: 'consideration-payment',
-          name: `HKD ${(considerationAmount / 1000000).toFixed(0)}M Consideration`,
-          type: 'consideration' as const,
-          value: considerationAmount,
-          currency: 'HKD'
-        });
-      }
-
-      // Create ownership relationships
-      results.shareholding.after.forEach((holder, index) => {
+        // Create ownership relationship
         relationships.push({
-          source: `after-shareholder-${index}`,
+          source: shareholderId,
           target: 'after-target-company',
           type: 'ownership' as const,
           percentage: holder.percentage
         });
       });
-
-      // Add consideration relationship if applicable
-      if (considerationAmount > 0) {
-        const acquirer = results.shareholding.after.find(holder => 
-          holder.name.toLowerCase().includes('acquir') || 
-          holder.name.toLowerCase().includes('buyer')
-        );
-        
-        if (acquirer) {
-          const acquirerIndex = results.shareholding.after.indexOf(acquirer);
-          relationships.push({
-            source: `after-shareholder-${acquirerIndex}`,
-            target: 'consideration-payment',
-            type: 'consideration' as const,
-            value: considerationAmount
-          });
-        }
-      }
     } else {
-      // Minimal structure when no after data
+      // Fallback structure
       entities.push(
         {
           id: 'after-acquiring-company',
           name: entityNames.acquiringCompanyName,
-          type: 'buyer' as const
+          type: 'buyer' as const,
+          percentage: 70,
+          description: '70% shareholder'
         },
         {
-          id: 'after-target-company',
-          name: entityNames.targetCompanyName,
-          type: 'target' as const
+          id: 'after-remaining-shareholders',
+          name: 'Remaining Shareholders',
+          type: 'stockholder' as const,
+          percentage: 30,
+          description: '30% shareholder'
         }
       );
 
-      if (considerationAmount > 0) {
-        entities.push({
-          id: 'consideration-payment',
-          name: `HKD ${(considerationAmount / 1000000).toFixed(0)}M Consideration`,
+      relationships.push(
+        {
+          source: 'after-acquiring-company',
+          target: 'after-target-company',
+          type: 'ownership' as const,
+          percentage: 70
+        },
+        {
+          source: 'after-remaining-shareholders',
+          target: 'after-target-company',
+          type: 'ownership' as const,
+          percentage: 30
+        }
+      );
+    }
+
+    // Add consideration if amount is available
+    if (considerationAmount > 0) {
+      entities.push({
+        id: 'consideration-payment',
+        name: `${results.dealEconomics?.currency || 'HKD'} ${(considerationAmount / 1000000).toFixed(0)}M`,
+        type: 'consideration' as const,
+        value: considerationAmount,
+        currency: results.dealEconomics?.currency || 'HKD',
+        description: 'Transaction Consideration'
+      });
+
+      // Find the acquirer to create consideration relationship
+      const acquirer = results.shareholding?.after?.find(holder => 
+        holder.name.toLowerCase().includes('acquir') || 
+        holder.name.toLowerCase().includes('buyer')
+      );
+      
+      if (acquirer) {
+        const acquirerIndex = results.shareholding!.after!.indexOf(acquirer);
+        relationships.push({
+          source: `after-shareholder-${acquirerIndex}`,
+          target: 'consideration-payment',
           type: 'consideration' as const,
-          value: considerationAmount,
-          currency: 'HKD'
+          value: considerationAmount
         });
       }
     }
@@ -341,13 +297,13 @@ export class TransactionFlowConverter {
         id: 'step-1',
         title: 'Due Diligence & Negotiation',
         description: `${entityNames.acquiringCompanyName} conducts due diligence and negotiates transaction terms`,
-        entities: ['before-acquiring-company', 'before-target-company']
+        entities: ['before-target-company']
       },
       {
         id: 'step-2',
         title: 'Transaction Execution',
         description: `Implementation of ${results.structure?.recommended || 'transaction structure'}`,
-        entities: ['before-acquiring-company', 'before-target-company']
+        entities: ['before-target-company', 'after-target-company']
       }
     ];
 
@@ -355,7 +311,7 @@ export class TransactionFlowConverter {
       steps.push({
         id: 'step-3',
         title: 'Completion & Payment',
-        description: `Transfer of ownership and payment of HKD ${(considerationAmount / 1000000).toFixed(0)}M consideration`,
+        description: `Transfer of ownership and payment of ${results.dealEconomics?.currency || 'HKD'} ${(considerationAmount / 1000000).toFixed(0)}M consideration`,
         entities: ['after-target-company', 'consideration-payment']
       });
     } else {
