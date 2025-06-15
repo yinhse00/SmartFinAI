@@ -1,5 +1,7 @@
 
-import { DocumentCategory } from "@/types/references";
+import { RegulatoryEntry } from './types';
+
+export type DocumentCategory = 'listing_rules' | 'takeovers' | 'guidance' | 'decisions' | 'checklists' | 'other';
 
 export function determineCategory(filename: string): DocumentCategory {
   const lowerFilename = filename.toLowerCase();

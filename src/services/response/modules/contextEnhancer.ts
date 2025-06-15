@@ -26,31 +26,22 @@ export const contextEnhancer = {
       // Search both in-memory database and reference documents
       const comprehensiveResults = await searchService.searchComprehensive(ruleNumber);
       
-      // If we found matching reference documents, add their content to the context
-      if (comprehensiveResults.referenceDocuments.length > 0 || comprehensiveResults.databaseEntries.length > 0) {
-        console.log(`Found ${comprehensiveResults.referenceDocuments.length} reference documents and ${comprehensiveResults.databaseEntries.length} database entries matching Rule/Chapter ${ruleNumber}`);
-        
-        // Extract additional context from reference documents
-        const referenceContext = comprehensiveResults.referenceDocuments
-          .map(doc => `[${doc.title} | Reference Document]:\n${doc.description || "No detailed content available. Please check the reference document directly."}`)
-          .join('\n\n---\n\n');
+      // If we found matching database entries, add their content to the context
+      if (comprehensiveResults.databaseEntries.length > 0) {
+        console.log(`Found ${comprehensiveResults.databaseEntries.length} database entries matching Rule/Chapter ${ruleNumber}. Reference document search is disabled.`);
         
         // Add specific note about prioritizing database information
-        const priorityNote = "NOTE: When information conflicts, prioritize the database entries over reference documents.";
+        const priorityNote = "NOTE: When information conflicts, prioritize the database entries.";
         
-        // Create enhanced context from both sources
+        // Create enhanced context from database entries
         const enhancedContext = `${priorityNote}\n\n--- DATABASE ENTRIES ---\n\n`;
         
-        // Add database entries first (prioritized)
         const databaseContext = comprehensiveResults.databaseEntries
           .map(entry => `[${entry.title} | ${entry.source}]:\n${entry.content}`)
           .join('\n\n---\n\n');
           
-        // Combine the contexts
         const fullContext = enhancedContext + 
-                          (databaseContext.length > 0 ? databaseContext : "No direct database entries found.") + 
-                          "\n\n--- REFERENCE DOCUMENTS ---\n\n" + 
-                          referenceContext;
+                          (databaseContext.length > 0 ? databaseContext : "No direct database entries found.");
                           
         params.regulatoryContext = fullContext;
       }

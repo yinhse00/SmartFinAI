@@ -1,8 +1,6 @@
-
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { Loader2, FileSpreadsheet, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -29,8 +27,9 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
   const [error, setError] = useState<string | null>(null);
   const [processingResult, setProcessingResult] = useState<ProcessingResult | null>(null);
   
-  // Get reference documents
-  const { data: documents, isLoading } = useReferenceDocuments();
+  // Get reference documents (disabled)
+  const documents: any[] | undefined = [];
+  const isLoading = false;
   
   // Find the pre-vetting guide document
   const vettingGuideDoc = documents?.find(doc => 

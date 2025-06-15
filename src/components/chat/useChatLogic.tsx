@@ -1,8 +1,6 @@
-
 import { useMessageState } from './hooks/useMessageState';
 import { useApiKeyState } from './hooks/useApiKeyState';
 import { useInputState } from './hooks/useInputState';
-import { useReferenceDocuments } from '@/hooks/useReferenceDocuments';
 import { useBatchHandling } from './hooks/useBatchHandling';
 import { useLanguageState } from './hooks/useLanguageState';
 import { useOptimizedWorkflowProcessor } from './hooks/useOptimizedWorkflowProcessor';
@@ -30,9 +28,6 @@ export const useChatLogic = () => {
   
   // Input state management
   const { input, setInput, lastQuery, setLastQuery } = useInputState();
-  
-  // Reference documents
-  const { data: referenceDocuments = [] } = useReferenceDocuments();
   
   // Language state management
   const { lastInputWasChinese, checkIsChineseInput } = useLanguageState();
