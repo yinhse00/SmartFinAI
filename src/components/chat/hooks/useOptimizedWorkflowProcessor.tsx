@@ -37,7 +37,6 @@ export const useOptimizedWorkflowProcessor = ({
     currentStep, 
     startWorkflow, 
     updateStage, 
-    updateStep, 
     completeWorkflow, 
     handleError 
   } = useWorkflowState();
@@ -58,7 +57,6 @@ export const useOptimizedWorkflowProcessor = ({
     try {
       // Step 1: Initial Analysis with improved state tracking
       console.log('Starting enhanced workflow - Step 1: Initial Analysis');
-      updateStep('preparing');
       updateStage('Analyzing your query and checking cache...');
       
       // Add user message
@@ -100,7 +98,6 @@ export const useOptimizedWorkflowProcessor = ({
         completeStreaming(streamingResponse);
         
         // Enhanced completion sequence
-        updateStep('finalizing');
         updateStage('Retrieved from cache - Response ready');
         
         // Brief completion display before clearing
@@ -115,7 +112,6 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Step 3: Enhanced parallel context retrieval with early termination
       console.log('Step 3: Enhanced parallel context retrieval');
-      updateStep('processing');
       updateStage('Gathering regulatory context with quality scoring...');
       updateStreamingContent(streamingResponse, 'Gathering enhanced regulatory context...');
       
@@ -153,7 +149,6 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Step 5: Enhanced response generation with progressive delivery
       console.log('Step 5: Enhanced response generation');
-      updateStep('finalizing');
       updateStage('Generating high-quality response...');
       updateStreamingContent(streamingResponse, 'Generating comprehensive response...');
       
@@ -190,7 +185,6 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Enhanced completion sequence with proper state management
       console.log('Workflow completed successfully');
-      updateStep('reviewing');
       updateStage('Validating response quality...');
       
       // Brief validation phase

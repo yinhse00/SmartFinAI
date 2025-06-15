@@ -1,11 +1,12 @@
-
-import React from 'react';
-import { CardContent } from '@/components/ui/card';
-import ChatHistory from '../ChatHistory';
-import { Message } from '../ChatMessage';
-import { AlertCircle, WifiOff } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import InlineProcessingOverlay from '../InlineProcessingOverlay';
+import { AlertCircle, Wifi, WifiOff } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import ChatMessage, { Message } from '../ChatMessage';
+import ChatLoadingIndicator from '../ChatLoadingIndicator';
+import WorkflowIndicator from '../workflow/WorkflowIndicator';
+import { WorkflowPhase } from '../workflow/workflowConfig';
 
 interface ChatContentProps {
   messages: Message[];
@@ -14,7 +15,7 @@ interface ChatContentProps {
   translatingMessageIds?: string[];
   isOfflineMode?: boolean;
   onTryReconnect?: () => Promise<boolean>;
-  currentStep?: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+  currentStep?: WorkflowPhase;
   stepProgress?: string;
 }
 
@@ -25,50 +26,92 @@ const ChatContent: React.FC<ChatContentProps> = ({
   translatingMessageIds = [],
   isOfflineMode = false,
   onTryReconnect,
-  currentStep = 'preparing',
+  currentStep = WorkflowPhase.ANALYSIS,
   stepProgress = ''
 }) => {
-  return (
-    <CardContent className="flex-1 p-0 overflow-auto max-h-[calc(100vh-18rem)] md:max-h-[calc(100vh-15rem)] min-h-[500px] flex flex-col bg-gray-50 w-full">
-      {isOfflineMode && (
-        <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 m-4 p-3 rounded-md flex flex-col gap-2">
-          <div className="flex items-center gap-2">
-            <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
-              Operating in offline mode with limited functionality
-            </span>
-          </div>
-          {onTryReconnect && (
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="w-fit border-amber-300 dark:border-amber-700 bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/50" 
-              onClick={onTryReconnect}
-            >
-              Try reconnect to API
-            </Button>
-          )}
-        </div>
-      )}
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [isScrolledToBottom, setIsScrolledToBottom] = useState(true);
 
-      <ChatHistory 
-        messages={messages} 
-        isLoading={isLoading} 
-        onRetry={onRetry} 
-        translatingMessageIds={translatingMessageIds} 
-      />
-      
-      {/* Use our new InlineProcessingOverlay instead of ProcessingIndicator */}
-      {isLoading && (
-        <div className="px-4 pb-4">
-          <InlineProcessingOverlay
-            isVisible={isLoading}
-            currentStep={currentStep}
-            stepProgress={stepProgress}
+  // Function to scroll to the bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    setIsScrolledToBottom(true);
+  };
+
+  // Effect to scroll to bottom on new messages
+  useEffect(() => {
+    if (isLoading || isScrolledToBottom) {
+      scrollToBottom();
+    }
+  }, [messages, isLoading, isScrolledToBottom]);
+
+  // Handle scroll events to detect if user has scrolled up
+  const handleScroll = (event: React.SyntheticEvent<HTMLDivElement>) => {
+    const element = event.currentTarget;
+    const atBottom = element.scrollHeight - element.scrollTop === element.clientHeight;
+    setIsScrolledToBottom(atBottom);
+  };
+
+  // Reconnection handling
+  const handleReconnect = async () => {
+    if (onTryReconnect) {
+      const success = await onTryReconnect();
+      if (success) {
+        console.log('Reconnected successfully');
+      } else {
+        console.error('Failed to reconnect');
+      }
+    }
+  };
+  
+  return (
+    <ScrollArea className="flex-1 p-4" onScroll={handleScroll}>
+      <div className="space-y-4 pb-4">
+        {/* Offline mode indicator */}
+        {isOfflineMode && (
+          <div className="flex items-center justify-center p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+            <WifiOff className="h-4 w-4 text-amber-600 mr-2" />
+            <span className="text-sm text-amber-700 dark:text-amber-300 mr-3">
+              Offline Mode - Using local responses
+            </span>
+            {onTryReconnect && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleReconnect}
+                className="text-xs h-7 px-2"
+              >
+                <Wifi className="h-3 w-3 mr-1" />
+                Reconnect
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Messages */}
+        {messages.map((message) => (
+          <ChatMessage
+            key={message.id}
+            message={message}
+            onRetry={message.isError ? onRetry : undefined}
+            isTranslating={translatingMessageIds.includes(message.id)}
           />
-        </div>
-      )}
-    </CardContent>
+        ))}
+
+        {/* Loading indicator with workflow */}
+        {isLoading && (
+          <div className="space-y-3">
+            <WorkflowIndicator 
+              currentStep={currentStep}
+              stepProgress={stepProgress}
+            />
+            <ChatLoadingIndicator />
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+    </ScrollArea>
   );
 };
 

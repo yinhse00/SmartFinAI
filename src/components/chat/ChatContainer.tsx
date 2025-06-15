@@ -7,6 +7,7 @@ import ChatInput from './ChatInput';
 import { Message } from './ChatMessage';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useToast } from '@/hooks/use-toast';
+import { WorkflowPhase } from './workflow/workflowConfig';
 
 interface ChatContainerProps {
   messages: Message[];
@@ -25,7 +26,7 @@ interface ChatContainerProps {
   onFileRemove?: (index: number) => void;
   isOfflineMode?: boolean;
   onTryReconnect?: () => Promise<boolean>;
-  currentStep?: 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+  currentStep?: WorkflowPhase;
   stepProgress?: string;
 }
 
@@ -46,7 +47,7 @@ const ChatContainer: React.FC<ChatContainerProps> = ({
   onFileRemove,
   isOfflineMode = false,
   onTryReconnect,
-  currentStep = 'preparing',
+  currentStep = WorkflowPhase.ANALYSIS,
   stepProgress = ''
 }) => {
   // Debug log to track message status

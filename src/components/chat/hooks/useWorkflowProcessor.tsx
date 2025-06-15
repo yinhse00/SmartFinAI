@@ -5,11 +5,15 @@ import { step2ListingRules } from './useStep2ListingRules';
 import { step3TakeoversCode } from './useStep3TakeoversCode';
 import { step4Execution } from './useStep4Execution';
 import { step5Response } from './useStep5Response';
-import { WorkflowStep, WorkflowProcessorProps, Step1Result } from './workflow/types';
+import { WorkflowProcessorProps, Step1Result } from './workflow/types';
 import { useContextRetrieval } from './useContextRetrieval';
 import { useLanguageState } from './useLanguageState';
 import { useTranslationManager } from './useTranslationManager';
 import { mappingSpreadsheetService } from '@/services/regulatory/mappingSpreadsheetService';
+import { WorkflowPhase } from '../workflow/workflowConfig';
+
+// Update the local WorkflowStep type to use WorkflowPhase
+type WorkflowStep = WorkflowPhase | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
 
 /**
  * Hook for managing the workflow of processing and responding to queries
@@ -23,7 +27,7 @@ export const useWorkflowProcessor = ({
   setApiKeyDialogOpen
 }: WorkflowProcessorProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [currentStep, setCurrentStep] = useState<WorkflowStep>('initial');
+  const [currentStep, setCurrentStep] = useState<WorkflowStep>(WorkflowPhase.ANALYSIS);
   const [stepProgress, setStepProgress] = useState('');
   
   // Use enhanced context retrieval with parallel processing
@@ -42,7 +46,7 @@ export const useWorkflowProcessor = ({
     }
     
     setIsLoading(true);
-    setCurrentStep('initial');
+    setCurrentStep(WorkflowPhase.ANALYSIS);
     setLastQuery(query);
     
     try {
@@ -70,7 +74,7 @@ export const useWorkflowProcessor = ({
       setMessages([...updatedMessages, assistantMessage]);
       
       // Step 1: Enhanced Initial Processing with hybrid search
-      setCurrentStep('initial');
+      setCurrentStep(WorkflowPhase.ANALYSIS);
       const step1Result = await step1Initial({
         query,
         storeTranslation,
@@ -106,7 +110,7 @@ export const useWorkflowProcessor = ({
       }
 
       // For execution queries, we still want to use the execution step
-      let nextStep = 'response';
+      let nextStep: WorkflowStep = WorkflowPhase.RESPONSE_GENERATION;
       if (query.toLowerCase().includes('process') || 
           query.toLowerCase().includes('how to') || 
           query.toLowerCase().includes('steps') || 
@@ -125,7 +129,7 @@ export const useWorkflowProcessor = ({
       }
       
       // Step 5: Response Generation (always required)
-      setCurrentStep('response');
+      setCurrentStep(WorkflowPhase.RESPONSE_GENERATION);
       console.log('Starting step 5 with params:', params);
       const step5Result = await step5Response(
         params, 
@@ -219,7 +223,7 @@ export const useWorkflowProcessor = ({
         }
       }
       
-      setCurrentStep('complete');
+      setCurrentStep(WorkflowPhase.COMPLETE);
     } catch (error) {
       console.error('Workflow error:', error);
       

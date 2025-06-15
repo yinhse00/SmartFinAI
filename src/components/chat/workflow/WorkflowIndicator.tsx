@@ -1,56 +1,25 @@
 
-import { AlertCircle, BookOpen, FileText, CheckCircle2, BarChart2, Loader2 } from 'lucide-react';
+import { AlertCircle, Database, Zap, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-interface WorkflowStep {
-  id: string;
-  name: string;
-  description: string;
-  icon: React.ReactNode;
-}
+import { WorkflowPhase, getWorkflowStep } from './workflowConfig';
 
 interface WorkflowIndicatorProps {
-  currentStep: 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
+  currentStep: WorkflowPhase;
   stepProgress: string;
 }
 
 export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicatorProps) => {
-  // Define all workflow steps
-  const steps: WorkflowStep[] = [
-    {
-      id: 'initial',
-      name: 'Initial Analysis',
-      description: 'Analyzing and classifying your query',
-      icon: <AlertCircle className="h-4 w-4" />
-    },
-    {
-      id: 'listingRules',
-      name: 'Listing Rules',
-      description: 'Searching through Listing Rules',
-      icon: <BookOpen className="h-4 w-4" />
-    },
-    {
-      id: 'takeoversCode',
-      name: 'Takeovers Code',
-      description: 'Checking Takeovers Code regulations',
-      icon: <FileText className="h-4 w-4" />
-    },
-    {
-      id: 'execution',
-      name: 'Execution Guidance',
-      description: 'Finding relevant process documentation',
-      icon: <BarChart2 className="h-4 w-4" />
-    },
-    {
-      id: 'response',
-      name: 'Response Generation',
-      description: 'Compiling final answer',
-      icon: <CheckCircle2 className="h-4 w-4" />
-    }
+  // Get all workflow steps from configuration
+  const allSteps = [
+    WorkflowPhase.ANALYSIS,
+    WorkflowPhase.CONTEXT_GATHERING,
+    WorkflowPhase.INTELLIGENT_PROCESSING,
+    WorkflowPhase.RESPONSE_GENERATION,
+    WorkflowPhase.VALIDATION
   ];
 
   // Find current step index
-  const currentStepIndex = steps.findIndex(step => step.id === currentStep);
+  const currentStepIndex = allSteps.findIndex(step => step === currentStep);
   
   return (
     <div className="mb-4 pt-2">
@@ -58,15 +27,30 @@ export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicat
         <span className="text-xs text-gray-500 dark:text-gray-400">{stepProgress}</span>
       </div>
       
-      <div className="flex justify-between items-center max-w-xs mx-auto">
-        {steps.map((step, index) => {
+      <div className="flex justify-between items-center max-w-lg mx-auto">
+        {allSteps.map((stepPhase, index) => {
+          const stepConfig = getWorkflowStep(stepPhase);
+          if (!stepConfig) return null;
+
           // Determine if this step is active, completed, or upcoming
-          const isActive = step.id === currentStep;
+          const isActive = stepPhase === currentStep;
           const isCompleted = index < currentStepIndex;
           const isUpcoming = index > currentStepIndex;
           
+          // Get appropriate icon
+          const getIcon = () => {
+            switch (stepConfig.icon) {
+              case 'brain': return <AlertCircle className="h-3 w-3" />;
+              case 'database': return <Database className="h-3 w-3" />;
+              case 'zap': return <Zap className="h-3 w-3" />;
+              case 'message-square': return <MessageSquare className="h-3 w-3" />;
+              case 'check-circle': return <CheckCircle2 className="h-3 w-3" />;
+              default: return <AlertCircle className="h-3 w-3" />;
+            }
+          };
+          
           return (
-            <div key={step.id} className="flex flex-col items-center">
+            <div key={stepPhase} className="flex flex-col items-center">
               {/* Step indicator */}
               <div 
                 className={cn(
@@ -78,12 +62,12 @@ export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicat
               >
                 {isActive && <Loader2 className="h-3 w-3 animate-spin" />}
                 {isCompleted && <CheckCircle2 className="h-3 w-3" />}
-                {isUpcoming && step.icon}
+                {isUpcoming && getIcon()}
               </div>
               
               {/* Step name - only show for active step */}
               {isActive && (
-                <span className="text-xs mt-1 text-blue-500 font-medium">{step.name}</span>
+                <span className="text-xs mt-1 text-blue-500 font-medium">{stepConfig.name}</span>
               )}
             </div>
           );
