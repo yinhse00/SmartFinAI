@@ -1,3 +1,4 @@
+
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
@@ -51,7 +52,7 @@ export const responseFormatter = {
     console.log('Regulatory references enhanced with links');
     
     // Enhanced bold formatting for key regulatory concepts
-    formattedText = this.enhanceWithBoldFormatting(formattedText);
+    formattedText = responseFormatter.enhanceWithBoldFormatting(formattedText);
     
     // Only apply minimal formatting if no HTML is present
     const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
