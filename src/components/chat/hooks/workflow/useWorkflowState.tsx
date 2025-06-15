@@ -1,55 +1,86 @@
+import { useState, useEffect, useCallback } from 'react';
+import { workflowStateManager, WorkflowState } from '../../workflow/workflowStateManager';
+import { workflowMessageManager, MessageContext } from '../../workflow/workflowMessageManager';
+import { WorkflowPhase, ProcessingState } from '../../workflow/workflowConfig';
 
-import { useState } from 'react';
-
-export type WorkflowCurrentStep = 'preparing' | 'processing' | 'finalizing' | 'reviewing';
+export type WorkflowCurrentStep = WorkflowPhase;
 
 export const useWorkflowState = () => {
-  const [isLoading, setIsLoading] = useState(false);
+  const [workflowState, setWorkflowState] = useState<WorkflowState>(
+    workflowStateManager.getCurrentState()
+  );
   const [processingStage, setProcessingStage] = useState('');
-  const [currentStep, setCurrentStep] = useState<WorkflowCurrentStep>('preparing');
 
-  const startWorkflow = () => {
-    setIsLoading(true);
-    setCurrentStep('preparing');
+  // Subscribe to workflow state changes
+  useEffect(() => {
+    const unsubscribe = workflowStateManager.subscribe((state) => {
+      setWorkflowState(state);
+    });
+
+    return unsubscribe;
+  }, []);
+
+  const startWorkflow = useCallback(() => {
+    workflowStateManager.startWorkflow();
+    workflowMessageManager.clearHistory();
     setProcessingStage('');
-  };
+  }, []);
 
-  const updateStage = (stage: string) => {
+  const updateStage = useCallback((stage: string) => {
     setProcessingStage(stage);
-  };
+    workflowStateManager.updateFromStageMessage(stage);
+  }, []);
 
-  const updateStep = (step: WorkflowCurrentStep) => {
-    setCurrentStep(step);
-  };
+  const updateStep = useCallback((step: WorkflowCurrentStep) => {
+    // This is now handled automatically by the state manager
+    // but we keep the interface for compatibility
+    console.log('Step update requested:', step);
+  }, []);
 
-  const completeWorkflow = () => {
-    setCurrentStep('reviewing');
-    setProcessingStage('Response complete - High quality validated');
+  const completeWorkflow = useCallback(() => {
+    workflowStateManager.completeWorkflow();
     
     setTimeout(() => {
       setProcessingStage('Complete');
       setTimeout(() => {
-        setIsLoading(false);
         setProcessingStage('');
-        setCurrentStep('preparing');
       }, 1500);
     }, 1000);
-  };
+  }, []);
 
-  const handleError = () => {
-    setIsLoading(false);
+  const handleError = useCallback(() => {
+    workflowStateManager.updateProcessingState(ProcessingState.PREPARING);
     setProcessingStage('');
-    setCurrentStep('preparing');
-  };
+  }, []);
+
+  // Generate dynamic message for current state
+  const getCurrentMessage = useCallback((isChinese = false): string => {
+    const context: MessageContext = {
+      isOptimized: workflowState.isOptimized,
+      isChinese,
+      elapsedTime: workflowState.elapsedTime
+    };
+
+    return workflowMessageManager.getDynamicMessage(
+      workflowState.currentPhase,
+      context,
+      processingStage
+    );
+  }, [workflowState, processingStage]);
 
   return {
-    isLoading,
+    isLoading: workflowState.currentPhase !== WorkflowPhase.COMPLETE && workflowState.progress > 0,
     processingStage,
-    currentStep,
+    currentStep: workflowState.currentPhase,
+    progress: workflowState.progress,
+    isOptimized: workflowState.isOptimized,
+    elapsedTime: workflowState.elapsedTime,
+    estimatedTimeRemaining: workflowState.estimatedTimeRemaining,
     startWorkflow,
     updateStage,
     updateStep,
     completeWorkflow,
-    handleError
+    handleError,
+    getCurrentMessage
   };
 };
