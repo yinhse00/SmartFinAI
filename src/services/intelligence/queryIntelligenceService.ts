@@ -1,0 +1,142 @@
+
+import { grokApiService } from '../api/grokApiService';
+
+export interface QueryAnalysis {
+  categories: string[];
+  targetParty: 'listed_companies' | 'new_listing_applicants' | 'both';
+  intent: 'faq' | 'rules' | 'process' | 'costs' | 'timetable' | 'documentation' | 'general';
+  relevantTables: string[];
+  keywords: string[];
+  confidence: number;
+}
+
+/**
+ * Service for analyzing queries using Grok 3 to determine optimal search strategy
+ */
+export const queryIntelligenceService = {
+  /**
+   * Analyze a query using Grok 3 to determine search strategy
+   */
+  analyzeQuery: async (query: string): Promise<QueryAnalysis> => {
+    try {
+      console.log('Analyzing query with Grok 3:', query);
+      
+      const systemPrompt = `You are a Hong Kong financial regulatory query analyzer. Analyze the user query and return a JSON object with the following structure:
+
+{
+  "categories": ["rules", "provision", "index", "timetable", "documentation", "estimated_expenses", "checklist"],
+  "targetParty": "listed_companies" | "new_listing_applicants" | "both",
+  "intent": "faq" | "rules" | "process" | "costs" | "timetable" | "documentation" | "general",
+  "relevantTables": ["table_names_from_search_index"],
+  "keywords": ["extracted_keywords"],
+  "confidence": 0.8
+}
+
+Available table indexes from search_index: listingrule_new_faq, listingrule_listed_faq, listingrule_new_gl, listingrule_new_ld, takeovers_documents, execution_lr_documentations, listingrules_new_timetable, etc.
+
+Target party detection:
+- "new_listing_applicants" for IPO, new listing, listing application queries
+- "listed_companies" for continuing obligations, listed issuer queries  
+- "both" when unclear or applies to both
+
+Return ONLY the JSON object, no other text.`;
+
+      const response = await grokApiService.callChatCompletions({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Analyze this query: ${query}` }
+        ],
+        model: 'grok-3-beta',
+        temperature: 0.2,
+        max_tokens: 800,
+        metadata: { processingStage: 'query_analysis' }
+      });
+
+      const content = response?.choices?.[0]?.message?.content || '';
+      let analysis: QueryAnalysis;
+
+      try {
+        // Extract JSON from response
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
+        analysis = JSON.parse(jsonStr);
+        
+        // Validate and provide defaults
+        analysis = {
+          categories: analysis.categories || ['general'],
+          targetParty: analysis.targetParty || 'both',
+          intent: analysis.intent || 'general',
+          relevantTables: analysis.relevantTables || [],
+          keywords: analysis.keywords || [],
+          confidence: analysis.confidence || 0.7
+        };
+        
+      } catch (parseError) {
+        console.error('Error parsing query analysis:', parseError);
+        // Fallback analysis based on simple keyword detection
+        analysis = queryIntelligenceService.createFallbackAnalysis(query);
+      }
+
+      console.log('Query analysis result:', analysis);
+      return analysis;
+      
+    } catch (error) {
+      console.error('Error in query analysis:', error);
+      return queryIntelligenceService.createFallbackAnalysis(query);
+    }
+  },
+
+  /**
+   * Create fallback analysis when Grok analysis fails
+   */
+  createFallbackAnalysis: (query: string): QueryAnalysis => {
+    const lowerQuery = query.toLowerCase();
+    
+    // Detect target party
+    let targetParty: 'listed_companies' | 'new_listing_applicants' | 'both' = 'both';
+    if (lowerQuery.includes('new listing') || lowerQuery.includes('ipo') || lowerQuery.includes('listing application')) {
+      targetParty = 'new_listing_applicants';
+    } else if (lowerQuery.includes('listed issuer') || lowerQuery.includes('continuing obligation')) {
+      targetParty = 'listed_companies';
+    }
+    
+    // Detect intent
+    let intent: QueryAnalysis['intent'] = 'general';
+    if (lowerQuery.includes('faq') || lowerQuery.includes('question')) {
+      intent = 'faq';
+    } else if (lowerQuery.includes('cost') || lowerQuery.includes('fee')) {
+      intent = 'costs';
+    } else if (lowerQuery.includes('timetable') || lowerQuery.includes('timeline')) {
+      intent = 'timetable';
+    } else if (lowerQuery.includes('process') || lowerQuery.includes('procedure')) {
+      intent = 'process';
+    } else if (lowerQuery.includes('document') || lowerQuery.includes('form')) {
+      intent = 'documentation';
+    }
+    
+    // Map to relevant tables
+    const relevantTables: string[] = [];
+    if (intent === 'faq') {
+      if (targetParty === 'new_listing_applicants') {
+        relevantTables.push('listingrule_new_faq');
+      } else {
+        relevantTables.push('listingrule_listed_faq');
+      }
+    }
+    if (intent === 'timetable') {
+      relevantTables.push('listingrules_new_timetable');
+    }
+    if (intent === 'documentation') {
+      relevantTables.push('execution_lr_documentations');
+    }
+    
+    return {
+      categories: [intent === 'general' ? 'rules' : intent],
+      targetParty,
+      intent,
+      relevantTables,
+      keywords: query.split(' ').filter(word => word.length > 2),
+      confidence: 0.6
+    };
+  }
+};

@@ -25,43 +25,55 @@ export interface Step1Result {
   error?: any;
 }
 
+// Enhanced interfaces for the intelligent search system
+export interface SearchMetadata {
+  searchStrategy: string;
+  queryAnalysis?: any;
+  databaseResultsCount?: number;
+  searchTime?: number;
+  executionSpecific?: boolean;
+}
+
+// Enhanced Step result interfaces with search metadata
 export interface Step2Result {
   shouldContinue: boolean;
-  nextStep: WorkflowStep;
+  nextStep: string;
   query: string;
   listingRulesContext?: string;
   regulatoryContext?: string;
-  takeoversCodeRelated?: boolean;
   executionRequired?: boolean;
+  takeoversCodeRelated?: boolean;
   listingRulesSearchNegative?: boolean;
-  skipSequentialSearches: boolean;
-  isRegulatoryRelated: boolean;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
   error?: any;
+  searchMetadata?: SearchMetadata;
 }
 
 export interface Step3Result {
   shouldContinue: boolean;
-  nextStep: WorkflowStep;
+  nextStep: string;
   query: string;
   takeoversCodeContext?: string;
   regulatoryContext?: string;
   executionRequired?: boolean;
   takeoversCodeSearchNegative?: boolean;
-  skipSequentialSearches: boolean;
-  isRegulatoryRelated: boolean;
+  skipSequentialSearches?: boolean;
+  isRegulatoryRelated?: boolean;
   error?: any;
+  searchMetadata?: SearchMetadata;
 }
 
 export interface Step4Result {
   shouldContinue: boolean;
-  nextStep: 'response' | string;
+  nextStep: string;
   query: string;
-  executionContext?: string;
-  error?: any;
+  executionGuidance?: string;
   regulatoryContext?: string;
-  processType?: string;
-  guidanceContext?: string;
-  sourceMaterials?: string[];
+  executionRequired?: boolean;
+  hasEnhancedGuidance?: boolean;
   skipSequentialSearches?: boolean;
   isRegulatoryRelated?: boolean;
+  error?: any;
+  searchMetadata?: SearchMetadata;
 }
