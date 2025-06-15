@@ -9,7 +9,7 @@ const SupportPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Help & Support</CardTitle>
-          </Header>
+          </CardHeader>
           <CardContent>
             <p>Find help and support here.</p>
           </CardContent>
