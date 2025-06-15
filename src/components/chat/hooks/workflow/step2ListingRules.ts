@@ -1,4 +1,3 @@
-
 import { grokService } from '@/services/grokService';
 import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -94,7 +93,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         isRegulatoryRelated: true,
         searchMetadata: {
           searchStrategy: 'no_results',
-          queryAnalysis,
+          queryAnalysis: effectiveAnalysis,
           databaseResultsCount: 0,
           searchTime: searchResults.executionTime
         }
@@ -190,4 +189,3 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     };
   }
 };
-
