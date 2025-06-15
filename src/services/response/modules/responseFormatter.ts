@@ -1,14 +1,16 @@
 
+
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
 
 /**
- * Service for formatting final responses with simplified, clean formatting
+ * Service for formatting final responses with clean formatting and database-first priority
  */
 export const responseFormatter = {
   /**
    * Format the final response with minimal, clean formatting
+   * REMOVED: All hardcoded text corrections to respect database content
    */
   formatResponse: (
     text: string, 
@@ -24,7 +26,7 @@ export const responseFormatter = {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Start with the original text
+    // Start with the original text - NO hardcoded modifications
     let formattedText = text;
     
     // ONLY apply clickable links to regulatory references - no other formatting
@@ -53,12 +55,9 @@ export const responseFormatter = {
       }).join('\n\n');
     }
     
-    // Correct the profit test requirements for HKEX listing
-    formattedText = formattedText
-      .replace(/Profit attributable to shareholders of at least HK\$50 million in the most recent financial year/g, 
-               'Profit attributable to shareholders of at least HK$35 million in the most recent financial year')
-      .replace(/Aggregate profit of at least HK\$30 million for the two preceding financial years/g, 
-               'Aggregate profit of at least HK$45 million for the two preceding financial years');
+    // REMOVED: All hardcoded text corrections and replacements
+    // This ensures database content is never overridden by hardcoded "fixes"
+    // Database content is now the authoritative source and takes complete precedence
     
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
@@ -77,7 +76,7 @@ export const responseFormatter = {
       completenessOverride = true;
     }
     
-    console.log('Response formatting complete - clean layout restored');
+    console.log('Response formatting complete - database-first approach maintained');
     
     return {
       text: formattedText,
@@ -101,3 +100,4 @@ export const responseFormatter = {
     };
   }
 };
+

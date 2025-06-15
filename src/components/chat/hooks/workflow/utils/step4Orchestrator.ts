@@ -1,31 +1,32 @@
 
+
 import { grokService } from '@/services/grokService';
 import { Step4Result } from '../types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 4 Orchestrator with Database-First Execution Guidance
- * - Prioritizes Supabase database execution content over Grok's general knowledge
- * - Uses database-exclusive strategy for authoritative execution procedures
- * - Combines process guidance with regulatory timetables and documentation
+ * Enhanced Step 4 Orchestrator with Pure Database-First Execution Guidance
+ * - Prioritizes Supabase database execution content with complete precedence
+ * - Uses database-exclusive strategy when any database content found
+ * - Eliminates hardcoded content interference
  */
 export const orchestrateStep4 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step4Result> => {
-  setStepProgress('Analyzing execution requirements with database priority...');
+  setStepProgress('Analyzing execution requirements with pure database priority...');
   
   try {
     let executionContext = '';
-    let searchStrategy = 'grok_only';
+    let searchStrategy = 'no_results';
     let databaseResultsCount = 0;
     let searchTime = 0;
-    let databaseHasHighConfidence = false;
+    let databaseHasContent = false;
     
     // Phase 1: Leverage existing query analysis
     const queryAnalysis = params.searchMetadata?.queryAnalysis;
     
     // Phase 2: Database-First Search for execution-specific content
     if (queryAnalysis) {
-      setStepProgress('Searching execution guidance and timetables in database...');
+      setStepProgress('Searching execution guidance database with complete priority...');
       
       // Target execution-specific tables
       const executionAnalysis = {
@@ -49,35 +50,22 @@ export const orchestrateStep4 = async (params: any, setStepProgress: (progress: 
       searchTime = searchResults.executionTime;
       
       if (searchResults.totalResults > 0) {
-        // Check for high-confidence execution matches
-        const hasSpecificMatches = searchResults.searchResults.some(result => 
-          result.relevanceScore > 0.6 || 
-          result.results.some(item => 
-            item.title?.toLowerCase().includes('execution') ||
-            item.title?.toLowerCase().includes('timetable') ||
-            item.title?.toLowerCase().includes('process') ||
-            item.particulars?.toLowerCase().includes('procedure') ||
-            item.particulars?.toLowerCase().includes('timeline') ||
-            item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 15))
-          )
-        );
-        
-        if (hasSpecificMatches) {
-          databaseHasHighConfidence = true;
-          setStepProgress('Found authoritative execution guidance in database');
-        }
+        // ANY database results means database-exclusive approach
+        databaseHasContent = true;
+        setStepProgress('Found authoritative execution guidance in database');
         
         const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
         executionContext = `--- EXECUTION GUIDANCE DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
-        searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
+        searchStrategy = 'database_exclusive';
         
-        setStepProgress(`Found ${searchResults.totalResults} execution guidance items from database`);
+        setStepProgress(`Using ${searchResults.totalResults} execution guidance items from database exclusively`);
+        console.log('Database-exclusive strategy activated for execution - bypassing all hardcoded content');
       }
     }
     
-    // Phase 3: Conditional Grok Enhancement (only if not database-exclusive)
-    if (!databaseHasHighConfidence) {
-      setStepProgress('Enhancing with additional execution expertise...');
+    // Phase 3: Conditional Grok Enhancement (ONLY if no database content exists)
+    if (!databaseHasContent) {
+      setStepProgress('No database content found - using supplementary execution context...');
       
       const systemPrompt = `You are a Hong Kong financial regulatory expert specializing in execution processes, timetables, and business day calculations.
 
@@ -97,7 +85,8 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
           metadata: { 
             specializedQuery: 'execution',
             enhancedProcessing: true,
-            businessDayCalculations: true
+            businessDayCalculations: true,
+            supplementaryOnly: true
           } 
         }
       );
@@ -105,18 +94,12 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
       const grokExecutionContext = safelyExtractText(grokResponse);
       
       if (grokExecutionContext && grokExecutionContext.trim() !== '') {
-        if (executionContext) {
-          // Database results first, then complementary Grok content
-          executionContext += '\n\n--- ADDITIONAL EXECUTION CONTEXT ---\n\n' + grokExecutionContext;
-          searchStrategy = 'database_primary';
-        } else {
-          executionContext = grokExecutionContext;
-          searchStrategy = 'grok_primary';
-        }
+        executionContext = grokExecutionContext;
+        searchStrategy = 'grok_supplementary';
       }
     } else {
-      // Database-exclusive strategy - skip Grok to prevent conflicts
-      console.log('Using database-exclusive strategy for execution - preventing potential conflicts');
+      // Database content found - maintain database-exclusive approach
+      console.log('Database content available - maintaining database-exclusive approach for execution');
     }
     
     // Phase 4: Enhance with existing regulatory context (database context first)
@@ -151,7 +134,8 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
           queryAnalysis,
           databaseResultsCount,
           searchTime,
-          executionSpecific: true
+          executionSpecific: true,
+          databaseExclusive: databaseHasContent
         }
       };
     } else {
@@ -196,3 +180,4 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
     };
   }
 };
+

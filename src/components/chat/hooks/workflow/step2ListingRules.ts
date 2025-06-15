@@ -1,4 +1,5 @@
 
+
 import { grokService } from '@/services/grokService';
 import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -6,85 +7,70 @@ import { queryIntelligenceService } from '@/services/intelligence/queryIntellige
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 2: Database-First Listing Rules Search using Grok 3 + Database
- * - Prioritizes Supabase database results over Grok's AI knowledge
- * - Uses database-exclusive strategy when high-confidence matches found
- * - Implements conflict detection and source attribution
+ * Enhanced Step 2: Pure Database-First Listing Rules Search
+ * - Prioritizes Supabase database results with complete precedence
+ * - Uses database-exclusive strategy when any database matches found
+ * - Eliminates hardcoded content interference
  */
 export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
-  setStepProgress('Analyzing query with Grok 3 intelligence...');
+  setStepProgress('Analyzing query with database-first intelligence...');
   
   try {
-    // Phase 1: Grok 3 Query Analysis
+    // Phase 1: Query Analysis
     const queryAnalysis = await queryIntelligenceService.analyzeQuery(params.query);
-    console.log('Step 2 - Query analysis:', queryAnalysis);
+    console.log('Step 2 - Database-first query analysis:', queryAnalysis);
     
-    setStepProgress('Executing parallel database searches...');
+    setStepProgress('Executing priority database searches...');
     
-    // Phase 2: Parallel Database Searches (Priority Search)
+    // Phase 2: Pure Database Search (Authority Source)
     const searchResults = await searchIndexRoutingService.executeParallelSearches(
       params.query, 
       queryAnalysis
     );
     
-    // Phase 3: Database-First Context Processing
+    // Phase 3: Database-First Context Processing with Complete Priority
     let enhancedContext = '';
-    let searchStrategy = 'grok_only';
-    let databaseHasHighConfidence = false;
+    let searchStrategy = 'no_results';
+    let databaseHasContent = false;
     
     if (searchResults.totalResults > 0) {
-      // Check for high-confidence database matches
-      const hasSpecificMatches = searchResults.searchResults.some(result => 
-        result.relevanceScore > 0.7 || 
-        result.results.some(item => 
-          item.reference_no || item.reference_nos || item.faqtopic || 
-          item.title?.toLowerCase().includes('faq') ||
-          item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 20))
-        )
-      );
-      
-      if (hasSpecificMatches) {
-        databaseHasHighConfidence = true;
-        setStepProgress('Found authoritative database matches - using database-exclusive strategy');
-      }
+      // ANY database results means we use database-exclusive approach
+      databaseHasContent = true;
+      setStepProgress('Found authoritative database content - using database-exclusive strategy');
       
       // Format database results with clear source attribution
       const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
       enhancedContext = `--- HKEX DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
-      searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
+      searchStrategy = 'database_exclusive';
       
-      setStepProgress(`Found ${searchResults.totalResults} authoritative database results`);
+      setStepProgress(`Using ${searchResults.totalResults} authoritative database results exclusively`);
+      
+      console.log('Database-exclusive strategy activated - bypassing all hardcoded content');
     }
     
-    // Phase 4: Conditional Grok Enhancement (only if not database-exclusive)
-    if (!databaseHasHighConfidence) {
-      setStepProgress('Enhancing with additional regulatory context...');
+    // Phase 4: Conditional Grok Enhancement (ONLY if no database content exists)
+    if (!databaseHasContent) {
+      setStepProgress('No database content found - using supplementary regulatory context...');
       
       const grokResponse = await grokService.getRegulatoryContext(
         `HKEX Listing Rules regarding: ${params.query}`,
-        { metadata: { fastResponse: true, searchStrategy: 'database_supplementary' } }
+        { metadata: { fastResponse: true, searchStrategy: 'supplementary_only' } }
       );
       
       const grokContext = safelyExtractText(grokResponse);
       
       if (grokContext && grokContext.trim() !== '') {
-        if (enhancedContext) {
-          // Database results first, then complementary Grok content
-          enhancedContext += '\n\n--- ADDITIONAL REGULATORY CONTEXT ---\n\n' + grokContext;
-          searchStrategy = 'database_primary';
-        } else {
-          enhancedContext = grokContext;
-          searchStrategy = 'grok_primary';
-        }
+        enhancedContext = grokContext;
+        searchStrategy = 'grok_supplementary';
       }
     } else {
-      // Database-exclusive strategy - skip Grok to prevent conflicts
-      console.log('Using database-exclusive strategy - skipping Grok enhancement to prevent conflicts');
+      // Database content found - completely skip Grok to maintain data integrity
+      console.log('Database content available - maintaining database-exclusive approach');
     }
     
     // Phase 5: Handle empty results
     if (!enhancedContext || enhancedContext.trim() === '') {
-      setStepProgress('No specific Listing Rules found');
+      setStepProgress('No authoritative content found');
       return {
         shouldContinue: true,
         nextStep: 'response',
@@ -124,7 +110,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           searchStrategy,
           queryAnalysis,
           databaseResultsCount: searchResults.totalResults,
-          searchTime: searchResults.executionTime
+          searchTime: searchResults.executionTime,
+          databaseExclusive: databaseHasContent
         }
       };
     }
@@ -148,7 +135,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
           searchStrategy,
           queryAnalysis,
           databaseResultsCount: searchResults.totalResults,
-          searchTime: searchResults.executionTime
+          searchTime: searchResults.executionTime,
+          databaseExclusive: databaseHasContent
         }
       };
     }
@@ -167,7 +155,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         searchStrategy,
         queryAnalysis,
         databaseResultsCount: searchResults.totalResults,
-        searchTime: searchResults.executionTime
+        searchTime: searchResults.executionTime,
+        databaseExclusive: databaseHasContent
       }
     };
     
@@ -187,3 +176,4 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     };
   }
 };
+

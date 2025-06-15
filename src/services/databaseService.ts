@@ -13,10 +13,11 @@ export { searchService } from './database/searchService';
 // Re-export utilities
 export { determineCategory } from './database/categoryUtils';
 
-// Re-export initialization
+// Re-export initialization function for manual use only
 import { initializeSampleData } from './database/sampleData';
 export { initializeSampleData };
 
-// Initialize sample data when importing this file
-// This will now check if data exists in Supabase first
-initializeSampleData();
+// REMOVED: Automatic sample data initialization to prevent hardcoded data contamination
+// The system now relies purely on existing Supabase data without hardcoded interference
+console.log('Database service initialized - no automatic sample data population');
+

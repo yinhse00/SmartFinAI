@@ -1,4 +1,5 @@
 
+
 import { grokService } from '@/services/grokService';
 import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
@@ -6,20 +7,20 @@ import { queryIntelligenceService } from '@/services/intelligence/queryIntellige
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 3: Database-First Takeovers Code Search
- * - Prioritizes Supabase database results over Grok's AI knowledge
- * - Uses targeted database searches for takeovers-specific content
- * - Implements database-exclusive strategy for authoritative answers
+ * Enhanced Step 3: Pure Database-First Takeovers Code Search
+ * - Prioritizes Supabase database results with complete precedence
+ * - Uses database-exclusive strategy when any database content found
+ * - Eliminates hardcoded content interference
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Takeovers Code information with database-first approach...');
+  setStepProgress('Searching Takeovers Code with pure database-first approach...');
   
   try {
     let enhancedContext = '';
-    let searchStrategy = 'grok_only';
+    let searchStrategy = 'no_results';
     let databaseResultsCount = 0;
     let searchTime = 0;
-    let databaseHasHighConfidence = false;
+    let databaseHasContent = false;
     
     // Phase 1: Leverage existing analysis or create new one
     const hasStep2Analysis = params.searchMetadata?.queryAnalysis;
@@ -37,7 +38,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         params.query.toLowerCase().includes('takeover') ||
         params.query.toLowerCase().includes('general offer')) {
       
-      setStepProgress('Searching takeovers database with priority...');
+      setStepProgress('Searching takeovers database with complete priority...');
       
       // Focus on takeovers-specific tables
       const takeoversAnalysis = {
@@ -54,52 +55,36 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       searchTime = searchResults.executionTime;
       
       if (searchResults.totalResults > 0) {
-        // Check for high-confidence database matches
-        const hasSpecificMatches = searchResults.searchResults.some(result => 
-          result.relevanceScore > 0.7 || 
-          result.results.some(item => 
-            item.reference_no || item.reference_nos ||
-            item.title?.toLowerCase().includes('takeover') ||
-            item.particulars?.toLowerCase().includes('general offer') ||
-            item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 20))
-          )
-        );
-        
-        if (hasSpecificMatches) {
-          databaseHasHighConfidence = true;
-          setStepProgress('Found authoritative takeovers database matches');
-        }
+        // ANY database results means database-exclusive approach
+        databaseHasContent = true;
+        setStepProgress('Found authoritative takeovers database content');
         
         const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
         enhancedContext = `--- TAKEOVERS CODE DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
-        searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
+        searchStrategy = 'database_exclusive';
+        
+        console.log('Database-exclusive strategy activated for takeovers - bypassing all hardcoded content');
       }
     }
     
-    // Phase 3: Conditional Grok Enhancement (only if not database-exclusive)
-    if (!databaseHasHighConfidence) {
-      setStepProgress('Enhancing with additional takeovers expertise...');
+    // Phase 3: Conditional Grok Enhancement (ONLY if no database content exists)
+    if (!databaseHasContent) {
+      setStepProgress('No database content found - using supplementary takeovers context...');
       
       const grokResponse = await grokService.getRegulatoryContext(
         `Hong Kong Takeovers Code regarding: ${params.query}`,
-        { metadata: { specializedQuery: 'takeovers', fastResponse: true } }
+        { metadata: { specializedQuery: 'takeovers', fastResponse: true, supplementaryOnly: true } }
       );
       
       const takeoversCodeContext = safelyExtractText(grokResponse);
       
       if (takeoversCodeContext && takeoversCodeContext.trim() !== '') {
-        if (enhancedContext) {
-          // Database results first, then complementary Grok content
-          enhancedContext += '\n\n--- ADDITIONAL TAKEOVERS CONTEXT ---\n\n' + takeoversCodeContext;
-          searchStrategy = 'database_primary';
-        } else {
-          enhancedContext = takeoversCodeContext;
-          searchStrategy = 'grok_primary';
-        }
+        enhancedContext = takeoversCodeContext;
+        searchStrategy = 'grok_supplementary';
       }
     } else {
-      // Database-exclusive strategy - skip Grok to prevent conflicts
-      console.log('Using database-exclusive strategy for takeovers - preventing potential conflicts');
+      // Database content found - maintain database-exclusive approach
+      console.log('Database content available - maintaining database-exclusive approach for takeovers');
     }
     
     const searchPositive = enhancedContext && enhancedContext.trim() !== '';
@@ -135,7 +120,8 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
             searchStrategy,
             queryAnalysis,
             databaseResultsCount,
-            searchTime
+            searchTime,
+            databaseExclusive: databaseHasContent
           }
         };
       }
@@ -152,11 +138,12 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
           searchStrategy,
           queryAnalysis,
           databaseResultsCount,
-          searchTime
+          searchTime,
+          databaseExclusive: databaseHasContent
         }
       };
     } else {
-      setStepProgress('No specific Takeovers Code found');
+      setStepProgress('No authoritative Takeovers Code content found');
       
       return {
         shouldContinue: true,
@@ -189,3 +176,4 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     };
   }
 };
+
