@@ -1,20 +1,6 @@
 
 import { supabase } from '@/integrations/supabase/client';
 
-// A list of known, valid tables in the database. This acts as an allowlist.
-const KNOWN_VALID_TABLES = [
-  'listingrule_new_faq',
-  'listingrule_listed_faq',
-  'listingrule_new_gl',
-  'listingrule_new_ld',
-  'announcement_pre_vetting_requirements',
-  'mb_listingrule_documents',
-  'regulatory_categories',
-  'regulatory_provisions',
-  'rule_keywords',
-  'search_index',
-];
-
 export interface ValidatedTableInfo {
   previews: Record<string, string>;
   validatedTableNames: string[];
@@ -25,12 +11,29 @@ export interface ValidatedTableInfo {
  */
 export const tableDiscoveryService = {
   /**
-   * Fetches tables listed in the search_index, validates them against a known list,
+   * Fetches tables listed in the search_index, validates them against the actual database schema,
    * and returns content previews for the valid tables.
    */
   getValidatedTablesAndPreviews: async (): Promise<ValidatedTableInfo> => {
-    console.log('Starting table discovery and validation...');
+    console.log('Starting dynamic table discovery and validation...');
 
+    // Step 1: Fetch actual table names from the database schema using the new RPC function.
+    const { data: dbTables, error: dbError } = await supabase.rpc('get_public_tables');
+
+    if (dbError) {
+      console.error('Error fetching public tables from database schema:', dbError);
+      return { previews: {}, validatedTableNames: [] };
+    }
+
+    if (!dbTables || dbTables.length === 0) {
+      console.warn('No public tables found in the database.');
+      return { previews: {}, validatedTableNames: [] };
+    }
+
+    const knownValidTables = dbTables.map((t: { table_name: string }) => t.table_name);
+    console.log('Dynamically discovered database tables:', knownValidTables);
+
+    // Step 2: Fetch tables listed in the search_index for cross-referencing.
     const { data, error } = await supabase
       .from('search_index')
       .select('tableindex, particulars')
@@ -45,17 +48,17 @@ export const tableDiscoveryService = {
       return { previews: {}, validatedTableNames: [] };
     }
 
+    // Step 3: Validate and correct table names from search_index against the dynamic list.
     const indexedTables = [...new Set(data.map(i => i.tableindex).filter(Boolean) as string[])];
     const validatedTableNames = new Set<string>();
     const mismatches: { indexed: string; corrected: string | null }[] = [];
 
-    // Validate and correct table names
     indexedTables.forEach(indexedTable => {
-      if (KNOWN_VALID_TABLES.includes(indexedTable)) {
+      if (knownValidTables.includes(indexedTable)) {
         validatedTableNames.add(indexedTable);
       } else {
         // Attempt to correct common mismatches (e.g., singular vs. plural)
-        const corrected = KNOWN_VALID_TABLES.find(
+        const corrected = knownValidTables.find(
           validTable => validTable.startsWith(indexedTable) || indexedTable.startsWith(validTable)
         );
         if (corrected) {
@@ -77,11 +80,17 @@ export const tableDiscoveryService = {
     // Aggregate particulars for valid tables only
     const previews = data.reduce((acc, row) => {
       if (row.tableindex && row.particulars && finalTableList.includes(row.tableindex)) {
-        if (!acc[row.tableindex]) {
-          acc[row.tableindex] = '';
-        }
-        if (acc[row.tableindex].length < 1500) { // Increased limit for better context
-          acc[row.tableindex] += row.particulars + ' | ';
+        const correctedTable = validatedTableNames.has(row.tableindex) 
+          ? row.tableindex 
+          : (mismatches.find(m => m.indexed === row.tableindex)?.corrected || row.tableindex);
+        
+        if (finalTableList.includes(correctedTable)) {
+            if (!acc[correctedTable]) {
+              acc[correctedTable] = '';
+            }
+            if (acc[correctedTable].length < 1500) { // Increased limit for better context
+              acc[correctedTable] += row.particulars + ' | ';
+            }
         }
       }
       return acc;
