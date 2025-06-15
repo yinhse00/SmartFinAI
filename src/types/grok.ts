@@ -37,5 +37,10 @@ export interface GrokResponse {
     };
     responseWasTruncated?: boolean;
     isOfflineMode?: boolean;
+    databaseAccuracy?: {
+      isAccurate: boolean;
+      correctionsMade: boolean;
+      preservationScore: number;
+    };
   };
 }
