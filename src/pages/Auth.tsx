@@ -1,7 +1,6 @@
-
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -17,9 +16,16 @@ const AuthPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState('login');
 
   // Get the intended destination or default to home
   const from = location.state?.from?.pathname || '/';
+
+  const handleTabChange = (value: string) => {
+    setEmail('');
+    setPassword('');
+    setActiveTab(value);
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +60,20 @@ const AuthPage = () => {
     setLoading(false);
   };
 
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/update-password`,
+    });
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Password reset link sent", description: "Please check your email to continue." });
+    }
+    setLoading(false);
+  };
+
   const handleGoogleLogin = async () => {
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -72,10 +92,11 @@ const AuthPage = () => {
   return (
     <MainLayout>
       <div className="flex items-center justify-center py-12">
-        <Tabs defaultValue="login" className="w-[400px]">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-[400px]">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="login">Login</TabsTrigger>
             <TabsTrigger value="signup">Sign Up</TabsTrigger>
+            <TabsTrigger value="reset-password">Reset Password</TabsTrigger>
           </TabsList>
           <TabsContent value="login">
             <Card>
@@ -104,7 +125,16 @@ const AuthPage = () => {
                     <Input id="login-email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="login-password">Password</Label>
+                    <div className="flex items-center">
+                      <Label htmlFor="login-password">Password</Label>
+                      <button
+                        type="button"
+                        onClick={() => handleTabChange('reset-password')}
+                        className="ml-auto inline-block text-sm underline"
+                      >
+                        Forgot your password?
+                      </button>
+                    </div>
                     <Input id="login-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
                   </div>
                   <Button type="submit" className="w-full" disabled={loading}>
@@ -148,6 +178,35 @@ const AuthPage = () => {
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign Up
+                  </Button>
+                </form>
+              </CardContent>
+            </Card>
+          </TabsContent>
+          <TabsContent value="reset-password">
+            <Card>
+              <CardHeader>
+                <CardTitle>Reset Password</CardTitle>
+                <CardDescription>
+                  Enter your email to receive a password reset link.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form onSubmit={handlePasswordReset} className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="reset-email">Email</Label>
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="m@example.com"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                    />
+                  </div>
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Send Reset Link
                   </Button>
                 </form>
               </CardContent>

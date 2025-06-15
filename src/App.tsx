@@ -15,6 +15,7 @@ import Database from "./pages/Database";
 import DealStructuring from "./pages/DealStructuring";
 import Index from "./pages/Index";
 import AuthPage from "./pages/Auth";
+import UpdatePasswordPage from "./pages/UpdatePassword";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
 import BillingPage from "./pages/Billing";
@@ -41,6 +42,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
+              <Route path="/update-password" element={<UpdatePasswordPage />} />
               <Route path="/chat" element={
                 <ProtectedRoute>
                   <Chat />
