@@ -15,7 +15,7 @@ export interface ResponseMetadata {
   isBackupResponse?: boolean;
   responseCompleteness: {
     isComplete: boolean;
-    confidence: number;
+    confidence: string;
     reasons: string[];
   };
 }
