@@ -140,11 +140,10 @@ export interface AnalysisResults {
     majorChanges?: string[]; // Added
   };
   compliance: {
-    listingRules: string[]; 
+    listingRules: string[];
     takeoversCode: string[];
     risks: string[];
     recommendations: string[];
-    actionableRecommendations?: string[];
   };
   confidence: number;
   shareholdingChanges: ShareholdingChanges;

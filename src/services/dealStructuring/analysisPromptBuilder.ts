@@ -141,10 +141,11 @@ FORMAT your response as a structured JSON object with enhanced market intelligen
     }
   },
   "compliance": {
-    "keyListingRules": ["string with rule numbers"],
-    "materialApprovals": ["string"],
-    "criticalRisks": ["string"],
-    "actionableRecommendations": ["string"],
+    "listingRules": ["string with rule numbers like 'Rule 14.07'"],
+    "takeoversCode": ["string with relevant Takeovers Code rules like 'Rule 26.1'"],
+    "risks": ["string describing a critical compliance risk"],
+    "recommendations": ["string with an actionable recommendation to mitigate risks"],
+    "materialApprovals": ["string identifying key regulatory approvals needed"],
     "marketIntelligence": {
       "recentRegulatoryChanges": ["string"],
       "processingTimesTrends": "string",
