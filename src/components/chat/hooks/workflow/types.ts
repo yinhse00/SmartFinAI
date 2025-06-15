@@ -1,3 +1,4 @@
+
 export type WorkflowStep = 'initial' | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
 
 export interface WorkflowProcessorProps {
@@ -32,6 +33,7 @@ export interface SearchMetadata {
   databaseResultsCount?: number;
   searchTime?: number;
   executionSpecific?: boolean;
+  databaseExclusive?: boolean;
 }
 
 // Enhanced Step result interfaces with search metadata
