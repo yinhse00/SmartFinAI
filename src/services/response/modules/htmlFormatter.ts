@@ -21,6 +21,35 @@ export const htmlFormatter = {
         .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>')
         .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li>$3</li>');
       
+      // Convert markdown tables to HTML tables with proper styling
+      const tableRegex = /\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n(\|.+\|\s*\n)+/g;
+      formattedText = formattedText.replace(tableRegex, (match) => {
+        const rows = match.trim().split('\n');
+        let htmlTable = '<table class="chat-table">\n<thead>\n<tr>';
+        
+        // Process header row
+        const headerCells = rows[0].split('|').filter(cell => cell.trim() !== '');
+        headerCells.forEach(cell => {
+          htmlTable += `<th>${cell.trim()}</th>`;
+        });
+        htmlTable += '</tr>\n</thead>\n<tbody>';
+        
+        // Skip the header and separator rows
+        for (let i = 2; i < rows.length; i++) {
+          if (rows[i].trim() === '') continue;
+          
+          htmlTable += '<tr>';
+          const cells = rows[i].split('|').filter(cell => cell.trim() !== '');
+          cells.forEach(cell => {
+            htmlTable += `<td>${cell.trim()}</td>`;
+          });
+          htmlTable += '</tr>\n';
+        }
+        
+        htmlTable += '</tbody>\n</table>';
+        return htmlTable;
+      });
+      
       // Simple paragraph wrapping without CSS classes
       const paragraphs = formattedText.split(/\n\n+/);
       formattedText = paragraphs.map(p => {
