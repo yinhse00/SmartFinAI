@@ -18,21 +18,14 @@ export const useMessageFormatting = ({ content, originalContent, isBot }: UseMes
     const safeContent = content || "";
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
-    // SIMPLIFIED: Only apply table formatting for bot messages, preserve everything else
+    // FIXED: Always apply table formatting for bot messages to ensure proper CSS classes
     if (isBot) {
-      // Check if content already contains clickable links (anchor tags with href)
-      const hasClickableLinks = /<a\s+[^>]*href[^>]*>.*?<\/a>/i.test(displayContent);
-      
-      if (hasClickableLinks) {
-        // Content already has clickable links - preserve as-is
-        console.log('Content already contains clickable links, preserving formatting');
-        setFormattedContent(displayContent);
-      } else {
-        // Apply ONLY table formatting - no other processing
-        console.log('Applying minimal table formatting only');
-        const formatted = detectAndFormatTables(displayContent);
-        setFormattedContent(formatted);
-      }
+      // Apply table formatting to ensure proper CSS classes are added
+      // The responseFormatter already handles markdown → HTML conversion including bold text
+      // We just need to ensure tables get proper styling classes
+      console.log('Applying table formatting and ensuring proper CSS classes');
+      const formatted = detectAndFormatTables(displayContent);
+      setFormattedContent(formatted);
     } else {
       // For user messages, no formatting needed
       setFormattedContent(displayContent);
