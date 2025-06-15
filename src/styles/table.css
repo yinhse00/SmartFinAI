@@ -183,7 +183,36 @@
   line-height: 1.6;
 }
 
-/* Replace h1, h2, h3 styling with better paragraph styling */
+/* FIX: Restore black bold headings within chat content.
+   These rules have higher specificity to override general theme styles. */
+.chat-content h1.heading-black-bold,
+.chat-content h2.heading-black-bold,
+.chat-content h3.heading-black-bold {
+  color: #000000 !important;
+  font-weight: bold !important;
+  margin: 1rem 0 0.5rem 0;
+}
+
+.chat-content h1.heading-black-bold {
+  font-size: 1.25rem;
+}
+
+.chat-content h2.heading-black-bold {
+  font-size: 1.125rem;
+}
+
+.chat-content h3.heading-black-bold {
+  font-size: 1rem;
+}
+
+/* Dark mode override for black bold headings */
+.dark .chat-content h1.heading-black-bold,
+.dark .chat-content h2.heading-black-bold,
+.dark .chat-content h3.heading-black-bold {
+  color: #000000 !important;
+}
+
+/* Bold and strong text styling */
 .chat-content strong, 
 .chat-content b {
   font-weight: 600;

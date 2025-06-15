@@ -1,4 +1,3 @@
-
 @import url('./styles/table.css');
 @tailwind base;
 @tailwind components;
@@ -111,34 +110,6 @@
   @keyframes blink {
     0%, 100% { opacity: 0; }
     50% { opacity: 1; }
-  }
-  
-  /* Black bold heading styling - overrides theme colors */
-  h1.heading-black-bold,
-  h2.heading-black-bold,
-  h3.heading-black-bold {
-    color: #000000 !important;
-    font-weight: bold !important;
-    margin: 1rem 0 0.5rem 0;
-  }
-  
-  h1.heading-black-bold {
-    font-size: 1.25rem;
-  }
-  
-  h2.heading-black-bold {
-    font-size: 1.125rem;
-  }
-  
-  h3.heading-black-bold {
-    font-size: 1rem;
-  }
-  
-  /* Dark mode override for black bold headings */
-  .dark h1.heading-black-bold,
-  .dark h2.heading-black-bold,
-  .dark h3.heading-black-bold {
-    color: #000000 !important;
   }
   
   /* Full width table styling */
