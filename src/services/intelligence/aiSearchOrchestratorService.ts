@@ -1,6 +1,8 @@
+
 import { searchIndexRoutingService, CombinedSearchResults } from './searchIndexRoutingService';
 import { queryIntelligenceService, AiSearchStrategy, QueryAnalysis } from './queryIntelligenceService';
 import { aiSearchStrategyToQueryAnalysis } from './aiSearchStrategyConverter';
+import { tableDiscoveryService } from './tableDiscoveryService';
 
 /**
  * Service to orchestrate search using AI-driven discovery and prioritization.
@@ -17,29 +19,31 @@ export const aiSearchOrchestratorService = {
     console.log(`Starting AI-driven search for query: "${query}" with focus: ${searchFocus || 'none'}`);
     const startTime = Date.now();
     try {
-      // Step 1: Get content previews from the search index.
-      const searchIndexPreviews = await searchIndexRoutingService.getSearchIndexPreviews();
+      // Step 1: Discover and validate tables and get their content previews.
+      const { previews: searchIndexPreviews, validatedTableNames } = await tableDiscoveryService.getValidatedTablesAndPreviews();
 
-      if (Object.keys(searchIndexPreviews).length === 0) {
-        console.warn('Search index is empty. Cannot perform AI-driven search.');
+      if (validatedTableNames.length === 0) {
+        console.warn('No valid tables discovered. Cannot perform AI-driven search.');
         return {
           totalResults: 0,
           searchResults: [],
           executionTime: Date.now() - startTime,
-          searchStrategy: 'ai_orchestrator_failed_no_index',
+          searchStrategy: 'ai_orchestrator_failed_no_valid_tables',
         };
       }
 
-      // Step 2: Use AI to determine the search strategy.
+      // Step 2: Use AI to determine the search strategy based on validated previews.
       const aiStrategy = await queryIntelligenceService.getAiSearchStrategy(query, searchIndexPreviews, searchFocus);
       console.log('AI Search Strategy Reasoning:', aiStrategy.reasoning);
 
       // Step 2.1: Convert aiStrategy to QueryAnalysis
+      // Ensure AI strategy only uses tables that were originally validated
+      aiStrategy.prioritizedTables = aiStrategy.prioritizedTables.filter(table => validatedTableNames.includes(table));
       const queryAnalysis = aiSearchStrategyToQueryAnalysis(aiStrategy);
 
       // Step 3: Execute parallel searches based on the AI-prioritized tables.
-      if (aiStrategy.prioritizedTables.length === 0) {
-        console.log('AI recommended no tables to search.');
+      if (queryAnalysis.relevantTables.length === 0) {
+        console.log('AI recommended no valid tables to search.');
         return {
           totalResults: 0,
           searchResults: [],
@@ -61,7 +65,7 @@ export const aiSearchOrchestratorService = {
       return {
         ...searchResults,
         executionTime: totalExecutionTime,
-        searchStrategy: `ai_orchestrated_${aiStrategy.prioritizedTables.length}_tables`,
+        searchStrategy: `ai_orchestrated_${queryAnalysis.relevantTables.length}_tables`,
         aiStrategy,
         queryAnalysis,
       };
