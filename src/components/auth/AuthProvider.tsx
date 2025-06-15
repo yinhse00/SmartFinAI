@@ -18,23 +18,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const getSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setUser(session?.user ?? null);
-      } catch (error) {
-        console.error("Error getting session:", error);
-      } finally {
-        setLoading(false);
+    // onAuthStateChange handles initial session and any subsequent changes.
+    // The initial session is fired upon listener registration.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log(`Supabase auth event: ${event}`);
+      if (session?.expires_at) {
+        const expirationDate = new Date(session.expires_at * 1000);
+        console.log(`Session expires at: ${expirationDate.toLocaleString()}`);
       }
-    };
-
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
+      setLoading(false); // Set loading to false once we have a session or know there isn't one.
     });
 
     return () => {
