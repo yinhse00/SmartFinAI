@@ -1,4 +1,3 @@
-
 /**
  * Service for validating that responses preserve exact database content
  * Specifically designed to prevent rule reference generalization
@@ -31,9 +30,39 @@ export const databaseContentValidator = {
     const corrections: Correction[] = [];
     let preservationScore = 1.0;
 
-    // Extract rule references from database content
+    // Do not validate if database context is empty
+    if (!databaseContext || databaseContext.trim() === '') {
+      return {
+        isAccurate: true,
+        preservationScore: 1.0,
+        issues: [],
+      };
+    }
+
     const databaseRuleRefs = extractRuleReferences(databaseContext);
     const responseRuleRefs = extractRuleReferences(responseText);
+    const dbRefStrings = new Set(databaseRuleRefs.map(r => r.fullReference.toLowerCase()));
+
+    // Check for invented rule references not present in the database context
+    for (const respRef of responseRuleRefs) {
+      if (!dbRefStrings.has(respRef.fullReference.toLowerCase())) {
+        const isGeneralization = databaseRuleRefs.some(dbRef =>
+          dbRef.fullReference.toLowerCase().startsWith(respRef.fullReference.toLowerCase())
+        );
+
+        if (!isGeneralization) {
+          const issue = `Rule reference invented: Response contains "${respRef.fullReference}" which is not found in the source database content.`;
+          issues.push(issue);
+          corrections.push({
+            type: 'content_modification',
+            original: '', // No original content to reference
+            incorrect: respRef.fullReference,
+            reason: 'Rule reference was invented and is not present in the database context.',
+          });
+          preservationScore -= 0.3; // Heavier penalty for invention
+        }
+      }
+    }
 
     // Check for generalized rule references
     for (const dbRef of databaseRuleRefs) {
@@ -100,6 +129,11 @@ export const databaseContentValidator = {
         correctedText = correctedText.replace(pattern, correction.original);
         
         console.log(`Applied correction: "${correction.incorrect}" -> "${correction.original}"`);
+      } else if (correction.type === 'content_modification' && correction.reason.includes('invented')) {
+        // For invented rules, replace with a notice to avoid breaking sentence structure badly.
+        const pattern = new RegExp(`\\b${escapeRegExp(correction.incorrect)}\\b`, 'g');
+        correctedText = correctedText.replace(pattern, '[Reference removed for inaccuracy]');
+        console.log(`Applied correction: Removed invented rule reference "${correction.incorrect}"`);
       }
     }
 
