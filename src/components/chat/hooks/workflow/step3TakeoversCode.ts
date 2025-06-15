@@ -1,8 +1,10 @@
+
 import { grokService } from '@/services/grokService';
 import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 import { aiSearchOrchestratorService } from '@/services/intelligence/aiSearchOrchestratorService';
 import { QueryAnalysis, AiSearchStrategy } from '@/services/intelligence/queryIntelligenceService';
+import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
  * Enhanced Step 3: AI-Driven Takeovers Code Search

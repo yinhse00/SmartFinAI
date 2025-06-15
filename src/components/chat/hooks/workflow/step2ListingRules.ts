@@ -3,7 +3,8 @@ import { grokService } from '@/services/grokService';
 import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
 import { aiSearchOrchestratorService } from '@/services/intelligence/aiSearchOrchestratorService';
-import { QueryAnalysis } from '@/services/intelligence/queryIntelligenceService';
+import { QueryAnalysis, AiSearchStrategy } from '@/services/intelligence/queryIntelligenceService';
+import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
  * Enhanced Step 2: AI-Driven Listing Rules Search
@@ -16,16 +17,23 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
   try {
     // Phase 1 & 2: AI-driven discovery and search
     const searchResults = await aiSearchOrchestratorService.executeAiDrivenSearch(params.query, 'listing_rules');
-    const queryAnalysis = searchResults.aiStrategy;
+    const aiStrategy = searchResults.aiStrategy;
 
-    if(queryAnalysis) {
-      console.log('Step 2 - AI-driven query analysis:', queryAnalysis);
+    if(aiStrategy) {
+      console.log('Step 2 - AI-driven query analysis:', aiStrategy);
     } else {
       console.log('Step 2 - AI-driven analysis not available, using fallback.');
     }
     
-    // Fallback for queryAnalysis if AI strategy fails
-    const effectiveAnalysis: QueryAnalysis = queryAnalysis || {
+    // Convert AiSearchStrategy to QueryAnalysis if available
+    const effectiveAnalysis: QueryAnalysis = aiStrategy ? {
+      categories: aiStrategy.categories,
+      intent: aiStrategy.intent,
+      keywords: aiStrategy.keywords,
+      relevantTables: aiStrategy.prioritizedTables,
+      targetParty: 'both', // Defaulting as AI strategy doesn't determine this yet
+      confidence: 0.9, // High confidence for AI-driven strategy
+    } : {
       categories: ['general'],
       targetParty: 'both',
       intent: 'general',
