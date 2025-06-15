@@ -144,7 +144,7 @@ const NewListingScheduleProcessor: React.FC<ProcessorProps> = ({ onProcessComple
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Excel file not found</AlertTitle>
             <AlertDescription>
-              Please upload the "Mapping_Schedule_(EN)_(2024)_Guide for New Listing Applicants" file to the References section first.
+              Please upload the "Mapping_Schedule_(EN)_(2024)_Guide for New Listing Applicants" file.
             </AlertDescription>
           </Alert>
         )}

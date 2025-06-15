@@ -1,7 +1,6 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquareText, Upload, History, Database, ChevronRight } from 'lucide-react';
+import { MessageSquareText, History, Database, ChevronRight, Upload } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const QuickAction = ({ 
@@ -43,12 +42,6 @@ const QuickActions = () => {
           title="New Regulatory Query"
           description="Ask a question about HK listing rules or takeovers"
           to="/chat"
-        />
-        <QuickAction
-          icon={Upload}
-          title="Upload References"
-          description="Add documents to improve the system's knowledge"
-          to="/references"
         />
         <QuickAction
           icon={History}

@@ -158,7 +158,7 @@ const MappingScheduleProcessor: React.FC<ProcessorProps> = ({ onProcessComplete 
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Excel file not found</AlertTitle>
             <AlertDescription>
-              Please upload the "Mapping_schedule_FAQ_Guidance Materials for Listed Issuers.xlsx" file to the References section first.
+              Please upload the "Mapping_schedule_FAQ_Guidance Materials for Listed Issuers.xlsx" file.
             </AlertDescription>
           </Alert>
         )}

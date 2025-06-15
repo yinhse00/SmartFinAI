@@ -148,7 +148,7 @@ const VettingRequirementsProcessor: React.FC<ProcessorProps> = ({ onProcessCompl
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Excel file not found</AlertTitle>
             <AlertDescription>
-              Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements (2025.5.23).xls" file to the References section first.
+              Please upload the "Guide on pre-vetting requirements and selection of headline categories for announcements (2025.5.23).xls" file.
             </AlertDescription>
           </Alert>
         )}

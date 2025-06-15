@@ -1,4 +1,3 @@
-
 import { Link } from 'react-router-dom';
 import { useTheme } from "@/components/theme-provider";
 import { Moon, Sun } from 'lucide-react';
@@ -32,9 +31,6 @@ const Navbar = () => {
           </Link>
           <Link to="/deal-structuring" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             Deal Structuring
-          </Link>
-          <Link to="/references" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
-            References
           </Link>
           <Button variant="ghost" size="icon" onClick={toggleTheme}>
             <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
