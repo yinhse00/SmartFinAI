@@ -1,5 +1,5 @@
 import { searchIndexRoutingService, CombinedSearchResults } from './searchIndexRoutingService';
-import { queryIntelligenceService, AiSearchStrategy } from './queryIntelligenceService';
+import { queryIntelligenceService, AiSearchStrategy, QueryAnalysis } from './queryIntelligenceService';
 import { aiSearchStrategyToQueryAnalysis } from './aiSearchStrategyConverter';
 
 /**
