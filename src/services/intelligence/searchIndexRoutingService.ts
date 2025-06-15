@@ -88,6 +88,43 @@ export const searchIndexRoutingService = {
   },
 
   /**
+   * Get content previews from the search_index table
+   */
+  getSearchIndexPreviews: async (): Promise<Record<string, string>> => {
+    console.log('Fetching content previews from search_index');
+    const { data, error } = await supabase
+      .from('search_index')
+      .select('tableindex, particulars')
+      .limit(500);
+
+    if (error) {
+      console.error('Error fetching search_index previews:', error);
+      return {};
+    }
+
+    if (!data) {
+      return {};
+    }
+
+    // Aggregate particulars by tableindex
+    const previews = data.reduce((acc, row) => {
+      if (row.tableindex && row.particulars) {
+        if (!acc[row.tableindex]) {
+          acc[row.tableindex] = '';
+        }
+        // Append particulars, but limit the total length per table
+        if (acc[row.tableindex].length < 1000) {
+          acc[row.tableindex] += row.particulars + ' | ';
+        }
+      }
+      return acc;
+    }, {} as Record<string, string>);
+
+    console.log('Generated search_index previews for AI analysis');
+    return previews;
+  },
+
+  /**
    * Check if a table name is valid
    */
   isValidTableName: (tableName: string): tableName is ValidTableName => {

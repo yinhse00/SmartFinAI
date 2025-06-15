@@ -1,19 +1,16 @@
-
-
 import { grokService } from '@/services/grokService';
 import { Step3Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
-import { queryIntelligenceService } from '@/services/intelligence/queryIntelligenceService';
-import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
+import { aiSearchOrchestratorService } from '@/services/intelligence/aiSearchOrchestratorService';
+import { QueryAnalysis, AiSearchStrategy } from '@/services/intelligence/queryIntelligenceService';
 
 /**
- * Enhanced Step 3: Pure Database-First Takeovers Code Search
- * - Prioritizes Supabase database results with complete precedence
- * - Uses database-exclusive strategy when any database content found
- * - Eliminates hardcoded content interference
+ * Enhanced Step 3: AI-Driven Takeovers Code Search
+ * - Uses AI to discover and prioritize database tables for takeovers content.
+ * - Prioritizes database results with complete precedence.
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Takeovers Code with pure database-first approach...');
+  setStepProgress('Searching Takeovers Code with AI-driven approach...');
   
   try {
     let enhancedContext = '';
@@ -21,41 +18,26 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     let databaseResultsCount = 0;
     let searchTime = 0;
     let databaseHasContent = false;
+    let queryAnalysis: QueryAnalysis | AiSearchStrategy | null = params.searchMetadata?.queryAnalysis || null;
     
-    // Phase 1: Leverage existing analysis or create new one
-    const hasStep2Analysis = params.searchMetadata?.queryAnalysis;
-    let queryAnalysis = hasStep2Analysis ? params.searchMetadata.queryAnalysis : null;
-    
-    if (!queryAnalysis) {
-      setStepProgress('Analyzing query for takeovers relevance...');
-      queryAnalysis = await queryIntelligenceService.analyzeQuery(
-        `Hong Kong Takeovers Code: ${params.query}`
-      );
-    }
-    
-    // Phase 2: Execute targeted takeovers database search
-    if (queryAnalysis.categories.includes('takeovers') || 
+    // Phase 1: Determine if a targeted takeovers search is needed.
+    const isTakeoverQuery = queryAnalysis?.categories.includes('takeovers') || 
         params.query.toLowerCase().includes('takeover') ||
-        params.query.toLowerCase().includes('general offer')) {
+        params.query.toLowerCase().includes('general offer');
+
+    if (isTakeoverQuery) {
+      setStepProgress('Executing AI-driven search for takeovers content...');
       
-      setStepProgress('Searching takeovers database with complete priority...');
-      
-      // Focus on takeovers-specific tables
-      const takeoversAnalysis = {
-        ...queryAnalysis,
-        relevantTables: ['takeovers_documents', 'takeovers_code_provisions', 'takeovers_timetable']
-      };
-      
-      const searchResults = await searchIndexRoutingService.executeParallelSearches(
+      const searchResults = await aiSearchOrchestratorService.executeAiDrivenSearch(
         `Takeovers Code: ${params.query}`,
-        takeoversAnalysis
+        'takeovers'
       );
       
+      queryAnalysis = searchResults.aiStrategy || queryAnalysis;
       databaseResultsCount = searchResults.totalResults;
       searchTime = searchResults.executionTime;
       
       if (searchResults.totalResults > 0) {
-        // ANY database results means database-exclusive approach
         databaseHasContent = true;
         setStepProgress('Found authoritative takeovers database content');
         
@@ -63,12 +45,14 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         enhancedContext = `--- TAKEOVERS CODE DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
         searchStrategy = 'database_exclusive';
         
-        console.log('Database-exclusive strategy activated for takeovers - bypassing all hardcoded content');
+        console.log('Database-exclusive strategy activated for takeovers');
       }
+    } else {
+       console.log("Skipping dedicated takeovers search based on initial analysis.");
     }
     
-    // Phase 3: Conditional Grok Enhancement (ONLY if no database content exists)
-    if (!databaseHasContent) {
+    // Phase 2: Conditional Grok Enhancement (ONLY if no database content exists)
+    if (!databaseHasContent && isTakeoverQuery) {
       setStepProgress('No database content found - using supplementary takeovers context...');
       
       const grokResponse = await grokService.getRegulatoryContext(
@@ -103,8 +87,8 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         params.query.toLowerCase().includes('how to') ||
         params.query.toLowerCase().includes('steps') ||
         params.query.toLowerCase().includes('procedure') ||
-        queryAnalysis?.intent === 'process' ||
-        queryAnalysis?.intent === 'timetable';
+        (queryAnalysis as AiSearchStrategy)?.intent === 'process' ||
+        (queryAnalysis as AiSearchStrategy)?.intent === 'timetable';
         
       if (executionRequired) {
         return {
@@ -143,12 +127,13 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         }
       };
     } else {
-      setStepProgress('No authoritative Takeovers Code content found');
+      setStepProgress('No authoritative Takeovers Code content found, continuing with previous context.');
       
       return {
         shouldContinue: true,
         nextStep: 'response',
         query: params.query,
+        regulatoryContext: params.listingRulesContext, // Pass on context from step 2
         takeoversCodeSearchNegative: true,
         skipSequentialSearches: Boolean(params.skipSequentialSearches),
         isRegulatoryRelated: true,
@@ -161,7 +146,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       };
     }
   } catch (error) {
-    console.error('Error in database-first step 3:', error);
+    console.error('Error in AI-driven step 3:', error);
     return { 
       shouldContinue: true, 
       nextStep: 'response', 
@@ -176,4 +161,3 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     };
   }
 };
-

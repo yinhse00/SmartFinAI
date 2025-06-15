@@ -1,33 +1,39 @@
 
-
 import { grokService } from '@/services/grokService';
 import { Step2Result } from './types';
 import { safelyExtractText } from '@/services/utils/responseUtils';
-import { queryIntelligenceService } from '@/services/intelligence/queryIntelligenceService';
-import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
+import { aiSearchOrchestratorService } from '@/services/intelligence/aiSearchOrchestratorService';
+import { QueryAnalysis } from '@/services/intelligence/queryIntelligenceService';
 
 /**
- * Enhanced Step 2: Pure Database-First Listing Rules Search
- * - Prioritizes Supabase database results with complete precedence
- * - Uses database-exclusive strategy when any database matches found
- * - Eliminates hardcoded content interference
+ * Enhanced Step 2: AI-Driven Listing Rules Search
+ * - Uses AI to discover and prioritize database tables for searching.
+ * - Prioritizes database results with complete precedence.
  */
 export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
-  setStepProgress('Analyzing query with database-first intelligence...');
+  setStepProgress('Executing AI-driven database search...');
   
   try {
-    // Phase 1: Query Analysis
-    const queryAnalysis = await queryIntelligenceService.analyzeQuery(params.query);
-    console.log('Step 2 - Database-first query analysis:', queryAnalysis);
+    // Phase 1 & 2: AI-driven discovery and search
+    const searchResults = await aiSearchOrchestratorService.executeAiDrivenSearch(params.query, 'listing_rules');
+    const queryAnalysis = searchResults.aiStrategy;
+
+    if(queryAnalysis) {
+      console.log('Step 2 - AI-driven query analysis:', queryAnalysis);
+    } else {
+      console.log('Step 2 - AI-driven analysis not available, using fallback.');
+    }
     
-    setStepProgress('Executing priority database searches...');
-    
-    // Phase 2: Pure Database Search (Authority Source)
-    const searchResults = await searchIndexRoutingService.executeParallelSearches(
-      params.query, 
-      queryAnalysis
-    );
-    
+    // Fallback for queryAnalysis if AI strategy fails
+    const effectiveAnalysis: QueryAnalysis = queryAnalysis || {
+      categories: ['general'],
+      targetParty: 'both',
+      intent: 'general',
+      relevantTables: [],
+      keywords: [],
+      confidence: 0.5
+    };
+
     // Phase 3: Database-First Context Processing with Complete Priority
     let enhancedContext = '';
     let searchStrategy = 'no_results';
@@ -94,8 +100,8 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       params.query.toLowerCase().includes('steps') ||
       params.query.toLowerCase().includes('procedure') ||
       params.query.toLowerCase().includes('timeline') ||
-      queryAnalysis.intent === 'process' ||
-      queryAnalysis.intent === 'timetable';
+      effectiveAnalysis.intent === 'process' ||
+      effectiveAnalysis.intent === 'timetable';
       
     if (executionRequired) {
       return {
@@ -108,7 +114,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         isRegulatoryRelated: true,
         searchMetadata: {
           searchStrategy,
-          queryAnalysis,
+          queryAnalysis: effectiveAnalysis,
           databaseResultsCount: searchResults.totalResults,
           searchTime: searchResults.executionTime,
           databaseExclusive: databaseHasContent
@@ -120,7 +126,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     const takeoverRelated = 
       enhancedContext.toLowerCase().includes('takeover') ||
       enhancedContext.toLowerCase().includes('general offer') ||
-      queryAnalysis.categories.includes('takeovers');
+      effectiveAnalysis.categories.includes('takeovers');
     
     if (takeoverRelated) {
       return {
@@ -133,7 +139,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         isRegulatoryRelated: true,
         searchMetadata: {
           searchStrategy,
-          queryAnalysis,
+          queryAnalysis: effectiveAnalysis,
           databaseResultsCount: searchResults.totalResults,
           searchTime: searchResults.executionTime,
           databaseExclusive: databaseHasContent
@@ -153,7 +159,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       isRegulatoryRelated: true,
       searchMetadata: {
         searchStrategy,
-        queryAnalysis,
+        queryAnalysis: effectiveAnalysis,
         databaseResultsCount: searchResults.totalResults,
         searchTime: searchResults.executionTime,
         databaseExclusive: databaseHasContent

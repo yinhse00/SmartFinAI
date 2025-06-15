@@ -1,4 +1,3 @@
-
 import { grokApiService } from '../api/grokApiService';
 
 export interface QueryAnalysis {
@@ -8,6 +7,14 @@ export interface QueryAnalysis {
   relevantTables: string[];
   keywords: string[];
   confidence: number;
+}
+
+export interface AiSearchStrategy {
+  prioritizedTables: string[];
+  keywords: string[];
+  reasoning: string;
+  intent: 'faq' | 'rules' | 'process' | 'costs' | 'timetable' | 'documentation' | 'general';
+  categories: string[];
 }
 
 /**
@@ -83,6 +90,102 @@ Return ONLY the JSON object, no other text.`;
     } catch (error) {
       console.error('Error in query analysis:', error);
       return queryIntelligenceService.createFallbackAnalysis(query);
+    }
+  },
+
+  /**
+   * Use AI to determine a search strategy based on query and content previews.
+   */
+  getAiSearchStrategy: async (
+    query: string, 
+    searchIndexPreviews: Record<string, string>,
+    searchFocus?: 'takeovers' | 'listing_rules'
+  ): Promise<AiSearchStrategy> => {
+    try {
+      console.log('Determining AI-driven search strategy for query:', query);
+      
+      let focusInstruction = '';
+      if (searchFocus === 'takeovers') {
+        focusInstruction = 'The query is known to be related to the Takeovers Code. Prioritize tables related to takeovers, general offers, and related documents.';
+      } else if (searchFocus === 'listing_rules') {
+        focusInstruction = 'The query is known to be related to Listing Rules. Prioritize tables related to listing rules, guidance letters, and FAQs.';
+      }
+
+      const systemPrompt = `You are an expert search strategist for a Hong Kong financial regulatory database. Your task is to analyze a user query and previews of content from various database tables to determine the most effective search strategy.
+${focusInstruction}
+
+The user is asking: "${query}"
+
+Here are content previews from available tables:
+${JSON.stringify(searchIndexPreviews, null, 2)}
+
+Based on the user query and the content previews, return a JSON object with the following structure:
+{
+  "prioritizedTables": ["table_name_1", "table_name_2", ...],
+  "keywords": ["relevant_keyword_1", "keyword_2", ...],
+  "reasoning": "A brief explanation of why you chose these tables and in this order.",
+  "intent": "faq" | "rules" | "process" | "costs" | "timetable" | "documentation" | "general",
+  "categories": ["rules", "provision", "index", "timetable", "documentation", "estimated_expenses", "checklist"]
+}
+
+Instructions:
+1.  **Prioritize Tables**: List the table names in the order they should be searched. Only include tables that are highly relevant. If a table preview shows no relevance, do not include it.
+2.  **Extract Keywords**: Identify the most important keywords from the user query.
+3.  **Provide Reasoning**: Briefly explain your logic.
+4.  **Determine Intent and Categories**: Classify the query's intent and relevant categories.
+
+Return ONLY the JSON object, no other text.`;
+
+      const response = await grokApiService.callChatCompletions({
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: `Analyze the query "${query}" and provide a search strategy.` }
+        ],
+        model: 'grok-3-beta',
+        temperature: 0.1,
+        max_tokens: 1200,
+        metadata: { processingStage: 'ai_search_strategy' }
+      });
+
+      const content = response?.choices?.[0]?.message?.content || '';
+      let strategy: AiSearchStrategy;
+
+      try {
+        const jsonMatch = content.match(/\{[\s\S]*\}/);
+        const jsonStr = jsonMatch ? jsonMatch[0] : '{}';
+        const parsed = JSON.parse(jsonStr);
+        
+        strategy = {
+          prioritizedTables: parsed.prioritizedTables || [],
+          keywords: parsed.keywords || [],
+          reasoning: parsed.reasoning || 'No reasoning provided by AI.',
+          intent: parsed.intent || 'general',
+          categories: parsed.categories || ['general'],
+        };
+        
+      } catch (parseError) {
+        console.error('Error parsing AI search strategy:', parseError);
+        strategy = {
+          prioritizedTables: Object.keys(searchIndexPreviews),
+          keywords: query.split(' ').filter(word => word.length > 3),
+          reasoning: 'AI strategy parsing failed, falling back to basic keyword search across all tables.',
+          intent: 'general',
+          categories: ['general'],
+        };
+      }
+
+      console.log('AI search strategy result:', strategy);
+      return strategy;
+      
+    } catch (error) {
+      console.error('Error in AI search strategy analysis:', error);
+      return {
+        prioritizedTables: Object.keys(searchIndexPreviews),
+        keywords: query.split(' ').filter(word => word.length > 3),
+        reasoning: 'Error during AI strategy generation, falling back to basic search.',
+        intent: 'general',
+        categories: ['general'],
+      };
     }
   },
 
