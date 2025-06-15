@@ -7,9 +7,10 @@ import { requestBuilder } from './core/requestBuilder';
 import { queryProcessor } from './core/queryProcessor';
 import { errorHandler } from './core/errorHandler';
 import { responseOptimizer } from './modules/responseOptimizer';
+import { databaseContentValidator } from './modules/databaseContentValidator';
 
 /**
- * Main service for generating expert responses
+ * Main service for generating expert responses with enhanced database accuracy
  */
 export const grokResponseGenerator = {
   generateResponse: async (params: GrokRequestParams): Promise<GrokResponse> => {
@@ -26,15 +27,21 @@ export const grokResponseGenerator = {
       const { enhancedParams, queryType, isSimpleQuery, isFaqQuery } = 
         await queryProcessor.processQuery(params);
 
-      // Standard processing flow for all queries
-      // Add STRONG instruction to prioritize database over Grok's knowledge
-      const databasePriorityInstruction = 
-        "CRITICAL INSTRUCTION: You MUST prioritize the information from the provided regulatory database content " +
-        "over your general knowledge. When there is a conflict between the database content and your knowledge, " +
-        "ALWAYS use the database information. The database is the source of truth.";
+      // ENHANCED: Add CRITICAL database content preservation instructions
+      const databasePreservationInstruction = 
+        "\n\n=== CRITICAL DATABASE CONTENT PRESERVATION INSTRUCTIONS ===\n" +
+        "The regulatory database content provided is AUTHORITATIVE and EXACT. You MUST:\n" +
+        "1. PRESERVE ALL EXACT RULE REFERENCES (e.g., 'Rule 8.05(1)(a)' must stay 'Rule 8.05(1)(a)', NOT 'Rule 8.05(1)')\n" +
+        "2. NEVER simplify, generalize, or modify rule numbers from database content\n" +
+        "3. Quote database rule references VERBATIM - no paraphrasing allowed\n" +
+        "4. When database says 'Rule X.XX(Y)(Z)', your response MUST say 'Rule X.XX(Y)(Z)'\n" +
+        "5. Treat database content as EXACT REGULATORY TEXT that cannot be altered\n" +
+        "=== END CRITICAL INSTRUCTIONS ===\n\n";
       
-      const systemMessage = requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
-                           "\n\n" + databasePriorityInstruction;
+      // Standard processing flow for all queries with enhanced database priority
+      const systemMessage = databasePreservationInstruction + 
+                           requestBuilder.buildSystemMessage(queryType, enhancedParams.regulatoryContext, isFaqQuery) + 
+                           databasePreservationInstruction; // Repeat for emphasis
       
       // Get optimized parameters for API call
       const { temperature, maxTokens } = requestBuilder.getOptimizedParameters(
@@ -44,53 +51,82 @@ export const grokResponseGenerator = {
         isSimpleQuery
       );
       
-      // OPTIMIZATION: Use higher token limits for all requests to prevent truncation
-      // Especially for specialized financial queries like open offers and rights issues
+      // Use higher token limits for all requests to prevent truncation
       let finalTokens = maxTokens;
       if (queryType === 'open_offer' || queryType === 'rights_issue') {
-        // Use much higher token limits for timetable queries
-        finalTokens = 25000; // Set a high but still practical limit for API
+        finalTokens = 25000;
         console.log(`Using enhanced token limit (${finalTokens}) for ${queryType} query`);
       } else {
-        // For all other queries, use higher limits than default
-        finalTokens = Math.min(15000, maxTokens); // Cap at 15K for API practicality
+        finalTokens = Math.min(15000, maxTokens);
       }
       
-      // Build the request body with the enhanced token limits
+      // Build the request body with enhanced instructions
       const requestBody = requestBuilder.buildRequestBody(
         systemMessage,
         enhancedParams.prompt,
-        Math.min(0.5, temperature), // Keep temperature balanced for consistency
-        finalTokens               // Use our enhanced token limits
+        Math.min(0.5, temperature),
+        finalTokens
       );
 
       try {
         // Make primary API call
-        console.log(`Making API call with tokens: ${finalTokens}, temperature: ${Math.min(0.5, temperature)}`);
+        console.log(`Making API call with enhanced database preservation instructions`);
         const response = await responseGeneratorCore.makeApiCall(requestBody, apiKey);
         
         // Get the raw response text
         const responseText = response.choices[0].message.content;
         
+        // ENHANCED: Validate database content preservation
+        const validationResult = databaseContentValidator.validateDatabaseAccuracy(
+          responseText,
+          enhancedParams.regulatoryContext || '',
+          enhancedParams.prompt
+        );
+        
+        // Log validation results
+        if (!validationResult.isAccurate) {
+          console.warn('Database content accuracy issues detected:', validationResult.issues);
+        }
+        
+        // Apply corrections if needed
+        let correctedResponseText = responseText;
+        if (validationResult.corrections && validationResult.corrections.length > 0) {
+          console.log('Applying database accuracy corrections...');
+          correctedResponseText = databaseContentValidator.applyCorrections(
+            responseText,
+            validationResult.corrections
+          );
+        }
+        
         // Calculate relevance score and enhance with metadata
         const relevanceScore = responseOptimizer.calculateRelevanceScore(
           enhancedParams.prompt, 
-          responseText
+          correctedResponseText
         );
         
-        // Enhance response with metadata
+        // Enhance response with metadata including database accuracy info
         const finalResponse = responseEnhancer.enhanceResponse(
-          responseText, 
+          correctedResponseText, 
           queryType, 
           !!enhancedParams.regulatoryContext, 
           relevanceScore, 
           enhancedParams.prompt
         );
 
+        // Add database accuracy metadata
+        finalResponse.metadata = {
+          ...finalResponse.metadata,
+          databaseAccuracy: {
+            isAccurate: validationResult.isAccurate,
+            correctionsMade: validationResult.corrections?.length > 0,
+            preservationScore: validationResult.preservationScore
+          }
+        };
+
         console.groupEnd();
         return finalResponse;
       } catch (primaryApiError) {
-        // If first attempt fails, try backup approach with IDENTICAL parameters
+        // If first attempt fails, try backup approach
         console.error("Primary API call failed, attempting backup approach:", primaryApiError);
         
         try {
@@ -103,7 +139,6 @@ export const grokResponseGenerator = {
           console.groupEnd();
           return backupResponse;
         } catch (backupError) {
-          // If both attempts fail, generate fallback response
           console.error('Both API attempts failed, using fallback:', backupError);
           console.groupEnd();
           
@@ -122,7 +157,6 @@ export const grokResponseGenerator = {
         }
       }
     } catch (error) {
-      // Handle unexpected errors
       errorHandler.logApiError(error, params.prompt);
       console.groupEnd();
       

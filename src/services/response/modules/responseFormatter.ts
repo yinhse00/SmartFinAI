@@ -1,16 +1,15 @@
 
-
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
+import { databaseContentValidator } from './databaseContentValidator';
 
 /**
- * Service for formatting final responses with clean formatting and database-first priority
+ * Service for formatting final responses with enhanced database accuracy preservation
  */
 export const responseFormatter = {
   /**
-   * Format the final response with minimal, clean formatting
-   * REMOVED: All hardcoded text corrections to respect database content
+   * Format the final response with database content preservation validation
    */
   formatResponse: (
     text: string, 
@@ -21,20 +20,36 @@ export const responseFormatter = {
     takeoversCodeUsed: boolean,
     isWhitewashQuery: boolean,
     hasRefDocuments: boolean,
-    isBackupResponse?: boolean
+    isBackupResponse?: boolean,
+    originalContext?: string
   ): GrokResponse => {
     // Enhanced response completeness check
     const diagnostics = getTruncationDiagnostics(text);
     
-    // Start with the original text - NO hardcoded modifications
+    // ENHANCED: Validate database content preservation before formatting
+    if (originalContext && contextUsed) {
+      console.log('Validating database content preservation in final response...');
+      const validationResult = databaseContentValidator.validateDatabaseAccuracy(
+        text,
+        originalContext,
+        'final_response_validation'
+      );
+      
+      if (!validationResult.isAccurate && validationResult.corrections) {
+        console.log('Applying final corrections to preserve database accuracy...');
+        text = databaseContentValidator.applyCorrections(text, validationResult.corrections);
+      }
+    }
+    
+    // Start with the original text - database content takes precedence
     let formattedText = text;
     
-    // ONLY apply clickable links to regulatory references - no other formatting
+    // Apply clickable links to regulatory references
     console.log('Applying clickable links to regulatory references...');
     formattedText = enhanceWithClickableLinks(formattedText);
     console.log('Regulatory references enhanced with links');
     
-    // SIMPLIFIED: Only apply minimal formatting if no HTML is present
+    // Only apply minimal formatting if no HTML is present
     const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
     
     if (!hasHtmlFormatting) {
@@ -55,10 +70,6 @@ export const responseFormatter = {
       }).join('\n\n');
     }
     
-    // REMOVED: All hardcoded text corrections and replacements
-    // This ensures database content is never overridden by hardcoded "fixes"
-    // Database content is now the authoritative source and takes complete precedence
-    
     // For Rule 7.19A(1) aggregation questions, ensure content completeness
     const isAggregationResponse = text.toLowerCase().includes('7.19a') && 
                                text.toLowerCase().includes('aggregate') &&
@@ -76,7 +87,7 @@ export const responseFormatter = {
       completenessOverride = true;
     }
     
-    console.log('Response formatting complete - database-first approach maintained');
+    console.log('Response formatting complete - database accuracy preserved');
     
     return {
       text: formattedText,
@@ -100,4 +111,3 @@ export const responseFormatter = {
     };
   }
 };
-

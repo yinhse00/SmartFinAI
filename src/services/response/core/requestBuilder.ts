@@ -1,4 +1,3 @@
-
 import { createFinancialExpertSystemPrompt } from '../../financial/systemPrompts';
 import { GUIDE_COVERED_ACTIONS } from '../../constants/financialConstants';
 import { systemMessageBuilder } from './messages/systemMessageBuilder';
@@ -6,7 +5,7 @@ import { optimizedParametersBuilder } from './parameters/optimizedParametersBuil
 import { requestBodyBuilder } from './builders/requestBodyBuilder';
 
 /**
- * Coordinates request building using specialized builders
+ * Coordinates request building using specialized builders with enhanced database preservation
  */
 export const requestBuilder = {
   buildSystemMessage(
@@ -31,8 +30,14 @@ export const requestBuilder = {
     // Add professional formatting message to all queries
     systemMessage += systemMessageBuilder.buildProfessionalFormatMessage();
     
-    // Add database and FAQ instructions
-    systemMessage += "\n\nCRITICAL INSTRUCTION: You MUST prioritize information from the regulatory database over your general knowledge. When regulatory guidance exists in the provided database content, use it verbatim. If the database contains an answer to the question, quote it directly rather than generating your own response. Only use your general knowledge when the database has no relevant information.";
+    // ENHANCED: Extremely explicit database content preservation instructions
+    systemMessage += "\n\n🔴 CRITICAL DATABASE CONTENT PRESERVATION 🔴";
+    systemMessage += "\nThe regulatory database content is the AUTHORITATIVE source. You MUST:";
+    systemMessage += "\n• NEVER change rule numbers (Rule 8.05(1)(a) stays Rule 8.05(1)(a), NOT Rule 8.05(1))";
+    systemMessage += "\n• PRESERVE exact regulatory citations from database verbatim";
+    systemMessage += "\n• Quote database content exactly - no simplification allowed";
+    systemMessage += "\n• When database contains specific subsections like (1)(a), include them all";
+    systemMessage += "\n• Database content takes absolute precedence over your general knowledge";
     
     if (isFaqQuery) {
       systemMessage += "\n\nIMPORTANT: For questions related to FAQs or continuing obligations, ONLY use the exact wording from the provided database entries. DO NOT paraphrase, summarize or use your own knowledge. Extract the relevant FAQ question and answer from the '10.4 FAQ Continuing Obligations' document and provide them verbatim. If no exact match is found, explicitly state that.";
@@ -60,6 +65,9 @@ export const requestBuilder = {
     
     systemMessage += "\n\nCRITICAL: Ensure your response is COMPLETE and not truncated. Prioritize including all key points. If discussing a procedure with multiple steps, include ALL steps but explain each clearly. Format information efficiently with proper paragraphing and formatting.";
     
+    // FINAL EMPHASIS on database preservation
+    systemMessage += "\n\n🔴 FINAL REMINDER: PRESERVE ALL EXACT RULE REFERENCES FROM DATABASE 🔴";
+    
     return systemMessage;
   },
 
@@ -81,4 +89,3 @@ export const requestBuilder = {
     return optimizedParametersBuilder.getParameters(queryType, prompt, hasContext, isSimpleQuery);
   }
 };
-
