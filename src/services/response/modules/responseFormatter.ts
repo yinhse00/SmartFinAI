@@ -1,4 +1,3 @@
-
 import { GrokResponse } from '@/types/grok';
 import { getTruncationDiagnostics } from '@/utils/truncation';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
@@ -37,7 +36,7 @@ export const responseFormatter = {
         'final_response_validation'
       );
       
-      if (!validationResult.isAccurate && validationResult.corrections) {
+      if (!validationResult.isAccurate && validationResult.corrections && validationResult.corrections.length > 0) {
         console.log('Applying final corrections to preserve database accuracy...');
         text = databaseContentValidator.applyCorrections(text, validationResult.corrections);
       }
