@@ -114,26 +114,30 @@
   }
   
   /* Black bold heading styling - overrides theme colors */
-  .heading-black-bold {
+  h1.heading-black-bold,
+  h2.heading-black-bold,
+  h3.heading-black-bold {
     color: #000000 !important;
     font-weight: bold !important;
     margin: 1rem 0 0.5rem 0;
   }
   
-  .heading-black-bold h1 {
+  h1.heading-black-bold {
     font-size: 1.25rem;
   }
   
-  .heading-black-bold h2 {
+  h2.heading-black-bold {
     font-size: 1.125rem;
   }
   
-  .heading-black-bold h3 {
+  h3.heading-black-bold {
     font-size: 1rem;
   }
   
   /* Dark mode override for black bold headings */
-  .dark .heading-black-bold {
+  .dark h1.heading-black-bold,
+  .dark h2.heading-black-bold,
+  .dark h3.heading-black-bold {
     color: #000000 !important;
   }
   
