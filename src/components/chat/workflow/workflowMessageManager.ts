@@ -1,3 +1,4 @@
+
 /**
  * Dynamic workflow message manager
  * Generates contextual messages based on workflow state and processing context
@@ -17,16 +18,17 @@ export class WorkflowMessageManager {
   private messageHistory: string[] = [];
   private lastMessageTime: number = 0;
 
-  // Get dynamic message for current workflow phase
+  // Get dynamic message for current workflow phase with enhanced bold formatting
   getDynamicMessage(
     phase: WorkflowPhase,
     context: MessageContext,
     customMessage?: string
   ): string {
-    // Use custom message if provided and relevant
+    // Use custom message if provided and relevant, with bold enhancement
     if (customMessage && this.isRelevantMessage(customMessage, phase, context)) {
-      this.addToHistory(customMessage);
-      return customMessage;
+      const enhancedMessage = this.enhanceMessageWithBold(customMessage, context);
+      this.addToHistory(enhancedMessage);
+      return enhancedMessage;
     }
 
     // Get appropriate messages for phase
@@ -41,7 +43,7 @@ export class WorkflowMessageManager {
     return selectedMessage;
   }
 
-  // Generate progress description
+  // Generate progress description with bold formatting
   getProgressDescription(
     phase: WorkflowPhase,
     progress: number,
@@ -53,24 +55,24 @@ export class WorkflowMessageManager {
       return this.getProgressDescriptionZh(phase, progressPercent, context);
     }
 
-    // Generate contextual progress description
-    let description = `${progressPercent}% complete`;
+    // Generate contextual progress description with bold formatting
+    let description = `**${progressPercent}%** complete`;
     
     if (context.isOptimized) {
-      description += ' (Optimized)';
+      description += ' **(Optimized)**';
     }
     
     if (context.elapsedTime > 0) {
-      description += ` • ${context.elapsedTime}s elapsed`;
+      description += ` • **${context.elapsedTime}s** elapsed`;
     }
 
     return description;
   }
 
-  // Generate time estimate
+  // Generate time estimate with bold formatting
   getTimeEstimate(estimatedTimeRemaining: number, context: MessageContext): string {
     if (estimatedTimeRemaining <= 0) {
-      return context.isChinese ? '即将完成' : 'Almost complete';
+      return context.isChinese ? '**即将完成**' : '**Almost complete**';
     }
 
     const minutes = Math.floor(estimatedTimeRemaining / 60);
@@ -78,15 +80,15 @@ export class WorkflowMessageManager {
 
     if (context.isChinese) {
       if (minutes > 0) {
-        return `预计还需 ${minutes}分${seconds}秒`;
+        return `预计还需 **${minutes}分${seconds}秒**`;
       }
-      return `预计还需 ${seconds}秒`;
+      return `预计还需 **${seconds}秒**`;
     }
 
     if (minutes > 0) {
-      return `~${minutes}m ${seconds}s remaining`;
+      return `**~${minutes}m ${seconds}s** remaining`;
     }
-    return `~${seconds}s remaining`;
+    return `**~${seconds}s** remaining`;
   }
 
   // Clear message history
@@ -145,19 +147,49 @@ export class WorkflowMessageManager {
     return availableMessages[selectedIndex];
   }
 
+  private enhanceMessageWithBold(message: string, context: MessageContext): string {
+    // Enhance custom messages with strategic bold formatting
+    let enhanced = message;
+    
+    // Add bold to key action words
+    const actionWords = [
+      'analyzing', 'processing', 'generating', 'gathering', 'searching', 'checking',
+      'retrieving', 'formatting', 'validating', 'preparing', 'completing',
+      'optimizing', 'enhancing', 'finalizing'
+    ];
+    
+    actionWords.forEach(word => {
+      const regex = new RegExp(`\\b(${word})\\b`, 'gi');
+      enhanced = enhanced.replace(regex, '**$1**');
+    });
+    
+    // Add bold to important nouns
+    const importantNouns = [
+      'regulatory', 'context', 'database', 'rules', 'requirements', 'provisions',
+      'guidance', 'response', 'analysis', 'quality', 'accuracy'
+    ];
+    
+    importantNouns.forEach(noun => {
+      const regex = new RegExp(`\\b(${noun})\\b`, 'gi');
+      enhanced = enhanced.replace(regex, '**$1**');
+    });
+    
+    return enhanced;
+  }
+
   private getProgressDescriptionZh(
     phase: WorkflowPhase,
     progressPercent: number,
     context: MessageContext
   ): string {
-    let description = `${progressPercent}% 完成`;
+    let description = `**${progressPercent}%** 完成`;
     
     if (context.isOptimized) {
-      description += ' (优化模式)';
+      description += ' **(优化模式)**';
     }
     
     if (context.elapsedTime > 0) {
-      description += ` • 已用时 ${context.elapsedTime}秒`;
+      description += ` • 已用时 **${context.elapsedTime}秒**`;
     }
 
     return description;

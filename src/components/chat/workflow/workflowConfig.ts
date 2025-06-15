@@ -97,113 +97,113 @@ export const WORKFLOW_STEPS: WorkflowStepConfig[] = [
   }
 ];
 
-// Stage messages for each workflow phase
+// Stage messages for each workflow phase with enhanced bold formatting
 export const STAGE_MESSAGES: StageMessageConfig[] = [
   {
     phase: WorkflowPhase.ANALYSIS,
     messages: [
-      'Analyzing your query...',
-      'Determining processing strategy...',
-      'Checking query cache...',
-      'Preparing regulatory analysis...'
+      '**Analyzing** your query to understand regulatory requirements...',
+      '**Determining** optimal processing strategy for your request...',
+      '**Checking** query cache for similar regulatory questions...',
+      '**Preparing** comprehensive regulatory analysis framework...'
     ],
     messagesZh: [
-      '分析您的查询...',
-      '确定处理策略...',
-      '检查查询缓存...',
-      '准备监管分析...'
+      '**分析**您的查询以了解监管要求...',
+      '**确定**您请求的最佳处理策略...',
+      '**检查**类似监管问题的查询缓存...',
+      '**准备**全面的监管分析框架...'
     ],
     optimizedMessages: [
-      'Smart analysis in progress...',
-      'Using optimized processing patterns...',
-      'Cache hit - accelerating response...'
+      '**Smart analysis** in progress - leveraging **AI patterns**...',
+      'Using **optimized processing** patterns for faster results...',
+      '**Cache hit** detected - **accelerating** response generation...'
     ],
     optimizedMessagesZh: [
-      '智能分析进行中...',
-      '使用优化处理模式...',
-      '缓存命中 - 加速响应...'
+      '**智能分析**进行中 - 利用**AI模式**...',
+      '使用**优化处理**模式以获得更快结果...',
+      '检测到**缓存命中** - **加速**响应生成...'
     ]
   },
   {
     phase: WorkflowPhase.CONTEXT_GATHERING,
     messages: [
-      'Gathering regulatory context...',
-      'Searching listing rules database...',
-      'Checking takeovers code provisions...',
-      'Retrieving guidance materials...',
-      'Quality scoring context relevance...'
+      '**Gathering** relevant regulatory context from **multiple databases**...',
+      '**Searching** listing rules database for **applicable provisions**...',
+      '**Checking** takeovers code for **relevant requirements**...',
+      '**Retrieving** guidance materials and **FAQ resources**...',
+      '**Quality scoring** context relevance for **optimal results**...'
     ],
     messagesZh: [
-      '收集监管上下文...',
-      '搜索上市规则数据库...',
-      '检查收购守则条款...',
-      '检索指导材料...',
-      '对上下文相关性进行质量评分...'
+      '从**多个数据库**收集相关监管上下文...',
+      '在上市规则数据库中搜索**适用条款**...',
+      '检查收购守则中的**相关要求**...',
+      '检索指导材料和**FAQ资源**...',
+      '对上下文相关性进行**质量评分**以获得**最佳结果**...'
     ],
     optimizedMessages: [
-      'Using parallel context retrieval...',
-      'Fast path context gathering...',
-      'High-quality context identified...'
+      'Using **parallel context retrieval** for **enhanced speed**...',
+      '**Fast path** context gathering with **quality optimization**...',
+      '**High-quality** regulatory context **successfully identified**...'
     ],
     optimizedMessagesZh: [
-      '使用并行上下文检索...',
-      '快速路径上下文收集...',
-      '识别高质量上下文...'
+      '使用**并行上下文检索**以**提高速度**...',
+      '**快速路径**上下文收集与**质量优化**...',
+      '**高质量**监管上下文**成功识别**...'
     ]
   },
   {
     phase: WorkflowPhase.INTELLIGENT_PROCESSING,
     messages: [
-      'Processing regulatory information...',
-      'Applying intelligent search patterns...',
-      'Cross-referencing regulatory provisions...',
-      'Synthesizing comprehensive analysis...'
+      '**Processing** regulatory information with **advanced algorithms**...',
+      '**Applying** intelligent search patterns for **comprehensive analysis**...',
+      '**Cross-referencing** regulatory provisions across **multiple sources**...',
+      '**Synthesizing** comprehensive analysis from **regulatory data**...'
     ],
     messagesZh: [
-      '处理监管信息...',
-      '应用智能搜索模式...',
-      '交叉引用监管条款...',
-      '综合全面分析...'
+      '使用**高级算法**处理监管信息...',
+      '应用智能搜索模式进行**全面分析**...',
+      '跨**多个来源**交叉引用监管条款...',
+      '从**监管数据**综合全面分析...'
     ],
     optimizedMessages: [
-      'Using advanced processing algorithms...',
-      'Intelligent pattern matching active...',
-      'Optimized regulatory synthesis...'
+      'Using **advanced processing algorithms** for **superior results**...',
+      '**Intelligent pattern matching** actively **optimizing** analysis...',
+      '**Optimized regulatory synthesis** delivering **enhanced accuracy**...'
     ],
     optimizedMessagesZh: [
-      '使用高级处理算法...',
-      '智能模式匹配激活...',
-      '优化监管综合...'
+      '使用**高级处理算法**获得**卓越结果**...',
+      '**智能模式匹配**主动**优化**分析...',
+      '**优化监管综合**提供**增强准确性**...'
     ]
   },
   {
     phase: WorkflowPhase.RESPONSE_GENERATION,
     messages: [
-      'Generating comprehensive response...',
-      'Formatting regulatory content...',
-      'Ensuring accuracy and completeness...',
-      'Finalizing expert analysis...'
+      '**Generating** comprehensive response with **regulatory precision**...',
+      '**Formatting** regulatory content for **professional presentation**...',
+      '**Ensuring** accuracy and completeness of **regulatory guidance**...',
+      '**Finalizing** expert analysis with **quality assurance**...'
     ],
     messagesZh: [
-      '生成全面回复...',
-      '格式化监管内容...',
-      '确保准确性和完整性...',
-      '完成专家分析...'
+      '以**监管精度**生成全面回复...',
+      '为**专业展示**格式化监管内容...',
+      '确保**监管指导**的准确性和完整性...',
+      '通过**质量保证**完成专家分析...'
     ]
   },
   {
     phase: WorkflowPhase.VALIDATION,
     messages: [
-      'Validating response quality...',
-      'Checking regulatory accuracy...',
-      'Verifying completeness...',
-      'Response ready...'
+      '**Validating** response quality against **regulatory standards**...',
+      '**Checking** regulatory accuracy and **compliance requirements**...',
+      '**Verifying** completeness of **regulatory analysis**...',
+      '**Response ready** - **quality assured** regulatory guidance...'
     ],
     messagesZh: [
-      '验证回复质量...',
-      '检查监管准确性...',
-      '验证完整性...',
-      '回复就绪...'
+      '根据**监管标准**验证回复质量...',
+      '检查监管准确性和**合规要求**...',
+      '验证**监管分析**的完整性...',
+      '**回复就绪** - **质量保证**的监管指导...'
     ]
   }
 ];
