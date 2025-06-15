@@ -15,6 +15,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useAuth } from "@/components/auth/AuthProvider"
+import { Link } from "react-router-dom"
+import { User, Settings, CreditCard, HelpCircle } from "lucide-react"
 
 export function UserNav() {
   const { user, signOut } = useAuth();
@@ -56,10 +58,33 @@ export function UserNav() {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          {/* Future links can be added here */}
+          <DropdownMenuItem asChild>
+            <Link to="/profile">
+              <User className="mr-2 h-4 w-4" />
+              <span>Profile</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/settings">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Account Settings</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link to="/billing">
+              <CreditCard className="mr-2 h-4 w-4" />
+              <span>Billing & Payment</span>
+            </Link>
+          </DropdownMenuItem>
+           <DropdownMenuItem asChild>
+            <Link to="/support">
+              <HelpCircle className="mr-2 h-4 w-4" />
+              <span>Help & Support</span>
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={signOut}>
+        <DropdownMenuItem onClick={signOut} className="cursor-pointer">
           Log out
         </DropdownMenuItem>
       </DropdownMenuContent>

@@ -14,6 +14,10 @@ import Database from "./pages/Database";
 import DealStructuring from "./pages/DealStructuring";
 import Index from "./pages/Index";
 import AuthPage from "./pages/Auth";
+import ProfilePage from "./pages/Profile";
+import SettingsPage from "./pages/Settings";
+import BillingPage from "./pages/Billing";
+import SupportPage from "./pages/Support";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -39,6 +43,10 @@ const App = () => (
               <Route path="/chat" element={<Chat />} />
               <Route path="/database" element={<Database />} />
               <Route path="/deal-structuring" element={<DealStructuring />} />
+              <Route path="/profile" element={<ProfilePage />} />
+              <Route path="/settings" element={<SettingsPage />} />
+              <Route path="/billing" element={<BillingPage />} />
+              <Route path="/support" element={<SupportPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
