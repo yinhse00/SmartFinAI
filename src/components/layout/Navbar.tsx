@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from '@/components/auth/AuthProvider';
 import { UserNav } from '@/components/auth/UserNav';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LayoutDashboard } from 'lucide-react';
 
 const Navbar = () => {
   const { user, loading } = useAuth();
@@ -15,6 +16,10 @@ const Navbar = () => {
           SmartFinAI
         </Link>
         <div className="flex items-center space-x-4">
+          <Link to="/" className="flex items-center text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
+            <LayoutDashboard className="mr-2 h-4 w-4" />
+            <span>Dashboard</span>
+          </Link>
           <Link to="/chat" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
             Chat
           </Link>
