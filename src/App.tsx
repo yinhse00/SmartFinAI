@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -8,7 +7,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 
 // Import pages
 import Chat from "./pages/Chat";
-import References from "./pages/References";
 import NotFound from "./pages/NotFound";
 import Database from "./pages/Database";
 import DealStructuring from "./pages/DealStructuring";
@@ -34,7 +32,6 @@ const App = () => (
             {/* Redirect home to chat */}
             <Route path="/" element={<Navigate to="/chat" replace />} />
             <Route path="/chat" element={<Chat />} />
-            <Route path="/references" element={<References />} />
             <Route path="/database" element={<Database />} />
             <Route path="/deal-structuring" element={<DealStructuring />} />
             {/* Catch-all route */}

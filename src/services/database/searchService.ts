@@ -1,4 +1,3 @@
-
 /**
  * Service for searching the regulatory database
  */
@@ -6,7 +5,6 @@
 import { RegulatoryEntry } from "./types";
 import { databaseService } from "./databaseService";
 import { supabase } from '@/integrations/supabase/client';
-import { ReferenceDocument, DocumentCategory } from '@/types/references';
 
 export const searchService = {
   /**
@@ -111,109 +109,16 @@ export const searchService = {
    */
   searchComprehensive: async (query: string, category?: string): Promise<{
     databaseEntries: RegulatoryEntry[],
-    referenceDocuments: ReferenceDocument[]
+    referenceDocuments: []
   }> => {
     // Search for entries in the regulatory database
     const databaseEntries = await searchService.search(query, category);
     
-    // Search for reference documents in Supabase using the correct table name
-    let referenceQuery = supabase
-      .from('mb_listingrule_documents')
-      .select('*');
-      
-    if (category && category !== 'all') {
-      referenceQuery = referenceQuery.eq('category', category);
-    }
-    
-    // Add search filter for title and description
-    const { data: referenceData, error } = await referenceQuery.or(
-      `title.ilike.%${query}%,description.ilike.%${query}%`
-    );
-    
-    if (error) {
-      console.error("Error searching reference documents:", error);
-      return { databaseEntries, referenceDocuments: [] };
-    }
-    
-    // Convert the raw data to ReferenceDocument type
-    const typedReferenceData = referenceData?.map(item => ({
-      id: item.id,
-      title: item.title,
-      description: item.description || '',
-      category: item.category as DocumentCategory,
-      file_path: item.file_path,
-      file_url: item.file_url,
-      file_size: item.file_size || 0,
-      file_type: item.file_type || '',
-      created_at: item.created_at,
-      metadata: item.metadata
-    })) as ReferenceDocument[] || [];
-    
-    console.log(`Found ${databaseEntries.length} database entries and ${typedReferenceData.length || 0} reference documents`);
+    console.log(`Found ${databaseEntries.length} database entries. Reference document search is disabled.`);
     
     return {
       databaseEntries,
-      referenceDocuments: typedReferenceData
+      referenceDocuments: []
     };
   }
 };
-
-// Helper function to search reference documents
-async function searchReferenceDocuments(
-  query: string, 
-  category?: string, 
-  prioritizeFAQ: boolean = false
-): Promise<{ referenceDocuments: ReferenceDocument[] }> {
-  // Search reference documents in Supabase using correct table name
-  let referenceQuery = supabase
-    .from('mb_listingrule_documents')
-    .select('*');
-    
-  if (category && category !== 'all') {
-    referenceQuery = referenceQuery.eq('category', category);
-  }
-  
-  // Add search filter for title and description
-  const { data: referenceData, error } = await referenceQuery.or(
-    `title.ilike.%${query}%,description.ilike.%${query}%`
-  );
-  
-  if (error) {
-    console.error("Error searching reference documents:", error);
-    return { referenceDocuments: [] };
-  }
-  
-  // Convert the raw data to ReferenceDocument type
-  const typedReferenceData = referenceData?.map(item => ({
-    id: item.id,
-    title: item.title,
-    description: item.description || '',
-    category: item.category as DocumentCategory,
-    file_path: item.file_path,
-    file_url: item.file_url,
-    file_size: item.file_size || 0,
-    file_type: item.file_type || '',
-    created_at: item.created_at,
-    metadata: item.metadata
-  })) as ReferenceDocument[] || [];
-  
-  // Prioritize FAQ documents if requested
-  if (prioritizeFAQ) {
-    return {
-      referenceDocuments: typedReferenceData.sort((a, b) => {
-        const aIsFaq = a.title.includes('10.4') || 
-                      a.title.toLowerCase().includes('faq') || 
-                      a.title.toLowerCase().includes('continuing');
-        const bIsFaq = b.title.includes('10.4') || 
-                      b.title.toLowerCase().includes('faq') || 
-                      b.title.toLowerCase().includes('continuing');
-        
-        if (aIsFaq && !bIsFaq) return -1;
-        if (!aIsFaq && bIsFaq) return 1;
-        return 0;
-      })
-    };
-  }
-  
-  return { referenceDocuments: typedReferenceData };
-}
