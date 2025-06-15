@@ -6,10 +6,10 @@ import { queryIntelligenceService } from '@/services/intelligence/queryIntellige
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 2: Intelligent Listing Rules Search using Grok 3 + Database
- * - Uses Grok 3 for query analysis and categorization
- * - Leverages search_index table for parallel database searches
- * - Combines AI knowledge with structured regulatory data
+ * Enhanced Step 2: Database-First Listing Rules Search using Grok 3 + Database
+ * - Prioritizes Supabase database results over Grok's AI knowledge
+ * - Uses database-exclusive strategy when high-confidence matches found
+ * - Implements conflict detection and source attribution
  */
 export const executeStep2 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step2Result> => {
   setStepProgress('Analyzing query with Grok 3 intelligence...');
@@ -21,45 +21,69 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     
     setStepProgress('Executing parallel database searches...');
     
-    // Phase 2: Parallel Database Searches
+    // Phase 2: Parallel Database Searches (Priority Search)
     const searchResults = await searchIndexRoutingService.executeParallelSearches(
       params.query, 
       queryAnalysis
     );
     
-    setStepProgress('Combining AI knowledge with database results...');
-    
-    // Phase 3: Get Grok's regulatory context
-    const grokResponse = await grokService.getRegulatoryContext(
-      `HKEX Listing Rules regarding: ${params.query}`,
-      { metadata: { fastResponse: true, searchStrategy: 'enhanced_hybrid' } }
-    );
-    
-    const grokContext = safelyExtractText(grokResponse);
-    
-    // Phase 4: Combine results intelligently
+    // Phase 3: Database-First Context Processing
     let enhancedContext = '';
     let searchStrategy = 'grok_only';
+    let databaseHasHighConfidence = false;
     
     if (searchResults.totalResults > 0) {
-      // Format database results
-      const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
+      // Check for high-confidence database matches
+      const hasSpecificMatches = searchResults.searchResults.some(result => 
+        result.relevanceScore > 0.7 || 
+        result.results.some(item => 
+          item.reference_no || item.reference_nos || item.faqtopic || 
+          item.title?.toLowerCase().includes('faq') ||
+          item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 20))
+        )
+      );
       
-      // Combine Grok knowledge with database results
-      if (grokContext && grokContext.trim() !== '') {
-        enhancedContext = grokContext + '\n\n' + databaseContext;
-        searchStrategy = 'hybrid_grok_database';
-      } else {
-        enhancedContext = databaseContext;
-        searchStrategy = 'database_primary';
+      if (hasSpecificMatches) {
+        databaseHasHighConfidence = true;
+        setStepProgress('Found authoritative database matches - using database-exclusive strategy');
       }
       
-      setStepProgress(`Found comprehensive results from ${searchResults.searchResults.length} data sources`);
-    } else if (grokContext && grokContext.trim() !== '') {
-      enhancedContext = grokContext;
-      searchStrategy = 'grok_primary';
-      setStepProgress('Found relevant Listing Rules from AI knowledge');
+      // Format database results with clear source attribution
+      const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
+      enhancedContext = `--- HKEX DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
+      searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
+      
+      setStepProgress(`Found ${searchResults.totalResults} authoritative database results`);
+    }
+    
+    // Phase 4: Conditional Grok Enhancement (only if not database-exclusive)
+    if (!databaseHasHighConfidence) {
+      setStepProgress('Enhancing with additional regulatory context...');
+      
+      const grokResponse = await grokService.getRegulatoryContext(
+        `HKEX Listing Rules regarding: ${params.query}`,
+        { metadata: { fastResponse: true, searchStrategy: 'database_supplementary' } }
+      );
+      
+      const grokContext = safelyExtractText(grokResponse);
+      
+      if (grokContext && grokContext.trim() !== '') {
+        if (enhancedContext) {
+          // Database results first, then complementary Grok content
+          enhancedContext += '\n\n--- ADDITIONAL REGULATORY CONTEXT ---\n\n' + grokContext;
+          searchStrategy = 'database_primary';
+        } else {
+          enhancedContext = grokContext;
+          searchStrategy = 'grok_primary';
+        }
+      }
     } else {
+      // Database-exclusive strategy - skip Grok to prevent conflicts
+      console.log('Using database-exclusive strategy - skipping Grok enhancement to prevent conflicts');
+    }
+    
+    // Phase 5: Handle empty results
+    if (!enhancedContext || enhancedContext.trim() === '') {
       setStepProgress('No specific Listing Rules found');
       return {
         shouldContinue: true,
@@ -69,7 +93,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
         skipSequentialSearches: Boolean(params.skipSequentialSearches),
         isRegulatoryRelated: true,
         searchMetadata: {
-          searchStrategy,
+          searchStrategy: 'no_results',
           queryAnalysis,
           databaseResultsCount: 0,
           searchTime: searchResults.executionTime
@@ -77,7 +101,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       };
     }
     
-    // Check for execution guidance needs
+    // Phase 6: Process execution requirements
     const executionRequired = 
       params.query.toLowerCase().includes('process') ||
       params.query.toLowerCase().includes('how to') ||
@@ -105,7 +129,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       };
     }
     
-    // Check for takeover relevance
+    // Phase 7: Check for takeover relevance
     const takeoverRelated = 
       enhancedContext.toLowerCase().includes('takeover') ||
       enhancedContext.toLowerCase().includes('general offer') ||
@@ -129,7 +153,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
       };
     }
     
-    // Standard response path with enhanced context
+    // Phase 8: Standard response with database-first context
     return {
       shouldContinue: true,
       nextStep: 'response',
@@ -148,7 +172,7 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     };
     
   } catch (error) {
-    console.error('Error in enhanced step 2:', error);
+    console.error('Error in database-first step 2:', error);
     return { 
       shouldContinue: true, 
       nextStep: 'response', 

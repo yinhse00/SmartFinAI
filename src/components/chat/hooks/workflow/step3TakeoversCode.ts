@@ -6,25 +6,25 @@ import { queryIntelligenceService } from '@/services/intelligence/queryIntellige
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 3: Intelligent Takeovers Code Search
- * - Leverages Step 2's analysis when available
+ * Enhanced Step 3: Database-First Takeovers Code Search
+ * - Prioritizes Supabase database results over Grok's AI knowledge
  * - Uses targeted database searches for takeovers-specific content
- * - Combines with Grok's specialized takeovers knowledge
+ * - Implements database-exclusive strategy for authoritative answers
  */
 export const executeStep3 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step3Result> => {
-  setStepProgress('Searching Takeovers Code information with enhanced intelligence...');
+  setStepProgress('Searching Takeovers Code information with database-first approach...');
   
   try {
     let enhancedContext = '';
     let searchStrategy = 'grok_only';
     let databaseResultsCount = 0;
     let searchTime = 0;
+    let databaseHasHighConfidence = false;
     
-    // Phase 1: Check if we can leverage existing search metadata from Step 2
+    // Phase 1: Leverage existing analysis or create new one
     const hasStep2Analysis = params.searchMetadata?.queryAnalysis;
     let queryAnalysis = hasStep2Analysis ? params.searchMetadata.queryAnalysis : null;
     
-    // Phase 2: If no existing analysis, perform new Grok 3 analysis for takeovers
     if (!queryAnalysis) {
       setStepProgress('Analyzing query for takeovers relevance...');
       queryAnalysis = await queryIntelligenceService.analyzeQuery(
@@ -32,12 +32,12 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       );
     }
     
-    // Phase 3: Execute targeted takeovers database search if relevant
+    // Phase 2: Execute targeted takeovers database search
     if (queryAnalysis.categories.includes('takeovers') || 
         params.query.toLowerCase().includes('takeover') ||
         params.query.toLowerCase().includes('general offer')) {
       
-      setStepProgress('Searching takeovers database...');
+      setStepProgress('Searching takeovers database with priority...');
       
       // Focus on takeovers-specific tables
       const takeoversAnalysis = {
@@ -54,29 +54,52 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       searchTime = searchResults.executionTime;
       
       if (searchResults.totalResults > 0) {
+        // Check for high-confidence database matches
+        const hasSpecificMatches = searchResults.searchResults.some(result => 
+          result.relevanceScore > 0.7 || 
+          result.results.some(item => 
+            item.reference_no || item.reference_nos ||
+            item.title?.toLowerCase().includes('takeover') ||
+            item.particulars?.toLowerCase().includes('general offer') ||
+            item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 20))
+          )
+        );
+        
+        if (hasSpecificMatches) {
+          databaseHasHighConfidence = true;
+          setStepProgress('Found authoritative takeovers database matches');
+        }
+        
         const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
-        enhancedContext = databaseContext;
-        searchStrategy = 'database_primary';
+        enhancedContext = `--- TAKEOVERS CODE DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
+        searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
       }
     }
     
-    // Phase 4: Get Grok's specialized takeovers knowledge
-    setStepProgress('Retrieving Takeovers Code expertise...');
-    
-    const grokResponse = await grokService.getRegulatoryContext(
-      `Hong Kong Takeovers Code regarding: ${params.query}`,
-      { metadata: { specializedQuery: 'takeovers', fastResponse: true } }
-    );
-    
-    const takeoversCodeContext = safelyExtractText(grokResponse);
-    
-    // Phase 5: Combine database and Grok results intelligently
-    if (enhancedContext && takeoversCodeContext) {
-      enhancedContext = takeoversCodeContext + '\n\n' + enhancedContext;
-      searchStrategy = 'hybrid_grok_database';
-    } else if (takeoversCodeContext) {
-      enhancedContext = takeoversCodeContext;
-      searchStrategy = searchStrategy === 'database_primary' ? 'grok_primary' : 'grok_only';
+    // Phase 3: Conditional Grok Enhancement (only if not database-exclusive)
+    if (!databaseHasHighConfidence) {
+      setStepProgress('Enhancing with additional takeovers expertise...');
+      
+      const grokResponse = await grokService.getRegulatoryContext(
+        `Hong Kong Takeovers Code regarding: ${params.query}`,
+        { metadata: { specializedQuery: 'takeovers', fastResponse: true } }
+      );
+      
+      const takeoversCodeContext = safelyExtractText(grokResponse);
+      
+      if (takeoversCodeContext && takeoversCodeContext.trim() !== '') {
+        if (enhancedContext) {
+          // Database results first, then complementary Grok content
+          enhancedContext += '\n\n--- ADDITIONAL TAKEOVERS CONTEXT ---\n\n' + takeoversCodeContext;
+          searchStrategy = 'database_primary';
+        } else {
+          enhancedContext = takeoversCodeContext;
+          searchStrategy = 'grok_primary';
+        }
+      }
+    } else {
+      // Database-exclusive strategy - skip Grok to prevent conflicts
+      console.log('Using database-exclusive strategy for takeovers - preventing potential conflicts');
     }
     
     const searchPositive = enhancedContext && enhancedContext.trim() !== '';
@@ -84,9 +107,9 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
     if (searchPositive) {
       setStepProgress('Found comprehensive Takeovers Code information');
       
-      // Add previous context from Step 2 if available
+      // Add previous context from Step 2 if available (database context first)
       if (params.listingRulesContext) {
-        enhancedContext = params.listingRulesContext + "\n\n--- Takeovers Code Context ---\n\n" + enhancedContext;
+        enhancedContext = params.listingRulesContext + "\n\n--- TAKEOVERS CODE CONTEXT ---\n\n" + enhancedContext;
       }
       
       // Check for execution guidance needs
@@ -133,7 +156,6 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
         }
       };
     } else {
-      // Move to response if no takeovers code content found
       setStepProgress('No specific Takeovers Code found');
       
       return {
@@ -152,7 +174,7 @@ export const executeStep3 = async (params: any, setStepProgress: (progress: stri
       };
     }
   } catch (error) {
-    console.error('Error in enhanced step 3:', error);
+    console.error('Error in database-first step 3:', error);
     return { 
       shouldContinue: true, 
       nextStep: 'response', 

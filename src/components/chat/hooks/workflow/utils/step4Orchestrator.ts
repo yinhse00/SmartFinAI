@@ -5,26 +5,27 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
 
 /**
- * Enhanced Step 4 Orchestrator with database-backed execution guidance
- * - Uses intelligent search routing for execution-specific content
+ * Enhanced Step 4 Orchestrator with Database-First Execution Guidance
+ * - Prioritizes Supabase database execution content over Grok's general knowledge
+ * - Uses database-exclusive strategy for authoritative execution procedures
  * - Combines process guidance with regulatory timetables and documentation
- * - Maintains business day calculation logic
  */
 export const orchestrateStep4 = async (params: any, setStepProgress: (progress: string) => void): Promise<Step4Result> => {
-  setStepProgress('Analyzing execution requirements...');
+  setStepProgress('Analyzing execution requirements with database priority...');
   
   try {
     let executionContext = '';
     let searchStrategy = 'grok_only';
     let databaseResultsCount = 0;
     let searchTime = 0;
+    let databaseHasHighConfidence = false;
     
-    // Phase 1: Leverage existing query analysis if available
+    // Phase 1: Leverage existing query analysis
     const queryAnalysis = params.searchMetadata?.queryAnalysis;
     
-    // Phase 2: Search for execution-specific database content
+    // Phase 2: Database-First Search for execution-specific content
     if (queryAnalysis) {
-      setStepProgress('Searching execution guidance and timetables...');
+      setStepProgress('Searching execution guidance and timetables in database...');
       
       // Target execution-specific tables
       const executionAnalysis = {
@@ -34,7 +35,8 @@ export const orchestrateStep4 = async (params: any, setStepProgress: (progress: 
           'execution_lr_documentations',
           'listingrules_new_timetable', 
           'execution_procedures',
-          'process_checklists'
+          'process_checklists',
+          'announcement_pre_vetting_requirements'
         ]
       };
       
@@ -47,18 +49,37 @@ export const orchestrateStep4 = async (params: any, setStepProgress: (progress: 
       searchTime = searchResults.executionTime;
       
       if (searchResults.totalResults > 0) {
-        const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
-        executionContext = databaseContext;
-        searchStrategy = 'database_primary';
+        // Check for high-confidence execution matches
+        const hasSpecificMatches = searchResults.searchResults.some(result => 
+          result.relevanceScore > 0.6 || 
+          result.results.some(item => 
+            item.title?.toLowerCase().includes('execution') ||
+            item.title?.toLowerCase().includes('timetable') ||
+            item.title?.toLowerCase().includes('process') ||
+            item.particulars?.toLowerCase().includes('procedure') ||
+            item.particulars?.toLowerCase().includes('timeline') ||
+            item.particulars?.toLowerCase().includes(params.query.toLowerCase().slice(0, 15))
+          )
+        );
         
-        setStepProgress(`Found ${searchResults.totalResults} execution guidance items`);
+        if (hasSpecificMatches) {
+          databaseHasHighConfidence = true;
+          setStepProgress('Found authoritative execution guidance in database');
+        }
+        
+        const databaseContext = searchIndexRoutingService.formatSearchResultsToContext(searchResults);
+        executionContext = `--- EXECUTION GUIDANCE DATABASE RESULTS (Authoritative Source) ---\n\n${databaseContext}`;
+        searchStrategy = databaseHasHighConfidence ? 'database_exclusive' : 'database_primary';
+        
+        setStepProgress(`Found ${searchResults.totalResults} execution guidance items from database`);
       }
     }
     
-    // Phase 3: Get Grok's enhanced execution guidance with business day awareness
-    setStepProgress('Generating comprehensive execution guidance...');
-    
-    const systemPrompt = `You are a Hong Kong financial regulatory expert specializing in execution processes, timetables, and business day calculations.
+    // Phase 3: Conditional Grok Enhancement (only if not database-exclusive)
+    if (!databaseHasHighConfidence) {
+      setStepProgress('Enhancing with additional execution expertise...');
+      
+      const systemPrompt = `You are a Hong Kong financial regulatory expert specializing in execution processes, timetables, and business day calculations.
 
 Focus on providing:
 1. Step-by-step execution procedures
@@ -69,30 +90,36 @@ Focus on providing:
 6. Practical implementation guidance
 
 Consider Hong Kong business days (exclude weekends and public holidays) for all timeline calculations.`;
-    
-    const grokResponse = await grokService.getRegulatoryContext(
-      `${systemPrompt}\n\nExecution guidance for: ${params.query}`,
-      { 
-        metadata: { 
-          specializedQuery: 'execution',
-          enhancedProcessing: true,
-          businessDayCalculations: true
-        } 
+      
+      const grokResponse = await grokService.getRegulatoryContext(
+        `${systemPrompt}\n\nExecution guidance for: ${params.query}`,
+        { 
+          metadata: { 
+            specializedQuery: 'execution',
+            enhancedProcessing: true,
+            businessDayCalculations: true
+          } 
+        }
+      );
+      
+      const grokExecutionContext = safelyExtractText(grokResponse);
+      
+      if (grokExecutionContext && grokExecutionContext.trim() !== '') {
+        if (executionContext) {
+          // Database results first, then complementary Grok content
+          executionContext += '\n\n--- ADDITIONAL EXECUTION CONTEXT ---\n\n' + grokExecutionContext;
+          searchStrategy = 'database_primary';
+        } else {
+          executionContext = grokExecutionContext;
+          searchStrategy = 'grok_primary';
+        }
       }
-    );
-    
-    const grokExecutionContext = safelyExtractText(grokResponse);
-    
-    // Phase 4: Combine database and Grok execution guidance
-    if (executionContext && grokExecutionContext) {
-      executionContext = grokExecutionContext + '\n\n--- Detailed Execution Procedures ---\n\n' + executionContext;
-      searchStrategy = 'hybrid_grok_database';
-    } else if (grokExecutionContext) {
-      executionContext = grokExecutionContext;
-      searchStrategy = searchStrategy === 'database_primary' ? 'grok_primary' : 'grok_only';
+    } else {
+      // Database-exclusive strategy - skip Grok to prevent conflicts
+      console.log('Using database-exclusive strategy for execution - preventing potential conflicts');
     }
     
-    // Phase 5: Enhance with existing regulatory context
+    // Phase 4: Enhance with existing regulatory context (database context first)
     let finalContext = executionContext;
     if (params.regulatoryContext || params.listingRulesContext || params.takeoversCodeContext) {
       const existingContext = params.regulatoryContext || 
@@ -107,7 +134,7 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
     const hasExecutionGuidance = executionContext && executionContext.trim() !== '';
     
     if (hasExecutionGuidance) {
-      setStepProgress('Execution guidance prepared with business day calculations');
+      setStepProgress('Database-first execution guidance prepared with business day calculations');
       
       return {
         shouldContinue: true,
@@ -150,7 +177,7 @@ Consider Hong Kong business days (exclude weekends and public holidays) for all 
     }
     
   } catch (error) {
-    console.error('Error in enhanced step 4 orchestrator:', error);
+    console.error('Error in database-first step 4 orchestrator:', error);
     
     // Fallback to basic execution response
     return {

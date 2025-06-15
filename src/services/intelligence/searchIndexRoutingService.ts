@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { QueryAnalysis } from './queryIntelligenceService';
 
@@ -229,35 +228,82 @@ export const searchIndexRoutingService = {
   },
 
   /**
-   * Format search results into readable context
+   * Format search results into readable context with enhanced source attribution
    */
   formatSearchResultsToContext: (searchResults: CombinedSearchResults): string => {
     if (searchResults.totalResults === 0) {
       return '';
     }
     
-    let formattedContext = `\n--- DATABASE SEARCH RESULTS (${searchResults.totalResults} results) ---\n`;
+    let formattedContext = `DATABASE SEARCH RESULTS: ${searchResults.totalResults} authoritative entries found\n`;
+    formattedContext += `Search Strategy: ${searchResults.searchStrategy} | Execution Time: ${searchResults.executionTime}ms\n\n`;
     
     searchResults.searchResults.forEach((tableResult, index) => {
       if (tableResult.results.length > 0) {
-        formattedContext += `\n### ${tableResult.tableIndex.toUpperCase()} (${tableResult.results.length} results, relevance: ${Math.round(tableResult.relevanceScore * 100)}%)\n`;
+        // Enhanced table name formatting with source classification
+        const tableDisplayName = searchIndexRoutingService.getTableDisplayName(tableResult.tableIndex);
+        const sourceType = searchIndexRoutingService.getSourceType(tableResult.tableIndex);
+        
+        formattedContext += `### ${tableDisplayName} ${sourceType}\n`;
+        formattedContext += `Relevance: ${Math.round(tableResult.relevanceScore * 100)}% | Results: ${tableResult.results.length}\n\n`;
         
         tableResult.results.slice(0, 5).forEach((result, idx) => {
-          // Extract key information based on table structure
+          // Extract key information with enhanced formatting
           let title = result.title || result.topic || result.faqtopic || `Entry ${idx + 1}`;
           let content = result.particulars || result.description || result.content || '';
           let reference = result.reference_no || result.reference_nos || result.chapter || '';
           
-          formattedContext += `\n**${title}**`;
-          if (reference) formattedContext += ` (${reference})`;
-          if (content) formattedContext += `\n${content.substring(0, 300)}${content.length > 300 ? '...' : ''}`;
-          formattedContext += '\n';
+          formattedContext += `**${title}**`;
+          if (reference) formattedContext += ` (Reference: ${reference})`;
+          formattedContext += `\n`;
+          
+          if (content) {
+            // Clean and format content
+            const cleanContent = content.replace(/\s+/g, ' ').trim();
+            formattedContext += `${cleanContent.substring(0, 400)}${cleanContent.length > 400 ? '...' : ''}`;
+          }
+          formattedContext += '\n\n';
         });
+        
+        if (tableResult.results.length > 5) {
+          formattedContext += `... and ${tableResult.results.length - 5} more entries from ${tableDisplayName}\n\n`;
+        }
       }
     });
     
-    formattedContext += `\n--- End Database Results (Search time: ${searchResults.executionTime}ms) ---\n`;
+    formattedContext += `--- End Database Results | Total Processing Time: ${searchResults.executionTime}ms ---\n`;
     
     return formattedContext;
+  },
+
+  /**
+   * Get display name for table with proper formatting
+   */
+  getTableDisplayName: (tableIndex: string): string => {
+    const tableNames: Record<string, string> = {
+      'listingrule_new_faq': 'New Listing Applicant FAQs',
+      'listingrule_listed_faq': 'Listed Company FAQs',
+      'listingrule_new_gl': 'New Listing Guidance Letters',
+      'listingrule_new_ld': 'New Listing Decisions',
+      'announcement_pre_vetting_requirements': 'Pre-Vetting Requirements',
+      'mb_listingrule_documents': 'Listing Rule Documents',
+      'regulatory_categories': 'Regulatory Categories',
+      'regulatory_provisions': 'Regulatory Provisions',
+      'rule_keywords': 'Rule Keywords',
+      'search_index': 'Search Index'
+    };
+    return tableNames[tableIndex] || tableIndex.toUpperCase();
+  },
+
+  /**
+   * Get source type classification for proper attribution
+   */
+  getSourceType: (tableIndex: string): string => {
+    if (tableIndex.includes('faq')) return '(Official FAQ Database)';
+    if (tableIndex.includes('_gl')) return '(Guidance Letters Database)';
+    if (tableIndex.includes('_ld')) return '(Listing Decisions Database)';
+    if (tableIndex.includes('vetting')) return '(Vetting Requirements Database)';
+    if (tableIndex.includes('documents')) return '(Official Documents Database)';
+    return '(Regulatory Database)';
   }
 };
