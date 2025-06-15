@@ -39,8 +39,6 @@ export const queryIntelligenceService = {
   "confidence": 0.8
 }
 
-Available table indexes from search_index: listingrule_new_faq, listingrule_listed_faq, listingrule_new_gl, listingrule_new_ld, takeovers_documents, execution_lr_documentations, listingrules_new_timetable, etc.
-
 Target party detection:
 - "new_listing_applicants" for IPO, new listing, listing application queries
 - "listed_companies" for continuing obligations, listed issuer queries  
@@ -217,21 +215,8 @@ Return ONLY the JSON object, no other text.`;
       intent = 'documentation';
     }
     
-    // Map to relevant tables
+    // Fallback no longer suggests hardcoded tables.
     const relevantTables: string[] = [];
-    if (intent === 'faq') {
-      if (targetParty === 'new_listing_applicants') {
-        relevantTables.push('listingrule_new_faq');
-      } else {
-        relevantTables.push('listingrule_listed_faq');
-      }
-    }
-    if (intent === 'timetable') {
-      relevantTables.push('listingrules_new_timetable');
-    }
-    if (intent === 'documentation') {
-      relevantTables.push('execution_lr_documentations');
-    }
     
     return {
       categories: [intent === 'general' ? 'rules' : intent],

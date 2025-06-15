@@ -6,6 +6,7 @@ export interface SearchResult {
   results: any[];
   relevanceScore: number;
   searchTime: number;
+  searchStrategy: string;
 }
 
 export interface CombinedSearchResults {
@@ -14,19 +15,6 @@ export interface CombinedSearchResults {
   executionTime: number;
   searchStrategy: string;
 }
-
-// Define valid table names based on the database schema
-type ValidTableName = 
-  | 'listingrule_new_faq'
-  | 'listingrule_listed_faq' 
-  | 'listingrule_new_gl'
-  | 'listingrule_new_ld'
-  | 'announcement_pre_vetting_requirements'
-  | 'mb_listingrule_documents'
-  | 'regulatory_categories'
-  | 'regulatory_provisions'
-  | 'rule_keywords'
-  | 'search_index';
 
 /**
  * Service for routing searches to appropriate database tables based on query analysis
@@ -42,16 +30,10 @@ export const searchIndexRoutingService = {
     const startTime = Date.now();
     console.log('Executing parallel searches for tables:', analysis.relevantTables);
     
-    // If no specific tables identified, search all major tables
-    const tablesToSearch = analysis.relevantTables.length > 0 
-      ? analysis.relevantTables 
-      : ['listingrule_new_faq', 'listingrule_listed_faq', 'listingrule_new_gl', 'listingrule_new_ld'];
-    
-    // Filter and validate table names
-    const validTables = tablesToSearch.filter(searchIndexRoutingService.isValidTableName);
+    const tablesToSearch = analysis.relevantTables;
     
     // Create search promises for parallel execution
-    const searchPromises = validTables.map(async (tableIndex) => {
+    const searchPromises = tablesToSearch.map(async (tableIndex) => {
       return searchIndexRoutingService.searchSpecificTable(query, tableIndex, analysis);
     });
     
@@ -73,7 +55,7 @@ export const searchIndexRoutingService = {
         totalResults,
         searchResults: validResults,
         executionTime,
-        searchStrategy: `parallel_search_${validTables.length}_tables`
+        searchStrategy: `parallel_search_${tablesToSearch.length}_tables`
       };
       
     } catch (error) {
@@ -125,25 +107,6 @@ export const searchIndexRoutingService = {
   },
 
   /**
-   * Check if a table name is valid
-   */
-  isValidTableName: (tableName: string): tableName is ValidTableName => {
-    const validTables: ValidTableName[] = [
-      'listingrule_new_faq',
-      'listingrule_listed_faq',
-      'listingrule_new_gl', 
-      'listingrule_new_ld',
-      'announcement_pre_vetting_requirements',
-      'mb_listingrule_documents',
-      'regulatory_categories',
-      'regulatory_provisions',
-      'rule_keywords',
-      'search_index'
-    ];
-    return validTables.includes(tableName as ValidTableName);
-  },
-
-  /**
    * Search a specific table based on query and analysis
    */
   searchSpecificTable: async (
@@ -156,19 +119,8 @@ export const searchIndexRoutingService = {
     try {
       console.log(`Searching table: ${tableIndex}`);
       
-      // Validate table name before querying
-      if (!searchIndexRoutingService.isValidTableName(tableIndex)) {
-        console.error(`Invalid table name: ${tableIndex}`);
-        return {
-          tableIndex,
-          results: [],
-          relevanceScore: 0,
-          searchTime: Date.now() - searchStart
-        };
-      }
-      
       // Build dynamic query based on table structure
-      let supabaseQuery = supabase.from(tableIndex as ValidTableName).select('*');
+      let supabaseQuery = supabase.from(tableIndex).select('*');
       
       // Apply filters based on analysis
       const keywords = analysis.keywords.filter(keyword => keyword.length > 2);
@@ -336,10 +288,6 @@ export const searchIndexRoutingService = {
    * Get source type classification for proper attribution
    */
   getSourceType: (tableIndex: string): string => {
-    if (tableIndex.includes('faq')) return '(Official FAQ Database)';
-    if (tableIndex.includes('_gl')) return '(Guidance Letters Database)';
-    if (tableIndex.includes('_ld')) return '(Listing Decisions Database)';
-    if (tableIndex.includes('vetting')) return '(Vetting Requirements Database)';
     if (tableIndex.includes('documents')) return '(Official Documents Database)';
     return '(Regulatory Database)';
   }
