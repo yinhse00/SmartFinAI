@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 import { QueryAnalysis } from './queryIntelligenceService';
 
@@ -121,8 +122,8 @@ export const searchIndexRoutingService = {
       console.log(`Searching table: ${tableIndex}`);
       
       // Build dynamic query based on table structure
-      // Use 'any' type for the query builder to allow dynamic table names, bypassing strict typing.
-      let supabaseQuery: any = supabase.from(tableIndex).select('*');
+      // Use 'as any' to allow dynamic table names, bypassing strict typing.
+      let supabaseQuery = supabase.from(tableIndex as any).select('*');
       
       // Apply filters based on analysis
       const keywords = analysis.keywords.filter(keyword => keyword.length > 2);
