@@ -1,12 +1,17 @@
+
 import { Link } from 'react-router-dom';
 import { useTheme } from "@/components/theme-provider";
 import { Moon, Sun } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { useEffect, useState } from 'react';
+import { useAuth } from '@/components/auth/AuthProvider';
+import { UserNav } from '@/components/auth/UserNav';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const Navbar = () => {
   const { setTheme, theme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     setMounted(true);
@@ -37,6 +42,15 @@ const Navbar = () => {
             <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
             <span className="sr-only">Toggle theme</span>
           </Button>
+          {loading ? (
+            <Skeleton className="h-9 w-9 rounded-full" />
+          ) : user ? (
+            <UserNav />
+          ) : (
+            <Button asChild variant="outline">
+              <Link to="/auth">Login</Link>
+            </Button>
+          )}
         </div>
       </div>
     </nav>
