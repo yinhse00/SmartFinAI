@@ -115,12 +115,14 @@ export const searchIndexRoutingService = {
     analysis: QueryAnalysis
   ): Promise<SearchResult> => {
     const searchStart = Date.now();
+    let searchStrategy = `direct_search_on_${tableIndex}`;
     
     try {
       console.log(`Searching table: ${tableIndex}`);
       
       // Build dynamic query based on table structure
-      let supabaseQuery = supabase.from(tableIndex).select('*');
+      // Use 'any' type for the query builder to allow dynamic table names, bypassing strict typing.
+      let supabaseQuery: any = supabase.from(tableIndex).select('*');
       
       // Apply filters based on analysis
       const keywords = analysis.keywords.filter(keyword => keyword.length > 2);
@@ -128,6 +130,7 @@ export const searchIndexRoutingService = {
       // Search in multiple fields depending on table structure
       if (keywords.length > 0) {
         const searchTerm = keywords.join(' ');
+        searchStrategy = `keyword_search_on_${tableIndex}`;
         
         // Try different field combinations based on common table structures
         if (tableIndex.includes('faq')) {
@@ -157,7 +160,8 @@ export const searchIndexRoutingService = {
           tableIndex,
           results: [],
           relevanceScore: 0,
-          searchTime: Date.now() - searchStart
+          searchTime: Date.now() - searchStart,
+          searchStrategy: 'search_error'
         };
       }
       
@@ -172,7 +176,8 @@ export const searchIndexRoutingService = {
         tableIndex,
         results: data || [],
         relevanceScore,
-        searchTime: Date.now() - searchStart
+        searchTime: Date.now() - searchStart,
+        searchStrategy
       };
       
     } catch (error) {
@@ -181,7 +186,8 @@ export const searchIndexRoutingService = {
         tableIndex,
         results: [],
         relevanceScore: 0,
-        searchTime: Date.now() - searchStart
+        searchTime: Date.now() - searchStart,
+        searchStrategy: 'search_exception'
       };
     }
   },
