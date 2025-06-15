@@ -4,6 +4,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 import { aiSearchOrchestratorService } from '@/services/intelligence/aiSearchOrchestratorService';
 import { QueryAnalysis, AiSearchStrategy } from '@/services/intelligence/queryIntelligenceService';
 import { searchIndexRoutingService } from '@/services/intelligence/searchIndexRoutingService';
+import { aiSearchStrategyToQueryAnalysis } from '@/services/intelligence/aiSearchStrategyConverter';
 
 /**
  * Enhanced Step 2: AI-Driven Listing Rules Search
@@ -18,29 +19,22 @@ export const executeStep2 = async (params: any, setStepProgress: (progress: stri
     const searchResults = await aiSearchOrchestratorService.executeAiDrivenSearch(params.query, 'listing_rules');
     const aiStrategy = searchResults.aiStrategy;
 
-    if(aiStrategy) {
-      console.log('Step 2 - AI-driven query analysis:', aiStrategy);
+    let effectiveAnalysis: QueryAnalysis;
+    if (aiStrategy) {
+      effectiveAnalysis = aiSearchStrategyToQueryAnalysis(aiStrategy);
+      console.log('Step 2 - AI-driven query analysis:', effectiveAnalysis);
     } else {
       console.log('Step 2 - AI-driven analysis not available, using fallback.');
+      effectiveAnalysis = {
+        categories: ['general'],
+        targetParty: 'both',
+        intent: 'general',
+        relevantTables: [],
+        keywords: [],
+        confidence: 0.5
+      };
     }
     
-    // Convert AiSearchStrategy to QueryAnalysis if available
-    const effectiveAnalysis: QueryAnalysis = aiStrategy ? {
-      categories: aiStrategy.categories,
-      intent: aiStrategy.intent,
-      keywords: aiStrategy.keywords,
-      relevantTables: aiStrategy.prioritizedTables,
-      targetParty: 'both', // Defaulting as AI strategy doesn't determine this yet
-      confidence: 0.9, // High confidence for AI-driven strategy
-    } : {
-      categories: ['general'],
-      targetParty: 'both',
-      intent: 'general',
-      relevantTables: [],
-      keywords: [],
-      confidence: 0.5
-    };
-
     // Phase 3: Database-First Context Processing with Complete Priority
     let enhancedContext = '';
     let searchStrategy = 'no_results';
