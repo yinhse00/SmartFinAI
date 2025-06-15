@@ -1,15 +1,15 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from '@/components/ui/use-toast';
 import MainLayout from '@/components/layout/MainLayout';
-import { Loader2 } from 'lucide-react';
+import OAuthButtons from '@/components/auth/OAuthButtons';
+import LoginForm from '@/components/auth/LoginForm';
+import SignupForm from '@/components/auth/SignupForm';
+import ResetPasswordForm from '@/components/auth/ResetPasswordForm';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -111,73 +111,33 @@ const AuthPage = () => {
                     : "Enter your credentials to access your account."}
                 </CardDescription>
               </CardHeader>
-              {showResetForm ? (
-                <CardContent>
-                  <form onSubmit={handlePasswordReset} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="reset-email">Email</Label>
-                      <Input
-                        id="reset-email"
-                        type="email"
-                        placeholder="m@example.com"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                      />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Send Reset Link
-                    </Button>
-                     <Button variant="link" className="p-0 w-full" type="button" onClick={() => setShowResetForm(false)}>
-                        Back to login
-                    </Button>
-                  </form>
-                </CardContent>
-              ) : (
-                <CardContent className="grid gap-4">
-                  <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-                    {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    Continue with Google
-                  </Button>
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t" />
-                    </div>
-                    <div className="relative flex justify-center text-xs uppercase">
-                      <span className="bg-card px-2 text-muted-foreground">
-                        Or continue with email
-                      </span>
-                    </div>
+              <CardContent>
+                {showResetForm ? (
+                  <ResetPasswordForm
+                    onReset={handlePasswordReset}
+                    email={email}
+                    setEmail={setEmail}
+                    loading={loading}
+                    onBackToLogin={() => setShowResetForm(false)}
+                  />
+                ) : (
+                  <div className="grid gap-4">
+                    <OAuthButtons onGoogleLogin={handleGoogleLogin} loading={loading} />
+                    <LoginForm
+                      onLogin={handleLogin}
+                      email={email}
+                      setEmail={setEmail}
+                      password={password}
+                      setPassword={setPassword}
+                      loading={loading}
+                      onShowReset={() => {
+                        setShowResetForm(true);
+                        setPassword('');
+                      }}
+                    />
                   </div>
-                  <form onSubmit={handleLogin} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="login-email">Email</Label>
-                      <Input id="login-email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex items-center">
-                        <Label htmlFor="login-password">Password</Label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setShowResetForm(true);
-                            setPassword('');
-                          }}
-                          className="ml-auto inline-block text-sm underline"
-                        >
-                          Forgot your password?
-                        </button>
-                      </div>
-                      <Input id="login-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                    </div>
-                    <Button type="submit" className="w-full" disabled={loading}>
-                      {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Login
-                    </Button>
-                  </form>
-                </CardContent>
-              )}
+                )}
+              </CardContent>
             </Card>
           </TabsContent>
           <TabsContent value="signup">
@@ -187,34 +147,15 @@ const AuthPage = () => {
                 <CardDescription>Create a new account to get started.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4">
-                <Button variant="outline" type="button" className="w-full" onClick={handleGoogleLogin} disabled={loading}>
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                  Continue with Google
-                </Button>
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">
-                      Or continue with email
-                    </span>
-                  </div>
-                </div>
-                <form onSubmit={handleSignup} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
-                    <Input id="signup-email" type="email" placeholder="m@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
-                    <Input id="signup-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} />
-                  </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Sign Up
-                  </Button>
-                </form>
+                <OAuthButtons onGoogleLogin={handleGoogleLogin} loading={loading} />
+                <SignupForm
+                  onSignup={handleSignup}
+                  email={email}
+                  setEmail={setEmail}
+                  password={password}
+                  setPassword={setPassword}
+                  loading={loading}
+                />
               </CardContent>
             </Card>
           </TabsContent>
