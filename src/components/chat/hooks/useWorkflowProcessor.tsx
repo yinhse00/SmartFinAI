@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './useStep1Initial';
@@ -126,7 +125,8 @@ export const useWorkflowProcessor = ({
         setCurrentStep('execution' as WorkflowStep);
         const step4Result = await step4Execution(params, setStepProgress);
         params = { ...params, ...step4Result };
-        nextStep = step4Result.nextStep;
+        // Properly handle the nextStep assignment with type safety
+        nextStep = (step4Result.nextStep as WorkflowStep) || WorkflowPhase.RESPONSE_GENERATION;
       }
       
       // Step 5: Response Generation (always required)
