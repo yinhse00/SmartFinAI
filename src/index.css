@@ -1,9 +1,9 @@
-@import url('./styles/table.css');
+
+@import url('./styles/tables.css');
+@import url('./styles/chat.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-@import url('./styles/table.css');
 
 @layer base {
   :root {
