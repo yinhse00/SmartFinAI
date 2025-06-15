@@ -16,6 +16,19 @@ export interface CombinedSearchResults {
   searchStrategy: string;
 }
 
+// Define valid table names based on the database schema
+type ValidTableName = 
+  | 'listingrule_new_faq'
+  | 'listingrule_listed_faq' 
+  | 'listingrule_new_gl'
+  | 'listingrule_new_ld'
+  | 'announcement_pre_vetting_requirements'
+  | 'mb_listingrule_documents'
+  | 'regulatory_categories'
+  | 'regulatory_provisions'
+  | 'rule_keywords'
+  | 'search_index';
+
 /**
  * Service for routing searches to appropriate database tables based on query analysis
  */
@@ -35,8 +48,11 @@ export const searchIndexRoutingService = {
       ? analysis.relevantTables 
       : ['listingrule_new_faq', 'listingrule_listed_faq', 'listingrule_new_gl', 'listingrule_new_ld'];
     
+    // Filter and validate table names
+    const validTables = tablesToSearch.filter(searchIndexRoutingService.isValidTableName);
+    
     // Create search promises for parallel execution
-    const searchPromises = tablesToSearch.map(async (tableIndex) => {
+    const searchPromises = validTables.map(async (tableIndex) => {
       return searchIndexRoutingService.searchSpecificTable(query, tableIndex, analysis);
     });
     
@@ -58,7 +74,7 @@ export const searchIndexRoutingService = {
         totalResults,
         searchResults: validResults,
         executionTime,
-        searchStrategy: `parallel_search_${tablesToSearch.length}_tables`
+        searchStrategy: `parallel_search_${validTables.length}_tables`
       };
       
     } catch (error) {
@@ -70,6 +86,25 @@ export const searchIndexRoutingService = {
         searchStrategy: 'parallel_search_failed'
       };
     }
+  },
+
+  /**
+   * Check if a table name is valid
+   */
+  isValidTableName: (tableName: string): tableName is ValidTableName => {
+    const validTables: ValidTableName[] = [
+      'listingrule_new_faq',
+      'listingrule_listed_faq',
+      'listingrule_new_gl', 
+      'listingrule_new_ld',
+      'announcement_pre_vetting_requirements',
+      'mb_listingrule_documents',
+      'regulatory_categories',
+      'regulatory_provisions',
+      'rule_keywords',
+      'search_index'
+    ];
+    return validTables.includes(tableName as ValidTableName);
   },
 
   /**
@@ -85,8 +120,19 @@ export const searchIndexRoutingService = {
     try {
       console.log(`Searching table: ${tableIndex}`);
       
+      // Validate table name before querying
+      if (!searchIndexRoutingService.isValidTableName(tableIndex)) {
+        console.error(`Invalid table name: ${tableIndex}`);
+        return {
+          tableIndex,
+          results: [],
+          relevanceScore: 0,
+          searchTime: Date.now() - searchStart
+        };
+      }
+      
       // Build dynamic query based on table structure
-      let supabaseQuery = supabase.from(tableIndex).select('*');
+      let supabaseQuery = supabase.from(tableIndex as ValidTableName).select('*');
       
       // Apply filters based on analysis
       const keywords = analysis.keywords.filter(keyword => keyword.length > 2);
