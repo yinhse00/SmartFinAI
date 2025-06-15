@@ -12,11 +12,11 @@ export const htmlFormatter = {
     const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(text);
     
     if (!hasHtmlFormatting) {
-      // Only convert basic markdown to minimal HTML - no CSS classes
+      // Convert markdown headers to HTML with black bold styling
       let formattedText = text
-        .replace(/^###\s+(.*?)$/gm, '<h3>$1</h3>')
-        .replace(/^##\s+(.*?)$/gm, '<h2>$1</h2>')
-        .replace(/^#\s+(.*?)$/gm, '<h1>$1</h1>')
+        .replace(/^###\s+(.*?)$/gm, '<h3 class="heading-black-bold">$1</h3>')
+        .replace(/^##\s+(.*?)$/gm, '<h2 class="heading-black-bold">$1</h2>')
+        .replace(/^#\s+(.*?)$/gm, '<h1 class="heading-black-bold">$1</h1>')
         .replace(/\*\*((?!<a\s).*?)\*\*/g, '<strong>$1</strong>')
         .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>')
         .replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li>$3</li>');

@@ -10,6 +10,39 @@ export const boldFormatter = {
   enhanceWithBoldFormatting: (text: string): string => {
     let enhanced = text;
     
+    // Common heading patterns that should be bolded
+    const headingPatterns = [
+      'Analysis:?',
+      'Conclusion:?',
+      'Requirements:?',
+      'Summary:?',
+      'Overview:?',
+      'Background:?',
+      'Key Points:?',
+      'Important Notes?:?',
+      'Regulatory Framework:?',
+      'Compliance Requirements:?',
+      'Application Process:?',
+      'Timeline:?',
+      'Procedures?:?',
+      'Guidelines?:?',
+      'Recommendations?:?',
+      'Next Steps:?',
+      'Action Items:?'
+    ];
+    
+    // Apply bold formatting to heading patterns
+    headingPatterns.forEach(pattern => {
+      const regex = new RegExp(`^(${pattern})`, 'gmi');
+      enhanced = enhanced.replace(regex, (match) => {
+        // Don't bold if already in a link or bold
+        if (/<[^>]*>/.test(match) || /\*\*/.test(match)) {
+          return match;
+        }
+        return `**${match}**`;
+      });
+    });
+    
     // Key regulatory terms that should be bolded
     const regulatoryTerms = [
       'Rule \\d+\\.\\d+[A-Z]*(?:\\(\\d+\\))?', // Rule numbers like Rule 7.19A(1)
