@@ -3,7 +3,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { AlertCircle, Wifi, WifiOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import ChatMessage, { Message } from '../ChatMessage';
+import { ChatMessage, Message } from '../ChatMessage';
 import ChatLoadingIndicator from '../ChatLoadingIndicator';
 import WorkflowIndicator from '../workflow/WorkflowIndicator';
 import { WorkflowPhase } from '../workflow/workflowConfig';

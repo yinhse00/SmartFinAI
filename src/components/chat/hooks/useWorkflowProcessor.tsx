@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Message } from '../ChatMessage';
 import { step1Initial } from './useStep1Initial';
@@ -12,7 +13,7 @@ import { useTranslationManager } from './useTranslationManager';
 import { mappingSpreadsheetService } from '@/services/regulatory/mappingSpreadsheetService';
 import { WorkflowPhase } from '../workflow/workflowConfig';
 
-// Update the local WorkflowStep type to use WorkflowPhase
+// Update the local WorkflowStep type to include both WorkflowPhase and legacy steps
 type WorkflowStep = WorkflowPhase | 'listingRules' | 'takeoversCode' | 'execution' | 'response' | 'complete';
 
 /**
@@ -122,7 +123,7 @@ export const useWorkflowProcessor = ({
 
       // Step 4: Execution Process (if needed)
       if (nextStep === 'execution') {
-        setCurrentStep('execution');
+        setCurrentStep('execution' as WorkflowStep);
         const step4Result = await step4Execution(params, setStepProgress);
         params = { ...params, ...step4Result };
         nextStep = step4Result.nextStep;
