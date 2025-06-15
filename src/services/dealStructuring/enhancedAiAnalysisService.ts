@@ -1,6 +1,6 @@
-
 import { aiAnalysisService, TransactionAnalysisRequest } from './aiAnalysisService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { createFallbackAnalysis } from './analysisFallbackData';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
 
 export interface EnhancedAnalysisResult {
@@ -185,15 +185,15 @@ export const enhancedAiAnalysisService = {
     }
     
     // Add optimization insights to recommendations
-    if (reconciledResults.compliance.actionableRecommendations) {
-      reconciledResults.compliance.actionableRecommendations.push(...optimization.optimizationInsights);
+    if (reconciledResults.compliance.recommendations) {
+      reconciledResults.compliance.recommendations.push(...optimization.optimizationInsights);
     }
     
     // Add market intelligence insights
     if (optimization.marketIntelligence.marketTrends.length > 0) {
       changes.push('Incorporated current market intelligence');
-      if (reconciledResults.compliance.actionableRecommendations) {
-        reconciledResults.compliance.actionableRecommendations.push(
+      if (reconciledResults.compliance.recommendations) {
+        reconciledResults.compliance.recommendations.push(
           `Market Intelligence: ${optimization.marketIntelligence.marketTrends.slice(0, 2).join('; ')}`
         );
       }
