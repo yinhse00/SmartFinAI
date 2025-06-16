@@ -24,7 +24,7 @@ export const CorporateStructureDiagram = ({
     );
   }
 
-  const { entities, relationships, mainIssuer, targetEntities } = corporateStructure;
+  const { entities, relationships = [], mainIssuer, targetEntities } = corporateStructure;
   
   // Group entities by type
   const entityGroups = entities.reduce((groups, entity) => {
@@ -101,7 +101,7 @@ export const CorporateStructureDiagram = ({
     );
   };
 
-  // Find root entities (entities with no parent)
+  // Find root entities (entities with no parent) - Fixed the error here
   const rootEntities = entities.filter(entity => 
     !relationships.some(rel => rel.child === entity.id)
   );
