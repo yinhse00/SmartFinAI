@@ -1,66 +1,54 @@
-
-import { AnalysisResults } from './AIAnalysisResults';
-import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
-import { CostAnalysisBox } from './sections/CostAnalysisBox';
-import { ExecutionTimetableBox } from './sections/ExecutionTimetableBox';
-import { ShareholdingImpactBox } from './sections/ShareholdingImpactBox';
-import { RegulatoryComplianceBox } from './sections/RegulatoryComplianceBox';
-import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
+import { TransactionStructureDiagramBox } from './sections/TransactionStructureDiagramBox';
+import { CostsBreakdownBox } from './sections/CostsBreakdownBox';
+import { TimetableAnalysisBox } from './sections/TimetableAnalysisBox';
+import { ComplianceConsiderationsBox } from './sections/ComplianceConsiderationsBox';
+import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
+import { AnalysisResults } from '../AIAnalysisResults';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
-  onResultsUpdate: (updatedResults: AnalysisResults) => void;
+  onResultsUpdate?: (results: AnalysisResults) => void;
   optimizationResult?: OptimizationResult;
+  originalDescription?: string;
 }
 
 export const DealStructuringDashboard = ({ 
   results, 
   onResultsUpdate, 
-  optimizationResult 
+  optimizationResult,
+  originalDescription 
 }: DealStructuringDashboardProps) => {
+  const handleResultsChange = (updatedResults: AnalysisResults) => {
+    onResultsUpdate?.(updatedResults);
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-2 lg:grid-rows-4 lg:items-start">
-      {/* Row 1, Col 1: Structure Recommendation */}
-      <div className="lg:col-start-1 lg:row-start-1">
+    <div className="space-y-6">
+      {/* Top-level Recommendations and Structure */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StructureRecommendationBox results={results} />
-      </div>
-      
-      {/* Row 1, Col 2: Cost Analysis */}
-      <div className="lg:col-start-2 lg:row-start-1">
-        <CostAnalysisBox results={results} />
-      </div>
-      
-      {/* Row 1-4, Col 3: Chat (spans all 4 rows) */}
-      <div className="lg:col-start-3 lg:row-start-1 lg:row-span-4">
-        <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
-      </div>
-      
-      {/* Row 2, Col 1: Shareholding Impact */}
-      <div className="lg:col-start-1 lg:row-start-2">
-        <ShareholdingImpactBox results={results} />
-      </div>
-      
-      {/* Row 2, Col 2: Regulatory Compliance */}
-      <div className="lg:col-start-2 lg:row-start-2">
-        <RegulatoryComplianceBox results={results} />
-      </div>
-      
-      {/* Row 3, Col 1: Execution Timetable */}
-      <div className="lg:col-start-1 lg:row-start-3">
-        <ExecutionTimetableBox results={results} />
+        <CostsBreakdownBox results={results} />
       </div>
 
-      {/* Row 3, Col 2: Transaction Flow Diagram - Now with optimization data */}
-      <div className="lg:col-start-2 lg:row-start-3">
+      {/* Transaction Flow Diagrams */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <TransactionFlowDiagramBox 
           results={results} 
           optimizationResult={optimizationResult}
+          originalDescription={originalDescription}
         />
+        <TransactionStructureDiagramBox results={results} />
       </div>
-      
-      {/* Row 4, Col 1-2: Future expansion for optimization results */}
+
+      {/* Detailed Analysis and Compliance */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TimetableAnalysisBox results={results} />
+        <ComplianceConsiderationsBox results={results} />
+      </div>
     </div>
   );
 };
