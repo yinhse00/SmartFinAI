@@ -1,4 +1,3 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
@@ -6,6 +5,7 @@ import { Users, TrendingUp, TrendingDown, AlertTriangle, CheckCircle, Info } fro
 import { AnalysisResults } from '../AIAnalysisResults';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { useTransactionDataConsistency } from '@/hooks/useTransactionDataConsistency';
+import { ShareholdingDataProcessor } from '@/services/dealStructuring/shareholdingDataProcessor';
 
 interface EnhancedShareholdingImpactBoxProps {
   results: AnalysisResults;
@@ -62,115 +62,132 @@ const ValidationStatusBadge = ({ reconciliationData }: { reconciliationData?: En
 const EnlargedShareholdingContent = ({ results, reconciliationData }: { 
   results: AnalysisResults; 
   reconciliationData?: EnhancedShareholdingImpactBoxProps['reconciliationData'];
-}) => (
-  <div className="space-y-8 p-6">
-    {/* Validation Status Section */}
-    {reconciliationData && (
-      <div className="border rounded-lg p-4 bg-gray-50">
-        <h4 className="text-lg font-semibold mb-3">Data Validation Status</h4>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span>Input Data Confidence:</span>
-            <span className="font-medium">{(reconciliationData.validation.confidence * 100).toFixed(1)}%</span>
-          </div>
-          <div className="flex items-center justify-between">
-            <span>Reconciliation Applied:</span>
-            <span className="font-medium">{reconciliationData.reconciliationApplied ? 'Yes' : 'No'}</span>
-          </div>
-          {reconciliationData.validation.suggestions.length > 0 && (
-            <div className="mt-3">
-              <p className="font-medium mb-2">Validation Notes:</p>
-              <ul className="text-sm space-y-1">
-                {reconciliationData.validation.suggestions.map((suggestion, index) => (
-                  <li key={index} className="text-gray-600">• {suggestion}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-    )}
+}) => {
+  // Process the shareholding data using the processor
+  const processedData = ShareholdingDataProcessor.processShareholdingData(
+    results,
+    results.transactionType
+  );
 
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      <div>
-        <h4 className="text-xl font-semibold mb-6 text-center">Before Transaction</h4>
-        <div className="space-y-4">
-          {results.shareholding.before.map((holder, index) => (
-            <div key={index} className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-              <div className="flex-1">
-                <p className="font-semibold text-lg">{holder.name}</p>
-                <p className="text-sm text-gray-600">Current shareholder</p>
-              </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-blue-600">{holder.percentage.toFixed(1)}%</p>
-              </div>
+  return (
+    <div className="space-y-8 p-6">
+      {/* Validation Status Section */}
+      {reconciliationData && (
+        <div className="border rounded-lg p-4 bg-gray-50">
+          <h4 className="text-lg font-semibold mb-3">Data Validation Status</h4>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span>Input Data Confidence:</span>
+              <span className="font-medium">{(reconciliationData.validation.confidence * 100).toFixed(1)}%</span>
             </div>
-          ))}
+            <div className="flex items-center justify-between">
+              <span>Reconciliation Applied:</span>
+              <span className="font-medium">{reconciliationData.reconciliationApplied ? 'Yes' : 'No'}</span>
+            </div>
+            {reconciliationData.validation.suggestions.length > 0 && (
+              <div className="mt-3">
+                <p className="font-medium mb-2">Validation Notes:</p>
+                <ul className="text-sm space-y-1">
+                  {reconciliationData.validation.suggestions.map((suggestion, index) => (
+                    <li key={index} className="text-gray-600">• {suggestion}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
-      
-      <div>
-        <h4 className="text-xl font-semibold mb-6 text-center">After Transaction</h4>
-        <div className="space-y-4">
-          {results.shareholding.after.map((holder, index) => {
-            const beforeHolder = results.shareholding.before.find(b => b.name === holder.name);
-            const change = beforeHolder ? holder.percentage - beforeHolder.percentage : holder.percentage;
-            
-            return (
-              <div key={index} className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+      )}
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h4 className="text-xl font-semibold mb-6 text-center">Before Transaction</h4>
+          <div className="space-y-4">
+            {processedData.before.map((holder, index) => (
+              <div key={index} className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                 <div className="flex-1">
                   <p className="font-semibold text-lg">{holder.name}</p>
-                  <div className="flex items-center text-sm">
-                    {change > 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                    ) : change < 0 ? (
-                      <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-                    ) : null}
-                    <span className={change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-600'}>
-                      {change > 0 ? '+' : ''}{change.toFixed(1)}% change
-                    </span>
-                  </div>
+                  <p className="text-sm text-gray-600">Current shareholder</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-2xl font-bold text-green-600">{holder.percentage.toFixed(1)}%</p>
+                  <p className="text-2xl font-bold text-blue-600">{holder.percentage.toFixed(1)}%</p>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
-      </div>
-    </div>
-    
-    <div>
-      <h4 className="text-xl font-semibold mb-6">Detailed Impact Analysis</h4>
-      <div className="prose max-w-none">
-        <p className="text-lg leading-relaxed text-gray-700 mb-6">{results.shareholding.impact}</p>
+        
+        <div>
+          <h4 className="text-xl font-semibold mb-6 text-center">After Transaction</h4>
+          <div className="space-y-4">
+            {processedData.after.map((holder, index) => {
+              const beforeHolder = processedData.before.find(b => b.name === holder.name);
+              const change = beforeHolder ? holder.percentage - beforeHolder.percentage : holder.percentage;
+              
+              return (
+                <div key={index} className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+                  <div className="flex-1">
+                    <p className="font-semibold text-lg">{holder.name}</p>
+                    <div className="flex items-center text-sm">
+                      {change > 0 ? (
+                        <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
+                      ) : change < 0 ? (
+                        <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
+                      ) : null}
+                      <span className={change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-600'}>
+                        {change > 0 ? '+' : ''}{change.toFixed(1)}% change
+                      </span>
+                    </div>
+                    {holder.description && (
+                      <p className="text-xs text-gray-500 mt-1">{holder.description}</p>
+                    )}
+                  </div>
+                  <div className="text-right">
+                    <p className="text-2xl font-bold text-green-600">{holder.percentage.toFixed(1)}%</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="p-4 border rounded-lg">
-          <h5 className="font-medium mb-3">Voting Power Changes</h5>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>• Majority control implications</p>
-            <p>• Special resolution thresholds</p>
-            <p>• Board representation impact</p>
-          </div>
+      <div>
+        <h4 className="text-xl font-semibold mb-6">Detailed Impact Analysis</h4>
+        <div className="prose max-w-none">
+          <p className="text-lg leading-relaxed text-gray-700 mb-6">{processedData.impact}</p>
         </div>
-        <div className="p-4 border rounded-lg">
-          <h5 className="font-medium mb-3">Financial Implications</h5>
-          <div className="space-y-2 text-sm text-gray-600">
-            <p>• Dividend entitlement changes</p>
-            <p>• Capital distribution rights</p>
-            <p>• Liquidation preferences</p>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="p-4 border rounded-lg">
+            <h5 className="font-medium mb-3">Voting Power Changes</h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>• Majority control implications</p>
+              <p>• Special resolution thresholds</p>
+              <p>• Board representation impact</p>
+            </div>
+          </div>
+          <div className="p-4 border rounded-lg">
+            <h5 className="font-medium mb-3">Financial Implications</h5>
+            <div className="space-y-2 text-sm text-gray-600">
+              <p>• Dividend entitlement changes</p>
+              <p>• Capital distribution rights</p>
+              <p>• Liquidation preferences</p>
+            </div>
           </div>
         </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: EnhancedShareholdingImpactBoxProps) => {
   const { validation } = useTransactionDataConsistency(results);
+
+  // Process the shareholding data using the processor
+  const processedData = ShareholdingDataProcessor.processShareholdingData(
+    results,
+    results.transactionType
+  );
 
   return (
     <Card className="h-[300px] flex flex-col min-h-0">
@@ -198,7 +215,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
             <div>
               <h5 className="font-medium mb-4 text-base">Before</h5>
               <div className="space-y-2">
-                {results.shareholding.before.map((holder, index) => (
+                {processedData.before.map((holder, index) => (
                   <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
@@ -209,7 +226,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
             <div>
               <h5 className="font-medium mb-4 text-base">After</h5>
               <div className="space-y-2">
-                {results.shareholding.after.map((holder, index) => (
+                {processedData.after.map((holder, index) => (
                   <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
@@ -221,7 +238,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
           
           <div className="border-t pt-4">
             <h5 className="font-medium mb-4 text-base">Impact Summary</h5>
-            <p className="text-sm text-gray-600 leading-relaxed">{results.shareholding.impact}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{processedData.impact}</p>
             
             {reconciliationData && reconciliationData.reconciliationApplied && (
               <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
