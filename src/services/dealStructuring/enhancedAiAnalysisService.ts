@@ -1,3 +1,4 @@
+
 import { TransactionAnalysisRequest, aiAnalysisService, AnalysisContext } from './aiAnalysisService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { fileProcessingService } from '../documents/fileProcessingService';
@@ -5,128 +6,23 @@ import { grokService } from '../grokService';
 import { parseAnalysisResponse } from './analysisResponseParser';
 import { transactionTypeClassifier, TransactionClassification } from './transactionTypeClassifier';
 import { typeSpecificPromptBuilder } from './typeSpecificPromptBuilder';
-import { typeSpecificEntityExtractor } from './typeSpecificEntityExtractor';
-import { OptimizationResult, StructureScenario } from './optimizationEngine';
+import { OptimizationResult } from './optimizationEngine';
 
-export interface InputValidationResult {
-  isValid: boolean;
-  issues: string[];
-}
-
-export interface ReconciliationResult {
-  reconciledResults: AnalysisResults;
-  changesApplied: string[];
-  reconciliationApplied: boolean;
-  originalIssues: string[];
-}
-
-export interface AnalysisQualityMetrics {
-  completenessScore: number;
-  accuracyScore: number;
-  relevanceScore: number;
-  overallQuality: 'high' | 'medium' | 'poor';
-}
+// Import new focused modules
+import { inputValidationService, InputValidationResult } from './validation/inputValidationService';
+import { analysisQualityService, AnalysisQualityMetrics, AnalysisQualityReport } from './quality/analysisQualityService';
+import { marketIntelligenceService } from './optimization/marketIntelligenceService';
+import { dataReconciliationService, ReconciliationResult } from './reconciliation/dataReconciliationService';
 
 export interface EnhancedAnalysisResult {
   results: AnalysisResults;
   context: AnalysisContext;
-  classification: TransactionClassification; // Add classification to result
+  classification: TransactionClassification;
   inputValidation: InputValidationResult;
   optimization: OptimizationResult;
   reconciliation: ReconciliationResult;
   qualityMetrics: AnalysisQualityMetrics;
 }
-
-/**
- * Validate that the input data is consistent
- */
-const validateInputConsistency = (
-  request: TransactionAnalysisRequest,
-  results: AnalysisResults
-): InputValidationResult => {
-  const issues: string[] = [];
-  let isValid = true;
-
-  if (!request.description || request.description.length < 50) {
-    issues.push('Transaction description is too short.');
-    isValid = false;
-  }
-
-  if (!results.structure) {
-    issues.push('No transaction structure was identified.');
-    isValid = false;
-  }
-
-  return {
-    isValid,
-    issues
-  };
-};
-
-/**
- * Calculate quality metrics for the analysis
- */
-const calculateQualityMetrics = (
-  results: AnalysisResults,
-  inputValidation: InputValidationResult,
-  optimization: OptimizationResult,
-  reconciliation: ReconciliationResult
-): AnalysisQualityMetrics => {
-  let completenessScore = 0.8;
-  let accuracyScore = 0.7;
-  let relevanceScore = 0.9;
-
-  if (!inputValidation.isValid) {
-    accuracyScore -= 0.3;
-  }
-
-  if (optimization.optimizationInsights.length === 0) {
-    completenessScore -= 0.2;
-  }
-
-  if (reconciliation.reconciliationApplied) {
-    accuracyScore -= 0.1;
-  }
-
-  const overallScore = (completenessScore + accuracyScore + relevanceScore) / 3;
-  let overallQuality: 'high' | 'medium' | 'poor' = 'medium';
-
-  if (overallScore > 0.8) {
-    overallQuality = 'high';
-  } else if (overallScore < 0.6) {
-    overallQuality = 'poor';
-  }
-
-  return {
-    completenessScore,
-    accuracyScore,
-    relevanceScore,
-    overallQuality
-  };
-};
-
-/**
- * Get analysis quality report
- */
-const getAnalysisQualityReport = (result: EnhancedAnalysisResult): {
-  overallQuality: 'high' | 'medium' | 'poor';
-  completenessScore: number;
-  accuracyScore: number;
-  relevanceScore: number;
-  inputValidationIssues: string[];
-  optimizationInsightsCount: number;
-  reconciliationNeeded: boolean;
-} => {
-  return {
-    overallQuality: result.qualityMetrics.overallQuality,
-    completenessScore: result.qualityMetrics.completenessScore,
-    accuracyScore: result.qualityMetrics.accuracyScore,
-    relevanceScore: result.qualityMetrics.relevanceScore,
-    inputValidationIssues: result.inputValidation.issues,
-    optimizationInsightsCount: result.optimization.optimizationInsights.length,
-    reconciliationNeeded: result.reconciliation.reconciliationApplied
-  };
-};
 
 /**
  * Enhanced AI analysis service with transaction type awareness
@@ -186,16 +82,16 @@ export const enhancedAiAnalysisService = {
       analysisResults.transactionType = `${classification.type} - ${classification.subType || 'Standard'}`;
       
       // Step 7: Validate input consistency
-      const inputValidation = enhancedAiAnalysisService.validateInputConsistency(request, analysisResults);
+      const inputValidation = inputValidationService.validateInputConsistency(request, analysisResults);
       
       // Step 8: Run optimization with type awareness
-      const optimization = await enhancedAiAnalysisService.optimizeWithMarketIntelligence(
+      const optimization = await marketIntelligenceService.optimizeWithMarketIntelligence(
         analysisResults,
         classification
       );
       
       // Step 9: Reconcile data inconsistencies with type-specific logic
-      const reconciliation = enhancedAiAnalysisService.reconcileDataInconsistencies(
+      const reconciliation = dataReconciliationService.reconcileDataInconsistencies(
         request,
         analysisResults,
         classification
@@ -207,7 +103,7 @@ export const enhancedAiAnalysisService = {
       }
       
       // Step 11: Calculate quality metrics
-      const qualityMetrics = enhancedAiAnalysisService.calculateQualityMetrics(
+      const qualityMetrics = analysisQualityService.calculateQualityMetrics(
         analysisResults,
         inputValidation,
         optimization,
@@ -222,7 +118,7 @@ export const enhancedAiAnalysisService = {
       return {
         results: analysisResults,
         context,
-        classification, // Include classification in result
+        classification,
         inputValidation,
         optimization,
         reconciliation,
@@ -236,148 +132,14 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Validate that the input data is consistent
-   */
-  validateInputConsistency: validateInputConsistency,
-
-  /**
-   * Calculate quality metrics for the analysis
-   */
-  calculateQualityMetrics: calculateQualityMetrics,
-
-  /**
    * Get analysis quality report
    */
-  getAnalysisQualityReport: getAnalysisQualityReport,
-
-  /**
-   * Optimize with market intelligence and transaction type awareness
-   */
-  optimizeWithMarketIntelligence: async (
-    results: AnalysisResults,
-    classification: TransactionClassification
-  ): Promise<OptimizationResult> => {
-    // Type-specific optimization logic
-    const baseOptimization: OptimizationResult = {
-      recommendedStructure: {
-        id: 'recommended-structure',
-        name: 'Recommended Structure',
-        description: 'AI-recommended optimal structure based on transaction type',
-        structure: results.structure?.recommended || 'Standard structure',
-        optimizationScore: 0.7,
-        advantages: ['AI-optimized approach', 'Type-specific considerations'],
-        disadvantages: ['Requires detailed review'],
-        riskFactors: ['Standard market risks'],
-        estimatedCost: 2000000,
-        estimatedDuration: '3-4 months',
-        successProbability: 0.8
-      },
-      alternativeStructures: [],
-      parameterAnalysis: {
-        costSensitivity: 0.3,
-        timeSensitivity: 0.4,
-        riskSensitivity: 0.5,
-        regulatorySensitivity: 0.6
-      },
-      marketIntelligence: {
-        precedentTransactions: [],
-        marketTrends: ['Current market conditions require careful consideration'],
-        regulatoryEnvironment: 'Standard regulatory requirements apply'
-      },
-      optimizationInsights: []
-    };
-
-    if (classification.type === 'CAPITAL_RAISING') {
-      baseOptimization.optimizationInsights.push(
-        'Consider rights issue structure for existing shareholder participation',
-        'Evaluate discount rate to current market price',
-        'Assess market timing for capital raising completion'
-      );
-    } else if (classification.type === 'M&A') {
-      baseOptimization.optimizationInsights.push(
-        'Consider synergy realization timeline',
-        'Evaluate regulatory approval requirements',
-        'Assess integration complexity and costs'
-      );
-    } else if (classification.type === 'HYBRID') {
-      baseOptimization.optimizationInsights.push(
-        'Coordinate capital raising and acquisition timing',
-        'Consider conditional relationships between transaction components',
-        'Evaluate financing capacity for acquisition'
-      );
-    }
-
-    return baseOptimization;
-  },
-
-  /**
-   * Reconcile data with transaction type-specific logic
-   */
-  reconcileDataInconsistencies: (
-    request: TransactionAnalysisRequest,
-    results: AnalysisResults,
-    classification: TransactionClassification
-  ): ReconciliationResult => {
-    let reconciledResults = { ...results };
-    let changesApplied: string[] = [];
-    let reconciliationApplied = false;
-
-    // Type-specific reconciliation
-    if (classification.type === 'CAPITAL_RAISING') {
-      // Ensure single-company structure
-      if (reconciledResults.corporateStructure?.entities) {
-        const issuingEntity = reconciledResults.corporateStructure.entities.find(e => 
-          e.type === 'issuer' || e.name === classification.issuingCompany
-        );
-        
-        if (!issuingEntity && classification.issuingCompany) {
-          reconciledResults.corporateStructure.entities.push({
-            id: 'issuer-1',
-            name: classification.issuingCompany,
-            type: 'issuer',
-            description: 'Issuing company for capital raising'
-          });
-          changesApplied.push('Added issuing company entity');
-          reconciliationApplied = true;
-        }
-      }
-    } else if (classification.type === 'M&A') {
-      // Ensure acquirer-target structure
-      if (reconciledResults.corporateStructure?.entities) {
-        const hasAcquirer = reconciledResults.corporateStructure.entities.some(e => 
-          e.type === 'issuer' || e.type === 'parent'
-        );
-        const hasTarget = reconciledResults.corporateStructure.entities.some(e => e.type === 'target');
-        
-        if (!hasAcquirer && classification.acquiringCompany) {
-          reconciledResults.corporateStructure.entities.push({
-            id: 'acquirer-1',
-            name: classification.acquiringCompany,
-            type: 'issuer',
-            description: 'Acquiring company in M&A transaction'
-          });
-          changesApplied.push('Added acquiring company entity');
-          reconciliationApplied = true;
-        }
-        
-        if (!hasTarget && classification.targetCompany) {
-          reconciledResults.corporateStructure.entities.push({
-            id: 'target-1',
-            name: classification.targetCompany,
-            type: 'target',
-            description: 'Target company in M&A transaction'
-          });
-          changesApplied.push('Added target company entity');
-          reconciliationApplied = true;
-        }
-      }
-    }
-
-    return {
-      reconciledResults,
-      changesApplied,
-      reconciliationApplied,
-      originalIssues: reconciliationApplied ? ['Missing type-specific entities'] : []
-    };
+  getAnalysisQualityReport: (result: EnhancedAnalysisResult): AnalysisQualityReport => {
+    return analysisQualityService.generateQualityReport(
+      result.qualityMetrics,
+      result.inputValidation,
+      result.optimization,
+      result.reconciliation
+    );
   }
 };
