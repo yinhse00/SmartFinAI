@@ -7,6 +7,7 @@ import { CostAnalysisBox } from './sections/CostAnalysisBox';
 import { ExecutionTimetableBox } from './sections/ExecutionTimetableBox';
 import { RegulatoryComplianceBox } from './sections/RegulatoryComplianceBox';
 import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
+import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
 import { AnalysisResults } from './AIAnalysisResults';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 
@@ -28,27 +29,38 @@ export const DealStructuringDashboard = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top-level Recommendations and Structure */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StructureRecommendationBox results={results} />
-        <CostAnalysisBox results={results} />
+    <div className="flex flex-col lg:flex-row gap-6 h-full">
+      {/* Left Side - Analysis Boxes */}
+      <div className="flex-1 space-y-6">
+        {/* Top-level Recommendations and Structure */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <StructureRecommendationBox results={results} />
+          <CostAnalysisBox results={results} />
+        </div>
+
+        {/* Transaction Flow Diagrams */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TransactionFlowDiagramBox 
+            results={results} 
+            optimizationResult={optimizationResult}
+            originalDescription={originalDescription}
+          />
+          <TransactionStructureDiagramBox results={results} />
+        </div>
+
+        {/* Detailed Analysis and Compliance */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ExecutionTimetableBox results={results} />
+          <RegulatoryComplianceBox results={results} />
+        </div>
       </div>
 
-      {/* Transaction Flow Diagrams */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TransactionFlowDiagramBox 
+      {/* Right Side - Chat Box */}
+      <div className="w-full lg:w-96 flex-shrink-0">
+        <DealStructuringChatbox 
           results={results} 
-          optimizationResult={optimizationResult}
-          originalDescription={originalDescription}
+          onResultsUpdate={handleResultsChange}
         />
-        <TransactionStructureDiagramBox results={results} />
-      </div>
-
-      {/* Detailed Analysis and Compliance */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <ExecutionTimetableBox results={results} />
-        <RegulatoryComplianceBox results={results} />
       </div>
     </div>
   );
