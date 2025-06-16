@@ -112,11 +112,12 @@ export const typeSpecificEntityExtractor = {
       issuingCompanyName = issuerEntity.name;
     }
 
-    // Extract from transaction type patterns
+    // Extract from transaction type patterns - enhanced patterns
     const typePatterns = [
-      /^(.+)\s+(rights issue|open offer|raises capital)/i,
-      /^(.+)\s+conducts\s+(rights issue|open offer)/i,
-      /^(.+)\s+announces\s+(rights issue|open offer)/i
+      /^(.+?)\s+(?:rights issue|open offer|raises capital|ipo|placement|subscription)/i,
+      /^(.+?)\s+(?:conducts|announces|launches)\s+(?:rights issue|open offer|capital raising)/i,
+      /^(.+?)\s+(?:issues|raises|places)\s+(?:new shares|equity|capital)/i,
+      /(?:rights issue|open offer|capital raising|ipo)\s+by\s+(.+?)(?:\s|$)/i
     ];
 
     for (const pattern of typePatterns) {
@@ -124,6 +125,16 @@ export const typeSpecificEntityExtractor = {
       if (match && match[1]) {
         issuingCompanyName = match[1].trim();
         break;
+      }
+    }
+
+    // If we have shareholding data, try to extract company name from context
+    if (issuingCompanyName === 'Issuing Company' && results.shareholding?.before?.length > 0) {
+      // Look for company-related context in the transaction description
+      const description = results.transactionType || '';
+      const companyMatch = description.match(/([A-Z][a-zA-Z\s&]+(?:Limited|Ltd|Company|Corp|Inc))/);
+      if (companyMatch) {
+        issuingCompanyName = companyMatch[1].trim();
       }
     }
 
