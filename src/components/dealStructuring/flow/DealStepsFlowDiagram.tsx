@@ -12,7 +12,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import TransactionFlowNode from './TransactionFlowNode';
 import TransactionFlowEdge from './TransactionFlowEdge';
-import { TransactionFlow, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow'; // Added AnyTransactionRelationship
+import { TransactionFlow, OwnershipRelationship, AnyTransactionRelationship, TransactionFlowSection } from '@/types/transactionFlow';
 
 const nodeTypes = {
   transactionNode: TransactionFlowNode,
@@ -36,7 +36,19 @@ const DealStepsFlowDiagram: React.FC<DealStepsFlowDiagramProps> = ({
       return { nodes: [], edges: [] };
     }
 
-    const currentState = showBefore ? transactionFlow.before : transactionFlow.after;
+    // Handle both single section and multiple scenarios for after
+    let currentState: TransactionFlowSection;
+    if (showBefore) {
+      currentState = transactionFlow.before;
+    } else {
+      if (Array.isArray(transactionFlow.after)) {
+        // If multiple scenarios, use the first one for this diagram
+        currentState = transactionFlow.after[0].scenario;
+      } else {
+        // Single section
+        currentState = transactionFlow.after;
+      }
+    }
     
     // Create nodes from entities
     const flowNodes: Node[] = currentState.entities.map((entity, index) => ({
@@ -122,4 +134,3 @@ const DealStepsFlowDiagram: React.FC<DealStepsFlowDiagramProps> = ({
 };
 
 export default DealStepsFlowDiagram;
-
