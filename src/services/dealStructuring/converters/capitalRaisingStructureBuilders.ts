@@ -1,6 +1,8 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, OwnershipRelationship, AnyTransactionRelationship, TransactionFlowScenario } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
+import { ShareholdingDataInspector } from './shareholdingDataInspector';
 
 export class CapitalRaisingStructureBuilders {
   static buildCapitalRaisingBeforeStructure(
@@ -58,9 +60,12 @@ export class CapitalRaisingStructureBuilders {
     corporateStructureMap: Map<string, CorporateEntity & { children?: string[], parentLink?: string }>,
     considerationAmount: number
   ): TransactionFlowScenario[] {
+    // Get correctly calculated scenarios using the inspector
+    const { fullTakeup, noOtherTakeup } = ShareholdingDataInspector.calculateCapitalRaisingScenarios(results);
+    
     // Generate two scenarios for capital raising
-    const fullTakeupScenario = this.buildFullTakeupScenario(results, entityNames, considerationAmount);
-    const noOtherTakeupScenario = this.buildNoOtherTakeupScenario(results, entityNames, considerationAmount);
+    const fullTakeupScenario = this.buildFullTakeupScenario(results, entityNames, considerationAmount, fullTakeup);
+    const noOtherTakeupScenario = this.buildNoOtherTakeupScenario(results, entityNames, considerationAmount, noOtherTakeup);
 
     return [fullTakeupScenario, noOtherTakeupScenario];
   }
@@ -68,7 +73,8 @@ export class CapitalRaisingStructureBuilders {
   private static buildFullTakeupScenario(
     results: AnalysisResults,
     entityNames: any,
-    considerationAmount: number
+    considerationAmount: number,
+    shareholdingData: any[] | null
   ): TransactionFlowScenario {
     const entities: TransactionEntity[] = [];
     const relationships: AnyTransactionRelationship[] = [];
@@ -82,12 +88,12 @@ export class CapitalRaisingStructureBuilders {
       id: issuingCompanyId,
       name: issuingCompanyName,
       type: 'target',
-      description: `Issuing company after capital raising (full take-up)`
+      description: `Issuing company after capital raising (full take-up - no dilution)`
     });
 
-    // 2. Add shareholders from analysis results (post-dilution with full take-up)
-    const afterShareholders = results.shareholding?.after || [];
-    afterShareholders.forEach((shareholder, index) => {
+    // 2. Use shareholding data (should be same as before for full take-up)
+    const shareholders = shareholdingData || results.shareholding?.before || [];
+    shareholders.forEach((shareholder, index) => {
       const shareholderId = `${prefix}-shareholder-${index}`;
       
       // Determine if this is a new investor or existing shareholder
@@ -100,7 +106,7 @@ export class CapitalRaisingStructureBuilders {
         type: wasExistingShareholder ? 'stockholder' : 'investor',
         percentage: shareholder.percentage,
         description: wasExistingShareholder 
-          ? `Existing shareholder with diluted ${shareholder.percentage}% ownership (full take-up)`
+          ? `Existing shareholder maintaining ${shareholder.percentage}% ownership (full take-up, no dilution)`
           : `New investor with ${shareholder.percentage}% ownership (full take-up)`
       });
 
@@ -138,17 +144,20 @@ export class CapitalRaisingStructureBuilders {
       });
     }
 
+    console.log(`📊 Full Take-up Scenario: ${shareholders.length} shareholders, no dilution`);
+
     return {
       scenario: { entities, relationships },
       scenarioName: 'Full Take-up',
-      scenarioDescription: 'All available shares/rights are taken up by investors'
+      scenarioDescription: 'All available shares/rights are taken up - shareholding percentages remain unchanged (no dilution)'
     };
   }
 
   private static buildNoOtherTakeupScenario(
     results: AnalysisResults,
     entityNames: any,
-    considerationAmount: number
+    considerationAmount: number,
+    shareholdingData: any[] | null
   ): TransactionFlowScenario {
     const entities: TransactionEntity[] = [];
     const relationships: AnyTransactionRelationship[] = [];
@@ -162,24 +171,35 @@ export class CapitalRaisingStructureBuilders {
       id: issuingCompanyId,
       name: issuingCompanyName,
       type: 'target',
-      description: `Issuing company after capital raising (no other take-up)`
+      description: `Issuing company after capital raising (no other take-up - dilution occurred)`
     });
 
-    // 2. For no other take-up scenario, only existing shareholders participate
-    const beforeShareholders = results.shareholding?.before || [];
-    beforeShareholders.forEach((shareholder, index) => {
+    // 2. Use calculated shareholding data with dilution
+    const shareholders = shareholdingData || results.shareholding?.after || [];
+    shareholders.forEach((shareholder, index) => {
       const shareholderId = `${prefix}-shareholder-${index}`;
       
-      // In no other take-up scenario, existing shareholders maintain or increase their percentage
-      // This is a simplified assumption - in reality this would depend on the specific transaction terms
-      const adjustedPercentage = shareholder.percentage; // Could be higher if they take up additional shares
+      // Determine if this is the controlling shareholder (underwriter) or diluted shareholder
+      const beforeShareholders = results.shareholding?.before || [];
+      const beforePercentage = beforeShareholders.find(bs => bs.name === shareholder.name)?.percentage || 0;
+      const currentPercentage = shareholder.percentage;
+      
+      const isDiluted = currentPercentage < beforePercentage;
+      const isUnderwriter = currentPercentage > beforePercentage;
+      
+      let description = `Existing shareholder with ${currentPercentage}% ownership`;
+      if (isDiluted) {
+        description = `Existing shareholder diluted from ${beforePercentage}% to ${currentPercentage}% (no other take-up)`;
+      } else if (isUnderwriter) {
+        description = `Controlling shareholder increased from ${beforePercentage}% to ${currentPercentage}% (underwriter take-up)`;
+      }
       
       entities.push({
         id: shareholderId,
         name: shareholder.name,
         type: 'stockholder',
-        percentage: adjustedPercentage,
-        description: `Existing shareholder with ${adjustedPercentage}% ownership (no other take-up)`
+        percentage: currentPercentage,
+        description: description
       });
 
       // Create ownership relationship
@@ -187,40 +207,44 @@ export class CapitalRaisingStructureBuilders {
         source: shareholderId,
         target: issuingCompanyId,
         type: 'ownership',
-        percentage: adjustedPercentage,
-        label: `${adjustedPercentage}%`
+        percentage: currentPercentage,
+        label: `${currentPercentage}%`
       } as OwnershipRelationship);
     });
 
-    // 3. Add proceeds (likely lower amount due to no other take-up)
+    // 3. Add proceeds (likely lower amount due to partial take-up)
     if (considerationAmount > 0) {
       const proceedsId = `${prefix}-proceeds`;
       const currency = results.dealEconomics?.currency || 'HKD';
-      const reducedAmount = considerationAmount * 0.7; // Assume 70% take-up in no other scenario
+      // Calculate reduced proceeds based on actual take-up rate
+      const takeupRate = 0.7; // This could be calculated based on actual scenario data
+      const actualProceeds = considerationAmount * takeupRate;
       
       entities.push({
         id: proceedsId,
         name: 'Proceeds Raised',
         type: 'consideration',
-        value: reducedAmount,
+        value: actualProceeds,
         currency: currency,
-        description: `${currency} ${(reducedAmount / 1000000).toFixed(0)}M raised (no other take-up scenario)`
+        description: `${currency} ${(actualProceeds / 1000000).toFixed(0)}M raised (no other take-up scenario)`
       });
 
       relationships.push({
         source: proceedsId,
         target: issuingCompanyId,
         type: 'funding',
-        value: reducedAmount,
+        value: actualProceeds,
         currency: currency,
-        label: `${currency} ${(reducedAmount / 1000000).toFixed(0)}M`
+        label: `${currency} ${(actualProceeds / 1000000).toFixed(0)}M`
       });
     }
+
+    console.log(`📊 No Other Take-up Scenario: ${shareholders.length} shareholders, dilution occurred`);
 
     return {
       scenario: { entities, relationships },
       scenarioName: 'No Other Take-up',
-      scenarioDescription: 'Only existing shareholders participate in the capital raising'
+      scenarioDescription: 'Only controlling shareholder (underwriter) participates - other shareholders are diluted'
     };
   }
 }

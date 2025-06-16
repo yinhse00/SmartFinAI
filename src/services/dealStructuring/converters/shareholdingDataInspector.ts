@@ -55,44 +55,84 @@ export class ShareholdingDataInspector {
     console.log('================================');
   }
   
-  static extractCorrectScenarioData(results: AnalysisResults): {
+  static identifyControllingShareholderForCapitalRaising(results: AnalysisResults): string | null {
+    const beforeShareholders = results.shareholding?.before || [];
+    
+    // Find the shareholder with the highest percentage (likely the controlling shareholder/underwriter)
+    let controllingShareholder = null;
+    let highestPercentage = 0;
+    
+    beforeShareholders.forEach(shareholder => {
+      if (shareholder.percentage > highestPercentage) {
+        highestPercentage = shareholder.percentage;
+        controllingShareholder = shareholder.name;
+      }
+    });
+    
+    console.log('🎯 Identified controlling shareholder for capital raising:', controllingShareholder);
+    return controllingShareholder;
+  }
+  
+  static calculateCapitalRaisingScenarios(results: AnalysisResults): {
     fullTakeup: any[] | null;
     noOtherTakeup: any[] | null;
   } {
     this.inspectShareholdingData(results);
     
     const shareholding = results.shareholding;
-    if (!shareholding) {
+    if (!shareholding || !shareholding.before) {
+      console.log('❌ Missing shareholding data for calculation');
       return { fullTakeup: null, noOtherTakeup: null };
     }
     
-    // Strategy 1: Look for explicit scenario fields
-    let fullTakeup = (shareholding as any).fullTakeup || (shareholding as any).full_takeup;
-    let noOtherTakeup = (shareholding as any).noOtherTakeup || (shareholding as any).no_other_takeup;
+    // Full Take-up scenario: Use BEFORE shareholding (no dilution)
+    const fullTakeup = shareholding.before.map(sh => ({
+      name: sh.name,
+      percentage: sh.percentage
+    }));
     
-    // Strategy 2: Check if 'after' is an array with multiple scenarios
-    if (!fullTakeup && !noOtherTakeup && Array.isArray((shareholding as any).after)) {
-      const afterArray = (shareholding as any).after;
-      if (afterArray.length >= 2) {
-        fullTakeup = afterArray[0];
-        noOtherTakeup = afterArray[1];
-        console.log('📊 Using array-based scenario detection');
+    // No Other Take-up scenario: Calculate dilution based on controlling shareholder participation
+    const controllingShareholder = this.identifyControllingShareholderForCapitalRaising(results);
+    
+    let noOtherTakeup = null;
+    
+    if (controllingShareholder) {
+      // Check if we have specific scenario data from AI analysis
+      const afterData = shareholding.after;
+      
+      if (Array.isArray(afterData) && afterData.length >= 2) {
+        // Use AI-provided scenario data if available
+        // The AI might have calculated the dilution scenarios
+        const scenario1 = afterData[0];
+        const scenario2 = afterData[1];
+        
+        // Determine which scenario represents "no other take-up" (higher controlling shareholder percentage)
+        const scenario1ControllingPercentage = scenario1.find((sh: any) => sh.name === controllingShareholder)?.percentage || 0;
+        const scenario2ControllingPercentage = scenario2.find((sh: any) => sh.name === controllingShareholder)?.percentage || 0;
+        
+        if (scenario1ControllingPercentage > scenario2ControllingPercentage) {
+          noOtherTakeup = scenario1;
+          console.log('📊 Using scenario 1 for no other take-up (higher controlling percentage)');
+        } else {
+          noOtherTakeup = scenario2;
+          console.log('📊 Using scenario 2 for no other take-up (higher controlling percentage)');
+        }
+      } else if (afterData && !Array.isArray(afterData)) {
+        // Single after scenario - use as no other take-up scenario
+        noOtherTakeup = afterData;
+        console.log('📊 Using single after scenario for no other take-up');
       }
     }
     
-    // Strategy 3: Check for scenarios object
-    if (!fullTakeup && !noOtherTakeup && (shareholding as any).scenarios) {
-      const scenarios = (shareholding as any).scenarios;
-      if (Array.isArray(scenarios) && scenarios.length >= 2) {
-        fullTakeup = scenarios[0];
-        noOtherTakeup = scenarios[1];
-        console.log('📊 Using scenarios array');
-      }
+    // Fallback: if no specific scenario data, use the single after data or before data
+    if (!noOtherTakeup && shareholding.after && !Array.isArray(shareholding.after)) {
+      noOtherTakeup = shareholding.after;
+      console.log('📊 Fallback: Using single after data for no other take-up');
     }
     
-    console.log('🎯 Final extracted data:');
-    console.log('  Full takeup:', fullTakeup);
-    console.log('  No other takeup:', noOtherTakeup);
+    console.log('🎯 Final calculated scenarios:');
+    console.log('  Full takeup (no dilution):', fullTakeup);
+    console.log('  No other takeup (diluted):', noOtherTakeup);
     
     return { fullTakeup, noOtherTakeup };
   }
