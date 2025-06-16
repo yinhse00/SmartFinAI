@@ -6,7 +6,7 @@ import { parseAnalysisResponse } from './analysisResponseParser';
 import { transactionTypeClassifier, TransactionClassification } from './transactionTypeClassifier';
 import { typeSpecificPromptBuilder } from './typeSpecificPromptBuilder';
 import { typeSpecificEntityExtractor } from './typeSpecificEntityExtractor';
-import { OptimizationResult } from './optimizationEngine'; // Import from optimizationEngine
+import { OptimizationResult, StructureScenario } from './optimizationEngine';
 
 export interface InputValidationResult {
   isValid: boolean;
@@ -259,21 +259,32 @@ export const enhancedAiAnalysisService = {
   ): Promise<OptimizationResult> => {
     // Type-specific optimization logic
     const baseOptimization: OptimizationResult = {
-      marketIntelligence: {
-        precedentTransactions: [],
-        marketConditions: 'Current market conditions require careful consideration',
-        regulatoryEnvironment: 'Standard regulatory requirements apply'
-      },
-      optimizationInsights: [],
       recommendedStructure: {
+        id: 'recommended-structure',
+        name: 'Recommended Structure',
+        description: 'AI-recommended optimal structure based on transaction type',
         structure: results.structure?.recommended || 'Standard structure',
-        optimizationScore: 0.7
+        optimizationScore: 0.7,
+        advantages: ['AI-optimized approach', 'Type-specific considerations'],
+        disadvantages: ['Requires detailed review'],
+        riskFactors: ['Standard market risks'],
+        estimatedCost: 2000000,
+        estimatedDuration: '3-4 months',
+        successProbability: 0.8
       },
       alternativeStructures: [],
       parameterAnalysis: {
-        keyParameters: [],
-        recommendations: []
-      }
+        costSensitivity: 0.3,
+        timeSensitivity: 0.4,
+        riskSensitivity: 0.5,
+        regulatorySensitivity: 0.6
+      },
+      marketIntelligence: {
+        precedentTransactions: [],
+        marketTrends: ['Current market conditions require careful consideration'],
+        regulatoryEnvironment: 'Standard regulatory requirements apply'
+      },
+      optimizationInsights: []
     };
 
     if (classification.type === 'CAPITAL_RAISING') {
@@ -323,7 +334,8 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'issuer-1',
             name: classification.issuingCompany,
-            type: 'issuer'
+            type: 'issuer',
+            description: 'Issuing company for capital raising'
           });
           changesApplied.push('Added issuing company entity');
           reconciliationApplied = true;
@@ -341,7 +353,8 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'acquirer-1',
             name: classification.acquiringCompany,
-            type: 'issuer'
+            type: 'issuer',
+            description: 'Acquiring company in M&A transaction'
           });
           changesApplied.push('Added acquiring company entity');
           reconciliationApplied = true;
@@ -351,7 +364,8 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'target-1',
             name: classification.targetCompany,
-            type: 'target'
+            type: 'target',
+            description: 'Target company in M&A transaction'
           });
           changesApplied.push('Added target company entity');
           reconciliationApplied = true;

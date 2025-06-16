@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow, TransactionStep } from '@/types/transactionFlow';
 import { OptimizationResult } from './optimizationEngine';
@@ -99,8 +98,12 @@ export class TransactionFlowConverter {
         isAcquirerListed: entityNames.isIssuerListed || false
       }, corporateStructureMap);
     } else {
-      // For M&A, use standard before structure
-      return buildBeforeStructure(results, entityNames, corporateStructureMap);
+      // For M&A, use standard before structure with proper entity names
+      return buildBeforeStructure(results, {
+        targetCompanyName: entityNames.targetCompanyName,
+        acquiringCompanyName: entityNames.acquiringCompanyName,
+        isAcquirerListed: entityNames.isAcquirerListed || false
+      }, corporateStructureMap);
     }
   }
 
@@ -114,7 +117,11 @@ export class TransactionFlowConverter {
       }, corporateStructureMap, considerationAmount);
     } else {
       // For M&A, use standard after structure
-      return buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
+      return buildAfterStructure(results, {
+        targetCompanyName: entityNames.targetCompanyName,
+        acquiringCompanyName: entityNames.acquiringCompanyName,
+        isAcquirerListed: entityNames.isAcquirerListed || false
+      }, corporateStructureMap, considerationAmount);
     }
   }
 
