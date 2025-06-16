@@ -100,34 +100,36 @@ export class ShareholdingDataInspector {
       // Check if we have specific scenario data from AI analysis
       const afterData = shareholding.after;
       
-      if (Array.isArray(afterData) && afterData.length >= 2) {
-        // Use AI-provided scenario data if available
-        // The AI might have calculated the dilution scenarios
-        const scenario1 = afterData[0];
-        const scenario2 = afterData[1];
-        
-        // Determine which scenario represents "no other take-up" (higher controlling shareholder percentage)
-        const scenario1ControllingPercentage = scenario1.find((sh: any) => sh.name === controllingShareholder)?.percentage || 0;
-        const scenario2ControllingPercentage = scenario2.find((sh: any) => sh.name === controllingShareholder)?.percentage || 0;
-        
-        if (scenario1ControllingPercentage > scenario2ControllingPercentage) {
-          noOtherTakeup = scenario1;
-          console.log('📊 Using scenario 1 for no other take-up (higher controlling percentage)');
-        } else {
-          noOtherTakeup = scenario2;
-          console.log('📊 Using scenario 2 for no other take-up (higher controlling percentage)');
-        }
+      if (Array.isArray(afterData)) {
+        // afterData is an array of shareholders, use as diluted scenario
+        noOtherTakeup = afterData.map(sh => ({
+          name: sh.name,
+          percentage: sh.percentage
+        }));
+        console.log('📊 Using after shareholding data for no other take-up scenario');
       } else if (afterData && !Array.isArray(afterData)) {
-        // Single after scenario - use as no other take-up scenario
-        noOtherTakeup = afterData;
-        console.log('📊 Using single after scenario for no other take-up');
+        // Single after scenario object - convert to array format
+        noOtherTakeup = Object.entries(afterData).map(([name, percentage]) => ({
+          name,
+          percentage: Number(percentage)
+        }));
+        console.log('📊 Converting single after scenario object to array format');
+      } else {
+        // Fallback: Calculate dilution manually
+        console.log('📊 Calculating dilution manually - no specific after data found');
+        noOtherTakeup = this.calculateDilutedShareholders(shareholding.before, controllingShareholder);
       }
     }
     
-    // Fallback: if no specific scenario data, use the single after data or before data
-    if (!noOtherTakeup && shareholding.after && !Array.isArray(shareholding.after)) {
-      noOtherTakeup = shareholding.after;
-      console.log('📊 Fallback: Using single after data for no other take-up');
+    // Final fallback: if no controlling shareholder identified, use after data or before data
+    if (!noOtherTakeup) {
+      if (shareholding.after && Array.isArray(shareholding.after)) {
+        noOtherTakeup = shareholding.after;
+        console.log('📊 Fallback: Using after data for no other take-up');
+      } else {
+        noOtherTakeup = fullTakeup;
+        console.log('📊 Fallback: Using before data for no other take-up (no dilution data available)');
+      }
     }
     
     console.log('🎯 Final calculated scenarios:');
@@ -135,5 +137,25 @@ export class ShareholdingDataInspector {
     console.log('  No other takeup (diluted):', noOtherTakeup);
     
     return { fullTakeup, noOtherTakeup };
+  }
+  
+  private static calculateDilutedShareholders(beforeShareholders: any[], controllingShareholder: string): any[] {
+    // Simple dilution calculation assuming 20% new shares issued to controlling shareholder
+    const dilutionFactor = 0.8; // 80% of original percentage after 20% dilution
+    const controllingShareholderBonus = 20; // Additional 20% for controlling shareholder
+    
+    return beforeShareholders.map(sh => {
+      if (sh.name === controllingShareholder) {
+        return {
+          name: sh.name,
+          percentage: Math.round((sh.percentage * dilutionFactor + controllingShareholderBonus) * 100) / 100
+        };
+      } else {
+        return {
+          name: sh.name,
+          percentage: Math.round(sh.percentage * dilutionFactor * 100) / 100
+        };
+      }
+    });
   }
 }
