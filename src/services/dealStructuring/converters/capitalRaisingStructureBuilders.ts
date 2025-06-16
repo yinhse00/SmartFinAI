@@ -178,50 +178,101 @@ export class CapitalRaisingStructureBuilders {
     const shareholders = shareholdingData || results.shareholding?.after || [];
     const beforeShareholders = results.shareholding?.before || [];
     
+    // Identify controlling shareholder from before scenario
+    const controllingShareholder = ShareholdingDataInspector.identifyControllingShareholderForCapitalRaising(results);
+    
     // Debug logging for shareholder matching
     console.log('🔍 Before shareholders for matching:', beforeShareholders.map(sh => ({ name: sh.name, percentage: sh.percentage })));
     console.log('🔍 After shareholders for matching:', shareholders.map(sh => ({ name: sh.name, percentage: sh.percentage })));
+    console.log('🎯 Identified controlling shareholder:', controllingShareholder);
+    
+    // Track if we've already processed the controlling shareholder
+    let controllingShareholderProcessed = false;
+    let controllingShareholderIndex = 0;
     
     shareholders.forEach((shareholder, index) => {
-      const shareholderId = `${prefix}-shareholder-${index}`;
+      // Check if this is the controlling shareholder and we haven't processed them yet
+      const isControllingShareholder = controllingShareholder && shareholder.name === controllingShareholder;
       
-      // Improved shareholder matching logic
-      const beforePercentage = this.findMatchingShareholderPercentage(shareholder.name, beforeShareholders);
-      const currentPercentage = shareholder.percentage;
-      
-      console.log(`🔍 Matching shareholder "${shareholder.name}": before=${beforePercentage}%, after=${currentPercentage}%`);
-      
-      const isDiluted = beforePercentage > 0 && currentPercentage < beforePercentage;
-      const isUnderwriter = beforePercentage > 0 && currentPercentage > beforePercentage;
-      const isNewShareholder = beforePercentage === 0;
-      
-      let description = `Shareholder with ${currentPercentage}% ownership`;
-      if (isDiluted) {
-        description = `Existing shareholder diluted from ${beforePercentage}% to ${currentPercentage}% (no other take-up)`;
-      } else if (isUnderwriter) {
-        description = `Controlling shareholder increased from ${beforePercentage}% to ${currentPercentage}% (underwriter take-up)`;
-      } else if (isNewShareholder) {
-        description = `New shareholder with ${currentPercentage}% ownership (capital raising)`;
-      } else if (beforePercentage > 0) {
-        description = `Existing shareholder maintaining ${currentPercentage}% ownership`;
-      }
-      
-      entities.push({
-        id: shareholderId,
-        name: shareholder.name,
-        type: 'stockholder',
-        percentage: currentPercentage,
-        description: description
-      });
+      if (isControllingShareholder && !controllingShareholderProcessed) {
+        // Process controlling shareholder with consolidation logic
+        const shareholderId = `${prefix}-controlling-shareholder`;
+        
+        // Get before percentage for controlling shareholder
+        const beforePercentage = this.findMatchingShareholderPercentage(shareholder.name, beforeShareholders);
+        const currentPercentage = shareholder.percentage;
+        
+        console.log(`🎯 Processing controlling shareholder "${shareholder.name}": before=${beforePercentage}%, after=${currentPercentage}%`);
+        
+        // Calculate new shares acquired (difference between after and before)
+        const newSharesPercentage = currentPercentage - beforePercentage;
+        
+        let description: string;
+        if (newSharesPercentage > 0) {
+          description = `Controlling shareholder (${beforePercentage}% existing + ${newSharesPercentage.toFixed(2)}% new shares = ${currentPercentage}% total)`;
+        } else {
+          description = `Controlling shareholder maintaining ${currentPercentage}% ownership (no other take-up)`;
+        }
+        
+        entities.push({
+          id: shareholderId,
+          name: shareholder.name,
+          type: 'stockholder',
+          percentage: currentPercentage,
+          description: description
+        });
 
-      // Create ownership relationship
-      relationships.push({
-        source: shareholderId,
-        target: issuingCompanyId,
-        type: 'ownership',
-        percentage: currentPercentage,
-        label: `${currentPercentage}%`
-      } as OwnershipRelationship);
+        // Create ownership relationship
+        relationships.push({
+          source: shareholderId,
+          target: issuingCompanyId,
+          type: 'ownership',
+          percentage: currentPercentage,
+          label: `${currentPercentage}%`
+        } as OwnershipRelationship);
+        
+        controllingShareholderProcessed = true;
+        controllingShareholderIndex = index;
+      } else if (!isControllingShareholder) {
+        // Process other shareholders (non-controlling) with existing logic
+        const shareholderId = `${prefix}-shareholder-${index}`;
+        
+        // Improved shareholder matching logic
+        const beforePercentage = this.findMatchingShareholderPercentage(shareholder.name, beforeShareholders);
+        const currentPercentage = shareholder.percentage;
+        
+        console.log(`🔍 Matching shareholder "${shareholder.name}": before=${beforePercentage}%, after=${currentPercentage}%`);
+        
+        const isDiluted = beforePercentage > 0 && currentPercentage < beforePercentage;
+        const isNewShareholder = beforePercentage === 0;
+        
+        let description = `Shareholder with ${currentPercentage}% ownership`;
+        if (isDiluted) {
+          description = `Existing shareholder diluted from ${beforePercentage}% to ${currentPercentage}% (no other take-up)`;
+        } else if (isNewShareholder) {
+          description = `New shareholder with ${currentPercentage}% ownership (capital raising)`;
+        } else if (beforePercentage > 0) {
+          description = `Existing shareholder maintaining ${currentPercentage}% ownership`;
+        }
+        
+        entities.push({
+          id: shareholderId,
+          name: shareholder.name,
+          type: 'stockholder',
+          percentage: currentPercentage,
+          description: description
+        });
+
+        // Create ownership relationship
+        relationships.push({
+          source: shareholderId,
+          target: issuingCompanyId,
+          type: 'ownership',
+          percentage: currentPercentage,
+          label: `${currentPercentage}%`
+        } as OwnershipRelationship);
+      }
+      // Skip duplicate controlling shareholder entries (if any)
     });
 
     // 3. Add proceeds (likely lower amount due to partial take-up)
@@ -251,7 +302,7 @@ export class CapitalRaisingStructureBuilders {
       });
     }
 
-    console.log(`📊 No Other Take-up Scenario: ${shareholders.length} shareholders, dilution occurred`);
+    console.log(`📊 No Other Take-up Scenario: ${shareholders.length} shareholders, consolidation applied for controlling shareholder`);
 
     return {
       scenario: { entities, relationships },
