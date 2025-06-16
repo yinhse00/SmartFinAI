@@ -38,14 +38,16 @@ export class TransactionFlowConverter {
     
     const corporateStructureMap = processCorporateStructure(results.corporateStructure);
 
-    // Build before/after structures based on transaction type
+    // Build before structure
     const before = TypeSpecificStructureBuilders.buildTypeSpecificBeforeStructure(
       results, 
       entityNames, 
       corporateStructureMap, 
       transactionType
     );
-    const after = TypeSpecificStructureBuilders.buildTypeSpecificAfterStructure(
+
+    // Build after structure (may return single structure or multiple scenarios)
+    const afterResult = TypeSpecificStructureBuilders.buildTypeSpecificAfterStructure(
       results, 
       entityNames, 
       corporateStructureMap, 
@@ -83,7 +85,7 @@ export class TransactionFlowConverter {
 
     const transactionFlow: TransactionFlow = {
       before,
-      after,
+      after: afterResult, // This could be a single structure or array of scenarios
       transactionSteps,
       transactionContext
     };
