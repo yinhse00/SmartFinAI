@@ -176,22 +176,34 @@ export class CapitalRaisingStructureBuilders {
 
     // 2. Use calculated shareholding data with dilution
     const shareholders = shareholdingData || results.shareholding?.after || [];
+    const beforeShareholders = results.shareholding?.before || [];
+    
+    // Debug logging for shareholder matching
+    console.log('🔍 Before shareholders for matching:', beforeShareholders.map(sh => ({ name: sh.name, percentage: sh.percentage })));
+    console.log('🔍 After shareholders for matching:', shareholders.map(sh => ({ name: sh.name, percentage: sh.percentage })));
+    
     shareholders.forEach((shareholder, index) => {
       const shareholderId = `${prefix}-shareholder-${index}`;
       
-      // Determine if this is the controlling shareholder (underwriter) or diluted shareholder
-      const beforeShareholders = results.shareholding?.before || [];
-      const beforePercentage = beforeShareholders.find(bs => bs.name === shareholder.name)?.percentage || 0;
+      // Improved shareholder matching logic
+      const beforePercentage = this.findMatchingShareholderPercentage(shareholder.name, beforeShareholders);
       const currentPercentage = shareholder.percentage;
       
-      const isDiluted = currentPercentage < beforePercentage;
-      const isUnderwriter = currentPercentage > beforePercentage;
+      console.log(`🔍 Matching shareholder "${shareholder.name}": before=${beforePercentage}%, after=${currentPercentage}%`);
       
-      let description = `Existing shareholder with ${currentPercentage}% ownership`;
+      const isDiluted = beforePercentage > 0 && currentPercentage < beforePercentage;
+      const isUnderwriter = beforePercentage > 0 && currentPercentage > beforePercentage;
+      const isNewShareholder = beforePercentage === 0;
+      
+      let description = `Shareholder with ${currentPercentage}% ownership`;
       if (isDiluted) {
         description = `Existing shareholder diluted from ${beforePercentage}% to ${currentPercentage}% (no other take-up)`;
       } else if (isUnderwriter) {
         description = `Controlling shareholder increased from ${beforePercentage}% to ${currentPercentage}% (underwriter take-up)`;
+      } else if (isNewShareholder) {
+        description = `New shareholder with ${currentPercentage}% ownership (capital raising)`;
+      } else if (beforePercentage > 0) {
+        description = `Existing shareholder maintaining ${currentPercentage}% ownership`;
       }
       
       entities.push({
@@ -246,5 +258,40 @@ export class CapitalRaisingStructureBuilders {
       scenarioName: 'No Other Take-up',
       scenarioDescription: 'Only controlling shareholder (underwriter) participates - other shareholders are diluted'
     };
+  }
+  
+  /**
+   * Improved shareholder matching logic with fuzzy matching capabilities
+   */
+  private static findMatchingShareholderPercentage(shareholderName: string, beforeShareholders: any[]): number {
+    // Exact name match first
+    const exactMatch = beforeShareholders.find(sh => sh.name === shareholderName);
+    if (exactMatch) {
+      return exactMatch.percentage;
+    }
+    
+    // Fuzzy matching - case insensitive and trimmed
+    const normalizedName = shareholderName.toLowerCase().trim();
+    const fuzzyMatch = beforeShareholders.find(sh => 
+      sh.name.toLowerCase().trim() === normalizedName
+    );
+    if (fuzzyMatch) {
+      console.log(`🔍 Fuzzy match found: "${shareholderName}" matched with "${fuzzyMatch.name}"`);
+      return fuzzyMatch.percentage;
+    }
+    
+    // Partial match for grouped shareholders (e.g., "Controlling Shareholders" vs "ABC Corp")
+    const partialMatch = beforeShareholders.find(sh => {
+      const beforeName = sh.name.toLowerCase().trim();
+      return beforeName.includes(normalizedName) || normalizedName.includes(beforeName);
+    });
+    if (partialMatch) {
+      console.log(`🔍 Partial match found: "${shareholderName}" matched with "${partialMatch.name}"`);
+      return partialMatch.percentage;
+    }
+    
+    // No match found - could be new shareholder
+    console.log(`⚠️ No matching before shareholder found for "${shareholderName}"`);
+    return 0;
   }
 }
