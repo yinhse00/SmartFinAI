@@ -92,32 +92,20 @@ export class TransactionFlowConverter {
   private buildTypeSpecificBeforeStructure(results: AnalysisResults, entityNames: any, corporateStructureMap: any, transactionType: string) {
     if (transactionType === 'CAPITAL_RAISING') {
       // For capital raising, before structure shows current shareholders of issuing company
-      return buildBeforeStructure(results, {
-        targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName
-      }, corporateStructureMap);
+      return buildBeforeStructure(results, entityNames, corporateStructureMap);
     } else {
       // For M&A, use standard before structure with proper entity names
-      return buildBeforeStructure(results, {
-        targetCompanyName: entityNames.targetCompanyName,
-        acquiringCompanyName: entityNames.acquiringCompanyName
-      }, corporateStructureMap);
+      return buildBeforeStructure(results, entityNames, corporateStructureMap);
     }
   }
 
   private buildTypeSpecificAfterStructure(results: AnalysisResults, entityNames: any, corporateStructureMap: any, considerationAmount: number, transactionType: string) {
     if (transactionType === 'CAPITAL_RAISING') {
       // For capital raising, after structure shows diluted shareholding
-      return buildAfterStructure(results, {
-        targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName
-      }, corporateStructureMap, considerationAmount);
+      return buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
     } else {
       // For M&A, use standard after structure
-      return buildAfterStructure(results, {
-        targetCompanyName: entityNames.targetCompanyName,
-        acquiringCompanyName: entityNames.acquiringCompanyName
-      }, corporateStructureMap, considerationAmount);
+      return buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
     }
   }
 
