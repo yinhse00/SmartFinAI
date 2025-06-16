@@ -110,19 +110,29 @@ export class ShareholdingDataProcessor {
         
         controllingShareholderProcessed = true;
       } else if (!isControllingShareholder) {
-        // Process other shareholders (non-controlling)
+        // Process other shareholders with improved logic for new share allocation
         const beforePercentage = this.findMatchingShareholderPercentage(shareholder.name, beforeShareholders);
         const currentPercentage = shareholder.percentage;
         
-        const isDiluted = beforePercentage > 0 && currentPercentage < beforePercentage;
+        console.log(`🔍 Processing shareholder "${shareholder.name}": before=${beforePercentage}%, after=${currentPercentage}%`);
+        
         const isNewShareholder = beforePercentage === 0;
+        const hasIncreasedOwnership = beforePercentage > 0 && currentPercentage > beforePercentage;
+        const hasDecreasedOwnership = beforePercentage > 0 && currentPercentage < beforePercentage;
         
         let description = `Shareholder with ${currentPercentage}% ownership`;
-        if (isDiluted) {
-          description = `Existing shareholder diluted from ${beforePercentage}% to ${currentPercentage}%`;
-        } else if (isNewShareholder) {
+        
+        if (isNewShareholder) {
           description = `New shareholder with ${currentPercentage}% ownership`;
+        } else if (hasIncreasedOwnership) {
+          // This shareholder received new shares - focus on acquisition, not dilution
+          const newSharesPercentage = currentPercentage - beforePercentage;
+          description = `New shares to be taken by ${shareholder.name} of ${newSharesPercentage.toFixed(2)}%`;
+        } else if (hasDecreasedOwnership) {
+          // This shareholder was diluted by others' participation
+          description = `Existing shareholder maintaining ${currentPercentage}% (diluted by other participants)`;
         } else if (beforePercentage > 0) {
+          // Shareholder maintained same percentage
           description = `Existing shareholder maintaining ${currentPercentage}% ownership`;
         }
         
