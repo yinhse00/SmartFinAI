@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
@@ -133,7 +134,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   
   const beforeLevels = computeEntityHierarchyLevels(beforeEntities, transactionFlow.before.relationships);
   const { nodes: beforeNodes, sectionWidth: beforeSectionWidth } = calculateSectionLayout(beforeEntities, beforeLevels, currentXOffset);
-  addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, 0, beforeSectionWidth);
+  addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, -50, beforeSectionWidth);
   newNodes.push(...beforeNodes);
 
   // Validate BEFORE relationships
@@ -164,7 +165,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
   // TRANSACTION Section
-  addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset, 0, ENTITY_WIDTH);
+  addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset, -50, ENTITY_WIDTH);
   if (transactionFlow.transactionContext) {
       const tc = transactionFlow.transactionContext;
       const transactionNodeId = 'node-transaction-process';
@@ -232,7 +233,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   
   const afterLevels = computeAfterTransactionHierarchy(afterEntities, transactionFlow.after.relationships);
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
-  addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
+  addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, -50, afterSectionWidth);
   newNodes.push(...afterNodes);
 
   // Validate AFTER relationships
