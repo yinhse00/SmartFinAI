@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, OwnershipRelationship, AnyTransactionRelationship, TransactionFlowScenario } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
