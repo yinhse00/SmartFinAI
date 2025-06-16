@@ -64,9 +64,32 @@ const EnlargedShareholdingContent = ({ results, reconciliationData }: {
   results: AnalysisResults; 
   reconciliationData?: EnhancedShareholdingImpactBoxProps['reconciliationData'];
 }) => {
-  // Process data based on transaction type
+  // Check transaction type to determine processing approach
   const transactionType = ShareholdingDataProcessor.inferTransactionType(results);
-  const processedData = ShareholdingDataProcessor.processShareholdingData(results, transactionType);
+  const isCapitalRaising = transactionType === 'CAPITAL_RAISING';
+
+  let beforeData, afterData, impactDescription;
+
+  if (isCapitalRaising) {
+    // Use processed data for capital raising
+    const processedData = ShareholdingDataProcessor.processShareholdingData(results, transactionType);
+    beforeData = processedData.before;
+    afterData = processedData.after;
+    impactDescription = processedData.impactDescription;
+  } else {
+    // Use raw data for M&A transactions
+    beforeData = (results.shareholding?.before || []).map(sh => ({
+      name: sh.name,
+      percentage: sh.percentage,
+      description: `${sh.percentage}% stake`
+    }));
+    afterData = (results.shareholding?.after || []).map(sh => ({
+      name: sh.name,
+      percentage: sh.percentage,
+      description: `${sh.percentage}% stake`
+    }));
+    impactDescription = results.shareholding?.impact || 'Transaction will result in changes to ownership structure.';
+  }
 
   return (
     <div className="space-y-8 p-6">
@@ -101,7 +124,7 @@ const EnlargedShareholdingContent = ({ results, reconciliationData }: {
         <div>
           <h4 className="text-xl font-semibold mb-6 text-center">Before Transaction</h4>
           <div className="space-y-4">
-            {processedData.before.map((holder, index) => (
+            {beforeData.map((holder, index) => (
               <div key={index} className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
                 <div className="flex-1">
                   <p className="font-semibold text-lg">{holder.name}</p>
@@ -118,19 +141,19 @@ const EnlargedShareholdingContent = ({ results, reconciliationData }: {
         <div>
           <h4 className="text-xl font-semibold mb-6 text-center">After Transaction</h4>
           <div className="space-y-4">
-            {processedData.after.map((holder, index) => (
+            {afterData.map((holder, index) => (
               <div key={index} className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                 <div className="flex-1">
                   <p className="font-semibold text-lg">{holder.name}</p>
                   <div className="flex items-center text-sm">
-                    {holder.changeType === 'increase' ? (
+                    {isCapitalRaising && holder.changeType === 'increase' ? (
                       <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                    ) : holder.changeType === 'decrease' ? (
+                    ) : isCapitalRaising && holder.changeType === 'decrease' ? (
                       <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
                     ) : null}
                     <span className={
-                      holder.changeType === 'increase' ? 'text-green-600' : 
-                      holder.changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
+                      isCapitalRaising && holder.changeType === 'increase' ? 'text-green-600' : 
+                      isCapitalRaising && holder.changeType === 'decrease' ? 'text-red-600' : 'text-gray-600'
                     }>
                       {holder.description}
                     </span>
@@ -148,7 +171,7 @@ const EnlargedShareholdingContent = ({ results, reconciliationData }: {
       <div>
         <h4 className="text-xl font-semibold mb-6">Detailed Impact Analysis</h4>
         <div className="prose max-w-none">
-          <p className="text-lg leading-relaxed text-gray-700 mb-6">{processedData.impactDescription}</p>
+          <p className="text-lg leading-relaxed text-gray-700 mb-6">{impactDescription}</p>
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -177,9 +200,32 @@ const EnlargedShareholdingContent = ({ results, reconciliationData }: {
 export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: EnhancedShareholdingImpactBoxProps) => {
   const { validation } = useTransactionDataConsistency(results);
   
-  // Process data based on transaction type
+  // Check transaction type to determine processing approach
   const transactionType = ShareholdingDataProcessor.inferTransactionType(results);
-  const processedData = ShareholdingDataProcessor.processShareholdingData(results, transactionType);
+  const isCapitalRaising = transactionType === 'CAPITAL_RAISING';
+
+  let beforeData, afterData, impactDescription;
+
+  if (isCapitalRaising) {
+    // Use processed data for capital raising
+    const processedData = ShareholdingDataProcessor.processShareholdingData(results, transactionType);
+    beforeData = processedData.before;
+    afterData = processedData.after;
+    impactDescription = processedData.impactDescription;
+  } else {
+    // Use raw data for M&A transactions
+    beforeData = (results.shareholding?.before || []).map(sh => ({
+      name: sh.name,
+      percentage: sh.percentage,
+      description: `${sh.percentage}% stake`
+    }));
+    afterData = (results.shareholding?.after || []).map(sh => ({
+      name: sh.name,
+      percentage: sh.percentage,
+      description: `${sh.percentage}% stake`
+    }));
+    impactDescription = results.shareholding?.impact || 'Transaction will result in changes to ownership structure.';
+  }
 
   return (
     <Card className="h-[300px] flex flex-col min-h-0">
@@ -207,7 +253,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
             <div>
               <h5 className="font-medium mb-4 text-base">Before</h5>
               <div className="space-y-2">
-                {processedData.before.map((holder, index) => (
+                {beforeData.map((holder, index) => (
                   <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
@@ -218,7 +264,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
             <div>
               <h5 className="font-medium mb-4 text-base">After</h5>
               <div className="space-y-2">
-                {processedData.after.map((holder, index) => (
+                {afterData.map((holder, index) => (
                   <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
@@ -230,7 +276,7 @@ export const EnhancedShareholdingImpactBox = ({ results, reconciliationData }: E
           
           <div className="border-t pt-4">
             <h5 className="font-medium mb-4 text-base">Impact Summary</h5>
-            <p className="text-sm text-gray-600 leading-relaxed">{processedData.impactDescription}</p>
+            <p className="text-sm text-gray-600 leading-relaxed">{impactDescription}</p>
             
             {reconciliationData && reconciliationData.reconciliationApplied && (
               <div className="mt-4 p-3 bg-orange-50 border border-orange-200 rounded">
