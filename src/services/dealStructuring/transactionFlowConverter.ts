@@ -94,15 +94,13 @@ export class TransactionFlowConverter {
       // For capital raising, before structure shows current shareholders of issuing company
       return buildBeforeStructure(results, {
         targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName,
-        isAcquirerListed: entityNames.isIssuerListed || false
+        acquiringCompanyName: entityNames.issuingCompanyName
       }, corporateStructureMap);
     } else {
       // For M&A, use standard before structure with proper entity names
       return buildBeforeStructure(results, {
         targetCompanyName: entityNames.targetCompanyName,
-        acquiringCompanyName: entityNames.acquiringCompanyName,
-        isAcquirerListed: entityNames.isAcquirerListed || false
+        acquiringCompanyName: entityNames.acquiringCompanyName
       }, corporateStructureMap);
     }
   }
@@ -112,15 +110,13 @@ export class TransactionFlowConverter {
       // For capital raising, after structure shows diluted shareholding
       return buildAfterStructure(results, {
         targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName,
-        isAcquirerListed: entityNames.isIssuerListed || false
+        acquiringCompanyName: entityNames.issuingCompanyName
       }, corporateStructureMap, considerationAmount);
     } else {
       // For M&A, use standard after structure
       return buildAfterStructure(results, {
         targetCompanyName: entityNames.targetCompanyName,
-        acquiringCompanyName: entityNames.acquiringCompanyName,
-        isAcquirerListed: entityNames.isAcquirerListed || false
+        acquiringCompanyName: entityNames.acquiringCompanyName
       }, corporateStructureMap, considerationAmount);
     }
   }
