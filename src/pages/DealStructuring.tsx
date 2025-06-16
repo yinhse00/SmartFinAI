@@ -27,27 +27,27 @@ const DealStructuring = () => {
     try {
       // Convert the input data to TransactionAnalysisRequest format
       const request = {
-        transactionType: 'Transaction Analysis', // Default type
+        transactionType: 'Transaction Analysis', // This will be overridden by classification
         description: data.description,
         documents: data.uploadedFiles,
         additionalContext: data.extractedContent?.join('\n\n')
       };
 
-      // Use the enhanced analysis method with validation and reconciliation
+      // Use the enhanced analysis method with transaction type classification
       const enhancedResult = await enhancedAiAnalysisService.analyzeTransactionWithValidation(request);
       setAnalysisResults(enhancedResult.results);
       setEnhancedResults(enhancedResult);
       setCurrentStep('analysis');
 
-      // Show analysis quality report
+      // Show analysis quality report with transaction type info
       const qualityReport = enhancedAiAnalysisService.getAnalysisQualityReport(enhancedResult);
       let toastVariant: 'default' | 'destructive' = 'default';
-      let toastTitle = "Analysis Complete";
-      let toastDescription = `Analysis quality: ${qualityReport.overallQuality}`;
+      let toastTitle = `Analysis Complete - ${enhancedResult.classification.type}`;
+      let toastDescription = `Transaction classified as ${enhancedResult.classification.type}${enhancedResult.classification.subType ? ` (${enhancedResult.classification.subType})` : ''}. Quality: ${qualityReport.overallQuality}`;
       
       if (qualityReport.reconciliationNeeded) {
         toastVariant = 'default';
-        toastTitle = "Analysis Complete (Data Reconciled)";
+        toastTitle = `${enhancedResult.classification.type} Analysis Complete (Data Reconciled)`;
         toastDescription = "Analysis completed with data reconciliation to match your inputs.";
       }
       if (qualityReport.overallQuality === 'poor') {
@@ -66,7 +66,8 @@ const DealStructuring = () => {
         variant: toastVariant
       });
 
-      // Log quality report for debugging
+      // Log quality report and classification for debugging
+      console.log('Transaction classification:', enhancedResult.classification);
       console.log('Analysis quality report:', qualityReport);
       console.log('Optimization results:', enhancedResult.optimization);
     } catch (error) {
@@ -173,6 +174,13 @@ const DealStructuring = () => {
                   <h2 className="text-2xl font-bold">Transaction Analysis Dashboard</h2>
                   {enhancedResults && (
                     <div className="flex items-center gap-2">
+                      {/* Show transaction type classification */}
+                      <div className="flex items-center text-blue-600 text-sm bg-blue-50 px-2 py-1 rounded">
+                        <Brain className="h-4 w-4 mr-1" />
+                        {enhancedResults.classification.type}
+                        {enhancedResults.classification.subType && ` - ${enhancedResults.classification.subType}`}
+                      </div>
+                      
                       {enhancedResults.reconciliation.reconciliationApplied ? (
                         <div className="flex items-center text-orange-600 text-sm">
                           <AlertTriangle className="h-4 w-4 mr-1" />
