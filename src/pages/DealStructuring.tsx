@@ -15,7 +15,6 @@ const DealStructuring = () => {
   const [currentStep, setCurrentStep] = useState<'input' | 'analysis'>('input');
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [enhancedResults, setEnhancedResults] = useState<EnhancedAnalysisResult | null>(null);
-  const [originalDescription, setOriginalDescription] = useState<string>(''); // Add state for original description
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const { toast } = useToast();
 
@@ -25,8 +24,6 @@ const DealStructuring = () => {
     extractedContent?: string[];
   }) => {
     setIsAnalyzing(true);
-    setOriginalDescription(data.description); // Store original description
-    
     try {
       // Convert the input data to TransactionAnalysisRequest format
       const request = {
@@ -89,7 +86,6 @@ const DealStructuring = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
     setEnhancedResults(null);
-    setOriginalDescription(''); // Reset original description
   };
 
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
@@ -214,7 +210,6 @@ const DealStructuring = () => {
                 results={analysisResults} 
                 onResultsUpdate={handleResultsUpdate}
                 optimizationResult={enhancedResults?.optimization}
-                originalDescription={originalDescription}
               />
             </div>
           )}

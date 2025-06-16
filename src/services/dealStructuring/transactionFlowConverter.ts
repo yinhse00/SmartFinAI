@@ -19,8 +19,7 @@ export class TransactionFlowConverter {
   convertToTransactionFlow(
     results: AnalysisResults,
     optimizationResult?: OptimizationResult,
-    classification?: TransactionClassification,
-    originalDescription?: string
+    classification?: TransactionClassification
   ): TransactionFlow | undefined {
     console.log('Converting analysis results to transaction flow with type awareness...');
     console.log('Classification:', classification);
@@ -44,16 +43,14 @@ export class TransactionFlowConverter {
       results, 
       entityNames, 
       corporateStructureMap, 
-      transactionType,
-      originalDescription
+      transactionType
     );
     const after = TypeSpecificStructureBuilders.buildTypeSpecificAfterStructure(
       results, 
       entityNames, 
       corporateStructureMap, 
       considerationAmount, 
-      transactionType,
-      originalDescription
+      transactionType
     );
     
     // Generate transaction steps based on type
@@ -61,8 +58,7 @@ export class TransactionFlowConverter {
       results, 
       entityNames, 
       considerationAmount, 
-      transactionType,
-      originalDescription
+      transactionType
     );
     
     const transactionSteps: TransactionStep[] = rawTransactionSteps.map((step, index) => ({

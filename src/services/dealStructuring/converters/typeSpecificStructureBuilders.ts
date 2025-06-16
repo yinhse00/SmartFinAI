@@ -3,22 +3,17 @@ import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'
 import { TransactionFlow } from '@/types/transactionFlow';
 import { buildBeforeStructure } from '../converterUtils/beforeStructureBuilder';
 import { buildAfterStructure } from '../converterUtils/afterStructureBuilder';
-import { CapitalRaisingStructureBuilder } from '../capitalRaising/capitalRaisingStructureBuilder';
 
 export class TypeSpecificStructureBuilders {
   static buildTypeSpecificBeforeStructure(
     results: AnalysisResults, 
     entityNames: any, 
     corporateStructureMap: any, 
-    transactionType: string,
-    description?: string
+    transactionType: string
   ): TransactionFlow['before'] {
     if (transactionType === 'CAPITAL_RAISING') {
-      // Use capital raising specific structure builder
-      return CapitalRaisingStructureBuilder.buildCapitalRaisingBeforeStructure(
-        results, 
-        description || ''
-      );
+      // For capital raising, before structure shows current shareholders of issuing company
+      return buildBeforeStructure(results, entityNames, corporateStructureMap);
     } else {
       // For M&A, use standard before structure with proper entity names
       return buildBeforeStructure(results, entityNames, corporateStructureMap);
@@ -30,15 +25,11 @@ export class TypeSpecificStructureBuilders {
     entityNames: any, 
     corporateStructureMap: any, 
     considerationAmount: number, 
-    transactionType: string,
-    description?: string
+    transactionType: string
   ): TransactionFlow['after'] {
     if (transactionType === 'CAPITAL_RAISING') {
-      // Use capital raising specific structure builder
-      return CapitalRaisingStructureBuilder.buildCapitalRaisingAfterStructure(
-        results, 
-        description || ''
-      );
+      // For capital raising, after structure shows diluted shareholding
+      return buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
     } else {
       // For M&A, use standard after structure
       return buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);

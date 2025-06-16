@@ -1,4 +1,3 @@
-
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -18,7 +17,6 @@ export interface TransactionAnalysisRequest {
 export interface AnalysisContext {
   originalRequest: TransactionAnalysisRequest;
   analysisTimestamp: Date;
-  originalDescription?: string; // Add originalDescription property
   // Potentially add analysisId or version here if needed for context tracking
 }
 
@@ -74,8 +72,7 @@ export const aiAnalysisService = {
     // results parameter is currently unused but kept for potential future use (e.g. storing analysis ID)
     return {
       originalRequest: request,
-      analysisTimestamp: new Date(),
-      originalDescription: request.description // Store original description
+      analysisTimestamp: new Date()
     };
   },
 

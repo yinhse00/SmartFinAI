@@ -110,9 +110,8 @@ export const enhancedAiAnalysisService = {
         reconciliation
       );
       
-      // Step 12: Store analysis context with original description
+      // Step 12: Store analysis context
       const context = aiAnalysisService.storeAnalysisContext(request, analysisResults);
-      // originalDescription is now properly included in the context from storeAnalysisContext
       
       console.log('Enhanced analysis completed with type:', classification.type);
       

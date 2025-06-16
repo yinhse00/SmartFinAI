@@ -4,27 +4,18 @@ import { AnalysisResults } from '../AIAnalysisResults';
 import { transactionFlowConverter } from '@/services/dealStructuring/transactionFlowConverter';
 import EnhancedTransactionFlowDiagram from '../flow/EnhancedTransactionFlowDiagram';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
+import { useState } from 'react';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { Maximize2 } from 'lucide-react';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
   optimizationResult?: OptimizationResult;
-  originalDescription?: string; // Add original description prop
 }
 
-export const TransactionFlowDiagramBox = ({ 
-  results, 
-  optimizationResult, 
-  originalDescription 
-}: TransactionFlowDiagramBoxProps) => {
-  // Convert analysis results to transaction flow format with original description
-  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(
-    results, 
-    optimizationResult, 
-    undefined, // classification
-    originalDescription
-  );
+export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
+  // Convert analysis results to transaction flow format
+  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results, optimizationResult);
 
   const diagramContent = (
     <div className="h-full w-full">
