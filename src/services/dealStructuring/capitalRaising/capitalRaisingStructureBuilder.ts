@@ -119,13 +119,13 @@ export class CapitalRaisingStructureBuilder {
         const change = shareholder.percentage - (beforeShareholder?.percentage || 0);
         if (change > 0) {
           description += ` (increased by ${change.toFixed(1)}%)`;
-          entityType = 'new_equity_recipient';
+          entityType = 'investor'; // Use 'investor' instead of 'new_equity_recipient'
         } else if (change < 0) {
           description += ` (diluted by ${Math.abs(change).toFixed(1)}%)`;
         }
       } else {
         description = `New investor (${shareholder.percentage.toFixed(1)}%)`;
-        entityType = 'new_equity_recipient';
+        entityType = 'investor'; // Use 'investor' instead of 'new_equity_recipient'
       }
       
       // Don't create separate entity if controlling shareholder is underwriter and percentage increased

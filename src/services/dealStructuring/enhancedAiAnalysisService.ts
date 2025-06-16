@@ -1,3 +1,4 @@
+
 import { TransactionAnalysisRequest, aiAnalysisService, AnalysisContext } from './aiAnalysisService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { fileProcessingService } from '../documents/fileProcessingService';
@@ -111,7 +112,7 @@ export const enhancedAiAnalysisService = {
       
       // Step 12: Store analysis context with original description
       const context = aiAnalysisService.storeAnalysisContext(request, analysisResults);
-      context.originalDescription = request.description; // Store original description for structure builders
+      // originalDescription is now properly included in the context from storeAnalysisContext
       
       console.log('Enhanced analysis completed with type:', classification.type);
       

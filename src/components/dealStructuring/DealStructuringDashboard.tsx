@@ -1,12 +1,13 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
 import { TransactionStructureDiagramBox } from './sections/TransactionStructureDiagramBox';
-import { CostsBreakdownBox } from './sections/CostsBreakdownBox';
-import { TimetableAnalysisBox } from './sections/TimetableAnalysisBox';
-import { ComplianceConsiderationsBox } from './sections/ComplianceConsiderationsBox';
+import { CostAnalysisBox } from './sections/CostAnalysisBox';
+import { ExecutionTimetableBox } from './sections/ExecutionTimetableBox';
+import { RegulatoryComplianceBox } from './sections/RegulatoryComplianceBox';
 import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
-import { AnalysisResults } from '../AIAnalysisResults';
+import { AnalysisResults } from './AIAnalysisResults';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 
 interface DealStructuringDashboardProps {
@@ -31,7 +32,7 @@ export const DealStructuringDashboard = ({
       {/* Top-level Recommendations and Structure */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <StructureRecommendationBox results={results} />
-        <CostsBreakdownBox results={results} />
+        <CostAnalysisBox results={results} />
       </div>
 
       {/* Transaction Flow Diagrams */}
@@ -46,8 +47,8 @@ export const DealStructuringDashboard = ({
 
       {/* Detailed Analysis and Compliance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TimetableAnalysisBox results={results} />
-        <ComplianceConsiderationsBox results={results} />
+        <ExecutionTimetableBox results={results} />
+        <RegulatoryComplianceBox results={results} />
       </div>
     </div>
   );
