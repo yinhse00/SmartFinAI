@@ -56,32 +56,34 @@ const EnlargedStructureContent = ({ results }: { results: AnalysisResults }) => 
           )}
 
           {/* Payment Structure */}
-          <div className="p-4 border rounded-lg md:col-span-2">
-            <h5 className="font-semibold mb-3">Payment Structure</h5>
-            <div className="grid grid-cols-2 gap-4 mb-4">
-              <div className="bg-green-50 rounded p-3 border">
-                <div className="text-gray-600 text-sm">Cash Component</div>
-                <div className="text-xl font-bold text-green-600">
-                  {results.structure.majorTerms.paymentStructure.cashPercentage}%
+          {results.structure.majorTerms.paymentStructure && (
+            <div className="p-4 border rounded-lg md:col-span-2">
+              <h5 className="font-semibold mb-3">Payment Structure</h5>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="bg-green-50 rounded p-3 border">
+                  <div className="text-gray-600 text-sm">Cash Component</div>
+                  <div className="text-xl font-bold text-green-600">
+                    {results.structure.majorTerms.paymentStructure.cashPercentage || 0}%
+                  </div>
+                </div>
+                <div className="bg-blue-50 rounded p-3 border">
+                  <div className="text-gray-600 text-sm">Stock Component</div>
+                  <div className="text-xl font-bold text-blue-600">
+                    {results.structure.majorTerms.paymentStructure.stockPercentage || 0}%
+                  </div>
                 </div>
               </div>
-              <div className="bg-blue-50 rounded p-3 border">
-                <div className="text-gray-600 text-sm">Stock Component</div>
-                <div className="text-xl font-bold text-blue-600">
-                  {results.structure.majorTerms.paymentStructure.stockPercentage}%
+              
+              {results.structure.majorTerms.paymentStructure.paymentSchedule && (
+                <div className="mt-4">
+                  <h6 className="font-medium mb-2">Payment Schedule</h6>
+                  <p className="text-sm text-gray-600 bg-gray-50 rounded p-3 border">
+                    {results.structure.majorTerms.paymentStructure.paymentSchedule}
+                  </p>
                 </div>
-              </div>
+              )}
             </div>
-            
-            {results.structure.majorTerms.paymentStructure.paymentSchedule && (
-              <div className="mt-4">
-                <h6 className="font-medium mb-2">Payment Schedule</h6>
-                <p className="text-sm text-gray-600 bg-gray-50 rounded p-3 border">
-                  {results.structure.majorTerms.paymentStructure.paymentSchedule}
-                </p>
-              </div>
-            )}
-          </div>
+          )}
         </div>
 
         {/* Suggestion Consideration */}
@@ -95,7 +97,7 @@ const EnlargedStructureContent = ({ results }: { results: AnalysisResults }) => 
         )}
 
         {/* Key Conditions */}
-        {results.structure.majorTerms.keyConditions.length > 0 && (
+        {results.structure.majorTerms.keyConditions && results.structure.majorTerms.keyConditions.length > 0 && (
           <div>
             <h5 className="font-semibold mb-3 flex items-center gap-2">
               <FileCheck className="h-4 w-4" />
@@ -112,7 +114,7 @@ const EnlargedStructureContent = ({ results }: { results: AnalysisResults }) => 
         )}
 
         {/* Structural Decisions */}
-        {results.structure.majorTerms.structuralDecisions.length > 0 && (
+        {results.structure.majorTerms.structuralDecisions && results.structure.majorTerms.structuralDecisions.length > 0 && (
           <div>
             <h5 className="font-semibold mb-3">Key Structural Decisions</h5>
             <div className="flex flex-wrap gap-2">
@@ -128,7 +130,7 @@ const EnlargedStructureContent = ({ results }: { results: AnalysisResults }) => 
     )}
 
     {/* Alternative Structures */}
-    {results.structure.alternatives.length > 0 && (
+    {results.structure.alternatives && results.structure.alternatives.length > 0 && (
       <div>
         <h4 className="text-xl font-semibold mb-4 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-blue-500" />
@@ -216,23 +218,25 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
             </div>
 
             {/* Payment Structure */}
-            <div>
-              <h6 className="font-medium text-sm mb-2">Payment Structure</h6>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div className="bg-white rounded p-2 border">
-                  <div className="text-gray-500">Cash</div>
-                  <div className="font-semibold text-green-600">
-                    {results.structure.majorTerms.paymentStructure.cashPercentage}%
+            {results.structure.majorTerms.paymentStructure && (
+              <div>
+                <h6 className="font-medium text-sm mb-2">Payment Structure</h6>
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white rounded p-2 border">
+                    <div className="text-gray-500">Cash</div>
+                    <div className="font-semibold text-green-600">
+                      {results.structure.majorTerms.paymentStructure.cashPercentage || 0}%
+                    </div>
                   </div>
-                </div>
-                <div className="bg-white rounded p-2 border">
-                  <div className="text-gray-500">Stock</div>
-                  <div className="font-semibold text-green-600">
-                    {results.structure.majorTerms.paymentStructure.stockPercentage}%
+                  <div className="bg-white rounded p-2 border">
+                    <div className="text-gray-500">Stock</div>
+                    <div className="font-semibold text-green-600">
+                      {results.structure.majorTerms.paymentStructure.stockPercentage || 0}%
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Suggestion Consideration */}
             {results.structure.majorTerms.suggestionConsideration && (
@@ -245,7 +249,7 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
             )}
 
             {/* Payment Schedule */}
-            {results.structure.majorTerms.paymentStructure.paymentSchedule && (
+            {results.structure.majorTerms.paymentStructure?.paymentSchedule && (
               <div>
                 <h6 className="font-medium text-sm mb-1">Payment Schedule</h6>
                 <p className="text-xs text-gray-600 bg-white rounded p-2 border">
@@ -255,7 +259,7 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
             )}
 
             {/* Key Conditions */}
-            {results.structure.majorTerms.keyConditions.length > 0 && (
+            {results.structure.majorTerms.keyConditions && results.structure.majorTerms.keyConditions.length > 0 && (
               <div>
                 <h6 className="font-medium text-sm mb-2 flex items-center gap-1">
                   <FileCheck className="h-3 w-3" />
@@ -277,7 +281,7 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
             )}
 
             {/* Structural Decisions */}
-            {results.structure.majorTerms.structuralDecisions.length > 0 && (
+            {results.structure.majorTerms.structuralDecisions && results.structure.majorTerms.structuralDecisions.length > 0 && (
               <div>
                 <h6 className="font-medium text-sm mb-2">Key Structural Decisions</h6>
                 <div className="flex flex-wrap gap-1">
@@ -298,7 +302,7 @@ export const StructureRecommendationBox = ({ results }: StructureRecommendationB
         )}
 
         {/* Alternative Structures */}
-        {results.structure.alternatives.length > 0 && (
+        {results.structure.alternatives && results.structure.alternatives.length > 0 && (
           <div>
             <h5 className="font-medium mb-2 flex items-center gap-2">
               <TrendingUp className="h-4 w-4 text-blue-500" />

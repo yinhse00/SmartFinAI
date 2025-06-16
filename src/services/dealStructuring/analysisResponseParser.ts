@@ -24,8 +24,61 @@ export function parseAnalysisResponse(responseText: string): AnalysisResults {
       if (!parsed.corporateStructure) {
         parsed.corporateStructure = createFallbackCorporateStructure();
       }
-      if (!parsed.transactionFlow) { // Ensure transactionFlow fallback
+      if (!parsed.transactionFlow) {
         parsed.transactionFlow = createFallbackTransactionFlow();
+      }
+      
+      // Ensure costs object has all required properties
+      if (parsed.costs) {
+        parsed.costs.regulatory = parsed.costs.regulatory || 0;
+        parsed.costs.professional = parsed.costs.professional || 0;
+        parsed.costs.timing = parsed.costs.timing || 0;
+        parsed.costs.total = parsed.costs.total || 0;
+        parsed.costs.breakdown = parsed.costs.breakdown || [];
+      } else {
+        parsed.costs = {
+          regulatory: 0,
+          professional: 0,
+          timing: 0,
+          total: 0,
+          breakdown: []
+        };
+      }
+      
+      // Ensure timetable object has all required properties
+      if (parsed.timetable) {
+        parsed.timetable.keyMilestones = parsed.timetable.keyMilestones || [];
+        parsed.timetable.criticalPath = parsed.timetable.criticalPath || [];
+      } else {
+        parsed.timetable = {
+          totalDuration: 'To be determined',
+          keyMilestones: [],
+          criticalPath: []
+        };
+      }
+      
+      // Ensure structure.majorTerms has proper fallback
+      if (parsed.structure && parsed.structure.majorTerms) {
+        if (!parsed.structure.majorTerms.paymentStructure) {
+          parsed.structure.majorTerms.paymentStructure = {
+            cashPercentage: 0,
+            stockPercentage: 0
+          };
+        } else {
+          // Ensure paymentStructure has required properties
+          parsed.structure.majorTerms.paymentStructure.cashPercentage = 
+            parsed.structure.majorTerms.paymentStructure.cashPercentage || 0;
+          parsed.structure.majorTerms.paymentStructure.stockPercentage = 
+            parsed.structure.majorTerms.paymentStructure.stockPercentage || 0;
+        }
+        
+        parsed.structure.majorTerms.keyConditions = parsed.structure.majorTerms.keyConditions || [];
+        parsed.structure.majorTerms.structuralDecisions = parsed.structure.majorTerms.structuralDecisions || [];
+      }
+      
+      // Ensure alternatives array exists
+      if (parsed.structure) {
+        parsed.structure.alternatives = parsed.structure.alternatives || [];
       }
       
       // Standardize the compliance object to ensure consistency
@@ -54,11 +107,9 @@ export function parseAnalysisResponse(responseText: string): AnalysisResults {
       // Log extracted deal economics for debugging (dealEconomics is optional in AnalysisResults)
       if (parsed.dealEconomics) {
         console.log('Extracted deal economics:', parsed.dealEconomics);
-      } else {
-        // console.warn('No dealEconomics found in AI response, which is acceptable.');
       }
       
-      return parsed as AnalysisResults; // Cast to ensure type conformity
+      return parsed as AnalysisResults;
     }
   } catch (error) {
     console.error('Error parsing JSON response:', error);
