@@ -1,3 +1,4 @@
+
 export interface TransactionData {
   type: string;
   subtype: string;
@@ -29,6 +30,7 @@ export interface CorporateEntity {
   type: 'parent' | 'subsidiary' | 'target' | 'issuer';
   ownership?: number;
   parentId?: string;
+  description?: string; // Added missing property
 }
 
 export type Shareholder = ShareholderData; // Alias for ShareholderData

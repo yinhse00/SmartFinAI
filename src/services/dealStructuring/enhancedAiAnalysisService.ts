@@ -6,23 +6,11 @@ import { parseAnalysisResponse } from './analysisResponseParser';
 import { transactionTypeClassifier, TransactionClassification } from './transactionTypeClassifier';
 import { typeSpecificPromptBuilder } from './typeSpecificPromptBuilder';
 import { typeSpecificEntityExtractor } from './typeSpecificEntityExtractor';
+import { OptimizationResult } from './optimizationEngine'; // Import from optimizationEngine
 
 export interface InputValidationResult {
   isValid: boolean;
   issues: string[];
-}
-
-export interface OptimizationResult {
-  marketIntelligence: {
-    precedentTransactions: any[];
-    marketConditions: string;
-    regulatoryEnvironment: string;
-  };
-  optimizationInsights: string[];
-  recommendedStructure: {
-    structure: string;
-    optimizationScore: number;
-  };
 }
 
 export interface ReconciliationResult {
@@ -140,16 +128,6 @@ const getAnalysisQualityReport = (result: EnhancedAnalysisResult): {
   };
 };
 
-export interface EnhancedAnalysisResult {
-  results: AnalysisResults;
-  context: AnalysisContext;
-  classification: TransactionClassification; // Add classification to result
-  inputValidation: InputValidationResult;
-  optimization: OptimizationResult;
-  reconciliation: ReconciliationResult;
-  qualityMetrics: AnalysisQualityMetrics;
-}
-
 /**
  * Enhanced AI analysis service with transaction type awareness
  */
@@ -260,39 +238,17 @@ export const enhancedAiAnalysisService = {
   /**
    * Validate that the input data is consistent
    */
-  validateInputConsistency: (
-    request: TransactionAnalysisRequest,
-    results: AnalysisResults
-  ): InputValidationResult => {
-    return validateInputConsistency(request, results);
-  },
+  validateInputConsistency: validateInputConsistency,
 
   /**
    * Calculate quality metrics for the analysis
    */
-  calculateQualityMetrics: (
-    results: AnalysisResults,
-    inputValidation: InputValidationResult,
-    optimization: OptimizationResult,
-    reconciliation: ReconciliationResult
-  ): AnalysisQualityMetrics => {
-    return calculateQualityMetrics(results, inputValidation, optimization, reconciliation);
-  },
+  calculateQualityMetrics: calculateQualityMetrics,
 
   /**
    * Get analysis quality report
    */
-  getAnalysisQualityReport: (result: EnhancedAnalysisResult): {
-    overallQuality: 'high' | 'medium' | 'poor';
-    completenessScore: number;
-    accuracyScore: number;
-    relevanceScore: number;
-    inputValidationIssues: string[];
-    optimizationInsightsCount: number;
-    reconciliationNeeded: boolean;
-  } => {
-    return getAnalysisQualityReport(result);
-  },
+  getAnalysisQualityReport: getAnalysisQualityReport,
 
   /**
    * Optimize with market intelligence and transaction type awareness
@@ -302,7 +258,7 @@ export const enhancedAiAnalysisService = {
     classification: TransactionClassification
   ): Promise<OptimizationResult> => {
     // Type-specific optimization logic
-    const baseOptimization = {
+    const baseOptimization: OptimizationResult = {
       marketIntelligence: {
         precedentTransactions: [],
         marketConditions: 'Current market conditions require careful consideration',
@@ -312,6 +268,11 @@ export const enhancedAiAnalysisService = {
       recommendedStructure: {
         structure: results.structure?.recommended || 'Standard structure',
         optimizationScore: 0.7
+      },
+      alternativeStructures: [],
+      parameterAnalysis: {
+        keyParameters: [],
+        recommendations: []
       }
     };
 
@@ -362,8 +323,7 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'issuer-1',
             name: classification.issuingCompany,
-            type: 'issuer',
-            description: 'Company conducting capital raising'
+            type: 'issuer'
           });
           changesApplied.push('Added issuing company entity');
           reconciliationApplied = true;
@@ -381,8 +341,7 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'acquirer-1',
             name: classification.acquiringCompany,
-            type: 'issuer',
-            description: 'Acquiring company'
+            type: 'issuer'
           });
           changesApplied.push('Added acquiring company entity');
           reconciliationApplied = true;
@@ -392,8 +351,7 @@ export const enhancedAiAnalysisService = {
           reconciledResults.corporateStructure.entities.push({
             id: 'target-1',
             name: classification.targetCompany,
-            type: 'target',
-            description: 'Target company being acquired'
+            type: 'target'
           });
           changesApplied.push('Added target company entity');
           reconciliationApplied = true;

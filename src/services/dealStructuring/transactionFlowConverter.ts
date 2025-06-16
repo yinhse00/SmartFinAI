@@ -95,7 +95,8 @@ export class TransactionFlowConverter {
       // For capital raising, before structure shows current shareholders of issuing company
       return buildBeforeStructure(results, {
         targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName
+        acquiringCompanyName: entityNames.issuingCompanyName,
+        isAcquirerListed: entityNames.isIssuerListed || false
       }, corporateStructureMap);
     } else {
       // For M&A, use standard before structure
@@ -108,7 +109,8 @@ export class TransactionFlowConverter {
       // For capital raising, after structure shows diluted shareholding
       return buildAfterStructure(results, {
         targetCompanyName: entityNames.issuingCompanyName,
-        acquiringCompanyName: entityNames.issuingCompanyName
+        acquiringCompanyName: entityNames.issuingCompanyName,
+        isAcquirerListed: entityNames.isIssuerListed || false
       }, corporateStructureMap, considerationAmount);
     } else {
       // For M&A, use standard after structure
