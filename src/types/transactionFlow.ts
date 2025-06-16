@@ -1,4 +1,3 @@
-
 import { CorporateEntity } from './dealStructuring';
 
 export interface TransactionEntity {
@@ -56,15 +55,10 @@ export interface OperationalRelationship extends TransactionRelationshipBase {
 
 export type AnyTransactionRelationship = OwnershipRelationship | ConsiderationRelationship | OperationalRelationship;
 
+
 export interface TransactionFlowSection {
   entities: TransactionEntity[];
   relationships: AnyTransactionRelationship[];
-}
-
-export interface TransactionFlowScenario {
-  scenario: TransactionFlowSection;
-  scenarioName: string;
-  scenarioDescription?: string;
 }
 
 export interface TransactionStep {
@@ -80,7 +74,7 @@ export interface TransactionStep {
 
 export interface TransactionFlow {
   before: TransactionFlowSection;
-  after: TransactionFlowSection | TransactionFlowScenario[]; // Support both single and multiple scenarios
+  after: TransactionFlowSection;
   transactionSteps: TransactionStep[];
   transactionContext: {
     type: string;

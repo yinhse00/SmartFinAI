@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
-import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship, TransactionFlowSection } from '@/types/transactionFlow';
+import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
 import { createEntityNode, addSectionHeaderNode } from './nodeUtils';
 import {
   ENTITY_WIDTH,
@@ -212,22 +211,9 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   }
   currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
 
-  // AFTER Section - Handle both single section and multiple scenarios
+  // AFTER Section
   console.log('📍 Processing AFTER section...');
-  
-  let afterSection: TransactionFlowSection;
-  if (Array.isArray(transactionFlow.after)) {
-    // If multiple scenarios, use the first one for this single diagram
-    afterSection = transactionFlow.after[0].scenario;
-    console.log('Using first scenario for diagram processing');
-  } else {
-    // Single section
-    afterSection = transactionFlow.after;
-  }
-  
-  const afterEntities = afterSection.entities;
-  const afterRelationships = afterSection.relationships;
-  
+  const afterEntities = transactionFlow.after.entities;
   console.log(`📋 AFTER entities (${afterEntities.length}):`, afterEntities.map(e => ({ id: e.id, name: e.name, type: e.type, percentage: e.percentage })));
   
   // Special focus on Former Target Shareholders entity
@@ -244,14 +230,14 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
     console.warn('⚠️  Former Target Shareholders entity not found in AFTER entities');
   }
   
-  const afterLevels = computeAfterTransactionHierarchy(afterEntities, afterRelationships);
+  const afterLevels = computeAfterTransactionHierarchy(afterEntities, transactionFlow.after.relationships);
   const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
   addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, 0, afterSectionWidth);
   newNodes.push(...afterNodes);
 
   // Validate AFTER relationships
-  console.log(`📋 AFTER relationships (${afterRelationships.length}):`, 
-    afterRelationships.map((rel, idx) => ({
+  console.log(`📋 AFTER relationships (${transactionFlow.after.relationships.length}):`, 
+    transactionFlow.after.relationships.map((rel, idx) => ({
       index: idx,
       source: rel.source,
       target: rel.target,
@@ -262,7 +248,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
   );
   
   // Special focus on relationships involving Former Target Shareholders
-  const formerTargetRelationships = afterRelationships.filter(rel => 
+  const formerTargetRelationships = transactionFlow.after.relationships.filter(rel => 
     rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders') ||
     rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders')
   );
@@ -271,17 +257,17 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
     console.log('🎯 Relationships involving Former Target Shareholders:', formerTargetRelationships);
   } else {
     console.warn('⚠️  No relationships found involving Former Target Shareholders');
-    console.log('🔍 All relationship sources:', afterRelationships.map(r => r.source));
-    console.log('🔍 All relationship targets:', afterRelationships.map(r => r.target));
+    console.log('🔍 All relationship sources:', transactionFlow.after.relationships.map(r => r.source));
+    console.log('🔍 All relationship targets:', transactionFlow.after.relationships.map(r => r.target));
   }
   
-  validateRelationships(afterRelationships, afterNodes, 'AFTER');
+  validateRelationships(transactionFlow.after.relationships, afterNodes, 'AFTER');
 
   // Edges for AFTER section
   let createdEdges = 0;
   let skippedEdges = 0;
   
-  afterRelationships.forEach((rel, index) => {
+  transactionFlow.after.relationships.forEach((rel, index) => {
       const sourceNodeExists = newNodes.find(n => n.id === rel.source);
       const targetNodeExists = newNodes.find(n => n.id === rel.target);
       

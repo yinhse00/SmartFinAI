@@ -1,8 +1,7 @@
-
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { TransactionFlow, OwnershipRelationship, ConsiderationRelationship, TransactionFlowSection } from '@/types/transactionFlow';
+import { TransactionFlow, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
 
 interface CombinedTransactionFlowDiagramProps {
   transactionFlow?: TransactionFlow;
@@ -73,20 +72,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
     };
 
     const beforeEntities = transactionFlow.before.entities;
-    
-    // Handle both single section and multiple scenarios for after
-    let afterSection: TransactionFlowSection;
-    if (Array.isArray(transactionFlow.after)) {
-      // If multiple scenarios, use the first one for this diagram
-      afterSection = transactionFlow.after[0].scenario;
-    } else {
-      // Single section
-      afterSection = transactionFlow.after;
-    }
-    
-    const afterEntities = afterSection.entities;
+    const afterEntities = transactionFlow.after.entities;
     const beforeRelationships = transactionFlow.before.relationships;
-    const afterRelationships = afterSection.relationships;
+    const afterRelationships = transactionFlow.after.relationships;
     const transactionContext = transactionFlow.transactionContext;
 
     // BEFORE SECTION NODES

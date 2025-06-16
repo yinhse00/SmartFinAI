@@ -1,4 +1,3 @@
-
 // Utility to generate entity hierarchy levels based on relationships
 
 import { TransactionEntity, TransactionFlow, AnyTransactionRelationship } from "@/types/transactionFlow";
@@ -59,37 +58,6 @@ export function computeEntityHierarchyLevels(
 }
 
 /**
- * Builds a hierarchy specifically for capital raising transactions where shareholders must be above companies
- */
-export function computeCapitalRaisingHierarchy(
-  entities: TransactionEntity[],
-  relationships: AnyTransactionRelationship[]
-): Map<string, number> {
-  const levels = new Map<string, number>();
-
-  // For capital raising: shareholders (level 0) -> issuing company (level 1) -> proceeds/other (level 2)
-  entities.forEach(entity => {
-    switch (entity.type) {
-      case 'stockholder':
-      case 'investor':
-        levels.set(entity.id, 0); // Shareholders at top
-        break;
-      case 'target': // Issuing company
-        levels.set(entity.id, 1); // Company below shareholders
-        break;
-      case 'consideration':
-        levels.set(entity.id, 2); // Proceeds at bottom
-        break;
-      default:
-        levels.set(entity.id, 2); // Other entities at bottom
-        break;
-    }
-  });
-
-  return levels;
-}
-
-/**
  * Builds a hierarchy for the "After Transaction" section based on business entity types
  * and their ownership relationships. This overrides the generic parent-child relationship 
  * hierarchy to enforce a specific visual layout where stockholders are placed directly 
@@ -103,14 +71,6 @@ export function computeAfterTransactionHierarchy(
   entities: TransactionEntity[],
   relationships: AnyTransactionRelationship[]
 ): Map<string, number> {
-  // Check if this is a capital raising transaction by looking for issuing company pattern
-  const hasIssuingCompany = entities.some(e => e.type === 'target' && e.description?.includes('capital raising'));
-  
-  if (hasIssuingCompany) {
-    return computeCapitalRaisingHierarchy(entities, relationships);
-  }
-
-  // Original M&A hierarchy logic
   const levels = new Map<string, number>();
   const stockholderEntities = entities.filter(e => e.type === 'stockholder');
   const otherEntities = entities.filter(e => e.type !== 'stockholder');
@@ -184,6 +144,7 @@ export function computeAfterTransactionHierarchy(
 
   return levels;
 }
+
 
 /**
  * Returns max hierarchy level (deepest), used for layout spacing.
