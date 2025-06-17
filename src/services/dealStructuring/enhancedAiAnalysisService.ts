@@ -79,12 +79,14 @@ export const enhancedAiAnalysisService = {
       // Step 1: Extract user inputs before AI analysis
       const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
       console.log('Extracted user inputs:', userInputs);
+      console.log('=== VALIDATION: Passing userInputs to AI analysis ===');
       
       // Step 2: Input validation
       const inputValidation = enhancedAiAnalysisService.validateInput(request);
       
-      // Step 3: Get basic AI analysis
-      const basicResults = await aiAnalysisService.analyzeTransaction(request);
+      // Step 3: Get basic AI analysis WITH userInputs passed - THIS IS THE FIX
+      const basicResults = await aiAnalysisService.analyzeTransaction(request, userInputs);
+      console.log('AI analysis completed with userInputs passed');
       
       // Step 4: Apply optimization if parameters provided
       let optimization: OptimizationResult | null = null;
@@ -110,10 +112,12 @@ export const enhancedAiAnalysisService = {
       
       // Extract user inputs for fallback
       const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
+      console.log('=== FALLBACK: Passing userInputs to fallback AI analysis ===');
       
-      // Fallback to basic analysis with user inputs preserved
+      // Fallback to basic analysis with user inputs preserved - THIS IS THE SECOND FIX
       try {
-        const basicResults = await aiAnalysisService.analyzeTransaction(request);
+        const basicResults = await aiAnalysisService.analyzeTransaction(request, userInputs);
+        console.log('Fallback AI analysis completed with userInputs passed');
         return {
           results: enhancedAiAnalysisService.applyUserInputsToResults(basicResults, userInputs),
           optimization: enhancedAiAnalysisService.createFallbackOptimization(),
