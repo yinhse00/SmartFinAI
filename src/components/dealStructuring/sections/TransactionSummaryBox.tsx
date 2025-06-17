@@ -135,9 +135,9 @@ export const TransactionSummaryBox = ({ results, optimizationResult }: Transacti
                 <Users className="h-4 w-4" />
                 <span className="text-sm">{results.shareholding.before.length} shareholders</span>
               </div>
-              {optimizationResult?.optimizationScore && (
+              {optimizationResult?.recommendedStructure?.optimizationScore && (
                 <div className="text-sm">
-                  <span className="font-medium">Optimization:</span> {Math.round(optimizationResult.optimizationScore * 100)}%
+                  <span className="font-medium">Optimization:</span> {Math.round(optimizationResult.recommendedStructure.optimizationScore * 100)}%
                 </div>
               )}
             </div>
