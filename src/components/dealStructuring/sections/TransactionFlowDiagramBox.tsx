@@ -1,7 +1,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AnalysisResults } from '../AIAnalysisResults';
-import { transactionFlowConverter } from '@/services/dealStructuring/transactionFlowConverter';
+import { convertAnalysisToTransactionFlow } from '@/services/dealStructuring/transactionFlowConverter';
 import EnhancedTransactionFlowDiagram from '../flow/EnhancedTransactionFlowDiagram';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 import { useState } from 'react';
@@ -15,7 +15,12 @@ interface TransactionFlowDiagramBoxProps {
 
 export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
   // Convert analysis results to transaction flow format
-  const transactionFlow = transactionFlowConverter.convertToTransactionFlow(results, optimizationResult);
+  const entityNames = {
+    targetCompanyName: results.corporateStructure?.entities.find(e => e.type === 'target')?.name || 'Target Company',
+    acquiringCompanyName: results.corporateStructure?.entities.find(e => e.type === 'issuer' || e.type === 'parent')?.name || 'Acquiring Company'
+  };
+  
+  const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames);
 
   const diagramContent = (
     <div className="h-full w-full">

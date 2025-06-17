@@ -47,3 +47,8 @@ export const convertAnalysisToTransactionFlow = (
   
   return transactionFlow;
 };
+
+// Create the transactionFlowConverter object that was being imported
+export const transactionFlowConverter = {
+  convertToTransactionFlow: convertAnalysisToTransactionFlow
+};
