@@ -27,10 +27,10 @@ export const DealStructuringDashboard = ({
       {/* Left side: 4x2 grid of analysis boxes */}
       <div className="flex-1 grid grid-cols-2 gap-4 auto-rows-fr">
         {/* Row 1: Structure Recommendation, Transaction Flow */}
-        <div className="h-56">
+        <div className="h-80">
           <StructureRecommendationBox results={results} />
         </div>
-        <div className="h-56">
+        <div className="h-80">
           <TransactionFlowDiagramBox 
             results={results} 
             optimizationResult={optimizationResult}
@@ -38,26 +38,26 @@ export const DealStructuringDashboard = ({
         </div>
         
         {/* Row 2: Valuation Analysis, Shareholding Impact */}
-        <div className="h-56">
+        <div className="h-80">
           <ValuationAnalysisBox results={results} />
         </div>
-        <div className="h-56">
+        <div className="h-80">
           <ShareholdingImpactBox results={results} />
         </div>
         
         {/* Row 3: Cost Analysis, Document Preparation */}
-        <div className="h-56">
+        <div className="h-80">
           <CostAnalysisBox results={results} />
         </div>
-        <div className="h-56">
+        <div className="h-80">
           <DocumentPreparationBox results={results} />
         </div>
         
         {/* Row 4: Execution Timetable, Regulatory Compliance */}
-        <div className="h-56">
+        <div className="h-80">
           <ExecutionTimetableBox results={results} />
         </div>
-        <div className="h-56">
+        <div className="h-80">
           <RegulatoryComplianceBox results={results} />
         </div>
       </div>
