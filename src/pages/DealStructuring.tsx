@@ -15,6 +15,7 @@ const DealStructuring = () => {
   const [analysisResults, setAnalysisResults] = useState<AnalysisResults | null>(null);
   const [enhancedResults, setEnhancedResults] = useState<EnhancedAnalysisResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisKey, setAnalysisKey] = useState(0); // Key for resetting input component
   const {
     toast
   } = useToast();
@@ -83,6 +84,7 @@ const DealStructuring = () => {
     setCurrentStep('input');
     setAnalysisResults(null);
     setEnhancedResults(null);
+    setAnalysisKey(prev => prev + 1); // Increment key to force component reset
   };
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
     setAnalysisResults(updatedResults);
@@ -142,7 +144,11 @@ const DealStructuring = () => {
 
         {/* Main Content */}
         <div className="space-y-6">
-          {currentStep === 'input' && <EnhancedTransactionInput onAnalyze={handleTransactionAnalysis} isAnalyzing={isAnalyzing} />}
+          {currentStep === 'input' && <EnhancedTransactionInput 
+            key={analysisKey} 
+            onAnalyze={handleTransactionAnalysis} 
+            isAnalyzing={isAnalyzing} 
+          />}
           
           {currentStep === 'analysis' && analysisResults && <div className="space-y-6">
               <div className="flex justify-between items-center">
