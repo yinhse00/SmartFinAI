@@ -307,14 +307,6 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Clean transaction details display
-    const ownershipRelationship = afterRelationships.find(r => 
-      r.source.includes('acquiring') && 
-      (r.type === 'ownership' || r.type === 'control')
-    ) as OwnershipRelationship | undefined;
-    
-    const ownershipPercentage = ownershipRelationship?.percentage;
-
     nodesArr.push({
       id: 'transaction-details',
       type: 'default',
@@ -323,9 +315,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         label: (
           <div className="text-center p-4">
             <div className="text-lg font-bold mb-3 text-blue-900">
-              {transactionContext?.type || 'Transaction'}
+              {transactionContext?.type || 'Acquisition'}
             </div>
             <div className="space-y-2 text-xs text-left">
+              <div className="bg-blue-50 p-2 rounded">
+                <strong className="text-blue-800">Transaction:</strong>
+                <div className="text-blue-700">{transactionContext?.description}</div>
+              </div>
               <div className="bg-green-50 p-2 rounded">
                 <strong className="text-green-800">Consideration:</strong>
                 <div className="text-green-700">
@@ -333,9 +329,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
                 </div>
               </div>
               <div className="bg-orange-50 p-2 rounded">
-                <strong className="text-orange-800">Structure:</strong>
+                <strong className="text-orange-800">Ownership:</strong>
                 <div className="text-orange-700">
-                  {transactionContext?.recommendedStructure || 'Standard Structure'}
+                  {
+                    afterRelationships.find(r => r.source.includes('acquiring') && (r.type === 'ownership' || r.type === 'control') && (r as OwnershipRelationship).percentage !== undefined)
+                      ? `${(afterRelationships.find(r => r.source.includes('acquiring') && (r.type === 'ownership' || r.type === 'control')) as OwnershipRelationship).percentage}% stake acquired`
+                      : 'Stake acquired'
+                  }
                 </div>
               </div>
             </div>
@@ -347,7 +347,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         border: '3px solid #2563eb',
         borderRadius: '12px',
         width: '320px',
-        height: '180px'
+        height: '200px'
       },
       draggable: false,
       selectable: false
