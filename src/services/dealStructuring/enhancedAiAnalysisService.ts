@@ -38,6 +38,8 @@ export interface ExtractedUserInputs {
   amount?: number;
   currency?: string;
   acquisitionPercentage?: number;
+  targetCompanyName?: string;
+  acquiringCompanyName?: string;
 }
 
 /**
@@ -69,6 +71,17 @@ export const enhancedAiAnalysisService = {
     const percentageMatch = request.description.match(/(?:acquire|purchase|buy|obtaining?)\s+(?:a\s+)?(\d+(?:\.\d+)?)%/i);
     if (percentageMatch) {
       extracted.acquisitionPercentage = parseFloat(percentageMatch[1]);
+    }
+    
+    // Extract company names - simple pattern matching
+    const targetCompanyMatch = request.description.match(/(?:target|acquire|purchase|buy)\s+(?:company\s+)?([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))/i);
+    if (targetCompanyMatch) {
+      extracted.targetCompanyName = targetCompanyMatch[1].trim();
+    }
+    
+    const acquiringCompanyMatch = request.description.match(/([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))\s+(?:is|will)\s+(?:acquiring|purchasing|buying)/i);
+    if (acquiringCompanyMatch) {
+      extracted.acquiringCompanyName = acquiringCompanyMatch[1].trim();
     }
     
     return extracted;
