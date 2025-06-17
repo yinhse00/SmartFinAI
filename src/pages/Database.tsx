@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -109,7 +108,6 @@ const Database = () => {
         content: formData.content,
         chapter: formData.chapter,
         section: formData.section,
-        categoryCode: formData.categoryCode,
       });
       
       if (id) {
@@ -152,14 +150,13 @@ const Database = () => {
         provisions = importData.split('\n')
           .filter(line => line.trim())
           .map(line => {
-            const [ruleNumber, title, content, chapter, section, categoryCode] = line.split(',');
+            const [ruleNumber, title, content, chapter, section] = line.split(',');
             return {
               ruleNumber: ruleNumber?.trim() || '',
               title: title?.trim() || '',
               content: content?.trim() || '',
               chapter: chapter?.trim(),
               section: section?.trim(),
-              categoryCode: categoryCode?.trim() || 'OTHER',
             };
           });
       }
