@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
@@ -119,6 +120,61 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
       takeoversCode: ["Assessment needed"],
       risks: ["Detailed risk analysis in response (fallback)"],
       recommendations: ["See comprehensive recommendations (fallback)"],
+    },
+    valuation: {
+      transactionValue: {
+        amount: 100000000,
+        currency: 'HKD'
+      },
+      valuationMetrics: {
+        peRatio: 15.2,
+        pbRatio: 1.8
+      },
+      marketComparables: [],
+      fairnessAssessment: {
+        conclusion: 'Fair and Reasonable',
+        reasoning: 'Transaction priced within market range based on comparable transactions.'
+      },
+      valuationRange: {
+        low: 90000000,
+        high: 110000000,
+        midpoint: 100000000
+      }
+    },
+    documentPreparation: {
+      requiredDocuments: [
+        {
+          document: 'Circular to Shareholders',
+          description: 'Comprehensive disclosure document for shareholder approval',
+          priority: 'high',
+          timeline: '4-6 weeks',
+          responsibleParty: 'Legal counsel'
+        },
+        {
+          document: 'Joint Announcement',
+          description: 'Initial transaction announcement to the market',
+          priority: 'high',
+          timeline: '1-2 weeks',
+          responsibleParty: 'Financial adviser'
+        }
+      ],
+      keyParties: [
+        {
+          party: 'Financial Adviser',
+          role: 'Transaction advisory',
+          involvement: 'Lead advisory and execution'
+        },
+        {
+          party: 'Legal Counsel',
+          role: 'Legal documentation',
+          involvement: 'Draft agreements and regulatory filings'
+        }
+      ],
+      preparationTimeline: {
+        totalDuration: '8-12 weeks',
+        criticalPath: ['Regulatory approval', 'Shareholder approval']
+      },
+      regulatoryFilings: ['Exchange filing', 'Regulatory disclosure']
     },
     confidence: 0.5, 
     shareholdingChanges: createFallbackShareholdingChanges(),
