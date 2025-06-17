@@ -43,23 +43,112 @@ const extractCorporateStructure = (text: string) => {
   }
 };
 
-// Helper function to extract valuation data
+// Validation function for extraction inputs
+const validateExtractionInputs = (text: string, userInputs?: ExtractedUserInputs) => {
+  console.log('=== VALIDATING EXTRACTION INPUTS ===');
+  console.log('User inputs available:', !!userInputs);
+  console.log('User amount:', userInputs?.amount);
+  
+  const validationResult = {
+    userInputsValid: false,
+    aiResponseSafe: false,
+    shouldUseUserInputs: false,
+    detectedCorruption: false,
+    reason: ''
+  };
+
+  // Validate user inputs first
+  if (userInputs?.amount) {
+    const amount = userInputs.amount;
+    if (amount > 0 && amount < 10000000000000) { // 10 trillion upper bound
+      validationResult.userInputsValid = true;
+      validationResult.shouldUseUserInputs = true;
+      validationResult.reason = 'Valid user input detected';
+      console.log('✅ User inputs validated successfully');
+    } else {
+      validationResult.reason = 'User input amount out of reasonable bounds';
+      console.log('❌ User input validation failed:', amount);
+    }
+  }
+
+  // Check AI response for corruption patterns
+  if (text) {
+    const corruptionPatterns = [
+      /(\d{3,})\s*(million|m)\b/i, // Numbers > 999 with million multiplier
+      /(\d+)\s*(million|m).*(\d+)\s*(million|m)/i, // Multiple million mentions
+      /\b(\d+)\s*(billion|b).*(\d+)\s*(million|m)/i, // Mixed billion/million
+    ];
+
+    for (const pattern of corruptionPatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const firstNumber = parseInt(match[1]);
+        if (firstNumber > 1000) {
+          validationResult.detectedCorruption = true;
+          validationResult.reason += '; AI response corruption detected';
+          console.log('🚨 Corruption pattern detected:', match[0]);
+          break;
+        }
+      }
+    }
+
+    if (!validationResult.detectedCorruption) {
+      validationResult.aiResponseSafe = true;
+      console.log('✅ AI response appears safe from corruption');
+    }
+  }
+
+  console.log('Validation result:', validationResult);
+  return validationResult;
+};
+
+// Helper function to extract valuation data with comprehensive validation
 const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) => {
   console.log('=== DEBUGGING extractValuationData ===');
   console.log('User inputs:', userInputs);
   
-  // Prioritize user-extracted amount over AI response text parsing
-  let finalAmount = userInputs?.amount || 100000000;
-  let currency = userInputs?.currency || 'HKD';
+  // Pre-processing validation
+  const validation = validateExtractionInputs(text, userInputs);
   
-  console.log('Using prioritized amount from user inputs:', finalAmount);
-  console.log('Using prioritized currency from user inputs:', currency);
-  
-  // Only attempt text parsing if no user input is available
-  if (!userInputs?.amount) {
-    console.log('No user amount available, attempting text parsing...');
+  // Prioritize user inputs if they are valid
+  if (validation.shouldUseUserInputs && userInputs?.amount) {
+    console.log('🎯 Using validated user inputs as primary source');
+    const finalAmount = userInputs.amount;
+    const currency = userInputs.currency || 'HKD';
     
-    // Extract transaction value from AI response text
+    console.log('Final amount from user inputs:', finalAmount);
+    console.log('Final currency from user inputs:', currency);
+    
+    return {
+      transactionValue: {
+        amount: finalAmount,
+        currency,
+        pricePerShare: undefined
+      },
+      valuationMetrics: {
+        peRatio: undefined,
+        pbRatio: undefined,
+        evEbitda: undefined
+      },
+      marketComparables: [],
+      fairnessAssessment: {
+        conclusion: 'Fair and Reasonable',
+        reasoning: 'Based on user-specified transaction amount and market analysis.',
+        premium: undefined
+      },
+      valuationRange: {
+        low: finalAmount * 0.9,
+        high: finalAmount * 1.1,
+        midpoint: finalAmount
+      }
+    };
+  }
+
+  // Only attempt AI parsing if no valid user inputs and AI response is safe
+  if (!validation.detectedCorruption && validation.aiResponseSafe) {
+    console.log('⚠️ No valid user inputs, attempting careful AI text parsing...');
+    
+    // Extract transaction value from AI response text with strict validation
     const valueMatch = text.match(/(?:transaction value|purchase price|deal value)[:\s]*([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
     if (valueMatch) {
       const textAmount = parseFloat(valueMatch[2].replace(/,/g, ''));
@@ -68,52 +157,65 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
       console.log('Text parsing extracted amount:', textAmount);
       console.log('Text parsing extracted currency:', textCurrency);
       
-      // Add validation to prevent obviously corrupted amounts
-      if (textAmount > 0 && textAmount < 1000000000000) { // Reasonable upper bound
-        finalAmount = textAmount;
-        currency = textCurrency;
-        console.log('Using text-parsed amount after validation:', finalAmount);
+      // Strict validation for AI-parsed amounts
+      if (textAmount > 0 && textAmount < 1000000000000) { // 1 trillion upper bound
+        console.log('✅ AI-parsed amount validated, using:', textAmount);
+        
+        return {
+          transactionValue: {
+            amount: textAmount,
+            currency: textCurrency,
+            pricePerShare: undefined
+          },
+          valuationMetrics: {
+            peRatio: undefined,
+            pbRatio: undefined,
+            evEbitda: undefined
+          },
+          marketComparables: [],
+          fairnessAssessment: {
+            conclusion: 'Fair and Reasonable',
+            reasoning: 'Based on market comparables and transaction metrics, the valuation appears fair.',
+            premium: undefined
+          },
+          valuationRange: {
+            low: textAmount * 0.9,
+            high: textAmount * 1.1,
+            midpoint: textAmount
+          }
+        };
       } else {
-        console.warn('Text-parsed amount failed validation, keeping user input:', textAmount);
+        console.warn('❌ AI-parsed amount failed validation, using safe default');
       }
     }
   }
 
-  // Extract price per share
-  const priceMatch = text.match(/(?:price per share|share price)[:\s]*(?:[A-Z]{3})?\s*([\d,]+(?:\.\d+)?)/i);
-  const pricePerShare = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : undefined;
-
-  // Extract valuation metrics
-  const peMatch = text.match(/(?:p\/e|pe ratio)[:\s]*([\d.]+)/i);
-  const pbMatch = text.match(/(?:p\/b|pb ratio)[:\s]*([\d.]+)/i);
-  const evMatch = text.match(/(?:ev\/ebitda|enterprise value)[:\s]*([\d.]+)/i);
-
-  // Extract premium
-  const premiumMatch = text.match(/(?:premium|control premium)[:\s]*([\d.]+)%?/i);
-
-  console.log('Final valuation data - amount:', finalAmount, 'currency:', currency);
+  // Safe default fallback
+  console.log('🛡️ Using safe default values');
+  const defaultAmount = 100000000; // 100M default
+  const defaultCurrency = 'HKD';
 
   return {
     transactionValue: {
-      amount: finalAmount,
-      currency,
-      pricePerShare
+      amount: defaultAmount,
+      currency: defaultCurrency,
+      pricePerShare: undefined
     },
     valuationMetrics: {
-      peRatio: peMatch ? parseFloat(peMatch[1]) : undefined,
-      pbRatio: pbMatch ? parseFloat(pbMatch[1]) : undefined,
-      evEbitda: evMatch ? parseFloat(evMatch[1]) : undefined
+      peRatio: undefined,
+      pbRatio: undefined,
+      evEbitda: undefined
     },
-    marketComparables: [], // AI will need to provide these
+    marketComparables: [],
     fairnessAssessment: {
       conclusion: 'Fair and Reasonable',
-      reasoning: 'Based on market comparables and transaction metrics, the valuation appears fair.',
-      premium: premiumMatch ? parseFloat(premiumMatch[1]) : undefined
+      reasoning: 'Valuation based on standard market assumptions pending detailed analysis.',
+      premium: undefined
     },
     valuationRange: {
-      low: finalAmount * 0.9,
-      high: finalAmount * 1.1,
-      midpoint: finalAmount
+      low: defaultAmount * 0.9,
+      high: defaultAmount * 1.1,
+      midpoint: defaultAmount
     }
   };
 };
@@ -145,8 +247,8 @@ const extractDocumentData = (text: string) => {
   }));
 
   return {
-    requiredDocuments: requiredDocuments.slice(0, 6), // Limit to 6 items
-    keyParties: keyParties.slice(0, 6), // Limit to 6 items
+    requiredDocuments: requiredDocuments.slice(0, 6),
+    keyParties: keyParties.slice(0, 6),
     preparationTimeline: {
       totalDuration: '8-12 weeks',
       criticalPath: ['Regulatory approval', 'Shareholder approval', 'Due diligence completion']
@@ -181,17 +283,17 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     const shareholdingChanges = extractShareholdingChanges(responseText);
     const corporateStructure = extractCorporateStructure(responseText);
 
-    // Add valuation and document preparation data with user inputs priority
+    // Extract valuation data with comprehensive validation
     const valuation = extractValuationData(responseText, userInputs);
     const documentPreparation = extractDocumentData(responseText);
 
-    console.log('Valuation data created with user inputs priority:', valuation.transactionValue);
+    console.log('Valuation data created with validation:', valuation.transactionValue);
 
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
       dealEconomics: parsed.dealEconomics || {
-        purchasePrice: userInputs?.amount || 100000000,
-        currency: userInputs?.currency || 'HKD',
+        purchasePrice: userInputs?.amount || valuation.transactionValue.amount,
+        currency: userInputs?.currency || valuation.transactionValue.currency,
         paymentStructure: 'Cash',
         valuationBasis: 'Market Comparables',
         targetPercentage: userInputs?.acquisitionPercentage || 100
@@ -231,18 +333,28 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       transactionFlow: parsed.transactionFlow
     };
 
-    // Validate and reconcile with user inputs if provided
-    if (userInputs) {
-      if (userInputs.amount && (!results.dealEconomics?.purchasePrice || results.dealEconomics.purchasePrice !== userInputs.amount)) {
-        console.log('Reconciling purchase price with user input:', userInputs.amount);
-        results.dealEconomics = {
-          ...results.dealEconomics,
-          purchasePrice: userInputs.amount
+    // Cross-validation: Ensure dealEconomics and valuation amounts match when user inputs are provided
+    if (userInputs?.amount) {
+      console.log('🔍 Cross-validating amounts with user inputs');
+      
+      if (results.dealEconomics && results.dealEconomics.purchasePrice !== userInputs.amount) {
+        console.log('⚠️ Reconciling dealEconomics.purchasePrice with user input');
+        results.dealEconomics.purchasePrice = userInputs.amount;
+      }
+      
+      if (results.valuation.transactionValue.amount !== userInputs.amount) {
+        console.log('⚠️ Reconciling valuation.transactionValue.amount with user input');
+        results.valuation.transactionValue.amount = userInputs.amount;
+        results.valuation.valuationRange = {
+          low: userInputs.amount * 0.9,
+          high: userInputs.amount * 1.1,
+          midpoint: userInputs.amount
         };
       }
       
       if (userInputs.currency && results.dealEconomics) {
         results.dealEconomics.currency = userInputs.currency;
+        results.valuation.transactionValue.currency = userInputs.currency;
       }
       
       if (userInputs.acquisitionPercentage && results.dealEconomics) {
@@ -250,7 +362,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       }
     }
 
-    console.log('Successfully parsed analysis response with user input validation');
+    console.log('✅ Successfully parsed and validated analysis response');
     console.log('Final results.dealEconomics.purchasePrice:', results.dealEconomics?.purchasePrice);
     console.log('Final results.valuation.transactionValue.amount:', results.valuation?.transactionValue?.amount);
     return results;

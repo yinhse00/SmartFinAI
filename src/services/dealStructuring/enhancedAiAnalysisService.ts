@@ -137,20 +137,44 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Apply user inputs to analysis results
+   * Apply user inputs to analysis results with comprehensive validation
    */
   applyUserInputsToResults: (results: AnalysisResults, userInputs: ExtractedUserInputs): AnalysisResults => {
+    console.log('=== APPLYING USER INPUTS TO RESULTS ===');
+    console.log('User inputs to apply:', userInputs);
+    console.log('Current dealEconomics.purchasePrice:', results.dealEconomics?.purchasePrice);
+    console.log('Current valuation.transactionValue.amount:', results.valuation?.transactionValue?.amount);
+    
     const updatedResults = { ...results };
     
     // Apply user amount if extracted
     if (userInputs.amount) {
+      console.log('📊 Applying user amount:', userInputs.amount);
+      
+      // Update dealEconomics
       updatedResults.dealEconomics = {
         ...updatedResults.dealEconomics,
         purchasePrice: userInputs.amount,
         currency: userInputs.currency || updatedResults.dealEconomics?.currency || 'HKD'
       };
       
-      console.log('Applied user amount to results:', userInputs.amount);
+      // Update valuation data to match dealEconomics
+      updatedResults.valuation = {
+        ...updatedResults.valuation,
+        transactionValue: {
+          ...updatedResults.valuation.transactionValue,
+          amount: userInputs.amount,
+          currency: userInputs.currency || updatedResults.valuation.transactionValue.currency
+        },
+        valuationRange: {
+          low: userInputs.amount * 0.9,
+          high: userInputs.amount * 1.1,
+          midpoint: userInputs.amount
+        }
+      };
+      
+      console.log('✅ Updated dealEconomics.purchasePrice:', updatedResults.dealEconomics.purchasePrice);
+      console.log('✅ Updated valuation.transactionValue.amount:', updatedResults.valuation.transactionValue.amount);
     }
     
     // Apply acquisition percentage if extracted
@@ -159,6 +183,7 @@ export const enhancedAiAnalysisService = {
         ...updatedResults.dealEconomics,
         targetPercentage: userInputs.acquisitionPercentage
       };
+      console.log('✅ Applied acquisition percentage:', userInputs.acquisitionPercentage);
     }
     
     return updatedResults;
@@ -244,28 +269,33 @@ export const enhancedAiAnalysisService = {
    * Reconcile AI results with optimization recommendations and user inputs
    */
   reconcileResults: (basicResults: AnalysisResults, optimization: OptimizationResult, userInputs?: ExtractedUserInputs) => {
+    console.log('=== RECONCILING RESULTS ===');
+    console.log('User inputs for reconciliation:', userInputs);
+    
     const changes: string[] = [];
     let reconciledResults = { ...basicResults };
     
-    // Apply user inputs first if they exist
+    // Apply user inputs first if they exist - THIS IS THE CRITICAL FIX
     if (userInputs) {
+      console.log('🎯 Applying user inputs during reconciliation');
       reconciledResults = enhancedAiAnalysisService.applyUserInputsToResults(reconciledResults, userInputs);
+      
       if (userInputs.amount) {
-        changes.push(`Applied user-specified amount: ${userInputs.amount}`);
+        changes.push(`Applied user-specified amount: ${userInputs.amount.toLocaleString()}`);
       }
       if (userInputs.acquisitionPercentage) {
         changes.push(`Applied user-specified acquisition percentage: ${userInputs.acquisitionPercentage}%`);
       }
     }
     
-    // Update structure recommendation with optimized version
+    // Update structure recommendation with optimized version (only if not overriding user preferences)
     if (optimization.recommendedStructure.structure !== basicResults.structure.recommended) {
       changes.push('Updated structure recommendation based on optimization analysis');
       reconciledResults.structure.recommended = optimization.recommendedStructure.structure;
       reconciledResults.structure.rationale = `${basicResults.structure.rationale}\n\nOptimization Analysis: ${optimization.recommendedStructure.description}`;
     }
     
-    // Update cost estimates with optimization data
+    // Update cost estimates with optimization data (but don't override user amounts)
     if (Math.abs(optimization.recommendedStructure.estimatedCost - basicResults.costs.total) > 500000) {
       changes.push('Refined cost estimates based on optimization scenarios');
       reconciledResults.costs.total = optimization.recommendedStructure.estimatedCost;
@@ -295,6 +325,22 @@ export const enhancedAiAnalysisService = {
         );
       }
     }
+    
+    // Final validation: Ensure dealEconomics and valuation amounts are consistent
+    if (reconciledResults.dealEconomics?.purchasePrice && reconciledResults.valuation?.transactionValue?.amount) {
+      if (reconciledResults.dealEconomics.purchasePrice !== reconciledResults.valuation.transactionValue.amount) {
+        console.log('🔧 Final reconciliation: syncing dealEconomics and valuation amounts');
+        reconciledResults.valuation.transactionValue.amount = reconciledResults.dealEconomics.purchasePrice;
+        reconciledResults.valuation.valuationRange = {
+          low: reconciledResults.dealEconomics.purchasePrice * 0.9,
+          high: reconciledResults.dealEconomics.purchasePrice * 1.1,
+          midpoint: reconciledResults.dealEconomics.purchasePrice
+        };
+        changes.push('Synchronized transaction amounts across all sections');
+      }
+    }
+    
+    console.log('✅ Reconciliation completed with changes:', changes);
     
     return {
       reconciledResults,
