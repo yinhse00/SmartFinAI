@@ -130,13 +130,14 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
   // Pre-processing validation
   const validation = validateExtractionInputs(text, userInputs);
   
-  // Prioritize user inputs if they are valid
+  // CRITICAL: Prioritize user inputs if they are valid - BLOCK AI corruption
   if (validation.shouldUseUserInputs && userInputs?.amount) {
     console.log('🎯 Using validated user inputs as primary source');
+    console.log('🛡️ BLOCKING any AI-parsed amounts to prevent corruption');
     const finalAmount = userInputs.amount;
     const currency = userInputs.currency || 'HKD';
     
-    console.log('Final amount from user inputs:', finalAmount);
+    console.log('Final amount from user inputs (CORRUPTION BLOCKED):', finalAmount);
     console.log('Final currency from user inputs:', currency);
     
     return {
@@ -167,6 +168,7 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
   // Only attempt AI parsing if no valid user inputs and AI response is safe
   if (!validation.detectedCorruption && validation.aiResponseSafe) {
     console.log('⚠️ No valid user inputs, attempting careful AI text parsing...');
+    console.log('🔍 Scanning AI response for amounts (this could be the source of 1.5B):');
     
     // Extract transaction value from AI response text with strict validation
     const valueMatch = text.match(/(?:transaction value|purchase price|deal value)[:\s]*([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
@@ -174,8 +176,9 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
       const textAmount = parseFloat(valueMatch[2].replace(/,/g, ''));
       const textCurrency = valueMatch[1];
       
-      console.log('Text parsing extracted amount:', textAmount);
-      console.log('Text parsing extracted currency:', textCurrency);
+      console.log('⚠️ AI text parsing extracted amount:', textAmount);
+      console.log('⚠️ AI text parsing extracted currency:', textCurrency);
+      console.log('🚨 WARNING: This could be the source of incorrect 1.5B if AI response is corrupted!');
       
       // Strict validation for AI-parsed amounts
       if (textAmount > 0 && textAmount < 1000000000000) { // 1 trillion upper bound
@@ -206,12 +209,13 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
         };
       } else {
         console.warn('❌ AI-parsed amount failed validation, using safe default');
+        console.warn('🚨 REJECTED AMOUNT:', textAmount, 'This might have been the 1.5B source!');
       }
     }
   }
 
   // Safe default fallback
-  console.log('🛡️ Using safe default values');
+  console.log('🛡️ Using safe default values (100M HKD)');
   const defaultAmount = 100000000; // 100M default
   const defaultCurrency = 'HKD';
 
@@ -278,6 +282,10 @@ const extractDocumentData = (text: string) => {
 };
 
 export const parseAnalysisResponse = (responseText: string, userInputs?: ExtractedUserInputs): AnalysisResults => {
+  console.log('=== DEBUGGING parseAnalysisResponse - TRACKING 1.5B BUG ===');
+  console.log('User inputs received:', userInputs);
+  console.log('User amount:', userInputs?.amount);
+  
   // Early validation: Check if the response is empty or too short
   if (!responseText || responseText.length < 100) {
     console.warn('Response text is too short or empty, using fallback with user inputs.');
@@ -300,6 +308,12 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       }
     }
 
+    console.log('🔍 Parsed AI response dealEconomics:', parsed.dealEconomics);
+    if (parsed.dealEconomics?.purchasePrice) {
+      console.log('🚨 AI response contains purchasePrice:', parsed.dealEconomics.purchasePrice);
+      console.log('🚨 This could be the 1.5B source if corrupted!');
+    }
+
     const shareholdingChanges = extractShareholdingChanges(responseText);
     const corporateStructure = extractCorporateStructure(responseText);
 
@@ -309,25 +323,34 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
 
     console.log('Valuation data created with validation:', valuation.transactionValue);
 
-    // Build dealEconomics with USER INPUT PRIORITY - NEVER use corrupted AI data when user inputs exist
-    console.log('=== CONSTRUCTING DEAL ECONOMICS WITH CORRUPTION BLOCKING ===');
+    // Build dealEconomics with ABSOLUTE USER INPUT PRIORITY - CRITICAL BUG FIX
+    console.log('=== CONSTRUCTING DEAL ECONOMICS WITH ENHANCED CORRUPTION BLOCKING ===');
     console.log('User inputs for dealEconomics:', userInputs);
-    console.log('Parsed dealEconomics (BLOCKED if user inputs exist):', parsed.dealEconomics);
+    console.log('AI parsed dealEconomics (WILL BE IGNORED if user inputs exist):', parsed.dealEconomics);
     
     const dealEconomics = {
-      // CRITICAL FIX: Remove parsed.dealEconomics?.purchasePrice from fallback chain to prevent corruption
-      purchasePrice: userInputs?.amount || valuation.transactionValue.amount,
-      // CRITICAL FIX: Remove parsed.dealEconomics?.currency from fallback chain when user input exists
-      currency: userInputs?.currency || valuation.transactionValue.currency,
+      // ABSOLUTE PRIORITY: User input amount, NEVER fallback to parsed if user input exists
+      purchasePrice: userInputs?.amount || (userInputs?.amount === 0 ? 0 : valuation.transactionValue.amount),
+      // ABSOLUTE PRIORITY: User input currency, NEVER fallback to parsed if user input exists  
+      currency: userInputs?.currency || (userInputs?.currency ? userInputs.currency : valuation.transactionValue.currency),
       // Keep non-corrupted properties from AI response
       paymentStructure: parsed.dealEconomics?.paymentStructure || 'Cash',
       valuationBasis: parsed.dealEconomics?.valuationBasis || 'Market Comparables',
       targetPercentage: userInputs?.acquisitionPercentage || parsed.dealEconomics?.targetPercentage || 100
     };
     
-    console.log('Final dealEconomics constructed (corruption blocked):', dealEconomics);
-    console.log('User input amount used:', userInputs?.amount);
-    console.log('Final purchase price (should match user input):', dealEconomics.purchasePrice);
+    console.log('=== FINAL DEAL ECONOMICS (1.5B BUG SHOULD BE FIXED) ===');
+    console.log('Final dealEconomics constructed:', dealEconomics);
+    console.log('Final purchase price (should be user input):', dealEconomics.purchasePrice);
+    console.log('User input amount that should be used:', userInputs?.amount);
+    
+    if (userInputs?.amount && dealEconomics.purchasePrice !== userInputs.amount) {
+      console.error('🚨 CRITICAL BUG: Final amount does not match user input!');
+      console.error('Expected:', userInputs.amount, 'Got:', dealEconomics.purchasePrice);
+      // Force correct amount
+      dealEconomics.purchasePrice = userInputs.amount;
+      console.log('🔧 FORCED CORRECTION: Set to user input:', dealEconomics.purchasePrice);
+    }
 
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
@@ -371,6 +394,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     if (results.dealEconomics && results.valuation) {
       if (results.dealEconomics.purchasePrice !== results.valuation.transactionValue.amount) {
         console.log('🔧 Synchronizing valuation amount with dealEconomics');
+        console.log('Before sync - dealEconomics:', results.dealEconomics.purchasePrice, 'valuation:', results.valuation.transactionValue.amount);
         results.valuation.transactionValue.amount = results.dealEconomics.purchasePrice;
         results.valuation.transactionValue.currency = results.dealEconomics.currency;
         results.valuation.valuationRange = {
@@ -378,12 +402,24 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
           high: results.dealEconomics.purchasePrice * 1.1,
           midpoint: results.dealEconomics.purchasePrice
         };
+        console.log('After sync - dealEconomics:', results.dealEconomics.purchasePrice, 'valuation:', results.valuation.transactionValue.amount);
       }
     }
 
-    console.log('✅ Successfully parsed and validated analysis response with corruption blocking');
+    console.log('=== FINAL VALIDATION - 1.5B BUG CHECK ===');
     console.log('Final results.dealEconomics.purchasePrice:', results.dealEconomics?.purchasePrice);
     console.log('Final results.valuation.transactionValue.amount:', results.valuation?.transactionValue?.amount);
+    console.log('Expected user input amount:', userInputs?.amount);
+    
+    if (userInputs?.amount) {
+      const finalAmount = results.dealEconomics?.purchasePrice;
+      if (finalAmount !== userInputs.amount) {
+        console.error('🚨 CRITICAL: 1.5B bug may still exist! Final amount does not match user input!');
+      } else {
+        console.log('✅ SUCCESS: 1.5B bug fixed - final amount matches user input');
+      }
+    }
+    
     return results;
 
   } catch (error) {

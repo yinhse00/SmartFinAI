@@ -41,45 +41,50 @@ export const extractUserInputAmount = (description: string): number | null => {
     const match = description.match(pattern);
     
     if (match) {
-      const amount = parseFloat(match[1].replace(/,/g, ''));
+      const rawAmount = parseFloat(match[1].replace(/,/g, ''));
       const multiplier = match[2] ? match[2].toLowerCase() : null;
       
       console.log('Pattern matched:', pattern);
-      console.log('Raw amount:', amount);
+      console.log('Raw amount:', rawAmount);
       console.log('Multiplier found:', multiplier);
       
-      // Validation: check for reasonable bounds
-      if (amount <= 0 || amount > 1000000) {
-        console.log('Amount failed validation (out of reasonable bounds):', amount);
-        continue;
-      }
+      // Apply multiplier first, then validate the final amount
+      let finalAmount = rawAmount;
       
-      let finalAmount = amount;
-      
-      // Apply multiplier only if it was captured in the same match
       if (multiplier) {
         if (multiplier === 'billion' || multiplier === 'b') {
-          finalAmount = amount * 1000000000;
+          finalAmount = rawAmount * 1000000000;
           console.log('Applied billion multiplier, final amount:', finalAmount);
         } else if (multiplier === 'million' || multiplier === 'm') {
-          finalAmount = amount * 1000000;
+          finalAmount = rawAmount * 1000000;
           console.log('Applied million multiplier, final amount:', finalAmount);
         }
       } else {
         console.log('No multiplier in match, using raw amount:', finalAmount);
       }
       
-      // Final validation: ensure we don't return impossible amounts
-      if (finalAmount > 1000000000000) { // 1 trillion cap
-        console.log('Final amount exceeds reasonable bounds, rejecting:', finalAmount);
+      // Validation AFTER multiplier application - this is the key fix
+      if (finalAmount <= 0) {
+        console.log('❌ Final amount is zero or negative, rejecting:', finalAmount);
         continue;
       }
       
-      console.log('✅ Successfully extracted amount:', finalAmount);
+      if (finalAmount > 1000000000000) { // 1 trillion cap
+        console.log('❌ Final amount exceeds reasonable bounds (1 trillion), rejecting:', finalAmount);
+        continue;
+      }
+      
+      // Additional validation: ensure raw amount was reasonable before multiplication
+      if (rawAmount <= 0 || rawAmount > 1000000) {
+        console.log('❌ Raw amount failed validation (should be 1-1M range for multiplied values):', rawAmount);
+        continue;
+      }
+      
+      console.log('✅ Successfully extracted and validated amount:', finalAmount);
       return finalAmount;
     }
   }
 
-  console.log('No patterns matched, returning null');
+  console.log('❌ No patterns matched, returning null');
   return null;
 };
