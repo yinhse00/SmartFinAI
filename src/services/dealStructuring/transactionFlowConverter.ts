@@ -5,10 +5,11 @@ import { extractConsiderationAmount } from './converterUtils/dataExtractors';
 import { generateTransactionDescription } from './converterUtils/transactionDetailsBuilder';
 import { buildBeforeStructure } from './converterUtils/beforeStructureBuilder';
 import { buildAfterStructure } from './converterUtils/afterStructureBuilder';
+import { EntityNames } from './converterUtils/entityHelpers';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
-  entityNames: { targetCompanyName: string; acquiringCompanyName: string }
+  entityNames: EntityNames
 ): TransactionFlow => {
   console.log('Starting conversion of analysis results to transaction flow...');
   
