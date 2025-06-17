@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -307,12 +308,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Fixed transaction details with proper separation
-    const ownershipPercentage = afterRelationships.find(r => 
+    // Fixed transaction details with proper separation and type checking
+    const ownershipRelationship = afterRelationships.find(r => 
       r.source.includes('acquiring') && 
-      (r.type === 'ownership' || r.type === 'control') && 
-      (r as OwnershipRelationship).percentage !== undefined
-    )?.percentage;
+      (r.type === 'ownership' || r.type === 'control')
+    ) as OwnershipRelationship | undefined;
+    
+    const ownershipPercentage = ownershipRelationship?.percentage;
 
     nodesArr.push({
       id: 'transaction-details',
