@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
@@ -126,54 +127,6 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       newNodes.push(addSectionHeaderNode(id, label, x, y));
   };
 
-  // Helper function to get edge styling based on relationship type
-  const getEdgeStyle = (relType: string) => {
-    switch (relType) {
-      case 'ownership':
-        return {
-          stroke: '#3b82f6',
-          strokeWidth: 2,
-          strokeDasharray: undefined, // Solid line for ownership
-        };
-      case 'control':
-        return {
-          stroke: '#dc2626',
-          strokeWidth: 2,
-          strokeDasharray: undefined, // Solid line for control
-        };
-      case 'consideration':
-        return {
-          stroke: '#16a34a',
-          strokeWidth: 2.5,
-          strokeDasharray: '8,4', // Dashed line for consideration/payment
-        };
-      case 'receives_from':
-        return {
-          stroke: '#059669',
-          strokeWidth: 2,
-          strokeDasharray: '4,2', // Dotted line for payment receipts
-        };
-      case 'funding':
-        return {
-          stroke: '#eab308',
-          strokeWidth: 2,
-          strokeDasharray: '6,3', // Dashed line for funding
-        };
-      case 'subsidiary':
-        return {
-          stroke: '#6b7280',
-          strokeWidth: 1.5,
-          strokeDasharray: undefined, // Solid line for subsidiaries
-        };
-      default:
-        return {
-          stroke: '#6b7280',
-          strokeWidth: 1.5,
-          strokeDasharray: undefined,
-        };
-    }
-  };
-
   // BEFORE Section
   console.log('📍 Processing BEFORE section...');
   const beforeEntities = transactionFlow.before.entities;
@@ -197,17 +150,14 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
         edgeLabel = rel.type; // Value is shown on the node itself
       }
 
-      const edgeStyle = getEdgeStyle(rel.type);
-
       newEdges.push({
         id: `edge-before-${rel.source}-${rel.target}-${index}`,
         source: rel.source,
         target: rel.target,
         type: 'smoothstep',
         label: edgeLabel,
-        style: edgeStyle,
-        markerEnd: { type: MarkerType.ArrowClosed, color: edgeStyle.stroke },
-        animated: rel.type === 'consideration' || rel.type === 'receives_from', // Animate payment flows
+        style: { stroke: '#525252', strokeWidth: 1.5 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
       });
     }
   });
@@ -323,14 +273,19 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
       const targetNodeExists = newNodes.find(n => n.id === rel.target);
       
       if (sourceNodeExists && targetNodeExists) {
+          const sourceNode = newNodes.find(n => n.id === rel.source);
+          let strokeColor = '#525252'; 
+          if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer')
+            strokeColor = '#2563eb';
+          if (rel.type === 'consideration')
+            strokeColor = '#16a34a';
+
           let edgeLabel: string | React.ReactNode = rel.label || rel.type;
           if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
             edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
           } else if (rel.type === 'consideration' || rel.type === 'funding') {
             edgeLabel = rel.type; // Value is shown on the node itself
           }
-
-          const edgeStyle = getEdgeStyle(rel.type);
           
           newEdges.push({
               id: `edge-after-${rel.source}-${rel.target}-${index}`,
@@ -338,9 +293,8 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
               target: rel.target,
               type: 'smoothstep',
               label: edgeLabel,
-              style: edgeStyle,
-              markerEnd: { type: MarkerType.ArrowClosed, color: edgeStyle.stroke },
-              animated: rel.type === 'consideration' || rel.type === 'receives_from', // Animate payment flows
+              style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
+              markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
           });
           
           createdEdges++;
@@ -388,7 +342,7 @@ export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlo
           source: beforeSH.id,
           target: afterSH.id,
           type: 'straight',
-          style: { stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '5,3' },
+          style: { stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '5 3' },
           label: 'Continues',
           labelStyle: { fontSize: '10px', fill: '#f59e0b' },
         });
