@@ -7,6 +7,7 @@ import { OptimizationResult } from '@/services/dealStructuring/optimizationEngin
 import { useState } from 'react';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { Maximize2 } from 'lucide-react';
+import { extractEntityNames } from '@/services/dealStructuring/converterUtils/entityHelpers';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
@@ -14,11 +15,8 @@ interface TransactionFlowDiagramBoxProps {
 }
 
 export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
-  // Convert analysis results to transaction flow format
-  const entityNames = {
-    targetCompanyName: results.corporateStructure?.entities.find(e => e.type === 'target')?.name || 'Target Company',
-    acquiringCompanyName: results.corporateStructure?.entities.find(e => e.type === 'issuer' || e.type === 'parent')?.name || 'Acquiring Company'
-  };
+  // Extract entity names using the proper helper function that returns EntityNames interface
+  const entityNames = extractEntityNames(results);
   
   const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames);
 
