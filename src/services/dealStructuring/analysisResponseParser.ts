@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { createFallbackAnalysisResults } from './analysisFallbackData';
 import { createFallbackShareholdingChanges, createFallbackCorporateStructure } from './analysisFallbackData';
@@ -310,21 +309,25 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
 
     console.log('Valuation data created with validation:', valuation.transactionValue);
 
-    // Prioritize user inputs for dealEconomics construction
-    console.log('=== CONSTRUCTING DEAL ECONOMICS WITH USER INPUT PRIORITY ===');
+    // Build dealEconomics with USER INPUT PRIORITY - NEVER use corrupted AI data when user inputs exist
+    console.log('=== CONSTRUCTING DEAL ECONOMICS WITH CORRUPTION BLOCKING ===');
     console.log('User inputs for dealEconomics:', userInputs);
+    console.log('Parsed dealEconomics (BLOCKED if user inputs exist):', parsed.dealEconomics);
     
     const dealEconomics = {
-      purchasePrice: userInputs?.amount || parsed.dealEconomics?.purchasePrice || valuation.transactionValue.amount,
-      currency: userInputs?.currency || parsed.dealEconomics?.currency || valuation.transactionValue.currency,
+      // CRITICAL FIX: Remove parsed.dealEconomics?.purchasePrice from fallback chain to prevent corruption
+      purchasePrice: userInputs?.amount || valuation.transactionValue.amount,
+      // CRITICAL FIX: Remove parsed.dealEconomics?.currency from fallback chain when user input exists
+      currency: userInputs?.currency || valuation.transactionValue.currency,
+      // Keep non-corrupted properties from AI response
       paymentStructure: parsed.dealEconomics?.paymentStructure || 'Cash',
       valuationBasis: parsed.dealEconomics?.valuationBasis || 'Market Comparables',
       targetPercentage: userInputs?.acquisitionPercentage || parsed.dealEconomics?.targetPercentage || 100
     };
     
-    console.log('Final dealEconomics constructed:', dealEconomics);
+    console.log('Final dealEconomics constructed (corruption blocked):', dealEconomics);
     console.log('User input amount used:', userInputs?.amount);
-    console.log('Final purchase price:', dealEconomics.purchasePrice);
+    console.log('Final purchase price (should match user input):', dealEconomics.purchasePrice);
 
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
@@ -378,7 +381,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       }
     }
 
-    console.log('✅ Successfully parsed and validated analysis response');
+    console.log('✅ Successfully parsed and validated analysis response with corruption blocking');
     console.log('Final results.dealEconomics.purchasePrice:', results.dealEconomics?.purchasePrice);
     console.log('Final results.valuation.transactionValue.amount:', results.valuation?.transactionValue?.amount);
     return results;
