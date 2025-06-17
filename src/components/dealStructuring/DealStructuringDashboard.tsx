@@ -1,5 +1,6 @@
 
 import { AnalysisResults } from './AIAnalysisResults';
+import { TransactionSummaryBox } from './sections/TransactionSummaryBox';
 import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
 import { CostAnalysisBox } from './sections/CostAnalysisBox';
 import { ExecutionTimetableBox } from './sections/ExecutionTimetableBox';
@@ -23,48 +24,53 @@ export const DealStructuringDashboard = ({
   optimizationResult 
 }: DealStructuringDashboardProps) => {
   return (
-    <div className="flex gap-4 h-screen">
-      {/* Left side: 4x2 grid of analysis boxes */}
-      <div className="flex-1 grid grid-cols-2 gap-4">
-        {/* Row 1: Structure Recommendation, Transaction Flow */}
-        <div>
-          <StructureRecommendationBox results={results} />
-        </div>
-        <div>
-          <TransactionFlowDiagramBox 
-            results={results} 
-            optimizationResult={optimizationResult}
-          />
-        </div>
-        
-        {/* Row 2: Valuation Analysis, Shareholding Impact */}
-        <div>
-          <ValuationAnalysisBox results={results} />
-        </div>
-        <div>
-          <ShareholdingImpactBox results={results} />
-        </div>
-        
-        {/* Row 3: Cost Analysis, Document Preparation */}
-        <div>
-          <CostAnalysisBox results={results} />
-        </div>
-        <div>
-          <DocumentPreparationBox results={results} />
-        </div>
-        
-        {/* Row 4: Execution Timetable, Regulatory Compliance */}
-        <div>
-          <ExecutionTimetableBox results={results} />
-        </div>
-        <div>
-          <RegulatoryComplianceBox results={results} />
-        </div>
-      </div>
+    <div className="space-y-4">
+      {/* Transaction Summary at the top */}
+      <TransactionSummaryBox results={results} />
       
-      {/* Right side: Chat box */}
-      <div className="w-96">
-        <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
+      <div className="flex gap-4 h-screen">
+        {/* Left side: 4x2 grid of analysis boxes */}
+        <div className="flex-1 grid grid-cols-2 gap-4">
+          {/* Row 1: Structure Recommendation, Transaction Flow */}
+          <div>
+            <StructureRecommendationBox results={results} />
+          </div>
+          <div>
+            <TransactionFlowDiagramBox 
+              results={results} 
+              optimizationResult={optimizationResult}
+            />
+          </div>
+          
+          {/* Row 2: Valuation Analysis, Shareholding Impact */}
+          <div>
+            <ValuationAnalysisBox results={results} />
+          </div>
+          <div>
+            <ShareholdingImpactBox results={results} />
+          </div>
+          
+          {/* Row 3: Cost Analysis, Document Preparation */}
+          <div>
+            <CostAnalysisBox results={results} />
+          </div>
+          <div>
+            <DocumentPreparationBox results={results} />
+          </div>
+          
+          {/* Row 4: Execution Timetable, Regulatory Compliance */}
+          <div>
+            <ExecutionTimetableBox results={results} />
+          </div>
+          <div>
+            <RegulatoryComplianceBox results={results} />
+          </div>
+        </div>
+        
+        {/* Right side: Chat box */}
+        <div className="w-96">
+          <DealStructuringChatbox results={results} onResultsUpdate={onResultsUpdate} />
+        </div>
       </div>
     </div>
   );
