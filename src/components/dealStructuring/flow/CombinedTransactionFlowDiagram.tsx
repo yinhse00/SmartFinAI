@@ -307,6 +307,13 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
+    // Fixed transaction details with proper separation
+    const ownershipPercentage = afterRelationships.find(r => 
+      r.source.includes('acquiring') && 
+      (r.type === 'ownership' || r.type === 'control') && 
+      (r as OwnershipRelationship).percentage !== undefined
+    )?.percentage;
+
     nodesArr.push({
       id: 'transaction-details',
       type: 'default',
@@ -319,8 +326,10 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             </div>
             <div className="space-y-2 text-xs text-left">
               <div className="bg-blue-50 p-2 rounded">
-                <strong className="text-blue-800">Transaction:</strong>
-                <div className="text-blue-700">{transactionContext?.description}</div>
+                <strong className="text-blue-800">Type:</strong>
+                <div className="text-blue-700">
+                  {ownershipPercentage ? `${ownershipPercentage}% ${(transactionContext?.type || 'Acquisition').toLowerCase()}` : transactionContext?.type || 'Acquisition'}
+                </div>
               </div>
               <div className="bg-green-50 p-2 rounded">
                 <strong className="text-green-800">Consideration:</strong>
@@ -329,13 +338,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
                 </div>
               </div>
               <div className="bg-orange-50 p-2 rounded">
-                <strong className="text-orange-800">Ownership:</strong>
+                <strong className="text-orange-800">Structure:</strong>
                 <div className="text-orange-700">
-                  {
-                    afterRelationships.find(r => r.source.includes('acquiring') && (r.type === 'ownership' || r.type === 'control') && (r as OwnershipRelationship).percentage !== undefined)
-                      ? `${(afterRelationships.find(r => r.source.includes('acquiring') && (r.type === 'ownership' || r.type === 'control')) as OwnershipRelationship).percentage}% stake acquired`
-                      : 'Stake acquired'
-                  }
+                  {transactionContext?.recommendedStructure || 'Standard Structure'}
                 </div>
               </div>
             </div>
