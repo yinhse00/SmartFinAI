@@ -1,3 +1,4 @@
+
 /**
  * This service handles the regulatory database operations
  * Connects to Supabase for persistence
@@ -27,13 +28,11 @@ export const databaseService = {
         
         // Extract chapter and section information from filename
         let chapter = '';
-        let categoryCode = 'OTHER';
         
         // Try to determine chapter from filename
         const chapterMatch = file.name.match(/Chapter\s*(\d+[A-Za-z]?)/i);
         if (chapterMatch) {
           chapter = `Chapter ${chapterMatch[1]}`;
-          categoryCode = `CH${chapterMatch[1]}`;
         }
         
         // Extract content from file (this is a placeholder - in production you would parse the actual file)
@@ -45,8 +44,6 @@ export const databaseService = {
         
         // Insert entries into Supabase
         for (const entry of entries) {
-          const categoryId = await getCategoryIdByCode(categoryCode);
-          
           const { error } = await supabase
             .from('regulatory_provisions')
             .insert({
@@ -55,7 +52,6 @@ export const databaseService = {
               content: entry.content,
               chapter: chapter,
               section: entry.section,
-              category_id: categoryId,
               last_updated: new Date().toISOString(),
               is_current: true,
               path_reference: file.name
@@ -173,31 +169,6 @@ export const databaseService = {
   addSampleEntry: async (entry: Omit<RegulatoryEntry, 'id'>): Promise<RegulatoryEntry> => {
     console.log(`Adding sample entry: ${entry.title}`);
     
-    // Map our category to the database category codes
-    const categoryMapping: Record<RegulatoryEntry['category'], string> = {
-      'listing_rules': 'CH14',
-      'takeovers': 'TO',
-      'guidance': 'GN',
-      'decisions': 'LD',
-      'checklists': 'CL',
-      'other': 'OTHER'
-    };
-    
-    const categoryCode = categoryMapping[entry.category] || 'OTHER';
-    
-    // Get the category ID
-    const { data: categoryData, error: categoryError } = await supabase
-      .from('regulatory_categories')
-      .select('id')
-      .eq('code', categoryCode)
-      .single();
-      
-    if (categoryError) {
-      console.error(`Error fetching category ID for code ${categoryCode}:`, categoryError);
-    }
-    
-    const categoryId = categoryData?.id;
-    
     // Generate a unique ID
     const newId = `entry-${Date.now()}`;
     
@@ -211,7 +182,6 @@ export const databaseService = {
         content: entry.content,
         chapter: entry.source?.split(' ')[0] || null,
         section: entry.section || null,
-        category_id: categoryId,
         last_updated: entry.lastUpdated.toISOString(),
         is_current: entry.status === 'active'
       })
@@ -248,13 +218,10 @@ export const databaseService = {
     content: string;
     chapter?: string;
     section?: string;
-    categoryCode: string;
   }): Promise<string | null> => {
     console.log(`Adding new provision: ${provision.ruleNumber}`);
     
     try {
-      const categoryId = await getCategoryIdByCode(provision.categoryCode);
-      
       const { data, error } = await supabase
         .from('regulatory_provisions')
         .insert({
@@ -263,7 +230,6 @@ export const databaseService = {
           content: provision.content,
           chapter: provision.chapter,
           section: provision.section,
-          category_id: categoryId,
           last_updated: new Date().toISOString(),
           is_current: true
         })
@@ -293,7 +259,6 @@ export const databaseService = {
       content: string;
       chapter: string;
       section: string;
-      categoryCode: string;
       isCurrent: boolean;
     }>
   ): Promise<boolean> => {
@@ -307,9 +272,6 @@ export const databaseService = {
       if (updates.content) updateData.content = updates.content;
       if (updates.chapter) updateData.chapter = updates.chapter;
       if (updates.section) updateData.section = updates.section;
-      if (updates.categoryCode) {
-        updateData.category_id = await getCategoryIdByCode(updates.categoryCode);
-      }
       if (updates.isCurrent !== undefined) updateData.is_current = updates.isCurrent;
       
       updateData.last_updated = new Date().toISOString();
@@ -359,7 +321,6 @@ export const databaseService = {
     content: string;
     chapter?: string;
     section?: string;
-    categoryCode: string;
   }>): Promise<{ success: number, failed: number }> => {
     console.log(`Bulk importing ${provisions.length} provisions`);
     
@@ -374,43 +335,25 @@ export const databaseService = {
       const batch = provisions.slice(i * batchSize, (i + 1) * batchSize);
       console.log(`Processing batch ${i + 1} of ${batches}`);
       
-      const supabaseRows = await Promise.all(
-        batch.map(async provision => {
-          try {
-            const categoryId = await getCategoryIdByCode(provision.categoryCode);
-            
-            return {
-              rule_number: provision.ruleNumber,
-              title: provision.title,
-              content: provision.content,
-              chapter: provision.chapter,
-              section: provision.section,
-              category_id: categoryId,
-              last_updated: new Date().toISOString(),
-              is_current: true
-            };
-          } catch (err) {
-            console.error(`Error preparing provision ${provision.ruleNumber}:`, err);
-            failed++;
-            return null;
-          }
-        })
-      );
+      const supabaseRows = batch.map(provision => ({
+        rule_number: provision.ruleNumber,
+        title: provision.title,
+        content: provision.content,
+        chapter: provision.chapter,
+        section: provision.section,
+        last_updated: new Date().toISOString(),
+        is_current: true
+      }));
       
-      // Filter out failed preparations
-      const validRows = supabaseRows.filter(row => row !== null);
-      
-      if (validRows.length > 0) {
-        const { error } = await supabase
-          .from('regulatory_provisions')
-          .insert(validRows);
-          
-        if (error) {
-          console.error('Error in bulk insert:', error);
-          failed += validRows.length;
-        } else {
-          success += validRows.length;
-        }
+      const { error } = await supabase
+        .from('regulatory_provisions')
+        .insert(supabaseRows);
+        
+      if (error) {
+        console.error('Error in bulk insert:', error);
+        failed += batch.length;
+      } else {
+        success += batch.length;
       }
     }
     
@@ -489,22 +432,4 @@ function parseContentToEntries(
   }
   
   return entries;
-}
-
-/**
- * Helper function to get category ID by code
- */
-async function getCategoryIdByCode(code: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from('regulatory_categories')
-    .select('id')
-    .eq('code', code)
-    .single();
-    
-  if (error) {
-    console.error(`Error finding category with code ${code}:`, error);
-    return null;
-  }
-  
-  return data.id;
 }
