@@ -1,22 +1,21 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Users, TrendingUp, TrendingDown } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
-
 interface ShareholdingImpactBoxProps {
   results: AnalysisResults;
 }
-
-const EnlargedShareholdingContent = ({ results }: { results: AnalysisResults }) => (
-  <div className="space-y-8 p-6">
+const EnlargedShareholdingContent = ({
+  results
+}: {
+  results: AnalysisResults;
+}) => <div className="space-y-8 p-6">
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
       <div>
         <h4 className="text-xl font-semibold mb-6 text-center">Before Transaction</h4>
         <div className="space-y-4">
-          {results.shareholding.before.map((holder, index) => (
-            <div key={index} className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
+          {results.shareholding.before.map((holder, index) => <div key={index} className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
               <div className="flex-1">
                 <p className="font-semibold text-lg">{holder.name}</p>
                 <p className="text-sm text-gray-600">Current shareholder</p>
@@ -24,8 +23,7 @@ const EnlargedShareholdingContent = ({ results }: { results: AnalysisResults }) 
               <div className="text-right">
                 <p className="text-2xl font-bold text-blue-600">{holder.percentage.toFixed(1)}%</p>
               </div>
-            </div>
-          ))}
+            </div>)}
         </div>
       </div>
       
@@ -33,19 +31,13 @@ const EnlargedShareholdingContent = ({ results }: { results: AnalysisResults }) 
         <h4 className="text-xl font-semibold mb-6 text-center">After Transaction</h4>
         <div className="space-y-4">
           {results.shareholding.after.map((holder, index) => {
-            const beforeHolder = results.shareholding.before.find(b => b.name === holder.name);
-            const change = beforeHolder ? holder.percentage - beforeHolder.percentage : holder.percentage;
-            
-            return (
-              <div key={index} className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
+          const beforeHolder = results.shareholding.before.find(b => b.name === holder.name);
+          const change = beforeHolder ? holder.percentage - beforeHolder.percentage : holder.percentage;
+          return <div key={index} className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
                 <div className="flex-1">
                   <p className="font-semibold text-lg">{holder.name}</p>
                   <div className="flex items-center text-sm">
-                    {change > 0 ? (
-                      <TrendingUp className="h-4 w-4 text-green-600 mr-1" />
-                    ) : change < 0 ? (
-                      <TrendingDown className="h-4 w-4 text-red-600 mr-1" />
-                    ) : null}
+                    {change > 0 ? <TrendingUp className="h-4 w-4 text-green-600 mr-1" /> : change < 0 ? <TrendingDown className="h-4 w-4 text-red-600 mr-1" /> : null}
                     <span className={change > 0 ? 'text-green-600' : change < 0 ? 'text-red-600' : 'text-gray-600'}>
                       {change > 0 ? '+' : ''}{change.toFixed(1)}% change
                     </span>
@@ -54,9 +46,8 @@ const EnlargedShareholdingContent = ({ results }: { results: AnalysisResults }) 
                 <div className="text-right">
                   <p className="text-2xl font-bold text-green-600">{holder.percentage.toFixed(1)}%</p>
                 </div>
-              </div>
-            );
-          })}
+              </div>;
+        })}
         </div>
       </div>
     </div>
@@ -86,23 +77,18 @@ const EnlargedShareholdingContent = ({ results }: { results: AnalysisResults }) 
         </div>
       </div>
     </div>
-  </div>
-);
-
-export const ShareholdingImpactBox = ({ results }: ShareholdingImpactBoxProps) => {
-  return (
-    <Card className="h-[300px] flex flex-col min-h-0">
+  </div>;
+export const ShareholdingImpactBox = ({
+  results
+}: ShareholdingImpactBoxProps) => {
+  return <Card className="bottom+40">
       <CardHeader className="pb-4 flex-shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
             <Users className="h-5 w-5 text-purple-500" />
             Shareholding Impact
           </CardTitle>
-          <EnlargedContentDialog
-            title="Detailed Shareholding Impact Analysis"
-            enlargedContent={<EnlargedShareholdingContent results={results} />}
-            size="large"
-          >
+          <EnlargedContentDialog title="Detailed Shareholding Impact Analysis" enlargedContent={<EnlargedShareholdingContent results={results} />} size="large">
             <div />
           </EnlargedContentDialog>
         </div>
@@ -113,23 +99,19 @@ export const ShareholdingImpactBox = ({ results }: ShareholdingImpactBoxProps) =
             <div>
               <h5 className="font-medium mb-4 text-base">Before</h5>
               <div className="space-y-2">
-                {results.shareholding.before.map((holder, index) => (
-                  <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
+                {results.shareholding.before.map((holder, index) => <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
             <div>
               <h5 className="font-medium mb-4 text-base">After</h5>
               <div className="space-y-2">
-                {results.shareholding.after.map((holder, index) => (
-                  <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
+                {results.shareholding.after.map((holder, index) => <div key={index} className="flex justify-between text-sm p-3 bg-gray-50 rounded">
                     <span className="truncate mr-2 font-medium">{holder.name}</span>
                     <span className="font-semibold">{holder.percentage.toFixed(1)}%</span>
-                  </div>
-                ))}
+                  </div>)}
               </div>
             </div>
           </div>
@@ -140,6 +122,5 @@ export const ShareholdingImpactBox = ({ results }: ShareholdingImpactBoxProps) =
           </div>
         </ScrollArea>
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
