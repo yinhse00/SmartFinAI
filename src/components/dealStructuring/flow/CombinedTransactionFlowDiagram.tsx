@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -308,7 +307,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
       selectable: false
     });
 
-    // Fixed transaction details with proper separation and type checking
+    // Clean transaction details display
     const ownershipRelationship = afterRelationships.find(r => 
       r.source.includes('acquiring') && 
       (r.type === 'ownership' || r.type === 'control')
@@ -324,15 +323,9 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         label: (
           <div className="text-center p-4">
             <div className="text-lg font-bold mb-3 text-blue-900">
-              {transactionContext?.type || 'Acquisition'}
+              {transactionContext?.type || 'Transaction'}
             </div>
             <div className="space-y-2 text-xs text-left">
-              <div className="bg-blue-50 p-2 rounded">
-                <strong className="text-blue-800">Type:</strong>
-                <div className="text-blue-700">
-                  {ownershipPercentage ? `${ownershipPercentage}% ${(transactionContext?.type || 'Acquisition').toLowerCase()}` : transactionContext?.type || 'Acquisition'}
-                </div>
-              </div>
               <div className="bg-green-50 p-2 rounded">
                 <strong className="text-green-800">Consideration:</strong>
                 <div className="text-green-700">
@@ -354,7 +347,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         border: '3px solid #2563eb',
         borderRadius: '12px',
         width: '320px',
-        height: '200px'
+        height: '180px'
       },
       draggable: false,
       selectable: false
