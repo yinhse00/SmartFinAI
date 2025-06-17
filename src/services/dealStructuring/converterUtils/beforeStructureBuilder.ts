@@ -1,9 +1,13 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
 import { generateEntityId, extractEntityNames, EntityNames } from './entityHelpers';
 import { addCorporateChildren } from './corporateStructureProcessor';
+import { 
+  shouldUseShareholdingData, 
+  getValidatedShareholdingData,
+  isGenericShareholderName 
+} from './shareholdingValidationUtils';
 
 // Helper function to add parent hierarchy for a given entity
 const addAncestors = (
@@ -211,31 +215,81 @@ export const buildBeforeStructure = (
     });
   }
 
-  // Process Target's shareholders - this should be the primary use of results.shareholding.before
+  // Process Target's shareholders with validation
+  console.log(`🔍 Processing Target Company shareholders for ${entityNames.targetCompanyName}`);
+  
   if (results.shareholding?.before && results.shareholding.before.length > 0) {
-    results.shareholding.before.forEach((holder) => {
-      // Ensure this holder isn't the acquirer itself
-      if (holder.name !== entityNames.acquiringCompanyName) {
-        const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-        targetEntityIds.add(shareholderId);
-        
-        if (!entities.find(e => e.id === shareholderId)) {
-          entities.push({
-            id: shareholderId,
-            name: holder.name,
-            type: 'stockholder',
+    console.log(`📋 Raw shareholding data:`, results.shareholding.before.map(h => ({ name: h.name, percentage: h.percentage })));
+    
+    // Validate and filter shareholding data
+    if (shouldUseShareholdingData(results.shareholding.before, entityNames.targetCompanyName)) {
+      const validShareholders = getValidatedShareholdingData(results.shareholding.before, entityNames.targetCompanyName);
+      
+      validShareholders.forEach((holder) => {
+        // Ensure this holder isn't the acquirer itself
+        if (holder.name !== entityNames.acquiringCompanyName) {
+          const shareholderId = generateEntityId('stockholder', holder.name, prefix);
+          targetEntityIds.add(shareholderId);
+          
+          if (!entities.find(e => e.id === shareholderId)) {
+            entities.push({
+              id: shareholderId,
+              name: holder.name,
+              type: 'stockholder',
+              percentage: holder.percentage,
+              description: `${holder.percentage}% Shareholder of ${entityNames.targetCompanyName}`,
+            });
+          }
+          relationships.push({
+            source: shareholderId,
+            target: targetId,
+            type: 'ownership',
             percentage: holder.percentage,
-            description: `${holder.percentage}% Shareholder of ${entityNames.targetCompanyName}`,
           });
+          
+          console.log(`✅ Created valid shareholder relationship: ${holder.name} -> ${entityNames.targetCompanyName} (${holder.percentage}%)`);
         }
-        relationships.push({
-          source: shareholderId,
-          target: targetId,
-          type: 'ownership',
-          percentage: holder.percentage,
+      });
+      
+      // Check if we created any valid shareholders
+      const createdValidShareholders = validShareholders.filter(h => h.name !== entityNames.acquiringCompanyName).length;
+      if (createdValidShareholders === 0) {
+        console.log(`⚠️ No valid shareholders created after filtering, using generic fallback`);
+        // Fall through to generic shareholder creation below
+      }
+    } else {
+      console.log(`🔄 Shareholding data not suitable for ${entityNames.targetCompanyName}, using generic fallback`);
+      // Continue to generic shareholder creation below
+    }
+    
+    // Check if we need to add generic shareholders
+    const targetHasValidShareholders = relationships.some(r => 
+      r.target === targetId && 
+      r.type === 'ownership' && 
+      entities.find(e => e.id === r.source && !isGenericShareholderName(e.name))
+    );
+    
+    if (!targetHasValidShareholders) {
+      console.log(`📝 Adding generic shareholders for ${entityNames.targetCompanyName} (no valid specific shareholders found)`);
+      const genericShareholderId = generateEntityId('stockholder', `Existing Shareholders of ${entityNames.targetCompanyName}`, prefix);
+      targetEntityIds.add(genericShareholderId);
+      
+      if (!entities.find(e => e.id === genericShareholderId)) {
+        entities.push({
+          id: genericShareholderId,
+          name: `Existing Shareholders of ${entityNames.targetCompanyName}`,
+          type: 'stockholder',
+          percentage: 100,
+          description: '100% collective ownership',
         });
       }
-    });
+      relationships.push({
+        source: genericShareholderId,
+        target: targetId,
+        type: 'ownership',
+        percentage: 100,
+      });
+    }
   } else if (targetCorpEntityData) {
     // Use corporate structure for Target's parents if no shareholding data
     addAncestors(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, targetVisitedAncestry, 'target');
