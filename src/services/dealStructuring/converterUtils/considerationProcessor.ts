@@ -15,29 +15,51 @@ export const addConsiderationDetails = (
     relationships: Relationships,
     formerShareholdersId?: string
 ) => {
+    console.log('=== DEBUGGING addConsiderationDetails ===');
+    console.log('Input considerationAmount:', considerationAmount);
+    
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
     const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
+    
+    console.log('Purchase price from dealEconomics:', results.dealEconomics?.purchasePrice);
+    console.log('Final purchase price used:', purchasePrice);
+    console.log('Stock payment percentage:', stockPaymentPercentage);
 
     let cashConsiderationAmount = considerationAmount;
     if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100 && purchasePrice > 0) {
         cashConsiderationAmount = purchasePrice * ((100 - stockPaymentPercentage) / 100);
+        console.log('Mixed payment calculated cash amount:', cashConsiderationAmount);
     } else if (stockPaymentPercentage === 100) {
         cashConsiderationAmount = 0;
+        console.log('Stock-only payment, cash amount set to 0');
     }
+    
+    console.log('Final cash consideration amount:', cashConsiderationAmount);
 
     if (cashConsiderationAmount > 0) {
+        const millionsAmount = (cashConsiderationAmount / 1000000).toFixed(0);
+        console.log('Millions calculation - cashConsiderationAmount:', cashConsiderationAmount, 'divided by 1000000 =', millionsAmount);
+        
         const considerationNodeName = stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ?
-            `Cash Payment (${(cashConsiderationAmount / 1000000).toFixed(0)}M)` :
-            `Payment (${(cashConsiderationAmount / 1000000).toFixed(0)}M)`;
+            `Cash Payment (${millionsAmount}M)` :
+            `Payment (${millionsAmount}M)`;
         const considerationId = generateEntityId('consideration', considerationNodeName, prefix);
         
+        console.log('Generated consideration node name:', considerationNodeName);
+        console.log('Generated consideration ID:', considerationId);
+        
         if (!entities.find(e => e.id === considerationId)) {
+            const entityValue = cashConsiderationAmount;
+            const entityName = `${results.dealEconomics?.currency || 'HKD'} ${millionsAmount}M`;
+            
+            console.log('Creating entity with value:', entityValue, 'and name:', entityName);
+            
             entities.push({
                 id: considerationId,
-                name: `${results.dealEconomics?.currency || 'HKD'} ${(cashConsiderationAmount / 1000000).toFixed(0)}M`,
+                name: entityName,
                 type: 'consideration',
-                value: cashConsiderationAmount,
+                value: entityValue,
                 currency: results.dealEconomics?.currency || 'HKD',
                 description: stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ? 'Cash portion of Transaction Consideration' : 'Transaction Consideration',
             });

@@ -12,10 +12,11 @@ export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
   entityNames: EntityNames
 ): TransactionFlow => {
+  console.log('=== DEBUGGING convertAnalysisToTransactionFlow ===');
   console.log('Starting conversion of analysis results to transaction flow...');
   
   const considerationAmount = extractConsiderationAmount(results);
-  console.log('Extracted consideration amount:', considerationAmount);
+  console.log('Extracted consideration amount in converter:', considerationAmount);
 
   // Clean the transaction type from AI results
   const rawTransactionType = results.transactionType || 'Transaction';
@@ -40,6 +41,7 @@ export const convertAnalysisToTransactionFlow = (
 
   console.log('Before structure entities:', beforeStructure.entities.length);
   console.log('After structure entities:', afterStructure.entities.length);
+  console.log('After structure entities with amounts:', afterStructure.entities.filter(e => e.value).map(e => ({ id: e.id, name: e.name, value: e.value })));
 
   // Generate transaction description using diagram context to avoid amount duplication
   const transactionDescription = generateTransactionDescription(results, considerationAmount, 'diagram');
@@ -62,6 +64,7 @@ export const convertAnalysisToTransactionFlow = (
   };
 
   console.log('Transaction flow conversion completed');
+  console.log('Transaction context amount:', transactionFlow.transactionContext.amount);
   console.log('Transaction context:', transactionFlow.transactionContext);
   
   return transactionFlow;

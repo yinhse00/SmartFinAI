@@ -3,14 +3,23 @@ import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'
 import { transactionDataValidator } from '../transactionDataValidator';
 
 export const extractConsiderationAmount = (results: AnalysisResults): number => {
+  console.log('=== DEBUGGING extractConsiderationAmount ===');
+  console.log('Input results.dealEconomics:', results.dealEconomics);
+  
   if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
     console.log('Using purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
     return results.dealEconomics.purchasePrice;
   }
-  return transactionDataValidator.extractConsiderationAmount(results);
+  
+  const validatorAmount = transactionDataValidator.extractConsiderationAmount(results);
+  console.log('Validator extracted amount:', validatorAmount);
+  return validatorAmount;
 };
 
 export const extractUserInputAmount = (description: string): number | null => {
+  console.log('=== DEBUGGING extractUserInputAmount ===');
+  console.log('Input description:', description);
+  
   // Extract amounts in various formats
   const patterns = [
     // HK$75 million, HKD 75M, etc.
@@ -30,15 +39,24 @@ export const extractUserInputAmount = (description: string): number | null => {
     const match = description.match(pattern);
     if (match) {
       const amount = parseFloat(match[1].replace(/,/g, ''));
+      console.log('Pattern matched:', pattern, 'Raw amount:', amount);
+      
+      let finalAmount;
       if (description.toLowerCase().includes('billion') || description.toLowerCase().includes(' b ')) {
-        return amount * 1000000000;
+        finalAmount = amount * 1000000000;
+        console.log('Billion detected, final amount:', finalAmount);
       } else if (description.toLowerCase().includes('million') || description.toLowerCase().includes(' m ')) {
-        return amount * 1000000;
+        finalAmount = amount * 1000000;
+        console.log('Million detected, final amount:', finalAmount);
       } else {
-        return amount;
+        finalAmount = amount;
+        console.log('No multiplier, final amount:', finalAmount);
       }
+      
+      return finalAmount;
     }
   }
 
+  console.log('No patterns matched, returning null');
   return null;
 };
