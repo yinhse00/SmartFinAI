@@ -100,36 +100,23 @@ class TransactionDataValidator {
   }
 
   extractConsiderationAmount(results: AnalysisResults): number {
-    // Primary source: dealEconomics.purchasePrice
+    console.log('=== DEBUGGING extractConsiderationAmount (VALIDATOR) ===');
+    console.log('Input results.dealEconomics:', results.dealEconomics);
+    
+    // Primary source: dealEconomics.purchasePrice - THIS SHOULD ALWAYS BE USED FIRST
     if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
-      console.log('Using purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
+      console.log('✅ Using reliable purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
       return results.dealEconomics.purchasePrice;
     }
 
-    // Fallback: Try to extract from transaction description or structure
-    if (results.structure?.rationale) {
-      const amountMatches = results.structure.rationale.match(/(?:HKD|HK\$|USD|\$)\s*([0-9,.]+)(?:\s*million|M|billion|B)?/gi);
-      if (amountMatches && amountMatches.length > 0) {
-        const firstMatch = amountMatches[0];
-        const numberMatch = firstMatch.match(/([0-9,.]+)/);
-        if (numberMatch) {
-          let amount = parseFloat(numberMatch[1].replace(/,/g, ''));
-          
-          // Convert millions/billions to actual amount
-          if (firstMatch.toLowerCase().includes('million') || firstMatch.toLowerCase().includes('m')) {
-            amount *= 1000000;
-          } else if (firstMatch.toLowerCase().includes('billion') || firstMatch.toLowerCase().includes('b')) {
-            amount *= 1000000000;
-          }
-          
-          console.log('Extracted consideration from rationale:', amount);
-          return amount;
-        }
-      }
-    }
-
-    // Last resort: Return 0 instead of using costs (which are execution fees, not purchase price)
-    console.warn('No purchase price found in analysis results');
+    // REMOVED: The problematic regex fallback parsing that was causing corruption
+    // The old code was parsing corrupted AI response text like "HKD 75000 million" 
+    // and incorrectly treating it as 75 billion instead of recognizing it as invalid
+    
+    console.log('⚠️ No valid purchase price found in dealEconomics, returning 0');
+    console.log('Note: Problematic fallback regex parsing has been disabled to prevent data corruption');
+    
+    // Return 0 instead of using corrupted fallback parsing
     return 0;
   }
 
