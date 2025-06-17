@@ -15,7 +15,15 @@ Perform a comprehensive analysis that incorporates MARKET INTELLIGENCE and OPTIM
 
 Your analysis should include OPTIMIZATION-FOCUSED recommendations covering:
 
-1. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS (OPTIMIZED):
+1. EXECUTIVE NARRATIVE SUMMARY (NEW REQUIREMENT):
+   - Create a professional, context-aware executive summary paragraph (150-200 words)
+   - Include specific transaction details: parties, consideration amount, structure type
+   - Highlight key commercial terms, strategic rationale, and market positioning
+   - Incorporate timing, risk factors, and unique structural features
+   - Write in professional advisory tone suitable for executive presentation
+   - Focus on value creation, strategic objectives, and execution excellence
+
+2. RECOMMENDED TRANSACTION STRUCTURE & MAJOR TERMS (OPTIMIZED):
    - Optimal structure with clear commercial rationale based on market conditions
    - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out) with market benchmarks
    - TARGET PERCENTAGE being acquired or affected by the transaction (specify exact percentage)
@@ -80,6 +88,12 @@ Your analysis should include OPTIMIZATION-FOCUSED recommendations covering:
 FORMAT your response as a structured JSON object with enhanced market intelligence and optimization data:
 
 {
+  "executiveSummary": {
+    "narrative": "string - Professional executive summary paragraph incorporating specific deal details, strategic rationale, market context, and key structural features",
+    "keyHighlights": ["string array of 3-4 key transaction highlights"],
+    "strategicRationale": "string - Core strategic reasoning for the transaction structure",
+    "marketContext": "string - Current market conditions and positioning"
+  },
   "transactionType": "string",
   "structure": {
     "recommended": "string with clear commercial rationale and market context",
@@ -194,6 +208,7 @@ FORMAT your response as a structured JSON object with enhanced market intelligen
 }
 
 CRITICAL REQUIREMENTS FOR OPTIMIZATION:
+- MANDATORY: Include comprehensive EXECUTIVE SUMMARY with professional narrative content
 - MANDATORY: Include specific TARGET PERCENTAGE being acquired or affected (not optional)
 - MANDATORY: Provide STRATEGIC CONSIDERATIONS with specific deal optimization suggestions
 - Incorporate MARKET INTELLIGENCE from recent transactions and current conditions
@@ -209,4 +224,3 @@ CRITICAL REQUIREMENTS FOR OPTIMIZATION:
 Your analysis should demonstrate how MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES lead to superior deal structuring decisions that maximize value while minimizing risk and cost in the current market environment.
 `;
 }
-

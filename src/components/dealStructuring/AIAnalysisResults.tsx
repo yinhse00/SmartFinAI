@@ -1,6 +1,13 @@
 
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
+export interface ExecutiveSummary {
+  narrative: string;
+  keyHighlights: string[];
+  strategicRationale: string;
+  marketContext: string;
+}
+
 export interface DealEconomics {
   purchasePrice: number;
   currency: string;
@@ -159,6 +166,7 @@ export interface DocumentPreparation {
 }
 
 export interface AnalysisResults {
+  executiveSummary?: ExecutiveSummary;
   transactionType: string;
   dealEconomics?: DealEconomics;
   structure: EnhancedStructure;
