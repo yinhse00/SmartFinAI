@@ -23,16 +23,18 @@ export const generateTransactionDescription = (results: AnalysisResults, conside
     if (considerationAmount >= 1000000000) {
       amountText = `${currency} ${(considerationAmount / 1000000000).toFixed(1)}B`;
     } else if (considerationAmount >= 1000000) {
-      amountText = `${currency} ${(considerationAmount / 1000000).toFixed(0)}M`;
+      amountText = `${currency} ${Math.round(considerationAmount / 1000000)}M`;
+    } else if (considerationAmount >= 1000) {
+      amountText = `${currency} ${Math.round(considerationAmount / 1000)}K`;
     } else {
-      amountText = `${currency} ${(considerationAmount / 1000).toFixed(0)}K`;
+      amountText = `${currency} ${considerationAmount}`;
     }
   }
 
-  const percentageText = targetPercentage ? `${targetPercentage}% acquisition` : 'acquisition';
+  const percentageText = targetPercentage ? `${targetPercentage}% ` : '';
   const structure = results.structure?.recommended || 'Standard Structure';
 
-  return `${transactionType} ${amountText} ${percentageText} via ${structure}`.trim();
+  return `${transactionType} ${amountText} ${percentageText}acquisition via ${structure}`.trim();
 };
 
 export const generateEnhancedTransactionSteps = (
