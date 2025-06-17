@@ -1,6 +1,6 @@
-
 import { grokApiService } from '../api/grokApiService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
+import { responseFormatter } from '../response/modules/responseFormatter';
 
 export interface FollowUpContext {
   originalTransactionDescription: string;
@@ -65,6 +65,7 @@ INSTRUCTIONS:
 4. Maintain all existing data that isn't being changed
 5. Provide a clear explanation of what was changed and why
 6. This is a FRESH analysis - do not use any cached responses
+7. Do not use markdown bold formatting (**text**) in your response as it will be converted to HTML
 
 Please respond with a JSON object in this exact format:
 {
@@ -105,8 +106,23 @@ Ensure the updatedResults maintains the exact same TypeScript interface structur
       const responseContent = response?.choices?.[0]?.message?.content || '';
       console.log('Raw API response length:', responseContent.length);
       
-      // Extract JSON from the response
-      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      // Apply response formatting without bold formatting for deal structuring
+      const formattedResponse = responseFormatter.formatResponse(
+        responseContent,
+        'deal_structuring_followup',
+        false, // contextUsed
+        1.0, // relevanceScore
+        false, // tradingArrangementInfoUsed
+        false, // takeoversCodeUsed
+        false, // isWhitewashQuery
+        false, // hasRefDocuments
+        false, // isBackupResponse
+        undefined, // originalContext
+        true // skipBoldFormatting - KEY CHANGE: Skip bold formatting for deal structuring
+      );
+      
+      // Extract JSON from the formatted response
+      const jsonMatch = formattedResponse.text.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         console.error('No JSON found in response, falling back to error response');
         throw new Error('Invalid response format from AI');

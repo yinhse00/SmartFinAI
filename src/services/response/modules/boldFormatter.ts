@@ -7,7 +7,12 @@ export const boldFormatter = {
   /**
    * Enhance text with strategic bold formatting for key regulatory concepts
    */
-  enhanceWithBoldFormatting: (text: string): string => {
+  enhanceWithBoldFormatting: (text: string, skipBoldFormatting: boolean = false): string => {
+    // Skip bold formatting if requested
+    if (skipBoldFormatting) {
+      return text;
+    }
+    
     let enhanced = text;
     
     // Common heading patterns that should be bolded

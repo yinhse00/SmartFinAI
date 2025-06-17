@@ -1,3 +1,4 @@
+
 import { GrokResponse } from '@/types/grok';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
 import { databaseContentValidator } from './databaseContentValidator';
@@ -24,7 +25,8 @@ export const responseFormatter = {
     isWhitewashQuery: boolean,
     hasRefDocuments: boolean,
     isBackupResponse?: boolean,
-    originalContext?: string
+    originalContext?: string,
+    skipBoldFormatting?: boolean
   ): GrokResponse => {
     // ENHANCED: Validate database content preservation before formatting
     if (originalContext && contextUsed) {
@@ -53,11 +55,11 @@ export const responseFormatter = {
     formattedText = enhanceWithClickableLinks(formattedText);
     console.log('Regulatory references enhanced with links');
     
-    // Enhanced bold formatting for key regulatory concepts
-    formattedText = boldFormatter.enhanceWithBoldFormatting(formattedText);
+    // Enhanced bold formatting for key regulatory concepts (skip if requested)
+    formattedText = boldFormatter.enhanceWithBoldFormatting(formattedText, skipBoldFormatting);
     
-    // Apply HTML formatting
-    formattedText = htmlFormatter.applyHtmlFormatting(formattedText);
+    // Apply HTML formatting (skip bold conversion if requested)
+    formattedText = htmlFormatter.applyHtmlFormatting(formattedText, skipBoldFormatting);
     
     // Build metadata
     const metadata = responseMetadataBuilder.buildMetadata(
