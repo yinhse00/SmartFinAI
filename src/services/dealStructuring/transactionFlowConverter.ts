@@ -6,6 +6,7 @@ import { generateTransactionDescription } from './converterUtils/transactionDeta
 import { buildBeforeStructure } from './converterUtils/beforeStructureBuilder';
 import { buildAfterStructure } from './converterUtils/afterStructureBuilder';
 import { EntityNames } from './converterUtils/entityHelpers';
+import { cleanTransactionType, extractTransactionPercentage } from './converterUtils/transactionTypeCleaner';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
@@ -15,6 +16,15 @@ export const convertAnalysisToTransactionFlow = (
   
   const considerationAmount = extractConsiderationAmount(results);
   console.log('Extracted consideration amount:', considerationAmount);
+
+  // Clean the transaction type from AI results
+  const rawTransactionType = results.transactionType || 'Transaction';
+  const cleanedTransactionType = cleanTransactionType(rawTransactionType);
+  const extractedPercentage = extractTransactionPercentage(rawTransactionType);
+  
+  console.log('Raw transaction type:', rawTransactionType);
+  console.log('Cleaned transaction type:', cleanedTransactionType);
+  console.log('Extracted percentage:', extractedPercentage);
 
   // Create corporate structure map from results
   const corporateStructureMap = new Map();
@@ -39,7 +49,7 @@ export const convertAnalysisToTransactionFlow = (
     after: afterStructure,
     transactionSteps: [], // These would be populated from AI results if available
     transactionContext: {
-      type: results.transactionType || 'Acquisition',
+      type: cleanedTransactionType, // Use cleaned transaction type
       description: transactionDescription,
       amount: considerationAmount,
       currency: results.dealEconomics?.currency || 'HKD',
