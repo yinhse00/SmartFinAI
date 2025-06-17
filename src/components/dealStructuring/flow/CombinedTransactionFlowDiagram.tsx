@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -68,6 +69,19 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
             backgroundColor: '#f3f4f6',
             borderColor: '#6b7280'
           };
+      }
+    };
+
+    // Helper function to format consideration amount correctly
+    const formatConsiderationAmount = (amount: number, currency: string): string => {
+      if (amount >= 1000000000) {
+        return `${currency} ${(amount / 1000000000).toFixed(1)}B`;
+      } else if (amount >= 1000000) {
+        return `${currency} ${Math.round(amount / 1000000)}M`;
+      } else if (amount >= 1000) {
+        return `${currency} ${Math.round(amount / 1000)}K`;
+      } else {
+        return `${currency} ${amount}`;
       }
     };
 
@@ -307,7 +321,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
               <div className="bg-green-50 p-2 rounded">
                 <strong className="text-green-800">Consideration:</strong>
                 <div className="text-green-700">
-                  {transactionContext?.currency} {(transactionContext?.amount || 0) / 1000000}M
+                  {formatConsiderationAmount(transactionContext?.amount || 0, transactionContext?.currency || 'HKD')}
                 </div>
               </div>
               <div className="bg-orange-50 p-2 rounded">

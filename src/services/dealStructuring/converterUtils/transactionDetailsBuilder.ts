@@ -13,13 +13,18 @@ interface IntermediateStepData {
   details?: Record<string, any>; // Optional, for TransactionStep compatibility
 }
 
-export const generateTransactionDescription = (results: AnalysisResults, considerationAmount: number): string => {
+export const generateTransactionDescription = (
+  results: AnalysisResults, 
+  considerationAmount: number,
+  context?: 'diagram' | 'default'
+): string => {
   const transactionType = results.transactionType || 'Transaction';
   const currency = results.dealEconomics?.currency || 'HKD';
   const targetPercentage = results.dealEconomics?.targetPercentage;
 
   let amountText = '';
-  if (considerationAmount > 0) {
+  // Only include amount if not in diagram context (to avoid duplication)
+  if (context !== 'diagram' && considerationAmount > 0) {
     if (considerationAmount >= 1000000000) {
       amountText = `${currency} ${(considerationAmount / 1000000000).toFixed(1)}B`;
     } else if (considerationAmount >= 1000000) {
@@ -34,7 +39,12 @@ export const generateTransactionDescription = (results: AnalysisResults, conside
   const percentageText = targetPercentage ? `${targetPercentage}% ` : '';
   const structure = results.structure?.recommended || 'Standard Structure';
 
-  return `${transactionType} ${amountText} ${percentageText}acquisition via ${structure}`.trim();
+  // Build description based on context
+  if (context === 'diagram') {
+    return `${transactionType} ${percentageText}acquisition via ${structure}`.trim();
+  } else {
+    return `${transactionType} ${amountText} ${percentageText}acquisition via ${structure}`.trim();
+  }
 };
 
 export const generateEnhancedTransactionSteps = (
