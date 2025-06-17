@@ -132,7 +132,7 @@ const EnlargedStructureContent = ({
 export const StructureRecommendationBox = ({
   results
 }: StructureRecommendationBoxProps) => {
-  return <Card className="h-[500px]">
+  return <Card className="-bottom-">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
