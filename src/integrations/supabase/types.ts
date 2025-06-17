@@ -228,36 +228,6 @@ export type Database = {
         }
         Relationships: []
       }
-      regulatory_categories: {
-        Row: {
-          code: string
-          created_at: string
-          description: string | null
-          id: string
-          name: string
-          priority: number | null
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          name: string
-          priority?: number | null
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          name?: string
-          priority?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
       regulatory_provisions: {
         Row: {
           category_id: string | null

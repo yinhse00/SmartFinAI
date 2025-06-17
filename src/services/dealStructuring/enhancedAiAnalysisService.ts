@@ -16,6 +16,13 @@ export interface EnhancedAnalysisResult {
   reconciliation: {
     reconciliationApplied: boolean;
     changes: string[];
+    regulatoryIntelligence?: {
+      provisions: number;
+      faqs: number;
+      vettingRequirements: number;
+      processingTime: number;
+      tablesSearched: string[];
+    } | null;
   };
 }
 

@@ -4,6 +4,7 @@ import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'
 import { buildAnalysisPrompt } from './analysisPromptBuilder';
 import { parseAnalysisResponse } from './analysisResponseParser';
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
+import { aiRegulatoryDiscoveryService } from './aiRegulatoryDiscoveryService';
 
 export interface TransactionAnalysisRequest {
   transactionType: string;
@@ -24,11 +25,15 @@ export interface AnalysisContext {
  */
 export const aiAnalysisService = {
   /**
-   * Analyze transaction requirements and generate comprehensive advisory
+   * Analyze transaction requirements and generate comprehensive advisory with regulatory intelligence
    */
-  analyzeTransaction: async (request: TransactionAnalysisRequest, userInputs?: ExtractedUserInputs): Promise<AnalysisResults> => {
+  analyzeTransaction: async (
+    request: TransactionAnalysisRequest, 
+    userInputs?: ExtractedUserInputs,
+    regulatoryContext?: any
+  ): Promise<AnalysisResults> => {
     try {
-      console.log('Starting AI transaction analysis...');
+      console.log('Starting AI transaction analysis with regulatory intelligence...');
       
       let documentContent = '';
       if (request.documents?.length > 0) {
@@ -43,19 +48,30 @@ export const aiAnalysisService = {
           .join('\n\n');
       }
       
-      const analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
+      // Enhanced prompt building with regulatory context
+      let analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
+      
+      // Add regulatory context if available
+      if (regulatoryContext?.context) {
+        const formattedRegulatoryContext = aiRegulatoryDiscoveryService.formatContextForPrompt(regulatoryContext.context);
+        if (formattedRegulatoryContext) {
+          analysisPrompt = `${analysisPrompt}\n\n${formattedRegulatoryContext}\n\nIMPORTANT: Incorporate the above regulatory provisions, FAQs, and vetting requirements into your analysis. Cite specific rule numbers and requirements where applicable.`;
+        }
+      }
       
       const response = await grokService.generateResponse({
         prompt: analysisPrompt,
         metadata: {
           type: 'deal_structuring',
-          hasDocuments: request.documents?.length > 0
+          hasDocuments: request.documents?.length > 0,
+          hasRegulatoryContext: !!regulatoryContext,
+          regulatoryProvisions: regulatoryContext?.context?.provisions?.length || 0
         }
       });
       
       const analysisResults = parseAnalysisResponse(response.text, userInputs);
       
-      console.log('AI transaction analysis completed');
+      console.log('AI transaction analysis completed with regulatory intelligence');
       return analysisResults;
     } catch (error) {
       console.error('Error in AI transaction analysis:', error);
