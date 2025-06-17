@@ -1,41 +1,33 @@
-
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle, CheckCircle, ArrowRight, Maximize2 } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
-
 interface ExecutionTimetableBoxProps {
   results: AnalysisResults;
 }
-
-export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) => {
+export const ExecutionTimetableBox = ({
+  results
+}: ExecutionTimetableBoxProps) => {
   // Prioritize critical path milestones if available
-  const displayMilestones = results.timetable.criticalPath && results.timetable.criticalPath.length > 0 
-    ? results.timetable.criticalPath 
-    : results.timetable.keyMilestones.map(m => ({ ...m, milestone: m.event }));
-
-  const timetableContent = (
-    <div className="h-full overflow-y-auto space-y-3">
+  const displayMilestones = results.timetable.criticalPath && results.timetable.criticalPath.length > 0 ? results.timetable.criticalPath : results.timetable.keyMilestones.map(m => ({
+    ...m,
+    milestone: m.event
+  }));
+  const timetableContent = <div className="h-full overflow-y-auto space-y-3">
       {/* Key Dependencies */}
-      {results.timetable.keyDependencies && results.timetable.keyDependencies.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+      {results.timetable.keyDependencies && results.timetable.keyDependencies.length > 0 && <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
           <h5 className="font-medium text-sm text-blue-800 mb-2 flex items-center gap-1">
             <ArrowRight className="h-3 w-3" />
             Key Dependencies
           </h5>
           <div className="space-y-1">
-            {results.timetable.keyDependencies.slice(0, 2).map((dependency, index) => (
-              <div key={index} className="text-xs text-blue-700">• {dependency}</div>
-            ))}
-            {results.timetable.keyDependencies.length > 2 && (
-              <div className="text-xs text-blue-600 italic">
+            {results.timetable.keyDependencies.slice(0, 2).map((dependency, index) => <div key={index} className="text-xs text-blue-700">• {dependency}</div>)}
+            {results.timetable.keyDependencies.length > 2 && <div className="text-xs text-blue-600 italic">
                 +{results.timetable.keyDependencies.length - 2} more dependencies
-              </div>
-            )}
+              </div>}
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Critical Path Milestones */}
       <div className="space-y-3">
@@ -44,12 +36,9 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
           Critical Path Milestones
         </h5>
         
-        {displayMilestones.map((milestone, index) => (
-          <div key={index} className="relative">
+        {displayMilestones.map((milestone, index) => <div key={index} className="relative">
             {/* Timeline connector */}
-            {index < displayMilestones.length - 1 && (
-              <div className="absolute left-3 top-8 w-px h-6 bg-gray-300" />
-            )}
+            {index < displayMilestones.length - 1 && <div className="absolute left-3 top-8 w-px h-6 bg-gray-300" />}
             
             <div className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
               <div className="flex-shrink-0 w-6 h-6 rounded-full bg-orange-500 flex items-center justify-center">
@@ -61,17 +50,9 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
                   <div className="text-xs font-medium text-orange-600">
                     {milestone.date}
                   </div>
-                  {'impact' in milestone && milestone.impact && (
-                    <Badge 
-                      variant={
-                        milestone.impact === 'high' ? 'destructive' : 
-                        milestone.impact === 'medium' ? 'default' : 'secondary'
-                      }
-                      className="text-xs px-1 py-0"
-                    >
+                  {'impact' in milestone && milestone.impact && <Badge variant={milestone.impact === 'high' ? 'destructive' : milestone.impact === 'medium' ? 'default' : 'secondary'} className="text-xs px-1 py-0">
                       {milestone.impact}
-                    </Badge>
-                  )}
+                    </Badge>}
                 </div>
                 
                 <p className="font-medium text-sm text-gray-900 mb-1">
@@ -83,29 +64,22 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
                 </p>
               </div>
             </div>
-          </div>
-        ))}
+          </div>)}
       </div>
 
       {/* Timing Risks */}
-      {results.timetable.timingRisks && results.timetable.timingRisks.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-4">
+      {results.timetable.timingRisks && results.timetable.timingRisks.length > 0 && <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mt-4">
           <h5 className="font-medium text-sm text-orange-800 mb-2 flex items-center gap-1">
             <AlertTriangle className="h-3 w-3" />
             Timing Risks
           </h5>
           <div className="space-y-1">
-            {results.timetable.timingRisks.slice(0, 3).map((risk, index) => (
-              <div key={index} className="text-xs text-orange-700">• {risk}</div>
-            ))}
-            {results.timetable.timingRisks.length > 3 && (
-              <div className="text-xs text-orange-600 italic">
+            {results.timetable.timingRisks.slice(0, 3).map((risk, index) => <div key={index} className="text-xs text-orange-700">• {risk}</div>)}
+            {results.timetable.timingRisks.length > 3 && <div className="text-xs text-orange-600 italic">
                 +{results.timetable.timingRisks.length - 3} more risks identified
-              </div>
-            )}
+              </div>}
           </div>
-        </div>
-      )}
+        </div>}
 
       {/* Summary Stats */}
       <div className="bg-gray-100 rounded-lg p-3 mt-4">
@@ -124,15 +98,12 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
           </div>
         </div>
       </div>
-    </div>
-  );
-
-  return (
-    <Card className="h-[500px]">
+    </div>;
+  return <Card className="h-[500px]">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle className="flex items-center gap-2">
+            <CardTitle className="flex items-center gap-2 text-lg">
               <Clock className="h-5 w-5 text-orange-500" />
               Critical Path Execution
             </CardTitle>
@@ -140,19 +111,10 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
               Duration: <span className="font-medium">{results.timetable.totalDuration}</span>
             </div>
           </div>
-          <EnlargedContentDialog
-            title="Critical Path Execution Timeline"
-            size="large"
-            enlargedContent={
-              <div className="h-[70vh] w-full">
+          <EnlargedContentDialog title="Critical Path Execution Timeline" size="large" enlargedContent={<div className="h-[70vh] w-full">
                 {timetableContent}
-              </div>
-            }
-          >
-            <button
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
-              title="Expand timeline"
-            >
+              </div>}>
+            <button className="p-1 hover:bg-gray-100 rounded transition-colors" title="Expand timeline">
               <Maximize2 className="h-4 w-4" />
             </button>
           </EnlargedContentDialog>
@@ -161,6 +123,5 @@ export const ExecutionTimetableBox = ({ results }: ExecutionTimetableBoxProps) =
       <CardContent className="h-[400px] overflow-y-auto space-y-3">
         {timetableContent}
       </CardContent>
-    </Card>
-  );
+    </Card>;
 };
