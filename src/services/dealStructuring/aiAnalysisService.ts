@@ -1,9 +1,9 @@
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { buildAnalysisPrompt } from './analysisPromptBuilder'; // Ensured correct import
-import { parseAnalysisResponse } from './analysisResponseParser'; // Ensured correct import
-// Fallback functions are in analysisFallbackData.ts and used by parseAnalysisResponse
+import { buildAnalysisPrompt } from './analysisPromptBuilder';
+import { parseAnalysisResponse } from './analysisResponseParser';
+import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 
 export interface TransactionAnalysisRequest {
   transactionType: string;
@@ -17,7 +17,6 @@ export interface TransactionAnalysisRequest {
 export interface AnalysisContext {
   originalRequest: TransactionAnalysisRequest;
   analysisTimestamp: Date;
-  // Potentially add analysisId or version here if needed for context tracking
 }
 
 /**
@@ -27,7 +26,7 @@ export const aiAnalysisService = {
   /**
    * Analyze transaction requirements and generate comprehensive advisory
    */
-  analyzeTransaction: async (request: TransactionAnalysisRequest): Promise<AnalysisResults> => {
+  analyzeTransaction: async (request: TransactionAnalysisRequest, userInputs?: ExtractedUserInputs): Promise<AnalysisResults> => {
     try {
       console.log('Starting AI transaction analysis...');
       
@@ -44,7 +43,7 @@ export const aiAnalysisService = {
           .join('\n\n');
       }
       
-      const analysisPrompt = buildAnalysisPrompt(request.description, documentContent); // Uses imported function
+      const analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
       
       const response = await grokService.generateResponse({
         prompt: analysisPrompt,
@@ -54,13 +53,12 @@ export const aiAnalysisService = {
         }
       });
       
-      const analysisResults = parseAnalysisResponse(response.text); // Uses imported function
+      const analysisResults = parseAnalysisResponse(response.text, userInputs);
       
       console.log('AI transaction analysis completed');
       return analysisResults;
     } catch (error) {
       console.error('Error in AI transaction analysis:', error);
-      // Consider re-throwing a more specific error or a user-friendly one
       throw new Error('Failed to analyze transaction. Please try again.');
     }
   },

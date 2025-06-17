@@ -1,6 +1,7 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { createFallbackAnalysisResults } from './analysisFallbackData';
 import { createFallbackShareholdingChanges, createFallbackCorporateStructure } from './analysisFallbackData';
+import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 
 // Helper function to extract JSON from a string
 const extractJson = (text: string): string | null => {
@@ -122,11 +123,11 @@ const extractDocumentData = (text: string) => {
   };
 };
 
-export const parseAnalysisResponse = (responseText: string): AnalysisResults => {
+export const parseAnalysisResponse = (responseText: string, userInputs?: ExtractedUserInputs): AnalysisResults => {
   // Early validation: Check if the response is empty or too short
   if (!responseText || responseText.length < 100) {
-    console.warn('Response text is too short or empty, using fallback.');
-    return createFallbackAnalysisResults();
+    console.warn('Response text is too short or empty, using fallback with user inputs.');
+    return createFallbackAnalysisResults(userInputs);
   }
 
   try {
@@ -140,8 +141,8 @@ export const parseAnalysisResponse = (responseText: string): AnalysisResults => 
       if (jsonString) {
         parsed = JSON.parse(jsonString);
       } else {
-        console.warn('No JSON found in response, using fallback.');
-        return createFallbackAnalysisResults();
+        console.warn('No JSON found in response, using fallback with user inputs.');
+        return createFallbackAnalysisResults(userInputs);
       }
     }
 
@@ -155,11 +156,11 @@ export const parseAnalysisResponse = (responseText: string): AnalysisResults => 
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
       dealEconomics: parsed.dealEconomics || {
-        purchasePrice: 100000000,
-        currency: 'HKD',
+        purchasePrice: userInputs?.amount || 100000000,
+        currency: userInputs?.currency || 'HKD',
         paymentStructure: 'Cash',
         valuationBasis: 'Market Comparables',
-        targetPercentage: 100
+        targetPercentage: userInputs?.acquisitionPercentage || 100
       },
       structure: parsed.structure || {
         recommended: 'General Offer',
@@ -196,7 +197,26 @@ export const parseAnalysisResponse = (responseText: string): AnalysisResults => 
       transactionFlow: parsed.transactionFlow
     };
 
-    console.log('Successfully parsed analysis response');
+    // Validate and reconcile with user inputs if provided
+    if (userInputs) {
+      if (userInputs.amount && (!results.dealEconomics?.purchasePrice || results.dealEconomics.purchasePrice !== userInputs.amount)) {
+        console.log('Reconciling purchase price with user input:', userInputs.amount);
+        results.dealEconomics = {
+          ...results.dealEconomics,
+          purchasePrice: userInputs.amount
+        };
+      }
+      
+      if (userInputs.currency && results.dealEconomics) {
+        results.dealEconomics.currency = userInputs.currency;
+      }
+      
+      if (userInputs.acquisitionPercentage && results.dealEconomics) {
+        results.dealEconomics.targetPercentage = userInputs.acquisitionPercentage;
+      }
+    }
+
+    console.log('Successfully parsed analysis response with user input validation');
     return results;
 
   } catch (error) {
@@ -205,7 +225,7 @@ export const parseAnalysisResponse = (responseText: string): AnalysisResults => 
     
     const shareholdingChanges = createFallbackShareholdingChanges();
     const corporateStructure = createFallbackCorporateStructure();
-    const fallbackResults = createFallbackAnalysisResults();
+    const fallbackResults = createFallbackAnalysisResults(userInputs);
     fallbackResults.valuation = extractValuationData(responseText);
     fallbackResults.documentPreparation = extractDocumentData(responseText);
     

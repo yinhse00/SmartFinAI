@@ -1,6 +1,6 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
+import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 
 // Fallback for shareholding changes
 export function createFallbackShareholdingChanges(): ShareholdingChanges {
@@ -71,14 +71,18 @@ export function createFallbackTransactionFlow(): AnalysisResults['transactionFlo
 }
 
 // Fallback for overall analysis if parsing fails
-export function createFallbackAnalysis(responseText: string): AnalysisResults {
+export function createFallbackAnalysis(responseText: string, userInputs?: ExtractedUserInputs): AnalysisResults {
+  const amount = userInputs?.amount || 100000000;
+  const currency = userInputs?.currency || 'HKD';
+  const targetPercentage = userInputs?.acquisitionPercentage || 100;
+
   return {
     transactionType: "Transaction Analysis",
     structure: {
       recommended: "Please review the detailed analysis below. Fallback data used.",
       majorTerms: { 
         pricingMechanism: "fixed",
-        targetPercentage: 0,
+        targetPercentage: targetPercentage,
         suggestionConsideration: "N/A for fallback",
         paymentStructure: { cashPercentage: 100, stockPercentage: 0, paymentSchedule: "N/A", escrowArrangements: "N/A" },
         keyConditions: ["N/A"],
@@ -93,7 +97,7 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
       timing: 0,
       total: 0,
       majorDrivers: ["N/A"],
-      optimizationOpportunities: ["N/A"], // Added to match type
+      optimizationOpportunities: ["N/A"],
       breakdown: [{
         category: "Analysis",
         amount: 0,
@@ -102,7 +106,7 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
     },
     timetable: { 
       totalDuration: "To be determined",
-      keyMilestones: [ // Added required keyMilestones
+      keyMilestones: [
         { date: "TBD", event: "Initial Review", description: "Review fallback timetable milestone." }
       ],
       criticalPath: [{date: "TBD", milestone: "Analysis Review", description:"Review comprehensive analysis", impact: "high", marketStandard: false}],
@@ -113,18 +117,18 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
       before: [],
       after: [],
       impact: "Shareholding impact analysis included in detailed response (fallback)",
-      majorChanges: ["N/A"], // Added to match type
+      majorChanges: ["N/A"],
     },
     compliance: {
-      listingRules: ["Review required"], // Corrected from keyListingRules to listingRules
+      listingRules: ["Review required"],
       takeoversCode: ["Assessment needed"],
       risks: ["Detailed risk analysis in response (fallback)"],
       recommendations: ["See comprehensive recommendations (fallback)"],
     },
     valuation: {
       transactionValue: {
-        amount: 100000000,
-        currency: 'HKD'
+        amount: amount,
+        currency: currency
       },
       valuationMetrics: {
         peRatio: 15.2,
@@ -136,9 +140,9 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
         reasoning: 'Transaction priced within market range based on comparable transactions.'
       },
       valuationRange: {
-        low: 90000000,
-        high: 110000000,
-        midpoint: 100000000
+        low: amount * 0.9,
+        high: amount * 1.1,
+        midpoint: amount
       }
     },
     documentPreparation: {
@@ -176,21 +180,32 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
       },
       regulatoryFilings: ['Exchange filing', 'Regulatory disclosure']
     },
-    confidence: 0.5, 
+    confidence: 0.5,
+    dealEconomics: {
+      purchasePrice: amount,
+      currency: currency,
+      paymentStructure: 'Cash',
+      valuationBasis: 'Market Comparables',
+      targetPercentage: targetPercentage
+    },
     shareholdingChanges: createFallbackShareholdingChanges(),
     corporateStructure: createFallbackCorporateStructure(),
     transactionFlow: createFallbackTransactionFlow()
   };
 }
 
-export const createFallbackAnalysisResults = (): AnalysisResults => {
+export const createFallbackAnalysisResults = (userInputs?: ExtractedUserInputs): AnalysisResults => {
+  const amount = userInputs?.amount || 100000000;
+  const currency = userInputs?.currency || 'HKD';
+  const targetPercentage = userInputs?.acquisitionPercentage || 100;
+
   return {
     transactionType: "Transaction Analysis",
     structure: {
       recommended: "Please review the detailed analysis below. Fallback data used.",
       majorTerms: { 
         pricingMechanism: "fixed",
-        targetPercentage: 0,
+        targetPercentage: targetPercentage,
         suggestionConsideration: "N/A for fallback",
         paymentStructure: { cashPercentage: 100, stockPercentage: 0, paymentSchedule: "N/A", escrowArrangements: "N/A" },
         keyConditions: ["N/A"],
@@ -205,7 +220,7 @@ export const createFallbackAnalysisResults = (): AnalysisResults => {
       timing: 0,
       total: 0,
       majorDrivers: ["N/A"],
-      optimizationOpportunities: ["N/A"], // Added to match type
+      optimizationOpportunities: ["N/A"],
       breakdown: [{
         category: "Analysis",
         amount: 0,
@@ -214,7 +229,7 @@ export const createFallbackAnalysisResults = (): AnalysisResults => {
     },
     timetable: { 
       totalDuration: "To be determined",
-      keyMilestones: [ // Added required keyMilestones
+      keyMilestones: [
         { date: "TBD", event: "Initial Review", description: "Review fallback timetable milestone." }
       ],
       criticalPath: [{date: "TBD", milestone: "Analysis Review", description:"Review comprehensive analysis", impact: "high", marketStandard: false}],
@@ -225,19 +240,26 @@ export const createFallbackAnalysisResults = (): AnalysisResults => {
       before: [],
       after: [],
       impact: "Shareholding impact analysis included in detailed response (fallback)",
-      majorChanges: ["N/A"], // Added to match type
+      majorChanges: ["N/A"],
     },
     compliance: {
-      listingRules: ["Review required"], // Corrected from keyListingRules to listingRules
+      listingRules: ["Review required"],
       takeoversCode: ["Assessment needed"],
       risks: ["Detailed risk analysis in response (fallback)"],
       recommendations: ["See comprehensive recommendations (fallback)"],
     },
     confidence: 0.7,
+    dealEconomics: {
+      purchasePrice: amount,
+      currency: currency,
+      paymentStructure: 'Cash',
+      valuationBasis: 'Market Comparables',
+      targetPercentage: targetPercentage
+    },
     valuation: {
       transactionValue: {
-        amount: 100000000,
-        currency: 'HKD'
+        amount: amount,
+        currency: currency
       },
       valuationMetrics: {
         peRatio: 15.2,
@@ -249,9 +271,9 @@ export const createFallbackAnalysisResults = (): AnalysisResults => {
         reasoning: 'Transaction priced within market range based on comparable transactions.'
       },
       valuationRange: {
-        low: 90000000,
-        high: 110000000,
-        midpoint: 100000000
+        low: amount * 0.9,
+        high: amount * 1.1,
+        midpoint: amount
       }
     },
     documentPreparation: {

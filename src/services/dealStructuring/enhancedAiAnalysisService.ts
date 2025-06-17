@@ -2,6 +2,7 @@ import { aiAnalysisService, TransactionAnalysisRequest } from './aiAnalysisServi
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { createFallbackAnalysis } from './analysisFallbackData';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
+import { extractUserInputAmount } from './converterUtils/dataExtractors';
 
 export interface EnhancedAnalysisResult {
   results: AnalysisResults;
@@ -25,10 +26,46 @@ export interface AnalysisQualityReport {
   recommendations: string[];
 }
 
+export interface ExtractedUserInputs {
+  amount?: number;
+  currency?: string;
+  acquisitionPercentage?: number;
+}
+
 /**
  * Enhanced AI analysis service with optimization and market intelligence
  */
 export const enhancedAiAnalysisService = {
+  /**
+   * Extract structured data from user input
+   */
+  extractUserInputs: (request: TransactionAnalysisRequest): ExtractedUserInputs => {
+    const extracted: ExtractedUserInputs = {};
+    
+    // Extract amount from description
+    const extractedAmount = extractUserInputAmount(request.description);
+    if (extractedAmount) {
+      extracted.amount = extractedAmount;
+      console.log('Extracted amount from user input:', extractedAmount);
+    }
+    
+    // Extract currency
+    const description = request.description.toLowerCase();
+    if (description.includes('hk$') || description.includes('hkd') || description.includes('hong kong dollar')) {
+      extracted.currency = 'HKD';
+    } else if (description.includes('usd') || description.includes('us$')) {
+      extracted.currency = 'USD';
+    }
+    
+    // Extract acquisition percentage
+    const percentageMatch = request.description.match(/(?:acquire|purchase|buy|obtaining?)\s+(?:a\s+)?(\d+(?:\.\d+)?)%/i);
+    if (percentageMatch) {
+      extracted.acquisitionPercentage = parseFloat(percentageMatch[1]);
+    }
+    
+    return extracted;
+  },
+
   /**
    * Analyze transaction with optimization and validation
    */
@@ -39,13 +76,17 @@ export const enhancedAiAnalysisService = {
     console.log('Starting enhanced transaction analysis with optimization...');
     
     try {
-      // Step 1: Input validation
+      // Step 1: Extract user inputs before AI analysis
+      const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
+      console.log('Extracted user inputs:', userInputs);
+      
+      // Step 2: Input validation
       const inputValidation = enhancedAiAnalysisService.validateInput(request);
       
-      // Step 2: Get basic AI analysis
+      // Step 3: Get basic AI analysis
       const basicResults = await aiAnalysisService.analyzeTransaction(request);
       
-      // Step 3: Apply optimization if parameters provided
+      // Step 4: Apply optimization if parameters provided
       let optimization: OptimizationResult | null = null;
       if (optimizationParams) {
         optimization = await optimizationEngine.optimizeStructure(request, optimizationParams);
@@ -55,8 +96,8 @@ export const enhancedAiAnalysisService = {
         optimization = await optimizationEngine.optimizeStructure(request, defaultParams);
       }
       
-      // Step 4: Reconcile AI results with optimization
-      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization);
+      // Step 5: Reconcile AI results with optimization and user inputs
+      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization, userInputs);
       
       return {
         results: reconciledResults,
@@ -67,15 +108,56 @@ export const enhancedAiAnalysisService = {
     } catch (error) {
       console.error('Enhanced analysis error:', error);
       
-      // Fallback to basic analysis
-      const basicResults = await aiAnalysisService.analyzeTransaction(request);
-      return {
-        results: basicResults,
-        optimization: enhancedAiAnalysisService.createFallbackOptimization(),
-        inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
-        reconciliation: { reconciliationApplied: false, changes: [] }
+      // Extract user inputs for fallback
+      const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
+      
+      // Fallback to basic analysis with user inputs preserved
+      try {
+        const basicResults = await aiAnalysisService.analyzeTransaction(request);
+        return {
+          results: enhancedAiAnalysisService.applyUserInputsToResults(basicResults, userInputs),
+          optimization: enhancedAiAnalysisService.createFallbackOptimization(),
+          inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
+          reconciliation: { reconciliationApplied: true, changes: ['Applied user inputs to fallback data'] }
+        };
+      } catch (fallbackError) {
+        console.error('Fallback analysis also failed:', fallbackError);
+        return {
+          results: createFallbackAnalysis(request.description, userInputs),
+          optimization: enhancedAiAnalysisService.createFallbackOptimization(),
+          inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
+          reconciliation: { reconciliationApplied: false, changes: [] }
+        };
+      }
+    }
+  },
+
+  /**
+   * Apply user inputs to analysis results
+   */
+  applyUserInputsToResults: (results: AnalysisResults, userInputs: ExtractedUserInputs): AnalysisResults => {
+    const updatedResults = { ...results };
+    
+    // Apply user amount if extracted
+    if (userInputs.amount) {
+      updatedResults.dealEconomics = {
+        ...updatedResults.dealEconomics,
+        purchasePrice: userInputs.amount,
+        currency: userInputs.currency || updatedResults.dealEconomics?.currency || 'HKD'
+      };
+      
+      console.log('Applied user amount to results:', userInputs.amount);
+    }
+    
+    // Apply acquisition percentage if extracted
+    if (userInputs.acquisitionPercentage) {
+      updatedResults.dealEconomics = {
+        ...updatedResults.dealEconomics,
+        targetPercentage: userInputs.acquisitionPercentage
       };
     }
+    
+    return updatedResults;
   },
 
   /**
@@ -155,11 +237,22 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Reconcile AI results with optimization recommendations
+   * Reconcile AI results with optimization recommendations and user inputs
    */
-  reconcileResults: (basicResults: AnalysisResults, optimization: OptimizationResult) => {
+  reconcileResults: (basicResults: AnalysisResults, optimization: OptimizationResult, userInputs?: ExtractedUserInputs) => {
     const changes: string[] = [];
     let reconciledResults = { ...basicResults };
+    
+    // Apply user inputs first if they exist
+    if (userInputs) {
+      reconciledResults = enhancedAiAnalysisService.applyUserInputsToResults(reconciledResults, userInputs);
+      if (userInputs.amount) {
+        changes.push(`Applied user-specified amount: ${userInputs.amount}`);
+      }
+      if (userInputs.acquisitionPercentage) {
+        changes.push(`Applied user-specified acquisition percentage: ${userInputs.acquisitionPercentage}%`);
+      }
+    }
     
     // Update structure recommendation with optimized version
     if (optimization.recommendedStructure.structure !== basicResults.structure.recommended) {
