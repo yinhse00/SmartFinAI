@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
@@ -88,6 +89,31 @@ const validateNoCrossEntityRelationships = (
   }
 };
 
+// Helper function to check if two entities should be connected based on corporate structure
+const shouldCreateCorporateRelationship = (
+  parentEntity: CorporateEntity,
+  childEntity: CorporateEntity,
+  entityNames: EntityNames
+): boolean => {
+  // Never create relationships between acquirer and target in BEFORE structure
+  const parentIsAcquirer = parentEntity.name === entityNames.acquiringCompanyName || 
+                          parentEntity.type === 'issuer';
+  const childIsTarget = childEntity.name === entityNames.targetCompanyName || 
+                       childEntity.type === 'target';
+  
+  const parentIsTarget = parentEntity.name === entityNames.targetCompanyName || 
+                        parentEntity.type === 'target';
+  const childIsAcquirer = childEntity.name === entityNames.acquiringCompanyName || 
+                         childEntity.type === 'issuer';
+
+  if ((parentIsAcquirer && childIsTarget) || (parentIsTarget && childIsAcquirer)) {
+    console.log(`🚫 Preventing cross-entity relationship: ${parentEntity.name} (${parentEntity.type}) -> ${childEntity.name} (${childEntity.type})`);
+    return false;
+  }
+
+  return true;
+};
+
 export const buildBeforeStructure = (
   results: AnalysisResults,
   entityNames: EntityNames,
@@ -109,8 +135,33 @@ export const buildBeforeStructure = (
 
   console.log("Building Before Structure with entityNames:", entityNames);
 
+  // Create a filtered corporate structure map that excludes invalid cross-entity relationships
+  const filteredCorporateStructureMap = new Map(corporateStructureMap);
+  
+  // Remove invalid parent-child relationships from the corporate structure
+  for (const [entityId, entity] of corporateStructureMap.entries()) {
+    if (entity.parentLink) {
+      const parentEntity = corporateStructureMap.get(entity.parentLink);
+      if (parentEntity && !shouldCreateCorporateRelationship(parentEntity, entity, entityNames)) {
+        // Remove the invalid parent link
+        const filteredEntity = { ...entity };
+        delete filteredEntity.parentLink;
+        filteredCorporateStructureMap.set(entityId, filteredEntity);
+        
+        // Also remove this child from the parent's children array
+        if (parentEntity.children) {
+          const filteredParent = { 
+            ...parentEntity, 
+            children: parentEntity.children.filter(childId => childId !== entityId)
+          };
+          filteredCorporateStructureMap.set(entity.parentLink, filteredParent);
+        }
+      }
+    }
+  }
+
   // 1. Process Acquirer Company (Listed Company) and its shareholders first
-  const acquirerCorpEntityData = Array.from(corporateStructureMap.values()).find(
+  const acquirerCorpEntityData = Array.from(filteredCorporateStructureMap.values()).find(
     ce => ce.name === entityNames.acquiringCompanyName && (ce.type === 'issuer' || ce.type === 'parent')
   );
 
@@ -131,46 +182,16 @@ export const buildBeforeStructure = (
       });
     }
     
-    addAncestors(acquirerCorpEntityData, acquirerRootId, entities, relationships, corporateStructureMap, prefix, acquirerVisitedAncestry, 'acquirer');
-    addCorporateChildren(acquirerCorpEntityData, acquirerRootId, entities, relationships, corporateStructureMap, prefix, acquirerVisitedChildren);
+    addAncestors(acquirerCorpEntityData, acquirerRootId, entities, relationships, filteredCorporateStructureMap, prefix, acquirerVisitedAncestry, 'acquirer');
+    addCorporateChildren(acquirerCorpEntityData, acquirerRootId, entities, relationships, filteredCorporateStructureMap, prefix, acquirerVisitedChildren);
 
     // Track all acquirer-related entities
     entities.forEach(e => {
-      if (e.id.includes(acquirerCorpEntityData.name) || e.description?.includes(acquirerCorpEntityData.name)) {
+      if (e.id.includes(acquirerCorpEntityData.name.toLowerCase().replace(/\s+/g, '-')) || 
+          e.description?.includes(acquirerCorpEntityData.name)) {
         acquirerEntityIds.add(e.id);
       }
     });
-
-    // Process acquirer's shareholders only if it's a listed company
-    if (entityNames.isAcquirerListed) {
-      // Only use shareholding data for acquirer if explicitly indicated
-      // For now, we'll rely primarily on corporate structure for acquirer's shareholders
-      const acquirerShareholdersFromResults = results.shareholding?.before?.filter(sh => {
-        // Only include if there's clear indication this shareholder belongs to the acquirer
-        // This is a conservative approach to avoid misattribution
-        return false; // Disabled for now to prevent incorrect relationships
-      });
-
-      acquirerShareholdersFromResults?.forEach(holder => {
-        const shareholderId = generateEntityId('stockholder', holder.name, prefix);
-        acquirerEntityIds.add(shareholderId);
-        if (!entities.find(e => e.id === shareholderId)) {
-          entities.push({
-            id: shareholderId,
-            name: holder.name,
-            type: 'stockholder',
-            percentage: holder.percentage,
-            description: `${holder.percentage}% Shareholder of ${entityNames.acquiringCompanyName}`,
-          });
-        }
-        relationships.push({
-          source: shareholderId,
-          target: acquirerRootId,
-          type: 'ownership',
-          percentage: holder.percentage,
-        });
-      });
-    }
 
   } else if (entityNames.acquiringCompanyName && entityNames.acquiringCompanyName !== 'Acquiring Company') {
     acquirerDiagramType = entityNames.isAcquirerListed ? 'parent' : 'buyer';
@@ -199,7 +220,7 @@ export const buildBeforeStructure = (
   }
 
   // 2. Process Target Company and its structure (completely separate from acquirer)
-  const targetCorpEntityData = Array.from(corporateStructureMap.values()).find(
+  const targetCorpEntityData = Array.from(filteredCorporateStructureMap.values()).find(
     ce => ce.name === entityNames.targetCompanyName && ce.type === 'target'
   );
 
@@ -292,11 +313,12 @@ export const buildBeforeStructure = (
     }
   } else if (targetCorpEntityData) {
     // Use corporate structure for Target's parents if no shareholding data
-    addAncestors(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, targetVisitedAncestry, 'target');
+    addAncestors(targetCorpEntityData, targetId, entities, relationships, filteredCorporateStructureMap, prefix, targetVisitedAncestry, 'target');
     
     // Track target-related entities
     entities.forEach(e => {
-      if (e.id.includes(entityNames.targetCompanyName) || e.description?.includes(entityNames.targetCompanyName)) {
+      if (e.id.includes(entityNames.targetCompanyName.toLowerCase().replace(/\s+/g, '-')) || 
+          e.description?.includes(entityNames.targetCompanyName)) {
         targetEntityIds.add(e.id);
       }
     });
@@ -347,11 +369,12 @@ export const buildBeforeStructure = (
 
   if (targetCorpEntityData) {
     // Add children (subsidiaries) of the Target using separate visited set
-    addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, corporateStructureMap, prefix, targetVisitedChildren);
+    addCorporateChildren(targetCorpEntityData, targetId, entities, relationships, filteredCorporateStructureMap, prefix, targetVisitedChildren);
     
     // Update target entity tracking
     entities.forEach(e => {
-      if (e.id.includes(entityNames.targetCompanyName) || e.description?.includes(entityNames.targetCompanyName)) {
+      if (e.id.includes(entityNames.targetCompanyName.toLowerCase().replace(/\s+/g, '-')) || 
+          e.description?.includes(entityNames.targetCompanyName)) {
         targetEntityIds.add(e.id);
       }
     });
