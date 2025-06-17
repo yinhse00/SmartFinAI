@@ -1,10 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { Separator } from '@/components/ui/separator';
-import { ArrowRight, AlertTriangle, CheckCircle, Clock, DollarSign } from 'lucide-react';
+import { ArrowRight, AlertTriangle, CheckCircle, Clock, DollarSign, Shield, FileText } from 'lucide-react';
 import { TransactionData } from '@/types/dealStructuring';
 
 interface TransactionAnalysisProps {
@@ -110,54 +108,61 @@ export const TransactionAnalysis = ({ transactionData, onProceed }: TransactionA
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-2xl">Transaction Analysis</CardTitle>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-xl font-semibold">Transaction Analysis</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           
           {/* Transaction Summary */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <h3 className="font-semibold">Transaction Type</h3>
-              <div className="space-y-1">
-                <Badge variant="outline" className="text-sm">{transactionData.type.replace('_', ' ').toUpperCase()}</Badge>
-                <p className="text-sm text-gray-600">{transactionData.subtype}</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-blue-500" />
+                <h4 className="text-base font-medium">Transaction Type</h4>
               </div>
-            </div>
+              <Badge variant="outline" className="text-sm mb-1">{transactionData.type.replace('_', ' ').toUpperCase()}</Badge>
+              <p className="text-sm text-gray-600">{transactionData.subtype}</p>
+            </Card>
             
-            <div className="space-y-2">
-              <h3 className="font-semibold">Amount & Size</h3>
-              <div className="space-y-1">
-                <p className="text-lg font-medium">{formatCurrency(transactionData.amount)}</p>
-                <p className="text-sm text-gray-600">
-                  {((transactionData.amount / transactionData.marketCap) * 100).toFixed(1)}% of market cap
-                </p>
+            <Card className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                <h4 className="text-base font-medium">Amount & Size</h4>
               </div>
-            </div>
+              <p className="text-lg font-semibold">{formatCurrency(transactionData.amount)}</p>
+              <p className="text-sm text-gray-600">
+                {((transactionData.amount / transactionData.marketCap) * 100).toFixed(1)}% of market cap
+              </p>
+            </Card>
             
-            <div className="space-y-2">
-              <h3 className="font-semibold">Regulatory Framework</h3>
-              <div className="space-y-1">
-                <Badge variant="secondary">{getRegulatoryFramework()}</Badge>
-                <p className="text-sm text-gray-600">Primary regulation</p>
+            <Card className="p-3">
+              <div className="flex items-center gap-2 mb-2">
+                <Shield className="h-4 w-4 text-purple-500" />
+                <h4 className="text-base font-medium">Regulatory Framework</h4>
               </div>
-            </div>
+              <Badge variant="secondary" className="text-sm mb-1">{getRegulatoryFramework()}</Badge>
+              <p className="text-sm text-gray-600">Primary regulation</p>
+            </Card>
           </div>
 
-          <Separator />
-
-          {/* Threshold Analysis */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Threshold Analysis</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Main Analysis Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            
+            {/* Threshold Analysis */}
+            <Card className="p-4">
+              <h4 className="text-base font-semibold mb-3 flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-orange-500" />
+                Threshold Analysis
+              </h4>
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">Classification Level</span>
+                  <span className="text-sm">Classification Level</span>
                   <Badge 
                     variant={thresholdAnalysis.risk === 'high' ? 'destructive' : 
                              thresholdAnalysis.risk === 'medium' ? 'default' : 'secondary'}
+                    className="text-xs"
                   >
                     {thresholdAnalysis.level}
                   </Badge>
@@ -170,105 +175,98 @@ export const TransactionAnalysis = ({ transactionData, onProceed }: TransactionA
                   value={thresholdAnalysis.risk === 'high' ? 85 : thresholdAnalysis.risk === 'medium' ? 60 : 30} 
                   className="h-2"
                 />
-              </div>
-              
-              <div className="space-y-3">
-                <h4 className="font-medium">Regulatory Requirements</h4>
-                <div className="space-y-2 text-sm">
+                
+                {/* Compact Regulatory Requirements */}
+                <div className="mt-3 space-y-1">
+                  <h5 className="text-sm font-medium">Key Requirements</h5>
                   {thresholdAnalysis.level.includes('Substantial') && (
-                    <div className="flex items-center space-x-2">
-                      <CheckCircle className="h-4 w-4 text-red-500" />
-                      <span>Shareholder approval required</span>
+                    <div className="flex items-center text-xs text-red-600">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Shareholder approval required
                     </div>
                   )}
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-blue-500" />
-                    <span>Circular to shareholders</span>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Circular to shareholders
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <CheckCircle className="h-4 w-4 text-blue-500" />
-                    <span>HKEX/SFC approval</span>
+                  <div className="flex items-center text-xs text-blue-600">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    HKEX/SFC approval
                   </div>
                 </div>
               </div>
-            </div>
+            </Card>
+
+            {/* Cost Analysis */}
+            <Card className="p-4">
+              <h4 className="text-base font-semibold mb-3 flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-green-500" />
+                Estimated Costs
+              </h4>
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                <div className="text-center p-2 border rounded bg-gray-50">
+                  <p className="text-xs text-gray-600 mb-1">Regulatory</p>
+                  <p className="text-sm font-semibold">{formatCurrency(costs.regulatory)}</p>
+                </div>
+                <div className="text-center p-2 border rounded bg-gray-50">
+                  <p className="text-xs text-gray-600 mb-1">Professional</p>
+                  <p className="text-sm font-semibold">{formatCurrency(costs.professional)}</p>
+                </div>
+                <div className="text-center p-2 border rounded bg-gray-50">
+                  <p className="text-xs text-gray-600 mb-1">Marketing</p>
+                  <p className="text-sm font-semibold">{formatCurrency(costs.marketing)}</p>
+                </div>
+                <div className="text-center p-2 border rounded bg-blue-50">
+                  <p className="text-xs text-gray-600 mb-1">Total</p>
+                  <p className="text-sm font-bold text-blue-600">{formatCurrency(costs.total)}</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Timeline Analysis */}
+            <Card className="p-4">
+              <h4 className="text-base font-semibold mb-3 flex items-center gap-2">
+                <Clock className="h-4 w-4 text-orange-500" />
+                Timeline Analysis
+              </h4>
+              <div className="grid grid-cols-3 gap-2">
+                <div className="text-center p-2 border rounded">
+                  <p className="text-xs text-gray-600 mb-1">Optimistic</p>
+                  <p className="text-sm font-semibold text-green-600">{timeline.optimistic}w</p>
+                </div>
+                <div className="text-center p-2 border rounded bg-blue-50">
+                  <p className="text-xs text-gray-600 mb-1">Realistic</p>
+                  <p className="text-sm font-bold text-blue-600">{timeline.realistic}w</p>
+                </div>
+                <div className="text-center p-2 border rounded">
+                  <p className="text-xs text-gray-600 mb-1">Conservative</p>
+                  <p className="text-sm font-semibold text-red-600">{timeline.conservative}w</p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Risk Assessment */}
+            {risks.length > 0 && (
+              <Card className="p-4">
+                <h4 className="text-base font-semibold mb-3 flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 text-red-500" />
+                  Key Risks
+                </h4>
+                <div className="space-y-2">
+                  {risks.map((risk, index) => (
+                    <div key={index} className="flex items-start gap-2 text-sm">
+                      <div className="w-1 h-1 rounded-full bg-red-500 mt-2 flex-shrink-0"></div>
+                      <span className="text-gray-700 leading-relaxed">{risk}</span>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
-
-          <Separator />
-
-          {/* Cost Analysis */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center space-x-2">
-              <DollarSign className="h-5 w-5" />
-              <span>Estimated Costs</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Regulatory Fees</p>
-                <p className="text-lg font-semibold">{formatCurrency(costs.regulatory)}</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Professional Fees</p>
-                <p className="text-lg font-semibold">{formatCurrency(costs.professional)}</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Marketing Costs</p>
-                <p className="text-lg font-semibold">{formatCurrency(costs.marketing)}</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
-                <p className="text-sm text-gray-600 mb-1">Total Estimated</p>
-                <p className="text-lg font-bold text-blue-600">{formatCurrency(costs.total)}</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Timeline Analysis */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold flex items-center space-x-2">
-              <Clock className="h-5 w-5" />
-              <span>Timeline Analysis</span>
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Optimistic</p>
-                <p className="text-lg font-semibold text-green-600">{timeline.optimistic} weeks</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg bg-blue-50 dark:bg-blue-950">
-                <p className="text-sm text-gray-600 mb-1">Realistic</p>
-                <p className="text-lg font-bold text-blue-600">{timeline.realistic} weeks</p>
-              </div>
-              <div className="text-center p-4 border rounded-lg">
-                <p className="text-sm text-gray-600 mb-1">Conservative</p>
-                <p className="text-lg font-semibold text-red-600">{timeline.conservative} weeks</p>
-              </div>
-            </div>
-          </div>
-
-          <Separator />
-
-          {/* Risk Assessment */}
-          {risks.length > 0 && (
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold flex items-center space-x-2">
-                <AlertTriangle className="h-5 w-5" />
-                <span>Key Risks & Considerations</span>
-              </h3>
-              <div className="space-y-3">
-                {risks.map((risk, index) => (
-                  <Alert key={index}>
-                    <AlertTriangle className="h-4 w-4" />
-                    <AlertDescription>{risk}</AlertDescription>
-                  </Alert>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Action Button */}
-          <div className="flex justify-end pt-4">
-            <Button onClick={onProceed} className="flex items-center space-x-2">
+          <div className="flex justify-end pt-2">
+            <Button onClick={onProceed} className="flex items-center gap-2">
               <span>Get Structure Recommendations</span>
               <ArrowRight className="h-4 w-4" />
             </Button>
