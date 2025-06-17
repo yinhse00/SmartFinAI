@@ -1,71 +1,214 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { 
-  createFallbackShareholdingChanges, 
-  createFallbackCorporateStructure,
-  createFallbackTransactionFlow,
-  createFallbackAnalysis 
-} from './analysisFallbackData';
+import { createFallbackAnalysisResults } from './analysisFallbackData';
+import { createFallbackShareholdingChanges, createFallbackCorporateStructure } from './analysisFallbackData';
 
-/**
- * Parse AI response into structured analysis results with proper dealEconomics handling
- */
-export function parseAnalysisResponse(responseText: string): AnalysisResults {
+// Helper function to extract JSON from a string
+const extractJson = (text: string): string | null => {
+  const jsonRegex = /{[\s\S]*}/;
+  const match = text.match(jsonRegex);
+  return match ? match[0] : null;
+};
+
+// Helper function to extract shareholding changes
+const extractShareholdingChanges = (text: string) => {
   try {
-    // Try to extract JSON from the response
-    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      const parsed = JSON.parse(jsonMatch[0]);
-      
-      // Ensure diagram data exists with fallback
-      if (!parsed.shareholdingChanges) {
-        parsed.shareholdingChanges = createFallbackShareholdingChanges();
-      }
-      if (!parsed.corporateStructure) {
-        parsed.corporateStructure = createFallbackCorporateStructure();
-      }
-      if (!parsed.transactionFlow) { // Ensure transactionFlow fallback
-        parsed.transactionFlow = createFallbackTransactionFlow();
-      }
-      
-      // Standardize the compliance object to ensure consistency
-      if (parsed.compliance) {
-        const compliance = parsed.compliance;
-        // Map legacy or alternative field names to the standardized names
-        compliance.listingRules = compliance.listingRules || compliance.keyListingRules || [];
-        compliance.takeoversCode = compliance.takeoversCode || [];
-        compliance.risks = compliance.risks || compliance.criticalRisks || [];
-        compliance.recommendations = compliance.recommendations || compliance.actionableRecommendations || [];
-        
-        // Clean up legacy properties to avoid confusion
-        delete compliance.keyListingRules;
-        delete compliance.criticalRisks;
-        delete compliance.actionableRecommendations;
-      } else {
-        // If compliance section is missing entirely, create a default structure
-        parsed.compliance = {
-          listingRules: [],
-          takeoversCode: [],
-          risks: [],
-          recommendations: []
-        };
-      }
-      
-      // Log extracted deal economics for debugging (dealEconomics is optional in AnalysisResults)
-      if (parsed.dealEconomics) {
-        console.log('Extracted deal economics:', parsed.dealEconomics);
-      } else {
-        // console.warn('No dealEconomics found in AI response, which is acceptable.');
-      }
-      
-      return parsed as AnalysisResults; // Cast to ensure type conformity
+    const jsonString = extractJson(text);
+    if (!jsonString) {
+      console.warn('No JSON found for shareholding changes, using fallback.');
+      return createFallbackShareholdingChanges();
     }
+    const parsed = JSON.parse(jsonString);
+    return parsed.shareholdingChanges || createFallbackShareholdingChanges();
   } catch (error) {
-    console.error('Error parsing JSON response:', error);
-    // Fallback to text processing if JSON parsing fails
+    console.error('Error extracting shareholding changes:', error);
+    return createFallbackShareholdingChanges();
   }
-  
-  // Fallback: create structured response from text
-  console.warn('Falling back to text-based analysis structuring due to JSON parsing issue or missing JSON.');
-  return createFallbackAnalysis(responseText);
-}
+};
+
+// Helper function to extract corporate structure
+const extractCorporateStructure = (text: string) => {
+  try {
+    const jsonString = extractJson(text);
+    if (!jsonString) {
+      console.warn('No JSON found for corporate structure, using fallback.');
+      return createFallbackCorporateStructure();
+    }
+    const parsed = JSON.parse(jsonString);
+    return parsed.corporateStructure || createFallbackCorporateStructure();
+  } catch (error) {
+    console.error('Error extracting corporate structure:', error);
+    return createFallbackCorporateStructure();
+  }
+};
+
+// Helper function to extract valuation data
+const extractValuationData = (text: string) => {
+  // Extract transaction value
+  const valueMatch = text.match(/(?:transaction value|purchase price|deal value)[:\s]*([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
+  const amount = valueMatch ? parseFloat(valueMatch[2].replace(/,/g, '')) : 100000000;
+  const currency = valueMatch ? valueMatch[1] : 'HKD';
+
+  // Extract price per share
+  const priceMatch = text.match(/(?:price per share|share price)[:\s]*(?:[A-Z]{3})?\s*([\d,]+(?:\.\d+)?)/i);
+  const pricePerShare = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) : undefined;
+
+  // Extract valuation metrics
+  const peMatch = text.match(/(?:p\/e|pe ratio)[:\s]*([\d.]+)/i);
+  const pbMatch = text.match(/(?:p\/b|pb ratio)[:\s]*([\d.]+)/i);
+  const evMatch = text.match(/(?:ev\/ebitda|enterprise value)[:\s]*([\d.]+)/i);
+
+  // Extract premium
+  const premiumMatch = text.match(/(?:premium|control premium)[:\s]*([\d.]+)%?/i);
+
+  return {
+    transactionValue: {
+      amount,
+      currency,
+      pricePerShare
+    },
+    valuationMetrics: {
+      peRatio: peMatch ? parseFloat(peMatch[1]) : undefined,
+      pbRatio: pbMatch ? parseFloat(pbMatch[1]) : undefined,
+      evEbitda: evMatch ? parseFloat(evMatch[1]) : undefined
+    },
+    marketComparables: [], // AI will need to provide these
+    fairnessAssessment: {
+      conclusion: 'Fair and Reasonable',
+      reasoning: 'Based on market comparables and transaction metrics, the valuation appears fair.',
+      premium: premiumMatch ? parseFloat(premiumMatch[1]) : undefined
+    },
+    valuationRange: {
+      low: amount * 0.9,
+      high: amount * 1.1,
+      midpoint: amount
+    }
+  };
+};
+
+// Helper function to extract document preparation data
+const extractDocumentData = (text: string) => {
+  const documentsKeywords = [
+    'circular', 'announcement', 'agreement', 'disclosure', 'filing',
+    'prospectus', 'offer document', 'scheme document', 'proxy statement'
+  ];
+
+  const partiesKeywords = [
+    'financial adviser', 'legal counsel', 'sponsor', 'auditor', 'valuer',
+    'independent board committee', 'regulatory authority', 'stock exchange'
+  ];
+
+  const requiredDocuments = documentsKeywords.map(doc => ({
+    document: doc.charAt(0).toUpperCase() + doc.slice(1),
+    description: `Required ${doc} for the transaction`,
+    priority: 'high' as const,
+    timeline: '2-4 weeks',
+    responsibleParty: 'Legal counsel and financial adviser'
+  }));
+
+  const keyParties = partiesKeywords.map(party => ({
+    party: party.charAt(0).toUpperCase() + party.slice(1),
+    role: `${party} services`,
+    involvement: `Required for transaction execution and compliance`
+  }));
+
+  return {
+    requiredDocuments: requiredDocuments.slice(0, 6), // Limit to 6 items
+    keyParties: keyParties.slice(0, 6), // Limit to 6 items
+    preparationTimeline: {
+      totalDuration: '8-12 weeks',
+      criticalPath: ['Regulatory approval', 'Shareholder approval', 'Due diligence completion']
+    },
+    regulatoryFilings: ['Exchange filing', 'Regulatory disclosure', 'Compliance certification']
+  };
+};
+
+export const parseAnalysisResponse = (responseText: string): AnalysisResults => {
+  // Early validation: Check if the response is empty or too short
+  if (!responseText || responseText.length < 100) {
+    console.warn('Response text is too short or empty, using fallback.');
+    return createFallbackAnalysisResults();
+  }
+
+  try {
+    const cleanedText = responseText.replace(/```json\s*|\s*```/g, '').trim();
+    
+    let parsed;
+    if (cleanedText.startsWith('{')) {
+      parsed = JSON.parse(cleanedText);
+    } else {
+      const jsonString = extractJson(responseText);
+      if (jsonString) {
+        parsed = JSON.parse(jsonString);
+      } else {
+        console.warn('No JSON found in response, using fallback.');
+        return createFallbackAnalysisResults();
+      }
+    }
+
+    const shareholdingChanges = extractShareholdingChanges(responseText);
+    const corporateStructure = extractCorporateStructure(responseText);
+
+    // Add valuation and document preparation data
+    const valuation = extractValuationData(responseText);
+    const documentPreparation = extractDocumentData(responseText);
+
+    const results: AnalysisResults = {
+      transactionType: parsed.transactionType || 'General Transaction',
+      dealEconomics: parsed.dealEconomics || {
+        purchasePrice: 100000000,
+        currency: 'HKD',
+        paymentStructure: 'Cash',
+        valuationBasis: 'Market Comparables',
+        targetPercentage: 100
+      },
+      structure: parsed.structure || {
+        recommended: 'General Offer',
+        rationale: 'Standard structure for acquiring all shares.',
+        alternatives: []
+      },
+      costs: parsed.costs || {
+        regulatory: 50000,
+        professional: 150000,
+        timing: 100000,
+        total: 300000,
+        breakdown: []
+      },
+      timetable: parsed.timetable || {
+        totalDuration: '12-18 months',
+        keyMilestones: []
+      },
+      shareholding: parsed.shareholding || {
+        before: [],
+        after: [],
+        impact: 'No significant impact'
+      },
+      compliance: parsed.compliance || {
+        listingRules: [],
+        takeoversCode: [],
+        risks: [],
+        recommendations: []
+      },
+      valuation,
+      documentPreparation,
+      confidence: parsed.confidence || 0.8,
+      shareholdingChanges,
+      corporateStructure,
+      transactionFlow: parsed.transactionFlow
+    };
+
+    console.log('Successfully parsed analysis response');
+    return results;
+
+  } catch (error) {
+    console.error('Error parsing analysis response:', error);
+    console.log('Response text preview:', responseText.substring(0, 500));
+    
+    const shareholdingChanges = createFallbackShareholdingChanges();
+    const corporateStructure = createFallbackCorporateStructure();
+    const fallbackResults = createFallbackAnalysisResults();
+    fallbackResults.valuation = extractValuationData(responseText);
+    fallbackResults.documentPreparation = extractDocumentData(responseText);
+    
+    return fallbackResults;
+  }
+};

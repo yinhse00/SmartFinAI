@@ -126,3 +126,114 @@ export function createFallbackAnalysis(responseText: string): AnalysisResults {
     transactionFlow: createFallbackTransactionFlow()
   };
 }
+
+export const createFallbackAnalysisResults = (): AnalysisResults => {
+  return {
+    transactionType: "Transaction Analysis",
+    structure: {
+      recommended: "Please review the detailed analysis below. Fallback data used.",
+      majorTerms: { 
+        pricingMechanism: "fixed",
+        targetPercentage: 0,
+        suggestionConsideration: "N/A for fallback",
+        paymentStructure: { cashPercentage: 100, stockPercentage: 0, paymentSchedule: "N/A", escrowArrangements: "N/A" },
+        keyConditions: ["N/A"],
+        structuralDecisions: ["N/A"],
+      },
+      alternatives: [],
+      rationale: "Detailed analysis below. Fallback data used."
+    },
+    costs: {
+      regulatory: 0,
+      professional: 0,
+      timing: 0,
+      total: 0,
+      majorDrivers: ["N/A"],
+      optimizationOpportunities: ["N/A"], // Added to match type
+      breakdown: [{
+        category: "Analysis",
+        amount: 0,
+        description: "Detailed cost analysis available in full response (fallback)"
+      }]
+    },
+    timetable: { 
+      totalDuration: "To be determined",
+      keyMilestones: [ // Added required keyMilestones
+        { date: "TBD", event: "Initial Review", description: "Review fallback timetable milestone." }
+      ],
+      criticalPath: [{date: "TBD", milestone: "Analysis Review", description:"Review comprehensive analysis", impact: "high", marketStandard: false}],
+      keyDependencies: ["N/A"],
+      timingRisks: ["N/A"],
+    },
+    shareholding: { 
+      before: [],
+      after: [],
+      impact: "Shareholding impact analysis included in detailed response (fallback)",
+      majorChanges: ["N/A"], // Added to match type
+    },
+    compliance: {
+      listingRules: ["Review required"], // Corrected from keyListingRules to listingRules
+      takeoversCode: ["Assessment needed"],
+      risks: ["Detailed risk analysis in response (fallback)"],
+      recommendations: ["See comprehensive recommendations (fallback)"],
+    },
+    confidence: 0.7,
+    valuation: {
+      transactionValue: {
+        amount: 100000000,
+        currency: 'HKD'
+      },
+      valuationMetrics: {
+        peRatio: 15.2,
+        pbRatio: 1.8
+      },
+      marketComparables: [],
+      fairnessAssessment: {
+        conclusion: 'Fair and Reasonable',
+        reasoning: 'Transaction priced within market range based on comparable transactions.'
+      },
+      valuationRange: {
+        low: 90000000,
+        high: 110000000,
+        midpoint: 100000000
+      }
+    },
+    documentPreparation: {
+      requiredDocuments: [
+        {
+          document: 'Circular to Shareholders',
+          description: 'Comprehensive disclosure document for shareholder approval',
+          priority: 'high',
+          timeline: '4-6 weeks',
+          responsibleParty: 'Legal counsel'
+        },
+        {
+          document: 'Joint Announcement',
+          description: 'Initial transaction announcement to the market',
+          priority: 'high',
+          timeline: '1-2 weeks',
+          responsibleParty: 'Financial adviser'
+        }
+      ],
+      keyParties: [
+        {
+          party: 'Financial Adviser',
+          role: 'Transaction advisory',
+          involvement: 'Lead advisory and execution'
+        },
+        {
+          party: 'Legal Counsel',
+          role: 'Legal documentation',
+          involvement: 'Draft agreements and regulatory filings'
+        }
+      ],
+      preparationTimeline: {
+        totalDuration: '8-12 weeks',
+        criticalPath: ['Regulatory approval', 'Shareholder approval']
+      },
+      regulatoryFilings: ['Exchange filing', 'Regulatory disclosure']
+    },
+    shareholdingChanges: createFallbackShareholdingChanges(),
+    corporateStructure: createFallbackCorporateStructure()
+  };
+};

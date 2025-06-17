@@ -1,3 +1,4 @@
+
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface DealEconomics {
@@ -108,6 +109,55 @@ interface AITransactionFlow {
   }>;
 }
 
+export interface ValuationAnalysis {
+  transactionValue: {
+    amount: number;
+    currency: string;
+    pricePerShare?: number;
+  };
+  valuationMetrics: {
+    peRatio?: number;
+    pbRatio?: number;
+    evEbitda?: number;
+    priceToBook?: number;
+  };
+  marketComparables: Array<{
+    company: string;
+    metric: string;
+    value: number;
+  }>;
+  fairnessAssessment: {
+    conclusion: string;
+    reasoning: string;
+    premium?: number;
+  };
+  valuationRange: {
+    low: number;
+    high: number;
+    midpoint: number;
+  };
+}
+
+export interface DocumentPreparation {
+  requiredDocuments: Array<{
+    document: string;
+    description: string;
+    priority: 'high' | 'medium' | 'low';
+    timeline: string;
+    responsibleParty: string;
+  }>;
+  keyParties: Array<{
+    party: string;
+    role: string;
+    involvement: string;
+  }>;
+  preparationTimeline: {
+    totalDuration: string;
+    criticalPath: string[];
+  };
+  regulatoryFilings: string[];
+}
+
 export interface AnalysisResults {
   transactionType: string;
   dealEconomics?: DealEconomics;
@@ -145,6 +195,8 @@ export interface AnalysisResults {
     risks: string[];
     recommendations: string[];
   };
+  valuation: ValuationAnalysis;
+  documentPreparation: DocumentPreparation;
   confidence: number;
   shareholdingChanges: ShareholdingChanges;
   corporateStructure: CorporateStructure;
