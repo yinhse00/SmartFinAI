@@ -4,12 +4,12 @@
 // Patterns that indicate generic/placeholder shareholder names
 const GENERIC_SHAREHOLDER_PATTERNS = [
   /^shareholder\s+[a-z]$/i,           // "Shareholder A", "Shareholder B", etc.
-  /^public\s+shareholder/i,           // "Public Shareholder"
-  /^existing\s+shareholder/i,         // "Existing Shareholder"
-  /^minority\s+shareholder/i,         // "Minority Shareholder"
-  /^other\s+shareholder/i,            // "Other Shareholder"
-  /^[a-z]\s+shareholder/i,            // "A Shareholder", "B Shareholder"
-  /^shareholder\s+group/i,            // "Shareholder Group"
+  /^public\s+shareholder$/i,          // Exact "Public Shareholder" (but not "Public Shareholders")
+  /^existing\s+shareholder$/i,        // Exact "Existing Shareholder" (but not "Existing Shareholders")
+  /^minority\s+shareholder$/i,        // "Minority Shareholder"
+  /^other\s+shareholder$/i,           // "Other Shareholder"
+  /^[a-z]\s+shareholder$/i,           // "A Shareholder", "B Shareholder"
+  /^shareholder\s+group$/i,           // "Shareholder Group"
   /^unnamed\s+shareholder/i,          // "Unnamed Shareholder"
   /^placeholder/i,                    // Any variation of "Placeholder"
   /^sample/i,                         // Any variation of "Sample"
@@ -20,6 +20,7 @@ const GENERIC_SHAREHOLDER_PATTERNS = [
 
 /**
  * Checks if a shareholder name appears to be a generic placeholder
+ * Now less aggressive - allows "Shareholder A", "Public Shareholders" etc.
  */
 export const isGenericShareholderName = (name: string): boolean => {
   if (!name || typeof name !== 'string') {
@@ -28,7 +29,15 @@ export const isGenericShareholderName = (name: string): boolean => {
   
   const trimmedName = name.trim();
   
-  // Check against known generic patterns
+  // Allow structured shareholder names like "Shareholder A", "Public Shareholders" 
+  // These are often legitimate in financial structures
+  if (/^shareholder\s+[a-z]$/i.test(trimmedName) || 
+      /^public\s+shareholders$/i.test(trimmedName) ||
+      /^existing\s+shareholders/i.test(trimmedName)) {
+    return false; // These are considered valid structured names
+  }
+  
+  // Check against remaining generic patterns
   return GENERIC_SHAREHOLDER_PATTERNS.some(pattern => pattern.test(trimmedName));
 };
 
@@ -64,7 +73,7 @@ export const filterValidShareholders = (
  */
 export const shouldUseShareholdingData = (
   shareholdingData: Array<{ name: string; percentage: number }>,
-  targetCompanyName: string
+  companyName: string
 ): boolean => {
   // If no data, use fallback
   if (!shareholdingData || shareholdingData.length === 0) {
@@ -73,18 +82,18 @@ export const shouldUseShareholdingData = (
   
   // If all shareholders are generic, use fallback
   if (!isValidShareholdingData(shareholdingData)) {
-    console.log(`🔍 Shareholding data contains only generic placeholders for ${targetCompanyName}, using fallback`);
+    console.log(`🔍 Shareholding data contains only generic placeholders for ${companyName}, using fallback`);
     return false;
   }
   
   // Filter out generic shareholders and check if we have any valid ones left
   const validShareholders = filterValidShareholders(shareholdingData);
   if (validShareholders.length === 0) {
-    console.log(`🔍 No valid shareholders found after filtering for ${targetCompanyName}, using fallback`);
+    console.log(`🔍 No valid shareholders found after filtering for ${companyName}, using fallback`);
     return false;
   }
   
-  console.log(`✅ Found ${validShareholders.length} valid shareholders for ${targetCompanyName}`);
+  console.log(`✅ Found ${validShareholders.length} valid shareholders for ${companyName}`);
   return true;
 };
 
@@ -93,11 +102,49 @@ export const shouldUseShareholdingData = (
  */
 export const getValidatedShareholdingData = (
   shareholdingData: Array<{ name: string; percentage: number }>,
-  targetCompanyName: string
+  companyName: string
 ): Array<{ name: string; percentage: number }> => {
-  if (!shouldUseShareholdingData(shareholdingData, targetCompanyName)) {
+  if (!shouldUseShareholdingData(shareholdingData, companyName)) {
     return [];
   }
   
   return filterValidShareholders(shareholdingData);
+};
+
+/**
+ * Determines which company the shareholding data likely belongs to based on context
+ */
+export const attributeShareholdingData = (
+  shareholdingData: Array<{ name: string; percentage: number }>,
+  entityNames: { acquiringCompanyName: string; targetCompanyName: string; isAcquirerListed: boolean }
+): { acquirerShareholders: Array<{ name: string; percentage: number }>; targetShareholders: Array<{ name: string; percentage: number }> } => {
+  
+  if (!shareholdingData || shareholdingData.length === 0) {
+    return { acquirerShareholders: [], targetShareholders: [] };
+  }
+
+  // For listed acquirers, typically the shareholding data represents the acquirer's shareholders
+  // unless explicitly mentioned otherwise in shareholder names
+  if (entityNames.isAcquirerListed) {
+    const targetRelatedShareholders = shareholdingData.filter(holder => 
+      holder.name.toLowerCase().includes(entityNames.targetCompanyName.toLowerCase()) ||
+      holder.name.toLowerCase().includes('target') ||
+      holder.name.toLowerCase().includes('existing shareholders of')
+    );
+    
+    const acquirerShareholders = shareholdingData.filter(holder => 
+      !targetRelatedShareholders.includes(holder)
+    );
+    
+    return { 
+      acquirerShareholders, 
+      targetShareholders: targetRelatedShareholders 
+    };
+  }
+  
+  // For non-listed acquirers, shareholding data more likely belongs to target
+  return { 
+    acquirerShareholders: [], 
+    targetShareholders: shareholdingData 
+  };
 };
