@@ -71,23 +71,40 @@ const validateExtractionInputs = (text: string, userInputs?: ExtractedUserInputs
     }
   }
 
-  // Check AI response for corruption patterns
-  if (text) {
-    const corruptionPatterns = [
-      /(\d{3,})\s*(million|m)\b/i, // Numbers > 999 with million multiplier
-      /(\d+)\s*(million|m).*(\d+)\s*(million|m)/i, // Multiple million mentions
-      /\b(\d+)\s*(billion|b).*(\d+)\s*(million|m)/i, // Mixed billion/million
+  // Check AI response for corruption only if we have user input to compare against
+  if (text && userInputs?.amount) {
+    console.log('🔍 Checking AI response for corruption against user input:', userInputs.amount);
+    
+    // Extract potential AI amounts from text
+    const amountPatterns = [
+      /(?:transaction value|purchase price|deal value)[:\s]*[A-Z]{3}\s*([\d,]+(?:\.\d+)?)\s*(million|m|billion|b)/i,
+      /[A-Z]{3}\s*([\d,]+(?:\.\d+)?)\s*(million|m|billion|b)/i
     ];
 
-    for (const pattern of corruptionPatterns) {
+    for (const pattern of amountPatterns) {
       const match = text.match(pattern);
       if (match) {
-        const firstNumber = parseInt(match[1]);
-        if (firstNumber > 1000) {
+        const aiNumber = parseFloat(match[1].replace(/,/g, ''));
+        const multiplier = match[2].toLowerCase();
+        
+        let aiAmount = aiNumber;
+        if (multiplier === 'billion' || multiplier === 'b') {
+          aiAmount = aiNumber * 1000000000;
+        } else if (multiplier === 'million' || multiplier === 'm') {
+          aiAmount = aiNumber * 1000000;
+        }
+        
+        console.log('AI extracted amount:', aiAmount, 'User input amount:', userInputs.amount);
+        
+        // Compare AI amount to user input - flag if significantly different (more than 50% deviation)
+        const deviationRatio = Math.abs(aiAmount - userInputs.amount) / userInputs.amount;
+        if (deviationRatio > 0.5) {
           validationResult.detectedCorruption = true;
-          validationResult.reason += '; AI response corruption detected';
-          console.log('🚨 Corruption pattern detected:', match[0]);
+          validationResult.reason += `; AI response shows ${aiAmount} vs user input ${userInputs.amount} (${(deviationRatio * 100).toFixed(1)}% deviation)`;
+          console.log('🚨 Corruption detected: significant deviation from user input');
           break;
+        } else {
+          console.log('✅ AI amount reasonably close to user input');
         }
       }
     }
@@ -96,6 +113,10 @@ const validateExtractionInputs = (text: string, userInputs?: ExtractedUserInputs
       validationResult.aiResponseSafe = true;
       console.log('✅ AI response appears safe from corruption');
     }
+  } else if (text) {
+    // If no user input to compare against, assume AI response is safe
+    validationResult.aiResponseSafe = true;
+    console.log('✅ No user input for comparison, assuming AI response is safe');
   }
 
   console.log('Validation result:', validationResult);
@@ -289,15 +310,25 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
 
     console.log('Valuation data created with validation:', valuation.transactionValue);
 
+    // Prioritize user inputs for dealEconomics construction
+    console.log('=== CONSTRUCTING DEAL ECONOMICS WITH USER INPUT PRIORITY ===');
+    console.log('User inputs for dealEconomics:', userInputs);
+    
+    const dealEconomics = {
+      purchasePrice: userInputs?.amount || parsed.dealEconomics?.purchasePrice || valuation.transactionValue.amount,
+      currency: userInputs?.currency || parsed.dealEconomics?.currency || valuation.transactionValue.currency,
+      paymentStructure: parsed.dealEconomics?.paymentStructure || 'Cash',
+      valuationBasis: parsed.dealEconomics?.valuationBasis || 'Market Comparables',
+      targetPercentage: userInputs?.acquisitionPercentage || parsed.dealEconomics?.targetPercentage || 100
+    };
+    
+    console.log('Final dealEconomics constructed:', dealEconomics);
+    console.log('User input amount used:', userInputs?.amount);
+    console.log('Final purchase price:', dealEconomics.purchasePrice);
+
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
-      dealEconomics: parsed.dealEconomics || {
-        purchasePrice: userInputs?.amount || valuation.transactionValue.amount,
-        currency: userInputs?.currency || valuation.transactionValue.currency,
-        paymentStructure: 'Cash',
-        valuationBasis: 'Market Comparables',
-        targetPercentage: userInputs?.acquisitionPercentage || 100
-      },
+      dealEconomics,
       structure: parsed.structure || {
         recommended: 'General Offer',
         rationale: 'Standard structure for acquiring all shares.',
@@ -333,32 +364,17 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       transactionFlow: parsed.transactionFlow
     };
 
-    // Cross-validation: Ensure dealEconomics and valuation amounts match when user inputs are provided
-    if (userInputs?.amount) {
-      console.log('🔍 Cross-validating amounts with user inputs');
-      
-      if (results.dealEconomics && results.dealEconomics.purchasePrice !== userInputs.amount) {
-        console.log('⚠️ Reconciling dealEconomics.purchasePrice with user input');
-        results.dealEconomics.purchasePrice = userInputs.amount;
-      }
-      
-      if (results.valuation.transactionValue.amount !== userInputs.amount) {
-        console.log('⚠️ Reconciling valuation.transactionValue.amount with user input');
-        results.valuation.transactionValue.amount = userInputs.amount;
+    // Cross-validation: Ensure dealEconomics and valuation amounts are consistent
+    if (results.dealEconomics && results.valuation) {
+      if (results.dealEconomics.purchasePrice !== results.valuation.transactionValue.amount) {
+        console.log('🔧 Synchronizing valuation amount with dealEconomics');
+        results.valuation.transactionValue.amount = results.dealEconomics.purchasePrice;
+        results.valuation.transactionValue.currency = results.dealEconomics.currency;
         results.valuation.valuationRange = {
-          low: userInputs.amount * 0.9,
-          high: userInputs.amount * 1.1,
-          midpoint: userInputs.amount
+          low: results.dealEconomics.purchasePrice * 0.9,
+          high: results.dealEconomics.purchasePrice * 1.1,
+          midpoint: results.dealEconomics.purchasePrice
         };
-      }
-      
-      if (userInputs.currency && results.dealEconomics) {
-        results.dealEconomics.currency = userInputs.currency;
-        results.valuation.transactionValue.currency = userInputs.currency;
-      }
-      
-      if (userInputs.acquisitionPercentage && results.dealEconomics) {
-        results.dealEconomics.targetPercentage = userInputs.acquisitionPercentage;
       }
     }
 
