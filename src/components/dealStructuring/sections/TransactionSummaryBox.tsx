@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,85 +29,6 @@ export const TransactionSummaryBox = ({ results, optimizationResult }: Transacti
     return { status: 'high-risk', color: 'bg-red-100 text-red-800' };
   };
 
-  const generateTransactionDescription = () => {
-    const dealEconomics = results.dealEconomics;
-    const structure = results.structure;
-    const valuation = results.valuation;
-    const timetable = results.timetable;
-    
-    // Extract key information
-    const transactionType = results.transactionType || 'transaction';
-    const recommendedStructure = structure.recommended || 'standard structure';
-    const currency = dealEconomics?.currency || valuation?.transactionValue?.currency || 'HKD';
-    const amount = dealEconomics?.purchasePrice || valuation?.transactionValue?.amount;
-    const targetPercentage = dealEconomics?.targetPercentage || structure.majorTerms?.targetPercentage;
-    const paymentStructure = structure.majorTerms?.paymentStructure;
-    const pricingMechanism = structure.majorTerms?.pricingMechanism;
-    const duration = timetable.totalDuration;
-    
-    // Build description components
-    let description = `This ${transactionType.toLowerCase()}`;
-    
-    // Add amount and percentage if available
-    if (amount) {
-      const formattedAmount = amount >= 1000000000 
-        ? `${currency} ${(amount / 1000000000).toFixed(1)}B`
-        : amount >= 1000000 
-        ? `${currency} ${Math.round(amount / 1000000)}M`
-        : `${currency} ${amount.toLocaleString()}`;
-      
-      description += ` involves a ${formattedAmount} consideration`;
-      
-      if (targetPercentage && targetPercentage !== 100) {
-        description += ` for ${targetPercentage}% acquisition`;
-      }
-    } else if (targetPercentage && targetPercentage !== 100) {
-      description += ` involves a ${targetPercentage}% acquisition`;
-    }
-    
-    description += ` utilizing a ${recommendedStructure.toLowerCase()}`;
-    
-    // Add payment structure details
-    if (paymentStructure) {
-      const cashPct = paymentStructure.cashPercentage;
-      const stockPct = paymentStructure.stockPercentage;
-      
-      if (cashPct !== undefined && stockPct !== undefined) {
-        if (cashPct === 100) {
-          description += ` with all-cash consideration`;
-        } else if (stockPct === 100) {
-          description += ` with all-stock consideration`;
-        } else if (cashPct > 0 && stockPct > 0) {
-          description += ` with mixed consideration comprising ${cashPct}% cash and ${stockPct}% stock`;
-        }
-      }
-    }
-    
-    // Add pricing mechanism
-    if (pricingMechanism && pricingMechanism !== 'fixed') {
-      description += ` using a ${pricingMechanism} pricing mechanism`;
-    }
-    
-    // Add timeline
-    if (duration) {
-      description += `. The transaction is expected to complete within ${duration.toLowerCase()}`;
-    }
-    
-    // Add compliance status
-    const compliance = getComplianceStatus();
-    if (compliance.status === 'compliant') {
-      description += ` and is expected to meet all regulatory requirements`;
-    } else if (compliance.status === 'attention') {
-      description += ` with certain regulatory considerations requiring attention`;
-    } else {
-      description += ` and involves significant regulatory complexities that require careful management`;
-    }
-    
-    description += '.';
-    
-    return description;
-  };
-
   const compliance = getComplianceStatus();
 
   return (
@@ -118,14 +40,6 @@ export const TransactionSummaryBox = ({ results, optimizationResult }: Transacti
         </CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Transaction Description Paragraph */}
-        <div className="mb-6 p-4 bg-gray-50 rounded-lg border-l-4 border-blue-500">
-          <p className="text-sm leading-relaxed text-gray-700">
-            {generateTransactionDescription()}
-          </p>
-        </div>
-
-        {/* Existing Grid Layout */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {/* Deal Overview */}
           <div className="space-y-3">
@@ -221,9 +135,9 @@ export const TransactionSummaryBox = ({ results, optimizationResult }: Transacti
                 <Users className="h-4 w-4" />
                 <span className="text-sm">{results.shareholding.before.length} shareholders</span>
               </div>
-              {optimizationResult?.recommendedStructure?.optimizationScore && (
+              {optimizationResult?.optimizationScore && (
                 <div className="text-sm">
-                  <span className="font-medium">Optimization:</span> {Math.round(optimizationResult.recommendedStructure.optimizationScore * 100)}%
+                  <span className="font-medium">Optimization:</span> {Math.round(optimizationResult.optimizationScore * 100)}%
                 </div>
               )}
             </div>
