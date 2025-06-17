@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { ReactFlow, Node, Edge, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -74,12 +73,17 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
 
     // Helper function to format consideration amount correctly
     const formatConsiderationAmount = (amount: number, currency: string): string => {
+      console.log('Formatting amount:', amount, 'Currency:', currency);
+      
       if (amount >= 1000000000) {
-        return `${currency} ${(amount / 1000000000).toFixed(1)}B`;
+        const billions = (amount / 1000000000).toFixed(1);
+        return `${currency} ${billions}B`;
       } else if (amount >= 1000000) {
-        return `${currency} ${Math.round(amount / 1000000)}M`;
+        const millions = Math.round(amount / 1000000);
+        return `${currency} ${millions}M`;
       } else if (amount >= 1000) {
-        return `${currency} ${Math.round(amount / 1000)}K`;
+        const thousands = Math.round(amount / 1000);
+        return `${currency} ${thousands}K`;
       } else {
         return `${currency} ${amount}`;
       }
@@ -619,7 +623,7 @@ const CombinedTransactionFlowDiagram: React.FC<CombinedTransactionFlowDiagramPro
         if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
           labelText = `${(rel as OwnershipRelationship).percentage}%`;
         } else if ((rel.type === 'consideration' || rel.type === 'funding') && (rel as ConsiderationRelationship).value !== undefined) {
-          labelText = `${transactionContext?.currency} ${((rel as ConsiderationRelationship).value || 0) / 1000000}M`;
+          labelText = formatConsiderationAmount((rel as ConsiderationRelationship).value || 0, transactionContext?.currency || 'HKD');
         }
 
         edgesArr.push({

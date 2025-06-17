@@ -18,33 +18,44 @@ export const generateTransactionDescription = (
   considerationAmount: number,
   context?: 'diagram' | 'default'
 ): string => {
+  console.log('Generating transaction description with context:', context, 'amount:', considerationAmount);
+  
   const transactionType = results.transactionType || 'Transaction';
   const currency = results.dealEconomics?.currency || 'HKD';
   const targetPercentage = results.dealEconomics?.targetPercentage;
-
-  let amountText = '';
-  // Only include amount if not in diagram context (to avoid duplication)
-  if (context !== 'diagram' && considerationAmount > 0) {
-    if (considerationAmount >= 1000000000) {
-      amountText = `${currency} ${(considerationAmount / 1000000000).toFixed(1)}B`;
-    } else if (considerationAmount >= 1000000) {
-      amountText = `${currency} ${Math.round(considerationAmount / 1000000)}M`;
-    } else if (considerationAmount >= 1000) {
-      amountText = `${currency} ${Math.round(considerationAmount / 1000)}K`;
-    } else {
-      amountText = `${currency} ${considerationAmount}`;
-    }
-  }
-
-  const percentageText = targetPercentage ? `${targetPercentage}% ` : '';
   const structure = results.structure?.recommended || 'Standard Structure';
 
-  // Build description based on context
+  // Build the base transaction description without duplication
+  let description = '';
+  
   if (context === 'diagram') {
-    return `${transactionType} ${percentageText}acquisition via ${structure}`.trim();
+    // For diagram context, keep it concise and avoid amount duplication
+    if (targetPercentage && targetPercentage !== 100) {
+      description = `${targetPercentage}% ${transactionType.toLowerCase()} via ${structure}`;
+    } else {
+      description = `${transactionType} via ${structure}`;
+    }
   } else {
-    return `${transactionType} ${amountText} ${percentageText}acquisition via ${structure}`.trim();
+    // For default context, include amount if available
+    let amountText = '';
+    if (considerationAmount > 0) {
+      if (considerationAmount >= 1000000000) {
+        amountText = `${currency} ${(considerationAmount / 1000000000).toFixed(1)}B `;
+      } else if (considerationAmount >= 1000000) {
+        amountText = `${currency} ${Math.round(considerationAmount / 1000000)}M `;
+      } else if (considerationAmount >= 1000) {
+        amountText = `${currency} ${Math.round(considerationAmount / 1000)}K `;
+      } else {
+        amountText = `${currency} ${considerationAmount} `;
+      }
+    }
+
+    const percentageText = targetPercentage && targetPercentage !== 100 ? `${targetPercentage}% ` : '';
+    description = `${amountText}${percentageText}${transactionType.toLowerCase()} via ${structure}`;
   }
+
+  console.log('Generated transaction description:', description);
+  return description.trim();
 };
 
 export const generateEnhancedTransactionSteps = (
