@@ -1,3 +1,4 @@
+
 import { aiAnalysisService, TransactionAnalysisRequest } from './aiAnalysisService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { createFallbackAnalysis } from './analysisFallbackData';
@@ -98,7 +99,7 @@ export const enhancedAiAnalysisService = {
         optimization = await optimizationEngine.optimizeStructure(request, defaultParams);
       }
       
-      // Step 5: Reconcile AI results with optimization and user inputs
+      // Step 5: Reconcile AI results with optimization and user inputs - PASS userInputs to reconciliation
       const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization, userInputs);
       
       return {
@@ -269,15 +270,15 @@ export const enhancedAiAnalysisService = {
    * Reconcile AI results with optimization recommendations and user inputs
    */
   reconcileResults: (basicResults: AnalysisResults, optimization: OptimizationResult, userInputs?: ExtractedUserInputs) => {
-    console.log('=== RECONCILING RESULTS ===');
+    console.log('=== RECONCILING RESULTS WITH USER INPUT PROTECTION ===');
     console.log('User inputs for reconciliation:', userInputs);
     
     const changes: string[] = [];
     let reconciledResults = { ...basicResults };
     
-    // Apply user inputs first if they exist - THIS IS THE CRITICAL FIX
+    // CRITICAL FIX: Apply user inputs first and protect them throughout reconciliation
     if (userInputs) {
-      console.log('🎯 Applying user inputs during reconciliation');
+      console.log('🛡️ Protecting user inputs during reconciliation');
       reconciledResults = enhancedAiAnalysisService.applyUserInputsToResults(reconciledResults, userInputs);
       
       if (userInputs.amount) {
@@ -326,10 +327,33 @@ export const enhancedAiAnalysisService = {
       }
     }
     
-    // Final validation: Ensure dealEconomics and valuation amounts are consistent
-    if (reconciledResults.dealEconomics?.purchasePrice && reconciledResults.valuation?.transactionValue?.amount) {
+    // CRITICAL FIX: Final validation with USER INPUT AUTHORITY
+    if (userInputs?.amount && reconciledResults.dealEconomics && reconciledResults.valuation) {
+      console.log('🔒 FINAL USER INPUT PROTECTION: Ensuring user amount is authoritative');
+      
+      // Override any potentially corrupted dealEconomics with user input
+      if (reconciledResults.dealEconomics.purchasePrice !== userInputs.amount) {
+        console.log('🚨 Correcting corrupted dealEconomics.purchasePrice:', reconciledResults.dealEconomics.purchasePrice, '→', userInputs.amount);
+        reconciledResults.dealEconomics.purchasePrice = userInputs.amount;
+        changes.push('Protected user input amount from AI corruption');
+      }
+      
+      // Ensure valuation matches user input (not potentially corrupted dealEconomics)
+      if (reconciledResults.valuation.transactionValue.amount !== userInputs.amount) {
+        console.log('🔧 Syncing valuation with user input:', reconciledResults.valuation.transactionValue.amount, '→', userInputs.amount);
+        reconciledResults.valuation.transactionValue.amount = userInputs.amount;
+        reconciledResults.valuation.transactionValue.currency = userInputs.currency || reconciledResults.valuation.transactionValue.currency;
+        reconciledResults.valuation.valuationRange = {
+          low: userInputs.amount * 0.9,
+          high: userInputs.amount * 1.1,
+          midpoint: userInputs.amount
+        };
+        changes.push('Synchronized valuation with protected user input');
+      }
+    } else if (reconciledResults.dealEconomics?.purchasePrice && reconciledResults.valuation?.transactionValue?.amount) {
+      // Only sync if both exist and no user input to protect
       if (reconciledResults.dealEconomics.purchasePrice !== reconciledResults.valuation.transactionValue.amount) {
-        console.log('🔧 Final reconciliation: syncing dealEconomics and valuation amounts');
+        console.log('🔧 Standard reconciliation: syncing dealEconomics and valuation amounts');
         reconciledResults.valuation.transactionValue.amount = reconciledResults.dealEconomics.purchasePrice;
         reconciledResults.valuation.valuationRange = {
           low: reconciledResults.dealEconomics.purchasePrice * 0.9,
@@ -340,7 +364,7 @@ export const enhancedAiAnalysisService = {
       }
     }
     
-    console.log('✅ Reconciliation completed with changes:', changes);
+    console.log('✅ Reconciliation completed with user input protection, changes:', changes);
     
     return {
       reconciledResults,
