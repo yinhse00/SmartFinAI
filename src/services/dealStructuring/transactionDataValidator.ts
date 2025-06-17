@@ -1,6 +1,6 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow } from '@/types/transactionFlow';
+import { dataConsistencyService } from './dataConsistencyService';
 
 export interface ValidationResult {
   isValid: boolean;
@@ -21,6 +21,12 @@ class TransactionDataValidator {
     const warnings: string[] = [];
     const errors: string[] = [];
     const suggestions: string[] = [];
+
+    // Validate data consistency using the central service
+    const consistencyValidation = dataConsistencyService.validateDataConsistency(analysisResults);
+    if (!consistencyValidation.isConsistent) {
+      errors.push(...consistencyValidation.inconsistencies);
+    }
 
     // Validate shareholding data consistency
     this.validateShareholdingConsistency(analysisResults, warnings, errors);
@@ -100,50 +106,27 @@ class TransactionDataValidator {
   }
 
   extractConsiderationAmount(results: AnalysisResults): number {
-    console.log('=== DEBUGGING extractConsiderationAmount (VALIDATOR) ===');
-    console.log('Input results.dealEconomics:', results.dealEconomics);
+    console.log('=== VALIDATOR: EXTRACTING CONSIDERATION AMOUNT ===');
     
-    // Primary source: dealEconomics.purchasePrice - THIS SHOULD ALWAYS BE USED FIRST
-    if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
-      console.log('✅ Using reliable purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
-      return results.dealEconomics.purchasePrice;
-    }
-
-    // REMOVED: The problematic regex fallback parsing that was causing corruption
-    // The old code was parsing corrupted AI response text like "HKD 75000 million" 
-    // and incorrectly treating it as 75 billion instead of recognizing it as invalid
+    // Use the data consistency service for authoritative data extraction
+    const consistentData = dataConsistencyService.extractConsistentData(results);
     
-    console.log('⚠️ No valid purchase price found in dealEconomics, returning 0');
-    console.log('Note: Problematic fallback regex parsing has been disabled to prevent data corruption');
+    console.log('✅ Extracted consideration amount via consistency service:', consistentData.considerationAmount);
+    console.log('Data source:', consistentData.source);
     
-    // Return 0 instead of using corrupted fallback parsing
-    return 0;
+    return consistentData.considerationAmount;
   }
 
   extractOwnershipPercentages(results: AnalysisResults): { 
     acquisitionPercentage: number; 
     remainingPercentage: number; 
   } {
-    // Use shareholding data as primary source
-    if (results.shareholding?.after && results.shareholding.after.length > 0) {
-      const acquirerData = results.shareholding.after.find(holder => 
-        holder.name.toLowerCase().includes('acquir') || 
-        holder.name.toLowerCase().includes('buyer') ||
-        holder.name.toLowerCase().includes('purchas')
-      );
-      
-      if (acquirerData) {
-        return {
-          acquisitionPercentage: acquirerData.percentage,
-          remainingPercentage: 100 - acquirerData.percentage
-        };
-      }
-    }
-
-    // Return 0 instead of arbitrary percentages
+    // Use the data consistency service
+    const consistentData = dataConsistencyService.extractConsistentData(results);
+    
     return {
-      acquisitionPercentage: 0,
-      remainingPercentage: 0
+      acquisitionPercentage: consistentData.acquisitionPercentage,
+      remainingPercentage: 100 - consistentData.acquisitionPercentage
     };
   }
 
@@ -151,25 +134,12 @@ class TransactionDataValidator {
     targetCompanyName: string;
     acquiringCompanyName: string;
   } {
-    // Use corporate structure as primary source
-    if (results.corporateStructure?.entities) {
-      const targetEntity = results.corporateStructure.entities.find(e => e.type === 'target');
-      const acquiringEntity = results.corporateStructure.entities.find(e => 
-        e.type === 'parent' || e.type === 'issuer'
-      );
-      
-      if (targetEntity && acquiringEntity) {
-        return {
-          targetCompanyName: targetEntity.name,
-          acquiringCompanyName: acquiringEntity.name
-        };
-      }
-    }
-
-    // Return meaningful defaults instead of generic names
+    // Use the data consistency service
+    const consistentData = dataConsistencyService.extractConsistentData(results);
+    
     return {
-      targetCompanyName: 'Target Company',
-      acquiringCompanyName: 'Acquiring Company'
+      targetCompanyName: consistentData.targetCompanyName,
+      acquiringCompanyName: consistentData.acquiringCompanyName
     };
   }
 }
