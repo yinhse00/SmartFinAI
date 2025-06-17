@@ -1,6 +1,6 @@
 
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { TransactionEntity, ConsiderationRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
+import { TransactionEntity, ConsiderationRelationship, OperationalRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { generateEntityId } from './entityHelpers';
 
 type Entities = TransactionEntity[];
@@ -12,7 +12,8 @@ export const addConsiderationDetails = (
     acquirerId: string,
     prefix: string,
     entities: Entities,
-    relationships: Relationships
+    relationships: Relationships,
+    formerShareholdersId?: string
 ) => {
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
@@ -41,11 +42,23 @@ export const addConsiderationDetails = (
                 description: stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ? 'Cash portion of Transaction Consideration' : 'Transaction Consideration',
             });
         }
+
+        // Relationship: Acquirer → Consideration
         relationships.push({
             source: acquirerId,
             target: considerationId,
             type: 'consideration',
             value: cashConsiderationAmount,
         } as ConsiderationRelationship);
+
+        // Relationship: Consideration → Former Target Shareholders (if they exist)
+        if (formerShareholdersId && entities.find(e => e.id === formerShareholdersId)) {
+            relationships.push({
+                source: considerationId,
+                target: formerShareholdersId,
+                type: 'receives_from',
+                description: 'Consideration payment to former shareholders',
+            } as OperationalRelationship);
+        }
     }
 };

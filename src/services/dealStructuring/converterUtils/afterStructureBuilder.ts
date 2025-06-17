@@ -1,8 +1,9 @@
-
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { CorporateEntity } from '@/types/dealStructuring';
 import { addCorporateChildren } from './corporateStructureProcessor';
+import { generateEntityId } from './entityHelpers';
+import { NORMALIZED_TARGET_SHAREHOLDER_NAME } from './shareholderIdentificationUtils';
 import {
   createAcquirerEntity,
   addAcquirerShareholders,
@@ -58,20 +59,24 @@ export const buildAfterStructure = (
     processedEntities
   );
 
-  // 4. Add consideration/payment details
+  // 4. Find the Former Target Shareholders entity ID for consideration flow
+  const formerShareholdersId = generateEntityId('stockholder', NORMALIZED_TARGET_SHAREHOLDER_NAME, prefix);
+
+  // 5. Add consideration/payment details with proper flow to former shareholders
   addConsiderationDetails(
     results,
     considerationAmount,
     acquirerId,
     prefix,
     entities,
-    relationships
+    relationships,
+    formerShareholdersId
   );
 
-  // 5. Validate ownership percentages
+  // 6. Validate ownership percentages
   validateOwnershipPercentages(entities, relationships);
 
-  // 6. Logging
+  // 7. Logging
   console.log(`After Structure (refactored): Entities - ${entities.length}, Relationships - ${relationships.length}`);
   entities.forEach(e => console.log(`After Entity: ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
   relationships.forEach(r => {
