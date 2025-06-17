@@ -15,9 +15,17 @@ export const convertAnalysisToTransactionFlow = (
   const considerationAmount = extractConsiderationAmount(results);
   console.log('Extracted consideration amount:', considerationAmount);
 
-  // Build before and after structures
-  const beforeStructure = buildBeforeStructure(results, entityNames);
-  const afterStructure = buildAfterStructure(results, entityNames, considerationAmount);
+  // Create corporate structure map from results
+  const corporateStructureMap = new Map();
+  if (results.corporateStructure?.entities) {
+    results.corporateStructure.entities.forEach(entity => {
+      corporateStructureMap.set(entity.id, entity);
+    });
+  }
+
+  // Build before and after structures with the corporate structure map
+  const beforeStructure = buildBeforeStructure(results, entityNames, corporateStructureMap);
+  const afterStructure = buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
 
   console.log('Before structure entities:', beforeStructure.entities.length);
   console.log('After structure entities:', afterStructure.entities.length);
