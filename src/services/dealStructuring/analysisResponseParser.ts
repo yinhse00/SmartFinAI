@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { createFallbackAnalysisResults } from './analysisFallbackData';
 import { createFallbackShareholdingChanges, createFallbackCorporateStructure } from './analysisFallbackData';
@@ -43,11 +44,40 @@ const extractCorporateStructure = (text: string) => {
 };
 
 // Helper function to extract valuation data
-const extractValuationData = (text: string) => {
-  // Extract transaction value
-  const valueMatch = text.match(/(?:transaction value|purchase price|deal value)[:\s]*([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
-  const amount = valueMatch ? parseFloat(valueMatch[2].replace(/,/g, '')) : 100000000;
-  const currency = valueMatch ? valueMatch[1] : 'HKD';
+const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) => {
+  console.log('=== DEBUGGING extractValuationData ===');
+  console.log('User inputs:', userInputs);
+  
+  // Prioritize user-extracted amount over AI response text parsing
+  let finalAmount = userInputs?.amount || 100000000;
+  let currency = userInputs?.currency || 'HKD';
+  
+  console.log('Using prioritized amount from user inputs:', finalAmount);
+  console.log('Using prioritized currency from user inputs:', currency);
+  
+  // Only attempt text parsing if no user input is available
+  if (!userInputs?.amount) {
+    console.log('No user amount available, attempting text parsing...');
+    
+    // Extract transaction value from AI response text
+    const valueMatch = text.match(/(?:transaction value|purchase price|deal value)[:\s]*([A-Z]{3})\s*([\d,]+(?:\.\d+)?)/i);
+    if (valueMatch) {
+      const textAmount = parseFloat(valueMatch[2].replace(/,/g, ''));
+      const textCurrency = valueMatch[1];
+      
+      console.log('Text parsing extracted amount:', textAmount);
+      console.log('Text parsing extracted currency:', textCurrency);
+      
+      // Add validation to prevent obviously corrupted amounts
+      if (textAmount > 0 && textAmount < 1000000000000) { // Reasonable upper bound
+        finalAmount = textAmount;
+        currency = textCurrency;
+        console.log('Using text-parsed amount after validation:', finalAmount);
+      } else {
+        console.warn('Text-parsed amount failed validation, keeping user input:', textAmount);
+      }
+    }
+  }
 
   // Extract price per share
   const priceMatch = text.match(/(?:price per share|share price)[:\s]*(?:[A-Z]{3})?\s*([\d,]+(?:\.\d+)?)/i);
@@ -61,9 +91,11 @@ const extractValuationData = (text: string) => {
   // Extract premium
   const premiumMatch = text.match(/(?:premium|control premium)[:\s]*([\d.]+)%?/i);
 
+  console.log('Final valuation data - amount:', finalAmount, 'currency:', currency);
+
   return {
     transactionValue: {
-      amount,
+      amount: finalAmount,
       currency,
       pricePerShare
     },
@@ -79,9 +111,9 @@ const extractValuationData = (text: string) => {
       premium: premiumMatch ? parseFloat(premiumMatch[1]) : undefined
     },
     valuationRange: {
-      low: amount * 0.9,
-      high: amount * 1.1,
-      midpoint: amount
+      low: finalAmount * 0.9,
+      high: finalAmount * 1.1,
+      midpoint: finalAmount
     }
   };
 };
@@ -149,9 +181,11 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     const shareholdingChanges = extractShareholdingChanges(responseText);
     const corporateStructure = extractCorporateStructure(responseText);
 
-    // Add valuation and document preparation data
-    const valuation = extractValuationData(responseText);
+    // Add valuation and document preparation data with user inputs priority
+    const valuation = extractValuationData(responseText, userInputs);
     const documentPreparation = extractDocumentData(responseText);
+
+    console.log('Valuation data created with user inputs priority:', valuation.transactionValue);
 
     const results: AnalysisResults = {
       transactionType: parsed.transactionType || 'General Transaction',
@@ -217,6 +251,8 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     }
 
     console.log('Successfully parsed analysis response with user input validation');
+    console.log('Final results.dealEconomics.purchasePrice:', results.dealEconomics?.purchasePrice);
+    console.log('Final results.valuation.transactionValue.amount:', results.valuation?.transactionValue?.amount);
     return results;
 
   } catch (error) {
@@ -226,7 +262,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     const shareholdingChanges = createFallbackShareholdingChanges();
     const corporateStructure = createFallbackCorporateStructure();
     const fallbackResults = createFallbackAnalysisResults(userInputs);
-    fallbackResults.valuation = extractValuationData(responseText);
+    fallbackResults.valuation = extractValuationData(responseText, userInputs);
     fallbackResults.documentPreparation = extractDocumentData(responseText);
     
     return fallbackResults;
