@@ -3,13 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { FileText, TrendingUp, Target, DollarSign } from 'lucide-react';
 import { AnalysisResults } from '../AIAnalysisResults';
 import { useTransactionDataConsistency } from '@/hooks/useTransactionDataConsistency';
+import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
 interface TransactionSummaryBoxProps {
   results: AnalysisResults;
+  userInputs?: ExtractedUserInputs;
 }
 
-export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) => {
-  const { extractedData } = useTransactionDataConsistency(results);
+export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummaryBoxProps) => {
+  const { extractedData } = useTransactionDataConsistency(results, userInputs);
+  
+  console.log('=== TransactionSummaryBox ===');
+  console.log('UserInputs received:', userInputs);
+  console.log('ExtractedData amount:', extractedData.considerationAmount);
+  console.log('ExtractedData source:', extractedData.source);
   
   const generateIntelligentNarrative = () => {
     // First priority: Use AI-generated executive summary narrative
@@ -142,6 +149,9 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
         <CardTitle className="flex items-center gap-2 text-lg">
           <FileText className="h-5 w-5" />
           Transaction Summary
+          {extractedData.source === 'user_input' && (
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">User Input</span>
+          )}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
