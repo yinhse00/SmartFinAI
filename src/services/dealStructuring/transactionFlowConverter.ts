@@ -7,16 +7,23 @@ import { buildBeforeStructure } from './converterUtils/beforeStructureBuilder';
 import { buildAfterStructure } from './converterUtils/afterStructureBuilder';
 import { EntityNames } from './converterUtils/entityHelpers';
 import { cleanTransactionType, extractTransactionPercentage } from './converterUtils/transactionTypeCleaner';
+import { ExtractedUserInputs } from './enhancedAiAnalysisService';
+import { dataConsistencyService } from './dataConsistencyService';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
-  entityNames: EntityNames
+  entityNames: EntityNames,
+  userInputs?: ExtractedUserInputs
 ): TransactionFlow => {
   console.log('=== DEBUGGING convertAnalysisToTransactionFlow ===');
   console.log('Starting conversion of analysis results to transaction flow...');
+  console.log('UserInputs received in converter:', userInputs);
   
-  const considerationAmount = extractConsiderationAmount(results);
-  console.log('Extracted consideration amount in converter:', considerationAmount);
+  // Use data consistency service to get authoritative transaction data
+  const consistentData = dataConsistencyService.extractConsistentData(results, userInputs);
+  console.log('Consistent data extracted in converter:', consistentData);
+  console.log('Consideration amount source:', consistentData.source);
+  console.log('Final consideration amount:', consistentData.considerationAmount);
 
   // Clean the transaction type from AI results
   const rawTransactionType = results.transactionType || 'Transaction';
@@ -37,14 +44,14 @@ export const convertAnalysisToTransactionFlow = (
 
   // Build before and after structures with the corporate structure map
   const beforeStructure = buildBeforeStructure(results, entityNames, corporateStructureMap);
-  const afterStructure = buildAfterStructure(results, entityNames, corporateStructureMap, considerationAmount);
+  const afterStructure = buildAfterStructure(results, entityNames, corporateStructureMap, consistentData.considerationAmount);
 
   console.log('Before structure entities:', beforeStructure.entities.length);
   console.log('After structure entities:', afterStructure.entities.length);
   console.log('After structure entities with amounts:', afterStructure.entities.filter(e => e.value).map(e => ({ id: e.id, name: e.name, value: e.value })));
 
   // Generate transaction description using diagram context to avoid amount duplication
-  const transactionDescription = generateTransactionDescription(results, considerationAmount, 'diagram');
+  const transactionDescription = generateTransactionDescription(results, consistentData.considerationAmount, 'diagram');
 
   const transactionFlow: TransactionFlow = {
     before: beforeStructure,
@@ -53,8 +60,8 @@ export const convertAnalysisToTransactionFlow = (
     transactionContext: {
       type: cleanedTransactionType, // Use cleaned transaction type
       description: transactionDescription,
-      amount: considerationAmount,
-      currency: results.dealEconomics?.currency || 'HKD',
+      amount: consistentData.considerationAmount,
+      currency: consistentData.currency,
       targetName: entityNames.targetCompanyName,
       buyerName: entityNames.acquiringCompanyName,
       recommendedStructure: results.structure?.recommended,
@@ -65,6 +72,7 @@ export const convertAnalysisToTransactionFlow = (
 
   console.log('Transaction flow conversion completed');
   console.log('Transaction context amount:', transactionFlow.transactionContext.amount);
+  console.log('Transaction context currency:', transactionFlow.transactionContext.currency);
   console.log('Transaction context:', transactionFlow.transactionContext);
   
   return transactionFlow;
