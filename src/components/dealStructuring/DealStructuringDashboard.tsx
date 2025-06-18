@@ -11,28 +11,22 @@ import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox'
 import { ValuationAnalysisBox } from './sections/ValuationAnalysisBox';
 import { DocumentPreparationBox } from './sections/DocumentPreparationBox';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
-import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
   onResultsUpdate: (updatedResults: AnalysisResults) => void;
   optimizationResult?: OptimizationResult;
-  userInputs?: ExtractedUserInputs;
 }
 
 export const DealStructuringDashboard = ({ 
   results, 
   onResultsUpdate, 
-  optimizationResult,
-  userInputs 
+  optimizationResult 
 }: DealStructuringDashboardProps) => {
-  console.log('=== DealStructuringDashboard ===');
-  console.log('UserInputs received:', userInputs);
-  
   return (
     <div className="space-y-4">
       {/* Transaction Summary at the top */}
-      <TransactionSummaryBox results={results} userInputs={userInputs} />
+      <TransactionSummaryBox results={results} />
       
       <div className="flex gap-4 h-screen">
         {/* Left side: 4x2 grid of analysis boxes */}
@@ -50,7 +44,7 @@ export const DealStructuringDashboard = ({
           
           {/* Row 2: Valuation Analysis, Shareholding Impact */}
           <div>
-            <ValuationAnalysisBox results={results} userInputs={userInputs} />
+            <ValuationAnalysisBox results={results} />
           </div>
           <div>
             <ShareholdingImpactBox results={results} />

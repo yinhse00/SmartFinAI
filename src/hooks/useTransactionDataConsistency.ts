@@ -3,20 +3,15 @@ import { useMemo } from 'react';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { transactionDataValidator, ValidationResult } from '@/services/dealStructuring/transactionDataValidator';
 import { dataConsistencyService } from '@/services/dealStructuring/dataConsistencyService';
-import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
-export const useTransactionDataConsistency = (results: AnalysisResults, userInputs?: ExtractedUserInputs) => {
+export const useTransactionDataConsistency = (results: AnalysisResults) => {
   const validation = useMemo(() => {
     return transactionDataValidator.validateConsistency(results);
   }, [results]);
 
   const extractedData = useMemo(() => {
-    // Use the centralized data consistency service with userInputs
-    const consistentData = dataConsistencyService.extractConsistentData(results, userInputs);
-    
-    console.log('=== useTransactionDataConsistency ===');
-    console.log('UserInputs received:', userInputs);
-    console.log('Consistent data extracted:', consistentData);
+    // Use the centralized data consistency service
+    const consistentData = dataConsistencyService.extractConsistentData(results);
     
     return {
       considerationAmount: consistentData.considerationAmount,
@@ -31,7 +26,7 @@ export const useTransactionDataConsistency = (results: AnalysisResults, userInpu
       currency: consistentData.currency,
       source: consistentData.source
     };
-  }, [results, userInputs]);
+  }, [results]);
 
   const consistencyCheck = useMemo(() => {
     return dataConsistencyService.validateDataConsistency(results);
