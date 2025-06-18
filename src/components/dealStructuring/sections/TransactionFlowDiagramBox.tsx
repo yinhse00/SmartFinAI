@@ -26,7 +26,10 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
 
   const diagramContent = (
     <div className="h-full w-full">
-      <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
+      <EnhancedTransactionFlowDiagram 
+        transactionFlow={transactionFlow} 
+        userInputs={userInputs}
+      />
     </div>
   );
 
@@ -35,22 +38,32 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Transaction Flow</CardTitle>
-          <EnlargedContentDialog
-            title="Transaction Flow Diagram"
-            size="full"
-            enlargedContent={
-              <div className="h-[80vh] w-full">
-                <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
-              </div>
-            }
-          >
-            <button
-              className="p-1 hover:bg-gray-100 rounded transition-colors"
-              title="Expand diagram"
+          <div className="flex items-center gap-2">
+            {userInputs?.amount && (
+              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
+                User Input: {userInputs.currency || 'HKD'} {(userInputs.amount / 1000000).toFixed(0)}M
+              </span>
+            )}
+            <EnlargedContentDialog
+              title="Transaction Flow Diagram"
+              size="full"
+              enlargedContent={
+                <div className="h-[80vh] w-full">
+                  <EnhancedTransactionFlowDiagram 
+                    transactionFlow={transactionFlow}
+                    userInputs={userInputs}
+                  />
+                </div>
+              }
             >
-              <Maximize2 className="h-4 w-4" />
-            </button>
-          </EnlargedContentDialog>
+              <button
+                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                title="Expand diagram"
+              >
+                <Maximize2 className="h-4 w-4" />
+              </button>
+            </EnlargedContentDialog>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="p-4 h-[400px]">

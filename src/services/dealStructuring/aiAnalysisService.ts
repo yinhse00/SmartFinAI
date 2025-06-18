@@ -1,3 +1,4 @@
+
 import { grokService } from '../grokService';
 import { fileProcessingService } from '../documents/fileProcessingService';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -33,7 +34,9 @@ export const aiAnalysisService = {
     regulatoryContext?: any
   ): Promise<AnalysisResults> => {
     try {
-      console.log('Starting AI transaction analysis with regulatory intelligence...');
+      console.log('=== AI ANALYSIS SERVICE ===');
+      console.log('Request:', { description: request.description, amount: request.amount });
+      console.log('UserInputs received:', userInputs);
       
       let documentContent = '';
       if (request.documents?.length > 0) {
@@ -48,8 +51,8 @@ export const aiAnalysisService = {
           .join('\n\n');
       }
       
-      // Enhanced prompt building with regulatory context
-      let analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
+      // Enhanced prompt building with user input constraints
+      let analysisPrompt = buildAnalysisPrompt(request.description, documentContent, userInputs);
       
       // Add regulatory context if available
       if (regulatoryContext?.context) {
@@ -59,19 +62,23 @@ export const aiAnalysisService = {
         }
       }
       
+      console.log('Sending prompt to Grok with user input constraints...');
       const response = await grokService.generateResponse({
         prompt: analysisPrompt,
         metadata: {
           type: 'deal_structuring',
           hasDocuments: request.documents?.length > 0,
           hasRegulatoryContext: !!regulatoryContext,
-          regulatoryProvisions: regulatoryContext?.context?.provisions?.length || 0
+          regulatoryProvisions: regulatoryContext?.context?.provisions?.length || 0,
+          hasUserInputs: !!userInputs,
+          userAmount: userInputs?.amount
         }
       });
       
+      console.log('Raw AI response received, parsing with user input authority...');
       const analysisResults = parseAnalysisResponse(response.text, userInputs);
       
-      console.log('AI transaction analysis completed with regulatory intelligence');
+      console.log('AI transaction analysis completed with user input enforcement');
       return analysisResults;
     } catch (error) {
       console.error('Error in AI transaction analysis:', error);
@@ -103,9 +110,3 @@ export const aiAnalysisService = {
     return { results, context };
   }
 };
-
-// Helper functions (buildAnalysisPrompt, parseAnalysisResponse, createFallback... functions)
-// have been moved to separate modules:
-// - analysisPromptBuilder.ts
-// - analysisResponseParser.ts
-// - analysisFallbackData.ts

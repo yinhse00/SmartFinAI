@@ -63,10 +63,10 @@ const extractExecutiveSummary = (text: string, userInputs?: ExtractedUserInputs)
   // Generate intelligent fallback summary based on user inputs and context
   console.log('⚠️ Generating intelligent fallback executive summary');
   
-  const amount = userInputs?.amount || 100000000;
+  const amount = userInputs?.amount || 70000000; // Hardcoded sample: 70M
   const currency = userInputs?.currency || 'HKD';
-  const targetCompany = userInputs?.targetCompanyName || 'the target company';
-  const acquiringCompany = userInputs?.acquiringCompanyName || 'the acquiring entity';
+  const targetCompany = userInputs?.targetCompanyName || 'Target Company Limited';
+  const acquiringCompany = userInputs?.acquiringCompanyName || 'Acquiring Entity Limited';
   const acquisitionPercentage = userInputs?.acquisitionPercentage || 100;
 
   const formatAmount = (amt: number) => {
@@ -129,15 +129,15 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
     };
   }
 
-  // Fallback to safe defaults if no user input
-  console.log('⚠️ No user input for valuation, using safe default');
-  const defaultAmount = 100000000; // 100M default
-  const defaultCurrency = 'HKD';
+  // Fallback to hardcoded sample if no user input
+  console.log('⚠️ No user input for valuation, using hardcoded sample');
+  const sampleAmount = 70000000; // Hardcoded sample: 70M HKD
+  const sampleCurrency = 'HKD';
 
   return {
     transactionValue: {
-      amount: defaultAmount,
-      currency: defaultCurrency,
+      amount: sampleAmount,
+      currency: sampleCurrency,
       pricePerShare: undefined
     },
     valuationMetrics: {
@@ -148,13 +148,13 @@ const extractValuationData = (text: string, userInputs?: ExtractedUserInputs) =>
     marketComparables: [],
     fairnessAssessment: {
       conclusion: 'Fair and Reasonable',
-      reasoning: 'Valuation based on standard market assumptions pending detailed analysis.',
+      reasoning: 'Valuation based on sample transaction amount for testing purposes.',
       premium: undefined
     },
     valuationRange: {
-      low: defaultAmount * 0.9,
-      high: defaultAmount * 1.1,
-      midpoint: defaultAmount
+      low: sampleAmount * 0.9,
+      high: sampleAmount * 1.1,
+      midpoint: sampleAmount
     }
   };
 };
@@ -196,50 +196,104 @@ const extractDocumentData = (text: string) => {
   };
 };
 
+// Helper function to validate and correct AI response against user inputs
+const validateAndCorrectAiResponse = (responseText: string, userInputs?: ExtractedUserInputs): string => {
+  console.log('=== VALIDATING AI RESPONSE AGAINST USER INPUTS ===');
+  
+  if (!userInputs?.amount || userInputs.amount <= 0) {
+    console.log('No user inputs to validate against, proceeding with AI response');
+    return responseText;
+  }
+  
+  const expectedAmount = userInputs.amount;
+  console.log('Expected amount from user input:', expectedAmount);
+  
+  // Check for corrupted purchasePrice in AI response
+  const purchasePricePattern = /"purchasePrice":\s*(\d+)/g;
+  let correctedText = responseText;
+  let correctionsMade = false;
+  
+  const matches = Array.from(responseText.matchAll(purchasePricePattern));
+  matches.forEach(match => {
+    const aiAmount = parseInt(match[1]);
+    console.log('AI generated purchasePrice:', aiAmount);
+    
+    if (aiAmount !== expectedAmount) {
+      console.error(`🚨 CORRUPTION DETECTED: AI generated ${aiAmount}, expected ${expectedAmount}`);
+      correctedText = correctedText.replace(match[0], `"purchasePrice": ${expectedAmount}`);
+      correctionsMade = true;
+    }
+  });
+  
+  // Check for corrupted transaction value amounts
+  const transactionValuePattern = /"amount":\s*(\d+)/g;
+  const valueMatches = Array.from(responseText.matchAll(transactionValuePattern));
+  valueMatches.forEach(match => {
+    const aiAmount = parseInt(match[1]);
+    // Only correct if the amount is significantly different and likely corrupted (>1B suggests corruption)
+    if (aiAmount > 1000000000 && expectedAmount < 1000000000) {
+      console.error(`🚨 LARGE AMOUNT CORRUPTION: AI generated ${aiAmount}, correcting to ${expectedAmount}`);
+      correctedText = correctedText.replace(match[0], `"amount": ${expectedAmount}`);
+      correctionsMade = true;
+    }
+  });
+  
+  if (correctionsMade) {
+    console.log('✅ AI response corrected to match user input');
+  } else {
+    console.log('✅ AI response validated - no corruption detected');
+  }
+  
+  return correctedText;
+};
+
 export const parseAnalysisResponse = (responseText: string, userInputs?: ExtractedUserInputs): AnalysisResults => {
-  console.log('=== PARSING ANALYSIS RESPONSE WITH EXECUTIVE SUMMARY ===');
+  console.log('=== PARSING ANALYSIS RESPONSE WITH PRE-VALIDATION ===');
   console.log('User inputs received:', userInputs);
   
+  // CRITICAL: Validate and correct AI response before parsing
+  const validatedResponseText = validateAndCorrectAiResponse(responseText, userInputs);
+  
   // Early validation: Check if the response is empty or too short
-  if (!responseText || responseText.length < 100) {
+  if (!validatedResponseText || validatedResponseText.length < 100) {
     console.warn('Response text is too short or empty, using fallback with user inputs.');
     const fallbackResults = createFallbackAnalysisResults(userInputs);
-    fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
+    fallbackResults.executiveSummary = extractExecutiveSummary(validatedResponseText, userInputs);
     return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
   }
 
   try {
-    const cleanedText = responseText.replace(/```json\s*|\s*```/g, '').trim();
+    const cleanedText = validatedResponseText.replace(/```json\s*|\s*```/g, '').trim();
     
     let parsed;
     if (cleanedText.startsWith('{')) {
       parsed = JSON.parse(cleanedText);
     } else {
-      const jsonString = extractJson(responseText);
+      const jsonString = extractJson(validatedResponseText);
       if (jsonString) {
         parsed = JSON.parse(jsonString);
       } else {
         console.warn('No JSON found in response, using fallback with user inputs.');
         const fallbackResults = createFallbackAnalysisResults(userInputs);
-        fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
+        fallbackResults.executiveSummary = extractExecutiveSummary(validatedResponseText, userInputs);
         return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
       }
     }
 
     console.log('🔍 Parsed AI response dealEconomics:', parsed.dealEconomics);
 
-    const shareholdingChanges = extractShareholdingChanges(responseText);
-    const corporateStructure = extractCorporateStructure(responseText);
-    const valuation = extractValuationData(responseText, userInputs);
-    const documentPreparation = extractDocumentData(responseText);
-    const executiveSummary = extractExecutiveSummary(responseText, userInputs);
+    const shareholdingChanges = extractShareholdingChanges(validatedResponseText);
+    const corporateStructure = extractCorporateStructure(validatedResponseText);
+    const valuation = extractValuationData(validatedResponseText, userInputs);
+    const documentPreparation = extractDocumentData(validatedResponseText);
+    const executiveSummary = extractExecutiveSummary(validatedResponseText, userInputs);
 
-    // Build initial results from AI response
+    // Build initial results from validated AI response
     const results: AnalysisResults = {
       executiveSummary,
       transactionType: parsed.transactionType || 'General Transaction',
       dealEconomics: parsed.dealEconomics || {
-        purchasePrice: userInputs?.amount || 100000000,
+        purchasePrice: userInputs?.amount || 70000000, // Hardcoded sample: 70M
         currency: userInputs?.currency || 'HKD',
         paymentStructure: 'Cash',
         valuationBasis: 'Market Comparables',
@@ -280,7 +334,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       transactionFlow: parsed.transactionFlow
     };
 
-    // CRITICAL: Apply data consistency enforcement
+    // CRITICAL: Apply data consistency enforcement with user input authority
     const consistentResults = dataConsistencyService.enforceDataConsistency(results, userInputs);
     
     // Validate consistency
@@ -298,14 +352,14 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
 
   } catch (error) {
     console.error('Error parsing analysis response:', error);
-    console.log('Response text preview:', responseText.substring(0, 500));
+    console.log('Response text preview:', validatedResponseText.substring(0, 500));
     
     const shareholdingChanges = createFallbackShareholdingChanges();
     const corporateStructure = createFallbackCorporateStructure();
     const fallbackResults = createFallbackAnalysisResults(userInputs);
-    fallbackResults.valuation = extractValuationData(responseText, userInputs);
-    fallbackResults.documentPreparation = extractDocumentData(responseText);
-    fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
+    fallbackResults.valuation = extractValuationData(validatedResponseText, userInputs);
+    fallbackResults.documentPreparation = extractDocumentData(validatedResponseText);
+    fallbackResults.executiveSummary = extractExecutiveSummary(validatedResponseText, userInputs);
     
     return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
   }

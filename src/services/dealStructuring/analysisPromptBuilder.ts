@@ -1,9 +1,32 @@
-
 /**
  * Build enhanced analysis prompt focused on major deal terms with market intelligence
  */
-export function buildAnalysisPrompt(description: string, documentContent: string): string {
+export function buildAnalysisPrompt(
+  description: string, 
+  documentContent: string, 
+  userInputs?: ExtractedUserInputs
+): string {
+  // Add critical user input constraints when userInputs are provided
+  let userInputConstraints = '';
+  if (userInputs?.amount && userInputs.amount > 0) {
+    const formattedAmount = userInputs.amount.toLocaleString();
+    const currency = userInputs.currency || 'HKD';
+    
+    userInputConstraints = `
+CRITICAL USER INPUT CONSTRAINTS - MUST BE STRICTLY FOLLOWED:
+
+The transaction consideration amount is EXACTLY ${currency} ${formattedAmount}
+DO NOT modify, estimate, infer, or use any other monetary value for the transaction consideration
+Use this exact amount (${userInputs.amount}) in all calculations and JSON outputs
+Ensure dealEconomics.purchasePrice is set to exactly ${userInputs.amount}
+Ensure valuation.transactionValue.amount is set to exactly ${userInputs.amount}
+DO NOT use market comparables or precedent transactions to override this user-specified amount
+`;
+  }
+
   return `
+${userInputConstraints}
+
 As a Hong Kong investment banking advisor and financial regulatory expert with access to real-time market intelligence, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS, commercial considerations, and market-optimized recommendations.
 
 TRANSACTION DESCRIPTION:
@@ -223,4 +246,13 @@ CRITICAL REQUIREMENTS FOR OPTIMIZATION:
 
 Your analysis should demonstrate how MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES lead to superior deal structuring decisions that maximize value while minimizing risk and cost in the current market environment.
 `;
+}
+
+// Keep existing interface imports at top
+interface ExtractedUserInputs {
+  amount?: number;
+  currency?: string;
+  targetCompanyName?: string;
+  acquiringCompanyName?: string;
+  acquisitionPercentage?: number;
 }
