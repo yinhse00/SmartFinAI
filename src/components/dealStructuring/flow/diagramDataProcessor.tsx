@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Node, Edge, MarkerType } from '@xyflow/react';
 import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
@@ -9,45 +10,6 @@ import {
   LEVEL_Y_SPACING
 } from './diagramLayoutUtils';
 import { computeEntityHierarchyLevels, computeAfterTransactionHierarchy, getMaxHierarchyLevel } from './diagramHierarchyUtils';
-import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
-
-/**
- * Helper function to validate and correct transaction amounts
- */
-const validateTransactionAmount = (amount: number, userInputs?: ExtractedUserInputs): number => {
-  console.log('=== VALIDATING TRANSACTION AMOUNT IN DIAGRAM ===');
-  console.log('Received amount:', amount);
-  console.log('UserInputs:', userInputs);
-  
-  // If we have user inputs, validate against them
-  if (userInputs?.amount && userInputs.amount > 0) {
-    if (amount !== userInputs.amount) {
-      console.warn(`🚨 DIAGRAM CORRUPTION DETECTED: amount=${amount}, expected=${userInputs.amount}`);
-      console.log('✅ Using user input amount for display');
-      return userInputs.amount;
-    }
-    console.log('✅ Amount matches user input');
-    return amount;
-  }
-  
-  // Fallback validation: detect obviously corrupted amounts (>1B likely corrupted for typical deals)
-  if (amount > 1000000000) {
-    console.warn(`🚨 SUSPICIOUS LARGE AMOUNT: ${amount}, using hardcoded sample`);
-    return 70000000; // Hardcoded sample: 70M HKD
-  }
-  
-  // Use amount as-is if reasonable
-  console.log('✅ Amount appears reasonable');
-  return amount;
-};
-
-/**
- * Helper function to format amounts for display
- */
-const formatAmountForDisplay = (amount: number, currency: string = 'HKD'): string => {
-  const millions = amount / 1000000;
-  return `${currency} ${millions.toFixed(0)}M`;
-};
 
 /**
  * Given an entity hierarchy, calculate the Y position based on level, with buffers.
@@ -153,16 +115,12 @@ const validateRelationships = (
   }
 };
 
-export const processTransactionFlowForDiagram = (
-  transactionFlow: TransactionFlow, 
-  userInputs?: ExtractedUserInputs
-): { nodes: Node[], edges: Edge[] } => {
+export const processTransactionFlowForDiagram = (transactionFlow: TransactionFlow): { nodes: Node[], edges: Edge[] } => {
   const newNodes: Node[] = [];
   const newEdges: Edge[] = [];
   let currentXOffset = 50;
 
-  console.log('🚀 Starting diagram processing with user input validation...');
-  console.log('UserInputs received in diagram processor:', userInputs);
+  console.log('🚀 Starting diagram processing...');
   
   // Helper to add section header and update nodes array
   const addSectionHeader = (id: string, label: string, x: number, y: number, width: number) => {
@@ -206,21 +164,11 @@ export const processTransactionFlowForDiagram = (
 
   currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
 
-  // TRANSACTION Section with enhanced validation
+  // TRANSACTION Section
   addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset, -50, ENTITY_WIDTH);
   if (transactionFlow.transactionContext) {
       const tc = transactionFlow.transactionContext;
       const transactionNodeId = 'node-transaction-process';
-      
-      // CRITICAL: Validate and correct transaction amount
-      const validatedAmount = validateTransactionAmount(tc.amount, userInputs);
-      const displayAmount = formatAmountForDisplay(validatedAmount, tc.currency);
-      
-      console.log('=== TRANSACTION CONTEXT VALIDATION ===');
-      console.log('Original tc.amount:', tc.amount);
-      console.log('Validated amount:', validatedAmount);
-      console.log('Display amount:', displayAmount);
-      
       newNodes.push({
           id: transactionNodeId,
           type: 'default',
@@ -230,15 +178,12 @@ export const processTransactionFlowForDiagram = (
                   <div className="text-center p-3">
                       <div className="font-semibold text-sm text-purple-700">{tc.type}</div>
                       <div className="text-xs text-gray-600">{tc.description.split(" via ")[0]}</div>
-                      {validatedAmount > 0 && (
+                      {tc.amount > 0 && (
                           <div className="text-xs font-medium text-purple-600">
-                              {displayAmount}
+                              {tc.currency} {(tc.amount / 1000000).toFixed(0)}M
                           </div>
                       )}
                       <div className="text-xs text-gray-500 italic mt-1">Structure: {tc.recommendedStructure}</div>
-                      {userInputs?.amount && validatedAmount === userInputs.amount && (
-                          <div className="text-xs bg-green-100 text-green-700 px-1 rounded mt-1">User Input</div>
-                      )}
                   </div>
               )
           },
@@ -252,6 +197,7 @@ export const processTransactionFlowForDiagram = (
       });
 
       // Add edge from BEFORE target (or company node at lowest level) to transaction node
+      // (try to find deepest node of type 'target' if exists)
       const beforeTarget = beforeEntities.find(e => e.type === 'target');
       if (beforeTarget) {
           newEdges.push({
@@ -404,7 +350,6 @@ export const processTransactionFlowForDiagram = (
     });
 
   console.log(`🏁 Diagram processing complete: ${newNodes.length} nodes, ${newEdges.length} edges`);
-  console.log('✅ User input validation and corruption detection enabled');
   
   return { nodes: newNodes, edges: newEdges };
 };

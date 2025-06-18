@@ -4,32 +4,25 @@ import { AnalysisResults } from '../AIAnalysisResults';
 import { convertAnalysisToTransactionFlow } from '@/services/dealStructuring/transactionFlowConverter';
 import EnhancedTransactionFlowDiagram from '../flow/EnhancedTransactionFlowDiagram';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
+import { useState } from 'react';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { Maximize2 } from 'lucide-react';
 import { extractEntityNames } from '@/services/dealStructuring/converterUtils/entityHelpers';
-import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
   optimizationResult?: OptimizationResult;
-  userInputs?: ExtractedUserInputs;
 }
 
-export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInputs }: TransactionFlowDiagramBoxProps) => {
-  console.log('=== TransactionFlowDiagramBox ===');
-  console.log('UserInputs received:', userInputs);
-  
+export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
   // Extract entity names using the proper helper function that returns EntityNames interface
   const entityNames = extractEntityNames(results);
   
-  const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames, userInputs);
+  const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames);
 
   const diagramContent = (
     <div className="h-full w-full">
-      <EnhancedTransactionFlowDiagram 
-        transactionFlow={transactionFlow} 
-        userInputs={userInputs}
-      />
+      <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
     </div>
   );
 
@@ -38,32 +31,22 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg">Transaction Flow</CardTitle>
-          <div className="flex items-center gap-2">
-            {userInputs?.amount && (
-              <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-                User Input: {userInputs.currency || 'HKD'} {(userInputs.amount / 1000000).toFixed(0)}M
-              </span>
-            )}
-            <EnlargedContentDialog
-              title="Transaction Flow Diagram"
-              size="full"
-              enlargedContent={
-                <div className="h-[80vh] w-full">
-                  <EnhancedTransactionFlowDiagram 
-                    transactionFlow={transactionFlow}
-                    userInputs={userInputs}
-                  />
-                </div>
-              }
+          <EnlargedContentDialog
+            title="Transaction Flow Diagram"
+            size="full"
+            enlargedContent={
+              <div className="h-[80vh] w-full">
+                <EnhancedTransactionFlowDiagram transactionFlow={transactionFlow} />
+              </div>
+            }
+          >
+            <button
+              className="p-1 hover:bg-gray-100 rounded transition-colors"
+              title="Expand diagram"
             >
-              <button
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
-                title="Expand diagram"
-              >
-                <Maximize2 className="h-4 w-4" />
-              </button>
-            </EnlargedContentDialog>
-          </div>
+              <Maximize2 className="h-4 w-4" />
+            </button>
+          </EnlargedContentDialog>
         </div>
       </CardHeader>
       <CardContent className="p-4 h-[400px]">

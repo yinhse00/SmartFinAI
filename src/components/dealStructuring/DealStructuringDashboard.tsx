@@ -45,7 +45,6 @@ export const DealStructuringDashboard = ({
             <TransactionFlowDiagramBox 
               results={results} 
               optimizationResult={optimizationResult}
-              userInputs={userInputs}
             />
           </div>
           

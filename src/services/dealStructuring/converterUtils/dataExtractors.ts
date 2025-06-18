@@ -1,26 +1,19 @@
 
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { ExtractedUserInputs } from '../enhancedAiAnalysisService';
-import { dataConsistencyService } from '../dataConsistencyService';
+import { transactionDataValidator } from '../transactionDataValidator';
 
-export const extractConsiderationAmount = (
-  results: AnalysisResults, 
-  userInputs?: ExtractedUserInputs
-): number => {
+export const extractConsiderationAmount = (results: AnalysisResults): number => {
   console.log('=== DEBUGGING extractConsiderationAmount ===');
   console.log('Input results.dealEconomics:', results.dealEconomics);
-  console.log('UserInputs received in extractor:', userInputs);
   
-  // Use data consistency service to get authoritative amount with user input priority
-  const consistentData = dataConsistencyService.extractConsistentData(results, userInputs);
+  if (results.dealEconomics?.purchasePrice && results.dealEconomics.purchasePrice > 0) {
+    console.log('Using purchase price from dealEconomics:', results.dealEconomics.purchasePrice);
+    return results.dealEconomics.purchasePrice;
+  }
   
-  console.log('Data consistency service result:', {
-    amount: consistentData.considerationAmount,
-    source: consistentData.source,
-    currency: consistentData.currency
-  });
-  
-  return consistentData.considerationAmount;
+  const validatorAmount = transactionDataValidator.extractConsiderationAmount(results);
+  console.log('Validator extracted amount:', validatorAmount);
+  return validatorAmount;
 };
 
 export const extractUserInputAmount = (description: string): number | null => {

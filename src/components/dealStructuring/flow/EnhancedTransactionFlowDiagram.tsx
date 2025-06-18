@@ -1,75 +1,55 @@
-
-import React, { useCallback, useMemo } from 'react';
-import {
-  ReactFlow,
-  Controls,
-  Background,
-  useNodesState,
-  useEdgesState,
-  Node,
-  Edge,
-} from '@xyflow/react';
+import React, { useMemo } from 'react';
+import { ReactFlow, Background, Controls } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { TransactionFlow } from '@/types/transactionFlow';
-import { processTransactionFlowForDiagram } from './diagramDataProcessor';
-import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
+import { processTransactionFlowForDiagram } from './diagramDataProcessor.tsx';
 
 interface EnhancedTransactionFlowDiagramProps {
-  transactionFlow: TransactionFlow;
-  userInputs?: ExtractedUserInputs;
+  transactionFlow?: TransactionFlow;
 }
 
-const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramProps> = ({ 
-  transactionFlow,
-  userInputs 
+const EnhancedTransactionFlowDiagram: React.FC<EnhancedTransactionFlowDiagramProps> = ({
+  transactionFlow
 }) => {
-  console.log('=== ENHANCED TRANSACTION FLOW DIAGRAM ===');
-  console.log('UserInputs received in diagram:', userInputs);
+  const { nodes, edges } = useMemo(() => {
+    if (!transactionFlow) {
+      console.log("Transaction flow data is undefined in diagram.");
+      return { nodes: [], edges: [] };
+    }
+    console.log("Processing transactionFlow in diagram (refactored component):", JSON.stringify(transactionFlow, null, 2));
+    return processTransactionFlowForDiagram(transactionFlow);
+  }, [transactionFlow]);
+
+  if (!transactionFlow) {
+    return <div className="flex items-center justify-center h-full text-gray-500">Loading transaction flow data...</div>;
+  }
   
-  const { nodes: processedNodes, edges: processedEdges } = useMemo(() => {
-    console.log('Processing transaction flow for diagram with user input validation...');
-    return processTransactionFlowForDiagram(transactionFlow, userInputs);
-  }, [transactionFlow, userInputs]);
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(processedNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(processedEdges);
-
-  // Update nodes and edges when processed data changes
-  React.useEffect(() => {
-    setNodes(processedNodes);
-    setEdges(processedEdges);
-  }, [processedNodes, processedEdges, setNodes, setEdges]);
-
-  const onInit = useCallback(() => {
-    console.log('ReactFlow initialized');
-  }, []);
+  if (nodes.length === 0 && edges.length === 0 && transactionFlow) {
+    // This condition implies transactionFlow is present, but processing resulted in no nodes/edges.
+    // It might indicate an issue with the data itself or the processing logic if data is expected.
+    return <div className="flex items-center justify-center h-full text-gray-500">No diagram elements to display. Verify transaction data or processing logic.</div>;
+  }
 
   return (
-    <div className="w-full h-full bg-gray-50 dark:bg-gray-900">
+    <div className="h-full w-full relative border rounded-md">
       <ReactFlow
         nodes={nodes}
         edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onInit={onInit}
         fitView
-        fitViewOptions={{
-          padding: 0.1,
-          includeHiddenNodes: false,
-        }}
-        minZoom={0.1}
+        nodesDraggable={true} 
+        nodesConnectable={false}
+        elementsSelectable={true}
+        zoomOnScroll={true}
+        panOnDrag={true}
+        className="bg-white"
+        defaultViewport={{ x: 0, y: 0, zoom: 0.7 }}
+        minZoom={0.2}
         maxZoom={2}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
+        attributionPosition="bottom-left"
       >
-        <Controls />
-        <Background color="#aaa" gap={16} />
+        <Background color="#e2e8f0" gap={24} size={1.5} />
+        <Controls showInteractive={true} />
       </ReactFlow>
-      
-      {userInputs?.amount && (
-        <div className="absolute top-2 right-2 text-xs bg-green-100 text-green-700 px-2 py-1 rounded">
-          Using User Input: {userInputs.currency || 'HKD'} {(userInputs.amount / 1000000).toFixed(0)}M
-        </div>
-      )}
     </div>
   );
 };
