@@ -1,4 +1,3 @@
-
 /**
  * Build enhanced analysis prompt focused on major deal terms with market intelligence
  */
@@ -18,12 +17,10 @@ CRITICAL USER INPUT CONSTRAINTS - MUST BE STRICTLY FOLLOWED:
 
 The transaction consideration amount is EXACTLY ${currency} ${formattedAmount}
 DO NOT modify, estimate, infer, or use any other monetary value for the transaction consideration
-Use this exact amount (${userInputs.amount}) in all calculations and JSON outputs including:
-- dealEconomics.purchasePrice is set to exactly ${userInputs.amount}
-- valuation.transactionValue.amount is set to exactly ${userInputs.amount}  
-- transactionFlow.paymentFlows.amount is set to exactly ${userInputs.amount}
+Use this exact amount (${userInputs.amount}) in all calculations and JSON outputs
+Ensure dealEconomics.purchasePrice is set to exactly ${userInputs.amount}
+Ensure valuation.transactionValue.amount is set to exactly ${userInputs.amount}
 DO NOT use market comparables or precedent transactions to override this user-specified amount
-ALL MONETARY FIELDS must use the exact user-provided amount of ${userInputs.amount}
 `;
   }
 
