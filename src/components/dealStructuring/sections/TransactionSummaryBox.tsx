@@ -18,7 +18,7 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
       return results.executiveSummary.narrative;
     }
 
-    console.log('⚠️ No AI narrative found, generating intelligent fallback');
+    console.log('⚠️ No AI narrative found, generating comprehensive fallback');
     
     // Use consistent data from the data consistency service
     const amount = extractedData.considerationAmount;
@@ -31,12 +31,16 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
     const recommendedStructure = results.structure?.recommended || 'acquisition';
     const totalDuration = results.timetable?.totalDuration || '12-18 months';
     
-    // Extract payment structure details
+    // Extract payment structure details and calculate equivalent values
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
-    const cashPercentage = paymentStructure?.cashPercentage;
-    const stockPercentage = paymentStructure?.stockPercentage;
+    const cashPercentage = paymentStructure?.cashPercentage || 0;
+    const stockPercentage = paymentStructure?.stockPercentage || 0;
     
-    // Format consideration amount
+    // Calculate equivalent monetary values
+    const cashAmount = amount * (cashPercentage / 100);
+    const stockAmount = amount * (stockPercentage / 100);
+    
+    // Format amounts
     const formatAmount = (amt: number) => {
       if (amt >= 1000000000) {
         return `${(amt / 1000000000).toFixed(1)} billion`;
@@ -49,34 +53,44 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
       }
     };
     
-    // Build consideration text
-    const considerationText = `${currency} ${formatAmount(amount)}`;
-    
-    // Build payment structure text
+    // Build comprehensive payment structure text with equivalent values
     let paymentText = '';
-    if (cashPercentage && stockPercentage) {
-      paymentText = `The consideration consists of ${cashPercentage}% cash and ${stockPercentage}% stock, `;
+    if (cashPercentage > 0 && stockPercentage > 0) {
+      paymentText = `comprising ${currency} ${formatAmount(cashAmount)} cash (${cashPercentage}%) and ${currency} ${formatAmount(stockAmount)} stock (${stockPercentage}%)`;
     } else if (cashPercentage === 100) {
-      paymentText = 'The transaction is structured as an all-cash deal, ';
+      paymentText = `structured as an all-cash transaction of ${currency} ${formatAmount(amount)}`;
     } else if (stockPercentage === 100) {
-      paymentText = 'The transaction is structured as an all-stock deal, ';
+      paymentText = `structured as an all-stock transaction valued at ${currency} ${formatAmount(amount)}`;
     } else {
-      paymentText = 'The transaction utilizes mixed consideration, ';
+      paymentText = `utilizing mixed consideration totaling ${currency} ${formatAmount(amount)}`;
     }
     
-    // Build strategic context
+    // Extract shareholding changes information
+    const beforeShareholders = results.shareholding?.before || [];
+    const afterShareholders = results.shareholding?.after || [];
+    const shareholdingChangesText = beforeShareholders.length > 0 && afterShareholders.length > 0 
+      ? `resulting in significant ownership restructuring where existing shareholders' collective ownership will change from ${beforeShareholders.reduce((sum, sh) => sum + sh.percentage, 0)}% to ${afterShareholders.find(sh => !sh.name.toLowerCase().includes(acquiringCompany.toLowerCase()))?.percentage || 0}%`
+      : `resulting in ${acquiringCompany} acquiring ${targetPercentage}% control of ${targetCompany}`;
+    
+    // Extract key regulatory implications
+    const listingRules = results.compliance?.listingRules || [];
+    const takeoversCode = results.compliance?.takeoversCode || [];
+    const regulatoryText = [...listingRules, ...takeoversCode].length > 0
+      ? `with compliance requirements including ${[...listingRules, ...takeoversCode].slice(0, 2).join(' and ')}`
+      : 'subject to standard regulatory approvals and compliance requirements';
+    
+    // Extract key conditions
+    const keyConditions = results.structure?.majorTerms?.keyConditions || [];
+    const conditionsText = keyConditions.length > 0
+      ? `, conditional upon ${keyConditions.slice(0, 2).join(' and ')}`
+      : '';
+    
+    // Extract strategic considerations
     const strategicContext = results.structure?.majorTerms?.suggestionConsideration || 
                            'optimizing value creation while ensuring regulatory compliance and minimizing execution risk';
     
-    // Extract key conditions for additional context
-    const keyConditions = results.structure?.majorTerms?.keyConditions;
-    let conditionsText = '';
-    if (keyConditions && keyConditions.length > 0) {
-      conditionsText = ` Key transaction conditions include ${keyConditions.slice(0, 2).join(' and ')}.`;
-    }
-    
-    // Generate intelligent narrative
-    const narrative = `This strategic transaction involves ${acquiringCompany} acquiring ${targetPercentage}% of ${targetCompany} for ${considerationText}. ${paymentText}${strategicContext}. The deal is structured as a ${recommendedStructure.toLowerCase()} with an expected completion timeline of ${totalDuration}.${conditionsText} The transaction incorporates market-standard terms and regulatory compliance frameworks to ensure successful execution.`;
+    // Generate comprehensive narrative with all required elements
+    const narrative = `This strategic ${recommendedStructure.toLowerCase()} involves ${acquiringCompany} acquiring ${targetPercentage}% of ${targetCompany} for total consideration of ${currency} ${formatAmount(amount)}, ${paymentText}, with an expected completion timeline of ${totalDuration}${conditionsText}. The transaction ${strategicContext}, ${shareholdingChangesText}, ${regulatoryText}. Key structural features include comprehensive due diligence provisions, regulatory approval mechanisms, and risk allocation frameworks designed to ensure successful execution within the projected timeline while maximizing stakeholder value and maintaining market confidence.`;
     
     return narrative;
   };
@@ -87,10 +101,11 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
       return results.executiveSummary.keyHighlights;
     }
 
-    // Generate intelligent fallback highlights
+    // Generate intelligent fallback highlights including payment breakdown
     const amount = extractedData.considerationAmount;
     const currency = extractedData.currency;
     const targetPercentage = extractedData.ownershipPercentages.acquisitionPercentage;
+    const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     
     const formatAmount = (amt: number) => {
       if (amt >= 1000000000) {
@@ -102,12 +117,23 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
       }
     };
 
-    return [
+    const highlights = [
       `${currency} ${formatAmount(amount)} total consideration`,
-      `${targetPercentage}% acquisition target`,
-      results.structure?.recommended || 'Optimized structure',
-      results.timetable?.totalDuration || 'Efficient timeline'
+      `${targetPercentage}% acquisition target`
     ];
+
+    // Add payment breakdown to highlights if available
+    if (paymentStructure?.cashPercentage && paymentStructure?.stockPercentage) {
+      const cashAmount = amount * (paymentStructure.cashPercentage / 100);
+      const stockAmount = amount * (paymentStructure.stockPercentage / 100);
+      highlights.push(`${currency} ${formatAmount(cashAmount)} cash + ${currency} ${formatAmount(stockAmount)} stock`);
+    } else {
+      highlights.push(results.structure?.recommended || 'Optimized structure');
+    }
+
+    highlights.push(results.timetable?.totalDuration || 'Efficient timeline');
+
+    return highlights;
   };
 
   return (
@@ -119,7 +145,7 @@ export const TransactionSummaryBox = ({ results }: TransactionSummaryBoxProps) =
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Main narrative */}
+        {/* Main comprehensive narrative */}
         <p className="text-base leading-relaxed text-gray-700 dark:text-gray-300">
           {generateIntelligentNarrative()}
         </p>
