@@ -208,18 +208,18 @@ const validateAndCorrectAiResponse = (responseText: string, userInputs?: Extract
   const expectedAmount = userInputs.amount;
   console.log('Expected amount from user input:', expectedAmount);
   
-  // Check for corrupted purchasePrice in AI response
-  const purchasePricePattern = /"purchasePrice":\s*(\d+)/g;
   let correctedText = responseText;
   let correctionsMade = false;
   
-  const matches = Array.from(responseText.matchAll(purchasePricePattern));
-  matches.forEach(match => {
+  // Check for corrupted purchasePrice in AI response
+  const purchasePricePattern = /"purchasePrice":\s*(\d+)/g;
+  const purchaseMatches = Array.from(responseText.matchAll(purchasePricePattern));
+  purchaseMatches.forEach(match => {
     const aiAmount = parseInt(match[1]);
     console.log('AI generated purchasePrice:', aiAmount);
     
     if (aiAmount !== expectedAmount) {
-      console.error(`🚨 CORRUPTION DETECTED: AI generated ${aiAmount}, expected ${expectedAmount}`);
+      console.error(`🚨 CORRUPTION DETECTED: AI generated purchasePrice ${aiAmount}, expected ${expectedAmount}`);
       correctedText = correctedText.replace(match[0], `"purchasePrice": ${expectedAmount}`);
       correctionsMade = true;
     }
@@ -230,13 +230,28 @@ const validateAndCorrectAiResponse = (responseText: string, userInputs?: Extract
   const valueMatches = Array.from(responseText.matchAll(transactionValuePattern));
   valueMatches.forEach(match => {
     const aiAmount = parseInt(match[1]);
-    // Only correct if the amount is significantly different and likely corrupted (>1B suggests corruption)
-    if (aiAmount > 1000000000 && expectedAmount < 1000000000) {
-      console.error(`🚨 LARGE AMOUNT CORRUPTION: AI generated ${aiAmount}, correcting to ${expectedAmount}`);
+    if (aiAmount !== expectedAmount) {
+      console.error(`🚨 AMOUNT CORRUPTION: AI generated ${aiAmount}, correcting to ${expectedAmount}`);
       correctedText = correctedText.replace(match[0], `"amount": ${expectedAmount}`);
       correctionsMade = true;
     }
   });
+  
+  // CRITICAL: Check for corrupted paymentFlows amounts in transactionFlow
+  if (responseText.includes('paymentFlows')) {
+    const paymentFlowPattern = /"paymentFlows":\s*\[\s*{[^}]*"amount":\s*(\d+)/g;
+    const paymentMatches = Array.from(responseText.matchAll(paymentFlowPattern));
+    paymentMatches.forEach(match => {
+      const aiAmount = parseInt(match[1]);
+      if (aiAmount !== expectedAmount) {
+        console.error(`🚨 PAYMENT FLOW CORRUPTION: AI generated ${aiAmount}, correcting to ${expectedAmount}`);
+        // Replace the amount within the paymentFlows structure
+        const paymentFlowAmountPattern = /("paymentFlows":\s*\[\s*{[^}]*"amount":\s*)(\d+)/g;
+        correctedText = correctedText.replace(paymentFlowAmountPattern, `$1${expectedAmount}`);
+        correctionsMade = true;
+      }
+    });
+  }
   
   if (correctionsMade) {
     console.log('✅ AI response corrected to match user input');
@@ -281,6 +296,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     }
 
     console.log('🔍 Parsed AI response dealEconomics:', parsed.dealEconomics);
+    console.log('🔍 Parsed AI response transactionFlow:', parsed.transactionFlow);
 
     const shareholdingChanges = extractShareholdingChanges(validatedResponseText);
     const corporateStructure = extractCorporateStructure(validatedResponseText);
@@ -293,7 +309,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       executiveSummary,
       transactionType: parsed.transactionType || 'General Transaction',
       dealEconomics: parsed.dealEconomics || {
-        purchasePrice: userInputs?.amount || 70000000, // Hardcoded sample: 70M
+        purchasePrice: userInputs?.amount || 100000000, // Hardcoded sample: 70M
         currency: userInputs?.currency || 'HKD',
         paymentStructure: 'Cash',
         valuationBasis: 'Market Comparables',

@@ -1,410 +1,176 @@
-import React from 'react';
-import { Node, Edge, MarkerType } from '@xyflow/react';
-import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, OwnershipRelationship, ConsiderationRelationship } from '@/types/transactionFlow';
-import { createEntityNode, addSectionHeaderNode } from './nodeUtils';
-import {
-  ENTITY_WIDTH,
-  SIBLING_X_SPACING,
-  SECTION_X_SPACING,
-  LEVEL_Y_SPACING
-} from './diagramLayoutUtils';
-import { computeEntityHierarchyLevels, computeAfterTransactionHierarchy, getMaxHierarchyLevel } from './diagramHierarchyUtils';
+
+import { Node, Edge } from '@xyflow/react';
+import { TransactionFlow } from '@/types/transactionFlow';
 import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
-/**
- * Helper function to validate and correct transaction amounts
- */
-const validateTransactionAmount = (amount: number, userInputs?: ExtractedUserInputs): number => {
-  console.log('=== VALIDATING TRANSACTION AMOUNT IN DIAGRAM ===');
-  console.log('Received amount:', amount);
-  console.log('UserInputs:', userInputs);
-  
-  // If we have user inputs, validate against them
-  if (userInputs?.amount && userInputs.amount > 0) {
-    if (amount !== userInputs.amount) {
-      console.warn(`🚨 DIAGRAM CORRUPTION DETECTED: amount=${amount}, expected=${userInputs.amount}`);
-      console.log('✅ Using user input amount for display');
-      return userInputs.amount;
-    }
-    console.log('✅ Amount matches user input');
-    return amount;
-  }
-  
-  // Fallback validation: detect obviously corrupted amounts (>1B likely corrupted for typical deals)
-  if (amount > 1000000000) {
-    console.warn(`🚨 SUSPICIOUS LARGE AMOUNT: ${amount}, using hardcoded sample`);
-    return 70000000; // Hardcoded sample: 70M HKD
-  }
-  
-  // Use amount as-is if reasonable
-  console.log('✅ Amount appears reasonable');
-  return amount;
-};
-
-/**
- * Helper function to format amounts for display
- */
-const formatAmountForDisplay = (amount: number, currency: string = 'HKD'): string => {
-  const millions = amount / 1000000;
-  return `${currency} ${millions.toFixed(0)}M`;
-};
-
-/**
- * Given an entity hierarchy, calculate the Y position based on level, with buffers.
- * @param level Hierarchy depth (0=top/shareholder, 1=company, etc.)
- */
-function getYPositionForLevel(level: number): number {
-  return 30 + level * LEVEL_Y_SPACING;
-}
-
-/**
- * Calculates the layout for a single section (e.g., "Before" or "After")
- * to ensure nodes are centered and do not overlap.
- */
-const calculateSectionLayout = (
-  entities: TransactionEntity[],
-  levels: Map<string, number>,
-  startX: number
-): { nodes: Node[], sectionWidth: number } => {
-  const groupByLevel: Record<number, TransactionEntity[]> = {};
-  entities.forEach(e => {
-    const lvl = levels.get(e.id) ?? 0;
-    if (!groupByLevel[lvl]) groupByLevel[lvl] = [];
-    groupByLevel[lvl].push(e);
-  });
-  
-  const maxLevel = getMaxHierarchyLevel(levels);
-  const levelLayouts: { nodes: TransactionEntity[]; width: number }[] = [];
-  let sectionWidth = 0;
-
-  for (let i = 0; i <= maxLevel; i++) {
-    const nodesAtLevel = groupByLevel[i] || [];
-    const width = nodesAtLevel.length > 0
-      ? ((nodesAtLevel.length - 1) * SIBLING_X_SPACING) + ENTITY_WIDTH
-      : 0;
-    levelLayouts.push({ nodes: nodesAtLevel, width });
-    sectionWidth = Math.max(sectionWidth, width);
-  }
-
-  const newNodes: Node[] = [];
-  for (let lvl = 0; lvl <= maxLevel; lvl++) {
-    const { nodes: nodesAtLevel, width: levelWidth } = levelLayouts[lvl];
-    if (nodesAtLevel.length === 0) continue;
-
-    const levelStartX = startX + (sectionWidth / 2) - (levelWidth / 2);
-    nodesAtLevel.forEach((entity, idx) => {
-      const x = levelStartX + idx * SIBLING_X_SPACING;
-      const y = getYPositionForLevel(lvl);
-      newNodes.push(createEntityNode(entity, x, y));
-    });
-  }
-
-  return { nodes: newNodes, sectionWidth };
-};
-
-/**
- * Validates that all relationships have corresponding nodes
- */
-const validateRelationships = (
-  relationships: AnyTransactionRelationship[],
-  nodes: Node[],
-  sectionName: string
-): void => {
-  console.log(`🔍 Validating ${sectionName} relationships...`);
-  
-  const nodeIds = new Set(nodes.map(n => n.id));
-  console.log(`📋 Available node IDs in ${sectionName}:`, Array.from(nodeIds));
-  
-  const missingNodes: { relationshipIndex: number; missingType: 'source' | 'target'; missingId: string; relationship: AnyTransactionRelationship }[] = [];
-  
-  relationships.forEach((rel, index) => {
-    if (!nodeIds.has(rel.source)) {
-      missingNodes.push({ 
-        relationshipIndex: index, 
-        missingType: 'source', 
-        missingId: rel.source, 
-        relationship: rel 
-      });
-    }
-    if (!nodeIds.has(rel.target)) {
-      missingNodes.push({ 
-        relationshipIndex: index, 
-        missingType: 'target', 
-        missingId: rel.target, 
-        relationship: rel 
-      });
-    }
-  });
-  
-  if (missingNodes.length > 0) {
-    console.error(`❌ ${sectionName} validation failed - Missing nodes for relationships:`);
-    missingNodes.forEach(({ relationshipIndex, missingType, missingId, relationship }) => {
-      console.error(`  Relationship #${relationshipIndex}: Missing ${missingType} node "${missingId}"`);
-      console.error(`  Relationship details:`, {
-        source: relationship.source,
-        target: relationship.target,
-        type: relationship.type,
-        percentage: (relationship as OwnershipRelationship).percentage,
-        value: (relationship as ConsiderationRelationship).value
-      });
-    });
-  } else {
-    console.log(`✅ ${sectionName} relationship validation passed - all nodes exist`);
-  }
-};
-
 export const processTransactionFlowForDiagram = (
-  transactionFlow: TransactionFlow, 
+  transactionFlow: TransactionFlow,
   userInputs?: ExtractedUserInputs
-): { nodes: Node[], edges: Edge[] } => {
-  const newNodes: Node[] = [];
-  const newEdges: Edge[] = [];
-  let currentXOffset = 50;
-
-  console.log('🚀 Starting diagram processing with user input validation...');
-  console.log('UserInputs received in diagram processor:', userInputs);
+): { nodes: Node[]; edges: Edge[] } => {
+  console.log('=== PROCESSING TRANSACTION FLOW FOR DIAGRAM ===');
+  console.log('UserInputs received in processor:', userInputs);
   
-  // Helper to add section header and update nodes array
-  const addSectionHeader = (id: string, label: string, x: number, y: number, width: number) => {
-      newNodes.push(addSectionHeaderNode(id, label, x, y));
-  };
-
-  // BEFORE Section
-  console.log('📍 Processing BEFORE section...');
-  const beforeEntities = transactionFlow.before.entities;
-  console.log(`📋 BEFORE entities (${beforeEntities.length}):`, beforeEntities.map(e => ({ id: e.id, name: e.name, type: e.type })));
+  const tc = transactionFlow.transactionContext;
+  console.log('Transaction context received:', tc);
   
-  const beforeLevels = computeEntityHierarchyLevels(beforeEntities, transactionFlow.before.relationships);
-  const { nodes: beforeNodes, sectionWidth: beforeSectionWidth } = calculateSectionLayout(beforeEntities, beforeLevels, currentXOffset);
-  addSectionHeader('header-before', 'BEFORE TRANSACTION', currentXOffset + beforeSectionWidth / 2 - ENTITY_WIDTH / 2, -50, beforeSectionWidth);
-  newNodes.push(...beforeNodes);
+  // CRITICAL: Validate transaction context amount against user input
+  let validatedAmount = tc.amount;
+  let validatedCurrency = tc.currency;
+  
+  if (userInputs?.amount && tc.amount !== userInputs.amount) {
+    console.error(`🚨 DIAGRAM PROCESSOR CORRUPTION DETECTED: tc.amount ${tc.amount} !== user input ${userInputs.amount}`);
+    validatedAmount = userInputs.amount;
+    console.log(`✅ Using user input amount: ${validatedAmount}`);
+  }
+  
+  if (userInputs?.currency && tc.currency !== userInputs.currency) {
+    console.warn(`Currency mismatch: tc.currency ${tc.currency} !== user input ${userInputs.currency}`);
+    validatedCurrency = userInputs.currency;
+    console.log(`✅ Using user input currency: ${validatedCurrency}`);
+  }
 
-  // Validate BEFORE relationships
-  validateRelationships(transactionFlow.before.relationships, beforeNodes, 'BEFORE');
-
-  // Edges for BEFORE section
-  transactionFlow.before.relationships.forEach((rel, index) => {
-    if (newNodes.find(n => n.id === rel.source) && newNodes.find(n => n.id === rel.target)) {
-      let edgeLabel: string | React.ReactNode = rel.label || rel.type;
-      if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
-        edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
-      } else if (rel.type === 'consideration' || rel.type === 'funding') {
-        edgeLabel = rel.type; // Value is shown on the node itself
+  const nodes: Node[] = [
+    // Transaction Overview Node
+    {
+      id: 'transaction-overview',
+      type: 'default',
+      position: { x: 50, y: 50 },
+      data: {
+        label: (
+          <div className="text-center p-4">
+            <h3 className="text-lg font-bold text-gray-800 mb-2">
+              {tc.type || 'Transaction'}
+            </h3>
+            <div className="text-sm text-gray-600 mb-2">
+              {tc.targetName} ← {tc.buyerName}
+            </div>
+            {validatedAmount > 0 && (
+              <div className="text-xs font-medium text-purple-600">
+                {(() => {
+                  console.log(`Diagram Processor: Formatting amount ${validatedAmount} for ${validatedCurrency}`);
+                  
+                  // CRITICAL: Additional validation at display time
+                  if (userInputs?.amount && validatedAmount !== userInputs.amount) {
+                    console.error(`🚨 DISPLAY CORRUPTION: Validated amount ${validatedAmount} !== user input ${userInputs.amount}`);
+                    const finalAmount = userInputs.amount;
+                    const finalCurrency = userInputs.currency || validatedCurrency;
+                    console.log(`✅ Final display correction: using ${finalCurrency} ${(finalAmount / 1000000).toFixed(0)}M`);
+                    return `${finalCurrency} ${(finalAmount / 1000000).toFixed(0)}M`;
+                  }
+                  
+                  console.log(`✅ Display validation passed: ${validatedCurrency} ${(validatedAmount / 1000000).toFixed(0)}M`);
+                  return `${validatedCurrency} ${(validatedAmount / 1000000).toFixed(0)}M`;
+                })()}
+              </div>
+            )}
+            {tc.description && (
+              <div className="text-xs text-gray-500 mt-2 max-w-xs">
+                {tc.description.length > 100 
+                  ? `${tc.description.substring(0, 100)}...` 
+                  : tc.description
+                }
+              </div>
+            )}
+          </div>
+        )
+      },
+      style: {
+        background: '#f8fafc',
+        border: '2px solid #e2e8f0',
+        borderRadius: '12px',
+        width: 280,
+        fontSize: '12px'
       }
-
-      newEdges.push({
-        id: `edge-before-${rel.source}-${rel.target}-${index}`,
-        source: rel.source,
-        target: rel.target,
-        type: 'smoothstep',
-        label: edgeLabel,
-        style: { stroke: '#525252', strokeWidth: 1.5 },
-        markerEnd: { type: MarkerType.ArrowClosed, color: '#525252' },
-      });
     }
-  });
+  ];
 
-  currentXOffset += beforeSectionWidth + SECTION_X_SPACING;
+  const edges: Edge[] = [];
 
-  // TRANSACTION Section with enhanced validation
-  addSectionHeader('header-transaction', 'TRANSACTION', currentXOffset, -50, ENTITY_WIDTH);
-  if (transactionFlow.transactionContext) {
-      const tc = transactionFlow.transactionContext;
-      const transactionNodeId = 'node-transaction-process';
-      
-      // CRITICAL: Validate and correct transaction amount
-      const validatedAmount = validateTransactionAmount(tc.amount, userInputs);
-      const displayAmount = formatAmountForDisplay(validatedAmount, tc.currency);
-      
-      console.log('=== TRANSACTION CONTEXT VALIDATION ===');
-      console.log('Original tc.amount:', tc.amount);
-      console.log('Validated amount:', validatedAmount);
-      console.log('Display amount:', displayAmount);
-      
-      newNodes.push({
-          id: transactionNodeId,
-          type: 'default',
-          position: { x: currentXOffset, y: getYPositionForLevel(1) },
-          data: {
-              label: (
-                  <div className="text-center p-3">
-                      <div className="font-semibold text-sm text-purple-700">{tc.type}</div>
-                      <div className="text-xs text-gray-600">{tc.description.split(" via ")[0]}</div>
-                      {validatedAmount > 0 && (
-                          <div className="text-xs font-medium text-purple-600">
-                              {displayAmount}
-                          </div>
-                      )}
-                      <div className="text-xs text-gray-500 italic mt-1">Structure: {tc.recommendedStructure}</div>
-                      {userInputs?.amount && validatedAmount === userInputs.amount && (
-                          <div className="text-xs bg-green-100 text-green-700 px-1 rounded mt-1">User Input</div>
-                      )}
-                  </div>
-              )
-          },
-          style: {
-              backgroundColor: '#f3e8ff', 
-              border: '2px dashed #8b5cf6', 
-              borderRadius: '8px', 
-              width: ENTITY_WIDTH,
-              textAlign: 'center' as const,
-          }
-      });
-
-      // Add edge from BEFORE target (or company node at lowest level) to transaction node
-      const beforeTarget = beforeEntities.find(e => e.type === 'target');
-      if (beforeTarget) {
-          newEdges.push({
-              id: 'edge-before-to-tx',
-              source: beforeTarget.id,
-              target: transactionNodeId,
-              type: 'smoothstep',
-              animated: true,
-              style: { stroke: '#8b5cf6', strokeWidth: 2 },
-          });
-      }
-  }
-  currentXOffset += ENTITY_WIDTH + SECTION_X_SPACING;
-
-  // AFTER Section
-  console.log('📍 Processing AFTER section...');
-  const afterEntities = transactionFlow.after.entities;
-  console.log(`📋 AFTER entities (${afterEntities.length}):`, afterEntities.map(e => ({ id: e.id, name: e.name, type: e.type, percentage: e.percentage })));
-  
-  // Special focus on Former Target Shareholders entity
-  const formerTargetShareholders = afterEntities.find(e => e.name === 'Former Target Shareholders');
-  if (formerTargetShareholders) {
-    console.log('🎯 Found Former Target Shareholders entity:', {
-      id: formerTargetShareholders.id,
-      name: formerTargetShareholders.name,
-      type: formerTargetShareholders.type,
-      percentage: formerTargetShareholders.percentage,
-      description: formerTargetShareholders.description
-    });
-  } else {
-    console.warn('⚠️  Former Target Shareholders entity not found in AFTER entities');
-  }
-  
-  const afterLevels = computeAfterTransactionHierarchy(afterEntities, transactionFlow.after.relationships);
-  const { nodes: afterNodes, sectionWidth: afterSectionWidth } = calculateSectionLayout(afterEntities, afterLevels, currentXOffset);
-  addSectionHeader('header-after', 'AFTER TRANSACTION', currentXOffset + afterSectionWidth / 2 - ENTITY_WIDTH / 2, -50, afterSectionWidth);
-  newNodes.push(...afterNodes);
-
-  // Validate AFTER relationships
-  console.log(`📋 AFTER relationships (${transactionFlow.after.relationships.length}):`, 
-    transactionFlow.after.relationships.map((rel, idx) => ({
-      index: idx,
-      source: rel.source,
-      target: rel.target,
-      type: rel.type,
-      percentage: (rel as OwnershipRelationship).percentage,
-      value: (rel as ConsiderationRelationship).value
-    }))
-  );
-  
-  // Special focus on relationships involving Former Target Shareholders
-  const formerTargetRelationships = transactionFlow.after.relationships.filter(rel => 
-    rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders') ||
-    rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders')
-  );
-  
-  if (formerTargetRelationships.length > 0) {
-    console.log('🎯 Relationships involving Former Target Shareholders:', formerTargetRelationships);
-  } else {
-    console.warn('⚠️  No relationships found involving Former Target Shareholders');
-    console.log('🔍 All relationship sources:', transactionFlow.after.relationships.map(r => r.source));
-    console.log('🔍 All relationship targets:', transactionFlow.after.relationships.map(r => r.target));
-  }
-  
-  validateRelationships(transactionFlow.after.relationships, afterNodes, 'AFTER');
-
-  // Edges for AFTER section
-  let createdEdges = 0;
-  let skippedEdges = 0;
-  
-  transactionFlow.after.relationships.forEach((rel, index) => {
-      const sourceNodeExists = newNodes.find(n => n.id === rel.source);
-      const targetNodeExists = newNodes.find(n => n.id === rel.target);
-      
-      if (sourceNodeExists && targetNodeExists) {
-          const sourceNode = newNodes.find(n => n.id === rel.source);
-          let strokeColor = '#525252'; 
-          if (rel.type === 'ownership' && sourceNode?.data?.entityType === 'buyer')
-            strokeColor = '#2563eb';
-          if (rel.type === 'consideration')
-            strokeColor = '#16a34a';
-
-          let edgeLabel: string | React.ReactNode = rel.label || rel.type;
-          if ((rel.type === 'ownership' || rel.type === 'control') && (rel as OwnershipRelationship).percentage !== undefined) {
-            edgeLabel = `${(rel as OwnershipRelationship).percentage?.toFixed(1)}%`;
-          } else if (rel.type === 'consideration' || rel.type === 'funding') {
-            edgeLabel = rel.type; // Value is shown on the node itself
-          }
-          
-          newEdges.push({
-              id: `edge-after-${rel.source}-${rel.target}-${index}`,
-              source: rel.source,
-              target: rel.target,
-              type: 'smoothstep',
-              label: edgeLabel,
-              style: { stroke: strokeColor, strokeWidth: rel.type === 'consideration' ? 2.5 : 1.5 },
-              markerEnd: { type: MarkerType.ArrowClosed, color: strokeColor },
-          });
-          
-          createdEdges++;
-          
-          // Log when we successfully create an edge involving Former Target Shareholders
-          if (rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders') ||
-              rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders')) {
-            console.log('✅ Created edge for Former Target Shareholders:', {
-              edgeId: `edge-after-${rel.source}-${rel.target}-${index}`,
-              source: rel.source,
-              target: rel.target,
-              type: rel.type,
-              percentage: (rel as OwnershipRelationship).percentage,
-              label: edgeLabel
-            });
-          }
-      } else {
-          skippedEdges++;
-          console.warn(`❌ Skipped edge #${index} - missing nodes:`, {
-            relationship: { source: rel.source, target: rel.target, type: rel.type },
-            sourceExists: !!sourceNodeExists,
-            targetExists: !!targetNodeExists
-          });
-          
-          // Special warning for Former Target Shareholders relationships
-          if (rel.source.includes('former-target-shareholders') || rel.target.includes('former-target-shareholders') ||
-              rel.source.includes('Former-Target-Shareholders') || rel.target.includes('Former-Target-Shareholders')) {
-            console.error('🚨 CRITICAL: Skipped Former Target Shareholders relationship due to missing nodes!');
-          }
-      }
-  });
-  
-  console.log(`📊 AFTER section edge summary: ${createdEdges} created, ${skippedEdges} skipped`);
-
-  // Connect continuing shareholders (Before -> After) if entity id & name matches and both are "stockholder"
-  beforeEntities
-    .filter(e => e.type === 'stockholder')
-    .forEach(beforeSH => {
-      const afterSH = afterEntities.find(
-        afterE => afterE.name === beforeSH.name && afterE.type === 'stockholder'
-      );
-      if (afterSH && newNodes.find(n => n.id === beforeSH.id) && newNodes.find(n => n.id === afterSH.id)) {
-        newEdges.push({
-          id: `edge-continuation-${beforeSH.id}-${afterSH.id}`,
-          source: beforeSH.id,
-          target: afterSH.id,
-          type: 'straight',
-          style: { stroke: '#f59e0b', strokeWidth: 1, strokeDasharray: '5 3' },
-          label: 'Continues',
-          labelStyle: { fontSize: '10px', fill: '#f59e0b' },
-        });
+  // Process before structure entities
+  transactionFlow.before.entities.forEach((entity, index) => {
+    nodes.push({
+      id: `before-${entity.id}`,
+      type: 'default',
+      position: { 
+        x: 50 + (index % 3) * 200, 
+        y: 200 + Math.floor(index / 3) * 120 
+      },
+      data: {
+        label: (
+          <div className="text-center p-2">
+            <div className="font-semibold text-sm">{entity.name}</div>
+            <div className="text-xs text-gray-500">{entity.type}</div>
+            {entity.percentage && (
+              <div className="text-xs text-blue-600">{entity.percentage.toFixed(1)}%</div>
+            )}
+            {entity.value && entity.value > 0 && (
+              <div className="text-xs text-green-600">
+                {validatedCurrency} {(entity.value / 1000000).toFixed(0)}M
+              </div>
+            )}
+          </div>
+        )
+      },
+      style: {
+        background: entity.type === 'target' ? '#fef3c7' : '#f3f4f6',
+        border: entity.type === 'target' ? '1px solid #f59e0b' : '1px solid #d1d5db',
+        borderRadius: '8px',
+        width: 160,
+        fontSize: '11px'
       }
     });
+  });
 
-  console.log(`🏁 Diagram processing complete: ${newNodes.length} nodes, ${newEdges.length} edges`);
-  console.log('✅ User input validation and corruption detection enabled');
-  
-  return { nodes: newNodes, edges: newEdges };
+  // Process after structure entities with validated amounts
+  transactionFlow.after.entities.forEach((entity, index) => {
+    let entityValue = entity.value;
+    
+    // CRITICAL: Validate entity values against user input
+    if (userInputs?.amount && entity.value && entity.value !== userInputs.amount && entity.type === 'consideration') {
+      console.error(`🚨 ENTITY VALUE CORRUPTION: Entity ${entity.name} has value ${entity.value}, expected ${userInputs.amount}`);
+      entityValue = userInputs.amount;
+      console.log(`✅ Corrected entity ${entity.name} value to ${entityValue}`);
+    }
+    
+    nodes.push({
+      id: `after-${entity.id}`,
+      type: 'default',
+      position: { 
+        x: 400 + (index % 3) * 200, 
+        y: 200 + Math.floor(index / 3) * 120 
+      },
+      data: {
+        label: (
+          <div className="text-center p-2">
+            <div className="font-semibold text-sm">{entity.name}</div>
+            <div className="text-xs text-gray-500">{entity.type}</div>
+            {entity.percentage && (
+              <div className="text-xs text-blue-600">{entity.percentage.toFixed(1)}%</div>
+            )}
+            {entityValue && entityValue > 0 && (
+              <div className="text-xs text-green-600">
+                {validatedCurrency} {(entityValue / 1000000).toFixed(0)}M
+              </div>
+            )}
+          </div>
+        )
+      },
+      style: {
+        background: entity.type === 'target' ? '#fef3c7' : 
+                   entity.type === 'consideration' ? '#f0fdf4' : '#f3f4f6',
+        border: entity.type === 'target' ? '1px solid #f59e0b' : 
+               entity.type === 'consideration' ? '1px solid #16a34a' : '1px solid #d1d5db',
+        borderRadius: '8px',
+        width: 160,
+        fontSize: '11px'
+      }
+    });
+  });
+
+  console.log('=== DIAGRAM PROCESSING COMPLETE ===');
+  console.log('Final validated amount:', validatedAmount);
+  console.log('Final validated currency:', validatedCurrency);
+  console.log('Total nodes created:', nodes.length);
+
+  return { nodes, edges };
 };

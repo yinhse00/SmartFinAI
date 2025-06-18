@@ -25,6 +25,18 @@ export const convertAnalysisToTransactionFlow = (
   console.log('Consideration amount source:', consistentData.source);
   console.log('Final consideration amount:', consistentData.considerationAmount);
 
+  // CRITICAL: Validate transactionFlow.paymentFlows against user input
+  if (results.transactionFlow?.paymentFlows && userInputs?.amount) {
+    results.transactionFlow.paymentFlows.forEach((flow, index) => {
+      if (flow.amount && flow.amount !== userInputs.amount) {
+        console.error(`🚨 PAYMENT FLOW CORRUPTION DETECTED: Flow ${index} has amount ${flow.amount}, expected ${userInputs.amount}`);
+        // Correct the payment flow amount
+        flow.amount = userInputs.amount;
+        console.log(`✅ Corrected payment flow ${index} amount to ${userInputs.amount}`);
+      }
+    });
+  }
+
   // Clean the transaction type from AI results
   const rawTransactionType = results.transactionType || 'Transaction';
   const cleanedTransactionType = cleanTransactionType(rawTransactionType);
@@ -53,6 +65,7 @@ export const convertAnalysisToTransactionFlow = (
   // Generate transaction description using diagram context to avoid amount duplication
   const transactionDescription = generateTransactionDescription(results, consistentData.considerationAmount, 'diagram');
 
+  // CRITICAL: Ensure transactionContext uses consistent data, not AI-generated amounts
   const transactionFlow: TransactionFlow = {
     before: beforeStructure,
     after: afterStructure,
@@ -60,7 +73,7 @@ export const convertAnalysisToTransactionFlow = (
     transactionContext: {
       type: cleanedTransactionType, // Use cleaned transaction type
       description: transactionDescription,
-      amount: consistentData.considerationAmount,
+      amount: consistentData.considerationAmount, // ALWAYS use consistent data
       currency: consistentData.currency,
       targetName: entityNames.targetCompanyName,
       buyerName: entityNames.acquiringCompanyName,
@@ -69,6 +82,13 @@ export const convertAnalysisToTransactionFlow = (
       optimizationScore: results.confidence || 0.8
     }
   };
+
+  // Final validation of transaction context amount
+  if (userInputs?.amount && transactionFlow.transactionContext.amount !== userInputs.amount) {
+    console.error(`🚨 FINAL VALIDATION FAILED: Transaction context amount ${transactionFlow.transactionContext.amount} !== user input ${userInputs.amount}`);
+    transactionFlow.transactionContext.amount = userInputs.amount;
+    console.log(`✅ Final correction applied: transaction context amount set to ${userInputs.amount}`);
+  }
 
   console.log('Transaction flow conversion completed');
   console.log('Transaction context amount:', transactionFlow.transactionContext.amount);
