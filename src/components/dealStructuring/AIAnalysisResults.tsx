@@ -1,4 +1,3 @@
-
 import { ShareholdingChanges, CorporateStructure } from '@/types/dealStructuring';
 
 export interface ExecutiveSummary {
@@ -114,6 +113,10 @@ interface AITransactionFlow {
     mechanism: string;
     timing: string;
   }>;
+  transactionContext?: {
+    amount?: number;
+    currency?: string;
+  };
 }
 
 export interface ValuationAnalysis {
