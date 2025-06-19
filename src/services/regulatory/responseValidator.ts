@@ -4,27 +4,44 @@
  */
 export const responseValidator = {
   /**
-   * Filter out non-existent document codes from response content
+   * Filter out non-existent document codes from response content with improved strategy
    */
   filterInvalidReferences(content: string): string {
-    // Pattern to match common non-existent reference formats
-    const invalidPatterns = [
-      /LD-\d+/g,  // Listing Decision codes
-      /GL-\d+/g,  // Guidance Letter codes
-      /\b(?:Listing Decision|Guidance Letter)\s+(?:LD-|GL-)\d+/gi,
-      /\b(?:LD|GL)\s*[-:]?\s*\d+/gi
+    // Pattern to match potentially invalid reference formats
+    const suspiciousPatterns = [
+      {
+        pattern: /LD-\d+/g,
+        replacement: (match: string) => isValidListingDecisionFormat(match) ? match : `${match}*`
+      },
+      {
+        pattern: /GL-\d+/g,
+        replacement: (match: string) => isValidGuidanceLetterFormat(match) ? match : `${match}*`
+      },
+      {
+        pattern: /\b(?:Listing Decision|Guidance Letter)\s+(?:LD-|GL-)\d+/gi,
+        replacement: (match: string) => `${match}*`
+      }
     ];
     
     let filteredContent = content;
+    let hasFiltering = false;
     
-    // Remove invalid reference patterns
-    invalidPatterns.forEach(pattern => {
-      filteredContent = filteredContent.replace(pattern, '[Reference removed - not found in database]');
+    // Apply improved filtering with disclaimers instead of harsh removal
+    suspiciousPatterns.forEach(({ pattern, replacement }) => {
+      const originalContent = filteredContent;
+      if (typeof replacement === 'function') {
+        filteredContent = filteredContent.replace(pattern, replacement);
+      } else {
+        filteredContent = filteredContent.replace(pattern, replacement);
+      }
+      if (originalContent !== filteredContent) {
+        hasFiltering = true;
+      }
     });
     
     // Log any filtering that occurred
-    if (filteredContent !== content) {
-      console.log('Filtered invalid references from response content');
+    if (hasFiltering) {
+      console.log('Applied reference disclaimers to uncertain regulatory references');
     }
     
     return filteredContent;
@@ -51,7 +68,7 @@ export const responseValidator = {
     suspiciousPatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
-        issues.push(`Suspicious reference pattern found: ${matches.join(', ')}`);
+        issues.push(`Uncertain reference pattern found: ${matches.join(', ')} - please verify`);
       }
     });
     
@@ -64,7 +81,7 @@ export const responseValidator = {
     quotePatterns.forEach(pattern => {
       const matches = content.match(pattern);
       if (matches) {
-        issues.push(`Claims to quote from specific document: ${matches.join(', ')}`);
+        issues.push(`Claims to quote from specific document: ${matches.join(', ')} - source verification needed`);
       }
     });
     
@@ -76,15 +93,31 @@ export const responseValidator = {
   },
 
   /**
-   * Clean response content to ensure only valid database references
+   * Clean response content with improved user experience
    */
   cleanResponseContent(content: string, sourceMaterials: string[] = []): string {
     const validation = this.validateDatabaseReferences(content, sourceMaterials);
     
     if (!validation.isValid) {
-      console.warn('Response validation issues detected:', validation.issues);
+      console.log('Response validation issues detected (non-critical):', validation.issues);
     }
     
     return validation.filteredContent;
   }
 };
+
+/**
+ * Validate Listing Decision format
+ */
+function isValidListingDecisionFormat(reference: string): boolean {
+  // Basic format validation - can be enhanced with actual validation logic
+  return /^LD-\d{2,4}$/.test(reference);
+}
+
+/**
+ * Validate Guidance Letter format
+ */
+function isValidGuidanceLetterFormat(reference: string): boolean {
+  // Basic format validation - can be enhanced with actual validation logic
+  return /^GL-\d{2,4}$/.test(reference);
+}

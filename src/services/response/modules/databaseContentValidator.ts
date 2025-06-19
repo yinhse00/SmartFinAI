@@ -1,3 +1,4 @@
+
 /**
  * Service for validating that responses preserve exact database content
  * Specifically designed to prevent rule reference generalization
@@ -43,23 +44,27 @@ export const databaseContentValidator = {
     const responseRuleRefs = extractRuleReferences(responseText);
     const dbRefStrings = new Set(databaseRuleRefs.map(r => r.fullReference.toLowerCase()));
 
-    // Check for invented rule references not present in the database context
+    // Check for rule references in response that aren't in database context
     for (const respRef of responseRuleRefs) {
-      if (!dbRefStrings.has(respRef.fullReference.toLowerCase())) {
+      const refLower = respRef.fullReference.toLowerCase();
+      
+      // Only flag as invented if it's clearly not a valid regulatory reference pattern
+      if (!dbRefStrings.has(refLower) && !isValidRegulatoryPattern(respRef.fullReference)) {
         const isGeneralization = databaseRuleRefs.some(dbRef =>
-          dbRef.fullReference.toLowerCase().startsWith(respRef.fullReference.toLowerCase())
+          dbRef.fullReference.toLowerCase().startsWith(refLower) ||
+          refLower.startsWith(dbRef.fullReference.toLowerCase())
         );
 
         if (!isGeneralization) {
-          const issue = `Rule reference invented: Response contains "${respRef.fullReference}" which is not found in the source database content.`;
+          const issue = `Potentially inaccurate rule reference: "${respRef.fullReference}" - not found in source materials.`;
           issues.push(issue);
           corrections.push({
             type: 'content_modification',
-            original: '', // No original content to reference
+            original: '',
             incorrect: respRef.fullReference,
-            reason: 'Rule reference was invented and is not present in the database context.',
+            reason: 'Rule reference may be inaccurate and should be verified.',
           });
-          preservationScore -= 0.3; // Heavier penalty for invention
+          preservationScore -= 0.2; // Reduced penalty for uncertain references
         }
       }
     }
@@ -117,7 +122,7 @@ export const databaseContentValidator = {
   },
 
   /**
-   * Apply corrections to response text
+   * Apply corrections to response text with improved replacement strategy
    */
   applyCorrections: (responseText: string, corrections: Correction[]): string => {
     let correctedText = responseText;
@@ -129,17 +134,33 @@ export const databaseContentValidator = {
         correctedText = correctedText.replace(pattern, correction.original);
         
         console.log(`Applied correction: "${correction.incorrect}" -> "${correction.original}"`);
-      } else if (correction.type === 'content_modification' && correction.reason.includes('invented')) {
-        // For invented rules, replace with a notice to avoid breaking sentence structure badly.
-        const pattern = new RegExp(`\\b${escapeRegExp(correction.incorrect)}\\b`, 'g');
-        correctedText = correctedText.replace(pattern, '[Reference removed for inaccuracy]');
-        console.log(`Applied correction: Removed invented rule reference "${correction.incorrect}"`);
+      } else if (correction.type === 'content_modification') {
+        // For uncertain references, add a disclaimer instead of harsh removal
+        const fullReferencePattern = new RegExp(`\\b${escapeRegExp(correction.incorrect)}(?:\\.[\\d\\w()]+)*\\b`, 'g');
+        const disclaimerText = `${correction.incorrect}*`;
+        correctedText = correctedText.replace(fullReferencePattern, disclaimerText);
+        console.log(`Applied disclaimer to uncertain reference: "${correction.incorrect}"`);
       }
     }
 
     return correctedText;
   }
 };
+
+/**
+ * Check if a reference follows valid regulatory patterns
+ */
+function isValidRegulatoryPattern(reference: string): boolean {
+  const validPatterns = [
+    /^Rule\s+\d+(?:\.\d+)*(?:\([a-z]\))*$/i,          // Rule X.XX(a) format
+    /^Chapter\s+\d+[A-Z]?$/i,                         // Chapter X format
+    /^FAQ\s+(?:Series\s+)?\d+(?:\.\d+)*$/i,          // FAQ X.X format
+    /^Guidance\s+Letter\s+[A-Z]{1,3}-\d+$/i,         // Guidance Letter XX-X format
+    /^(?:LD|Listing\s+Decision)\s+[A-Z]{1,3}[-\s]\d+[-\s]\d+$/i // Listing Decision format
+  ];
+  
+  return validPatterns.some(pattern => pattern.test(reference.trim()));
+}
 
 /**
  * Extract rule references from text with detailed parsing

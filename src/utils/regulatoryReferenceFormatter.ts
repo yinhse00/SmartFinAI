@@ -15,14 +15,13 @@ export interface ExtractedReference {
 }
 
 /**
- * Extract rule references from text with enhanced detection
+ * Extract rule references from text with enhanced detection and complete reference handling
  */
 export const extractRuleReferences = (text: string): ExtractedReference[] => {
   const references: ExtractedReference[] = [];
   
-  // Enhanced Listing Rules references (Rule X.XX, Chapter X)
-  // More comprehensive pattern to catch various formats
-  const listingRulePattern = /\b(?:Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))?)|Chapter\s+(\d+[A-Z]?)|Listing\s+Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))?))\b/gi;
+  // Enhanced Listing Rules references with complete subsection capture
+  const listingRulePattern = /\b(?:Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))*(?:\(\d+\))*)|Chapter\s+(\d+[A-Z]?)|Listing\s+Rule\s+(\d+[A-Z]?(?:\.\d+[A-Z]?)*(?:\([a-z]\))*(?:\(\d+\))*))\b/gi;
   let match;
   
   while ((match = listingRulePattern.exec(text)) !== null) {
@@ -103,11 +102,10 @@ export const extractRuleReferences = (text: string): ExtractedReference[] => {
 };
 
 /**
- * Convert regulatory references to clickable links
+ * Convert regulatory references to clickable links with improved handling
  */
 export const enhanceWithClickableLinks = (text: string): string => {
-  // IMPROVED: Only skip if there are actual existing anchor tags with href attributes
-  // Don't skip just because there are other HTML elements like <p>, <h2>, etc.
+  // Skip if there are existing anchor tags with href attributes
   const existingLinksRegex = /<a\s+[^>]*href[^>]*>.*?<\/a>/gi;
   const hasExistingLinks = existingLinksRegex.test(text);
   
@@ -142,19 +140,30 @@ export const enhanceWithClickableLinks = (text: string): string => {
         
       console.log(`Created clickable link for: ${ref.text} -> ${mapping.url}`);
     } else {
-      // Fallback to bold styling for unmapped references
-      const boldHtml = `<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">${ref.text}</strong>`;
+      // Check if reference has uncertainty marker and handle appropriately
+      const hasUncertaintyMarker = ref.text.includes('*');
       
-      enhancedText = 
-        enhancedText.slice(0, ref.startIndex) + 
-        boldHtml + 
-        enhancedText.slice(ref.endIndex);
-        
-      console.log(`No URL mapping found for: ${ref.text}, applied bold styling`);
+      if (hasUncertaintyMarker) {
+        // Apply special styling for uncertain references
+        const uncertainHtml = `<span class="font-bold text-amber-600 dark:text-amber-400" title="Reference requires verification">${ref.text}</span>`;
+        enhancedText = 
+          enhancedText.slice(0, ref.startIndex) + 
+          uncertainHtml + 
+          enhancedText.slice(ref.endIndex);
+        console.log(`Applied uncertainty styling for: ${ref.text}`);
+      } else {
+        // Fallback to bold styling for unmapped references
+        const boldHtml = `<strong class="font-bold text-finance-dark-blue dark:text-finance-light-blue">${ref.text}</strong>`;
+        enhancedText = 
+          enhancedText.slice(0, ref.startIndex) + 
+          boldHtml + 
+          enhancedText.slice(ref.endIndex);
+        console.log(`No URL mapping found for: ${ref.text}, applied bold styling`);
+      }
     }
   }
   
-  console.log(`Enhanced text with ${references.length} clickable regulatory references`);
+  console.log(`Enhanced text with ${references.length} regulatory references`);
   return enhancedText;
 };
 
