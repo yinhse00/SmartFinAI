@@ -1,126 +1,56 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
-import { TransactionEntity, TransactionFlow, ConsiderationRelationship, OwnershipRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
-import { CorporateEntity } from '@/types/dealStructuring';
-import { addCorporateChildren } from './corporateStructureProcessor';
-import { generateEntityId } from './entityHelpers';
-import { NORMALIZED_TARGET_SHAREHOLDER_NAME } from './shareholderIdentificationUtils';
-import {
-  createAcquirerEntity,
-  addAcquirerShareholders,
-  addTargetWithOwnership,
-  addConsiderationDetails
-} from './afterStructureHelpers';
+import { TransactionFlowSection, TransactionEntity, AnyTransactionRelationship } from '@/types/transactionFlow';
+import { EntityNames } from './entityHelpers';
+import { addConsiderationDetails } from './considerationProcessor';
+import { processAcquirerEntities } from './acquirerEntityProcessor';
+import { processTargetOwnership } from './targetOwnershipProcessor';
+import { ExtractedUserInputs } from '../enhancedAiAnalysisService';
 
 export const buildAfterStructure = (
   results: AnalysisResults,
-  entityNames: { targetCompanyName: string; acquiringCompanyName: string },
-  corporateStructureMap: Map<string, CorporateEntity & { children?: string[], parentLink?: string }>,
-  considerationAmount: number
-): TransactionFlow['after'] => {
+  entityNames: EntityNames,
+  corporateStructureMap: Map<string, any>,
+  considerationAmount: number,
+  userInputs?: ExtractedUserInputs
+): TransactionFlowSection => {
+  console.log('=== Building After Structure with User Inputs ===');
+  console.log('Consideration amount:', considerationAmount);
+  console.log('User inputs:', userInputs);
+
   const entities: TransactionEntity[] = [];
   const relationships: AnyTransactionRelationship[] = [];
-  const prefix = 'after';
-  const visitedChildren = new Set<string>();
-  const processedEntities = new Set<string>(); // Shared tracking for processed entities
 
-  // 1. Process the acquirer and its new shareholders (Level 1 Ownership)
-  const { acquirerId, acquirerCorpEntityData } = createAcquirerEntity(
-    entityNames.acquiringCompanyName,
-    corporateStructureMap,
-    prefix,
-    entities
-  );
+  // Process acquirer entities and get the acquirer ID
+  const acquirerId = processAcquirerEntities(results, entityNames, entities, relationships, 'after');
 
-  addAcquirerShareholders(
+  // Process target ownership structure
+  const formerShareholdersId = processTargetOwnership(
     results,
-    acquirerId,
-    entityNames.acquiringCompanyName,
-    prefix,
+    entityNames,
     entities,
     relationships,
-    processedEntities
+    'after',
+    corporateStructureMap
   );
 
-  // 2. Add corporate hierarchy (children only) for the acquirer
-  if (acquirerCorpEntityData) {
-    addCorporateChildren(acquirerCorpEntityData, acquirerId, entities, relationships, corporateStructureMap, prefix, new Set(visitedChildren));
-  }
-
-  // 3. Process the target company and its new ownership structure (Level 2 Ownership)
-  addTargetWithOwnership(
-    results,
-    entityNames.targetCompanyName,
-    corporateStructureMap,
-    acquirerId,
-    prefix,
-    entities,
-    relationships,
-    visitedChildren,
-    processedEntities
-  );
-
-  // 4. Find the Former Target Shareholders entity ID for consideration flow
-  const formerShareholdersId = generateEntityId('stockholder', NORMALIZED_TARGET_SHAREHOLDER_NAME, prefix);
-
-  // 5. Add consideration/payment details with proper flow to former shareholders
+  // CRITICAL: Add consideration details with user inputs for authority
   addConsiderationDetails(
     results,
     considerationAmount,
     acquirerId,
-    prefix,
+    'after',
     entities,
     relationships,
-    formerShareholdersId
+    formerShareholdersId,
+    userInputs // Pass userInputs for authoritative data
   );
 
-  // 6. Validate ownership percentages
-  validateOwnershipPercentages(entities, relationships);
+  console.log('After structure built with', entities.length, 'entities');
+  console.log('Entities with values:', entities.filter(e => e.value).map(e => ({ id: e.id, name: e.name, value: e.value })));
 
-  // 7. Logging
-  console.log(`After Structure (refactored): Entities - ${entities.length}, Relationships - ${relationships.length}`);
-  entities.forEach(e => console.log(`After Entity: ${e.id} (${e.type}) Name: ${e.name} Desc: ${e.description}`));
-  relationships.forEach(r => {
-    let labelContent = r.label || '';
-    if (r.type === 'ownership' && (r as OwnershipRelationship).percentage !== undefined) {
-        labelContent += ` ${(r as OwnershipRelationship).percentage}%`;
-    } else if ((r.type === 'consideration' || r.type === 'funding') && (r as ConsiderationRelationship).value !== undefined) {
-        labelContent += ` ${(r as ConsiderationRelationship).value}`;
-    }
-    console.log(`After Relationship: ${r.source} -> ${r.target} (${r.type}) Label: ${labelContent}`);
-  });
-  
-  return { entities, relationships };
-};
-
-const validateOwnershipPercentages = (
-  entities: TransactionEntity[],
-  relationships: AnyTransactionRelationship[]
-): void => {
-  const ownershipRelationships = relationships.filter(r => r.type === 'ownership') as OwnershipRelationship[];
-  
-  // Group relationships by target (the entity being owned)
-  const ownershipByTarget = new Map<string, OwnershipRelationship[]>();
-  
-  ownershipRelationships.forEach(rel => {
-    if (!ownershipByTarget.has(rel.target)) {
-      ownershipByTarget.set(rel.target, []);
-    }
-    ownershipByTarget.get(rel.target)!.push(rel);
-  });
-  
-  // Check each target entity's total ownership
-  ownershipByTarget.forEach((ownerships, targetId) => {
-    const totalOwnership = ownerships.reduce((sum, rel) => sum + (rel.percentage || 0), 0);
-    const targetEntity = entities.find(e => e.id === targetId);
-    
-    if (totalOwnership > 100) {
-      console.warn(`⚠️  Ownership validation failed for ${targetEntity?.name || targetId}: Total ownership is ${totalOwnership}% (exceeds 100%)`);
-      console.warn(`   Ownership breakdown:`, ownerships.map(rel => {
-        const sourceEntity = entities.find(e => e.id === rel.source);
-        return `${sourceEntity?.name || rel.source}: ${rel.percentage}%`;
-      }));
-    } else if (totalOwnership < 95 && totalOwnership > 0) {
-      console.warn(`⚠️  Ownership validation warning for ${targetEntity?.name || targetId}: Total ownership is ${totalOwnership}% (less than 100%)`);
-    }
-  });
+  return {
+    entities,
+    relationships
+  };
 };
