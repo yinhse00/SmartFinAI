@@ -2,8 +2,6 @@
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionEntity, ConsiderationRelationship, OperationalRelationship, AnyTransactionRelationship } from '@/types/transactionFlow';
 import { generateEntityId } from './entityHelpers';
-import { dataConsistencyService } from '../dataConsistencyService';
-import { ExtractedUserInputs } from '../enhancedAiAnalysisService';
 
 type Entities = TransactionEntity[];
 type Relationships = AnyTransactionRelationship[];
@@ -15,33 +13,22 @@ export const addConsiderationDetails = (
     prefix: string,
     entities: Entities,
     relationships: Relationships,
-    formerShareholdersId?: string,
-    userInputs?: ExtractedUserInputs
+    formerShareholdersId?: string
 ) => {
-    console.log('=== DEBUGGING addConsiderationDetails WITH AUTHORITY ===');
+    console.log('=== DEBUGGING addConsiderationDetails ===');
     console.log('Input considerationAmount:', considerationAmount);
-    console.log('UserInputs received:', userInputs);
-    
-    // CRITICAL: Use data consistency service to get authoritative amount
-    const consistentData = dataConsistencyService.extractConsistentData(results, userInputs);
-    const authoritativeAmount = consistentData.considerationAmount;
-    
-    console.log('Authoritative amount from consistency service:', authoritativeAmount);
-    console.log('Data source:', consistentData.source);
-    
-    // CRITICAL: Always use the authoritative amount, never fallback to AI-generated amounts
-    const finalAmount = authoritativeAmount;
-    
-    console.log('Final amount to be used:', finalAmount);
     
     const paymentStructure = results.structure?.majorTerms?.paymentStructure;
     const stockPaymentPercentage = paymentStructure?.stockPercentage || 0;
+    const purchasePrice = results.dealEconomics?.purchasePrice || considerationAmount || 0;
     
+    console.log('Purchase price from dealEconomics:', results.dealEconomics?.purchasePrice);
+    console.log('Final purchase price used:', purchasePrice);
     console.log('Stock payment percentage:', stockPaymentPercentage);
 
-    let cashConsiderationAmount = finalAmount;
-    if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100) {
-        cashConsiderationAmount = finalAmount * ((100 - stockPaymentPercentage) / 100);
+    let cashConsiderationAmount = considerationAmount;
+    if (stockPaymentPercentage > 0 && stockPaymentPercentage < 100 && purchasePrice > 0) {
+        cashConsiderationAmount = purchasePrice * ((100 - stockPaymentPercentage) / 100);
         console.log('Mixed payment calculated cash amount:', cashConsiderationAmount);
     } else if (stockPaymentPercentage === 100) {
         cashConsiderationAmount = 0;
@@ -64,7 +51,7 @@ export const addConsiderationDetails = (
         
         if (!entities.find(e => e.id === considerationId)) {
             const entityValue = cashConsiderationAmount;
-            const entityName = `${consistentData.currency} ${millionsAmount}M`;
+            const entityName = `${results.dealEconomics?.currency || 'HKD'} ${millionsAmount}M`;
             
             console.log('Creating entity with value:', entityValue, 'and name:', entityName);
             
@@ -73,7 +60,7 @@ export const addConsiderationDetails = (
                 name: entityName,
                 type: 'consideration',
                 value: entityValue,
-                currency: consistentData.currency,
+                currency: results.dealEconomics?.currency || 'HKD',
                 description: stockPaymentPercentage > 0 && stockPaymentPercentage < 100 ? 'Cash portion of Transaction Consideration' : 'Transaction Consideration',
             });
         }
@@ -96,6 +83,4 @@ export const addConsiderationDetails = (
             } as OperationalRelationship);
         }
     }
-    
-    console.log('=== END addConsiderationDetails WITH AUTHORITY ===');
 };

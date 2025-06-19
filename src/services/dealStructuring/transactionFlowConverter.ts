@@ -1,3 +1,4 @@
+
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { TransactionFlow, TransactionEntity, AnyTransactionRelationship, TransactionFlowSection } from '@/types/transactionFlow';
 import { generateTransactionDescription } from './converterUtils/transactionDetailsBuilder';
@@ -46,7 +47,7 @@ export const convertAnalysisToTransactionFlow = (
 
   // Build before and after structures with the corporate structure map
   const beforeStructure = buildBeforeStructure(normalizedResults, entityNames, corporateStructureMap);
-  const afterStructure = buildAfterStructure(normalizedResults, entityNames, corporateStructureMap, considerationAmount, userInputs);
+  const afterStructure = buildAfterStructure(normalizedResults, entityNames, corporateStructureMap, considerationAmount);
 
   console.log('Before structure entities:', beforeStructure.entities.length);
   console.log('After structure entities:', afterStructure.entities.length);
