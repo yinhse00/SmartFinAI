@@ -139,3 +139,36 @@ export const addTargetWithOwnership = (
         processedEntities.add(trackingKey);
     }
 };
+
+// Create the processTargetOwnership function that afterStructureBuilder expects
+export const processTargetOwnership = (
+    results: AnalysisResults,
+    entityNames: { targetCompanyName: string },
+    entities: Entities,
+    relationships: Relationships,
+    prefix: string,
+    corporateStructureMap: CorporateStructureMap
+): string => {
+    const visitedChildren = new Set<string>();
+    const processedEntities = new Set<string>();
+    
+    // Find the acquirer ID from existing entities
+    const acquirerId = entities.find(e => e.type === 'buyer' || e.type === 'parent')?.id || '';
+    
+    // Add target with ownership structure
+    addTargetWithOwnership(
+        results,
+        entityNames.targetCompanyName,
+        corporateStructureMap,
+        acquirerId,
+        prefix,
+        entities,
+        relationships,
+        visitedChildren,
+        processedEntities
+    );
+
+    // Return the former shareholders ID for consideration processing
+    const formerShareholdersId = generateEntityId('stockholder', NORMALIZED_TARGET_SHAREHOLDER_NAME, prefix);
+    return formerShareholdersId;
+};

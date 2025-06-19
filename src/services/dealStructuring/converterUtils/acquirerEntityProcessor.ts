@@ -149,3 +149,42 @@ export const addAcquirerShareholders = (
         }
     });
 };
+
+// Create the processAcquirerEntities function that afterStructureBuilder expects
+export const processAcquirerEntities = (
+    results: AnalysisResults,
+    entityNames: { acquiringCompanyName: string },
+    entities: Entities,
+    relationships: Relationships,
+    prefix: string
+): string => {
+    const corporateStructureMap = new Map();
+    if (results.corporateStructure?.entities) {
+        results.corporateStructure.entities.forEach(entity => {
+            corporateStructureMap.set(entity.id, entity);
+        });
+    }
+
+    const processedEntities = new Set<string>();
+    
+    // Create acquirer entity
+    const { acquirerId } = createAcquirerEntity(
+        entityNames.acquiringCompanyName,
+        corporateStructureMap,
+        prefix,
+        entities
+    );
+
+    // Add acquirer shareholders
+    addAcquirerShareholders(
+        results,
+        acquirerId,
+        entityNames.acquiringCompanyName,
+        prefix,
+        entities,
+        relationships,
+        processedEntities
+    );
+
+    return acquirerId;
+};
