@@ -8,17 +8,20 @@ import { useState } from 'react';
 import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { Maximize2 } from 'lucide-react';
 import { extractEntityNames } from '@/services/dealStructuring/converterUtils/entityHelpers';
+import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
   optimizationResult?: OptimizationResult;
+  userInputs?: ExtractedUserInputs;
 }
 
-export const TransactionFlowDiagramBox = ({ results, optimizationResult }: TransactionFlowDiagramBoxProps) => {
+export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInputs }: TransactionFlowDiagramBoxProps) => {
   // Extract entity names using the proper helper function that returns EntityNames interface
   const entityNames = extractEntityNames(results);
   
-  const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames);
+  // CRITICAL: Pass userInputs to the converter for proper normalization
+  const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames, userInputs);
 
   const diagramContent = (
     <div className="h-full w-full">

@@ -1,4 +1,3 @@
-
 import { AnalysisResults } from './AIAnalysisResults';
 import { TransactionSummaryBox } from './sections/TransactionSummaryBox';
 import { StructureRecommendationBox } from './sections/StructureRecommendationBox';
@@ -45,6 +44,7 @@ export const DealStructuringDashboard = ({
             <TransactionFlowDiagramBox 
               results={results} 
               optimizationResult={optimizationResult}
+              userInputs={userInputs}
             />
           </div>
           

@@ -3,6 +3,7 @@ import { createFallbackAnalysisResults } from './analysisFallbackData';
 import { createFallbackShareholdingChanges, createFallbackCorporateStructure } from './analysisFallbackData';
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 import { dataConsistencyService } from './dataConsistencyService';
+import { dataNormalizationService, NormalizedResults } from './dataNormalizationService';
 
 // Helper function to extract JSON from a string
 const extractJson = (text: string): string | null => {
@@ -196,8 +197,8 @@ const extractDocumentData = (text: string) => {
   };
 };
 
-export const parseAnalysisResponse = (responseText: string, userInputs?: ExtractedUserInputs): AnalysisResults => {
-  console.log('=== PARSING ANALYSIS RESPONSE WITH EXECUTIVE SUMMARY ===');
+export const parseAnalysisResponse = (responseText: string, userInputs?: ExtractedUserInputs): NormalizedResults => {
+  console.log('=== PARSING ANALYSIS RESPONSE WITH CENTRALIZED NORMALIZATION ===');
   console.log('User inputs received:', userInputs);
   
   // Early validation: Check if the response is empty or too short
@@ -205,7 +206,8 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     console.warn('Response text is too short or empty, using fallback with user inputs.');
     const fallbackResults = createFallbackAnalysisResults(userInputs);
     fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
-    return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+    const consistentResults = dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+    return dataNormalizationService.normalizeAnalysisResults(consistentResults, userInputs);
   }
 
   try {
@@ -222,7 +224,8 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
         console.warn('No JSON found in response, using fallback with user inputs.');
         const fallbackResults = createFallbackAnalysisResults(userInputs);
         fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
-        return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+        const consistentResults = dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+        return dataNormalizationService.normalizeAnalysisResults(consistentResults, userInputs);
       }
     }
 
@@ -280,21 +283,18 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
       transactionFlow: parsed.transactionFlow
     };
 
-    // CRITICAL: Apply data consistency enforcement
+    // Apply legacy consistency enforcement first
     const consistentResults = dataConsistencyService.enforceDataConsistency(results, userInputs);
     
-    // Validate consistency
-    const validation = dataConsistencyService.validateDataConsistency(consistentResults);
-    if (!validation.isConsistent) {
-      console.warn('Data inconsistencies detected:', validation.inconsistencies);
-    }
+    // CRITICAL: Apply centralized normalization (single source of truth)
+    const normalizedResults = dataNormalizationService.normalizeAnalysisResults(consistentResults, userInputs);
     
-    console.log('=== FINAL RESULTS WITH EXECUTIVE SUMMARY ===');
-    console.log('Executive summary:', consistentResults.executiveSummary?.narrative?.substring(0, 100) + '...');
-    console.log('Final dealEconomics.purchasePrice:', consistentResults.dealEconomics?.purchasePrice);
-    console.log('Final valuation.transactionValue.amount:', consistentResults.valuation?.transactionValue?.amount);
+    console.log('=== FINAL NORMALIZED RESULTS ===');
+    console.log('Corrections applied:', normalizedResults._corrections);
+    console.log('Final dealEconomics.purchasePrice:', normalizedResults.dealEconomics?.purchasePrice);
+    console.log('Final transactionFlow.transactionContext.amount:', normalizedResults.transactionFlow?.transactionContext?.amount);
     
-    return consistentResults;
+    return normalizedResults;
 
   } catch (error) {
     console.error('Error parsing analysis response:', error);
@@ -307,6 +307,7 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     fallbackResults.documentPreparation = extractDocumentData(responseText);
     fallbackResults.executiveSummary = extractExecutiveSummary(responseText, userInputs);
     
-    return dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+    const consistentResults = dataConsistencyService.enforceDataConsistency(fallbackResults, userInputs);
+    return dataNormalizationService.normalizeAnalysisResults(consistentResults, userInputs);
   }
 };
