@@ -23,22 +23,32 @@ const EnlargedValuationContent = ({ results, userInputs }: { results: AnalysisRe
         </h3>
       </div>
 
-      {/* Transaction Value */}
+      {/* Valuation of the Target */}
       <div className="p-4 border rounded-lg">
         <h4 className="text-xl font-semibold mb-3 flex items-center gap-2">
           <DollarSign className="h-5 w-5 text-green-600" />
-          Transaction Value
+          Valuation of the Target
         </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="text-center p-3 bg-green-50 rounded border">
             <div className="text-2xl font-bold text-green-600">
-              {extractedData.currency} {extractedData.considerationAmount.toLocaleString()}
+              {extractedData.currency} {extractedData.targetValuation.toLocaleString()}
             </div>
-            <div className="text-sm text-gray-600">Total Value</div>
+            <div className="text-sm text-gray-600">100% Equity Interest</div>
             {extractedData.source === 'user_input' && (
               <div className="text-xs text-green-700 mt-1">User Input</div>
             )}
           </div>
+          {extractedData.ownershipPercentages.acquisitionPercentage < 100 && (
+            <div className="text-center p-3 bg-blue-50 rounded border">
+              <div className="text-lg font-bold text-blue-600">
+                {extractedData.currency} {extractedData.considerationAmount.toLocaleString()}
+              </div>
+              <div className="text-sm text-gray-600">
+                Consideration ({extractedData.ownershipPercentages.acquisitionPercentage}%)
+              </div>
+            </div>
+          )}
           {results.valuation.transactionValue.pricePerShare && (
             <div className="text-center p-3 bg-blue-50 rounded border">
               <div className="text-2xl font-bold text-blue-600">
@@ -108,27 +118,32 @@ const EnlargedValuationContent = ({ results, userInputs }: { results: AnalysisRe
 
       {/* Valuation Range */}
       <div className="p-4 border rounded-lg">
-        <h4 className="text-xl font-semibold mb-3">Valuation Range</h4>
+        <h4 className="text-xl font-semibold mb-3">Valuation Range (100% Equity)</h4>
         <div className="grid grid-cols-3 gap-4">
           <div className="text-center p-3 bg-red-50 rounded border">
             <div className="text-lg font-bold text-red-600">
-              {extractedData.currency} {Math.round(extractedData.considerationAmount * 0.9).toLocaleString()}
+              {extractedData.currency} {Math.round(extractedData.targetValuation * 0.9).toLocaleString()}
             </div>
             <div className="text-xs text-gray-600">Low</div>
           </div>
           <div className="text-center p-3 bg-blue-50 rounded border">
             <div className="text-lg font-bold text-blue-600">
-              {extractedData.currency} {extractedData.considerationAmount.toLocaleString()}
+              {extractedData.currency} {extractedData.targetValuation.toLocaleString()}
             </div>
             <div className="text-xs text-gray-600">Midpoint</div>
           </div>
           <div className="text-center p-3 bg-green-50 rounded border">
             <div className="text-lg font-bold text-green-600">
-              {extractedData.currency} {Math.round(extractedData.considerationAmount * 1.1).toLocaleString()}
+              {extractedData.currency} {Math.round(extractedData.targetValuation * 1.1).toLocaleString()}
             </div>
             <div className="text-xs text-gray-600">High</div>
           </div>
         </div>
+        {extractedData.ownershipPercentages.acquisitionPercentage < 100 && (
+          <div className="mt-3 p-2 bg-gray-50 rounded text-xs text-gray-600">
+            Formula: Target Valuation = Consideration ({extractedData.currency} {extractedData.considerationAmount.toLocaleString()}) ÷ {extractedData.ownershipPercentages.acquisitionPercentage}%
+          </div>
+        )}
       </div>
     </div>
   );
@@ -165,19 +180,20 @@ export const ValuationAnalysisBox = ({ results, userInputs }: ValuationAnalysisB
         </div>
       </CardHeader>
       <CardContent className="h-[400px] overflow-y-auto space-y-4">
-        {/* Transaction Value */}
+        {/* Valuation of the Target */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h5 className="font-medium text-blue-800 mb-3 flex items-center gap-2">
             <DollarSign className="h-4 w-4" />
-            Transaction Value
+            Valuation of the Target
           </h5>
           <div className="text-center">
             <div className="text-2xl font-bold text-blue-600">
-              {extractedData.currency} {extractedData.considerationAmount.toLocaleString()}
+              {extractedData.currency} {extractedData.targetValuation.toLocaleString()}
             </div>
-            {results.valuation.transactionValue.pricePerShare && (
-              <div className="text-sm text-blue-700 mt-1">
-                @ {extractedData.currency} {results.valuation.transactionValue.pricePerShare} per share
+            <div className="text-sm text-blue-700 mt-1">100% Equity Interest</div>
+            {extractedData.ownershipPercentages.acquisitionPercentage < 100 && (
+              <div className="text-xs text-blue-600 mt-2 p-2 bg-blue-100 rounded">
+                Consideration: {extractedData.currency} {extractedData.considerationAmount.toLocaleString()} ({extractedData.ownershipPercentages.acquisitionPercentage}%)
               </div>
             )}
           </div>
@@ -235,23 +251,23 @@ export const ValuationAnalysisBox = ({ results, userInputs }: ValuationAnalysisB
 
         {/* Valuation Range */}
         <div>
-          <h5 className="font-medium mb-2">Valuation Range</h5>
+          <h5 className="font-medium mb-2">Valuation Range (100% Equity)</h5>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="text-center p-2 bg-red-50 rounded border">
               <div className="text-red-600 font-semibold">
-                {Math.round(extractedData.considerationAmount * 0.9).toLocaleString()}
+                {Math.round(extractedData.targetValuation * 0.9).toLocaleString()}
               </div>
               <div className="text-gray-500">Low</div>
             </div>
             <div className="text-center p-2 bg-blue-50 rounded border">
               <div className="text-blue-600 font-semibold">
-                {extractedData.considerationAmount.toLocaleString()}
+                {extractedData.targetValuation.toLocaleString()}
               </div>
               <div className="text-gray-500">Mid</div>
             </div>
             <div className="text-center p-2 bg-green-50 rounded border">
               <div className="text-green-600 font-semibold">
-                {Math.round(extractedData.considerationAmount * 1.1).toLocaleString()}
+                {Math.round(extractedData.targetValuation * 1.1).toLocaleString()}
               </div>
               <div className="text-gray-500">High</div>
             </div>

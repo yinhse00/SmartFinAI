@@ -20,6 +20,7 @@ export const useTransactionDataConsistency = (results: AnalysisResults, userInpu
     
     return {
       considerationAmount: consistentData.considerationAmount,
+      targetValuation: consistentData.targetValuation,
       ownershipPercentages: {
         acquisitionPercentage: consistentData.acquisitionPercentage,
         remainingPercentage: 100 - consistentData.acquisitionPercentage

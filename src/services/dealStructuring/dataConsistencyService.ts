@@ -4,6 +4,7 @@ import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 
 export interface ConsistentDataModel {
   considerationAmount: number;
+  targetValuation: number;
   currency: string;
   acquisitionPercentage: number;
   targetCompanyName: string;
@@ -88,8 +89,18 @@ export class DataConsistencyService {
                                 this.extractAcquiringCompanyFromStructure(analysisResults) || 
                                 'Acquiring Company';
     
+    // STEP 5: Calculate target valuation (100% equity interest)
+    const targetValuation = acquisitionPercentage > 0 && acquisitionPercentage < 100 
+      ? considerationAmount / (acquisitionPercentage / 100)
+      : considerationAmount;
+    
+    console.log('🎯 Target valuation calculation:');
+    console.log(`Consideration: ${considerationAmount}, Acquisition %: ${acquisitionPercentage}%`);
+    console.log(`Target Valuation (100%): ${targetValuation}`);
+
     const consistentData: ConsistentDataModel = {
       considerationAmount,
+      targetValuation,
       currency,
       acquisitionPercentage,
       targetCompanyName,
@@ -99,6 +110,7 @@ export class DataConsistencyService {
     
     console.log('=== FINAL CONSISTENT DATA MODEL ===');
     console.log('Consideration amount:', consistentData.considerationAmount);
+    console.log('Target valuation (100%):', consistentData.targetValuation);
     console.log('Currency:', consistentData.currency);
     console.log('Source:', consistentData.source);
     console.log('=== END DATA CONSISTENCY SERVICE ===');
