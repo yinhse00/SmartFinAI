@@ -237,17 +237,30 @@ export const parseAnalysisResponse = (responseText: string, userInputs?: Extract
     const documentPreparation = extractDocumentData(responseText);
     const executiveSummary = extractExecutiveSummary(responseText, userInputs);
 
-    // Build initial results from AI response
+    // CRITICAL: Build results with user input priority over AI data
+    const dealEconomics = userInputs ? {
+      purchasePrice: userInputs.amount || parsed.dealEconomics?.purchasePrice || 100000000,
+      currency: userInputs.currency || parsed.dealEconomics?.currency || 'HKD',
+      paymentStructure: parsed.dealEconomics?.paymentStructure || 'Cash',
+      valuationBasis: parsed.dealEconomics?.valuationBasis || 'Market Comparables',
+      targetPercentage: userInputs.acquisitionPercentage || parsed.dealEconomics?.targetPercentage || 100
+    } : (parsed.dealEconomics || {
+      purchasePrice: 100000000,
+      currency: 'HKD',
+      paymentStructure: 'Cash',
+      valuationBasis: 'Market Comparables',
+      targetPercentage: 100
+    });
+
+    console.log('🔒 USER INPUT PROTECTION: dealEconomics built with user priority');
+    console.log('User amount:', userInputs?.amount);
+    console.log('AI amount:', parsed.dealEconomics?.purchasePrice);
+    console.log('Final amount:', dealEconomics.purchasePrice);
+
     const results: AnalysisResults = {
       executiveSummary,
       transactionType: parsed.transactionType || 'General Transaction',
-      dealEconomics: parsed.dealEconomics || {
-        purchasePrice: userInputs?.amount || 100000000,
-        currency: userInputs?.currency || 'HKD',
-        paymentStructure: 'Cash',
-        valuationBasis: 'Market Comparables',
-        targetPercentage: userInputs?.acquisitionPercentage || 100
-      },
+      dealEconomics,
       structure: parsed.structure || {
         recommended: 'General Offer',
         rationale: 'Standard structure for acquiring all shares.',

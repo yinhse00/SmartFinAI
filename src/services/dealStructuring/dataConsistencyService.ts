@@ -40,7 +40,16 @@ export class DataConsistencyService {
     if (userInputs?.amount && userInputs.amount > 0) {
       considerationAmount = userInputs.amount;
       source = 'user_input';
-      console.log('✅ Using AUTHORITATIVE user input amount:', considerationAmount);
+      console.log('✅ PROTECTED: Using AUTHORITATIVE user input amount:', considerationAmount);
+      
+      // CRITICAL: Validate that AI hasn't corrupted user input
+      if (analysisResults.dealEconomics?.purchasePrice && 
+          Math.abs(analysisResults.dealEconomics.purchasePrice - userInputs.amount) > 1000) {
+        console.warn('🚨 DATA CORRUPTION DETECTED! AI amount differs from user input:');
+        console.warn('User input:', userInputs.amount);
+        console.warn('AI amount:', analysisResults.dealEconomics.purchasePrice);
+        console.warn('Using user input as authoritative source');
+      }
     } else if (analysisResults.dealEconomics?.purchasePrice && analysisResults.dealEconomics.purchasePrice > 0) {
       considerationAmount = analysisResults.dealEconomics.purchasePrice;
       source = 'ai_fallback';

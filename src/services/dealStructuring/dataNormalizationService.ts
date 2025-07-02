@@ -39,16 +39,25 @@ export class DataNormalizationService {
       return normalizedResults;
     }
 
-    // CRITICAL: Normalize consideration amount across ALL fields
+    // CRITICAL: Normalize consideration amount across ALL fields with absolute protection
     if (userInputs.amount && userInputs.amount > 0) {
       const targetAmount = userInputs.amount;
+      console.log('🔒 ENFORCING USER INPUT PROTECTION for amount:', targetAmount);
       
-      // 1. Normalize dealEconomics.purchasePrice
+      // 1. Normalize dealEconomics.purchasePrice with corruption detection
       if (normalizedResults.dealEconomics?.purchasePrice !== targetAmount) {
         const oldValue = normalizedResults.dealEconomics?.purchasePrice;
+        
+        // Detect if AI has corrupted user input
+        if (oldValue && Math.abs(oldValue - targetAmount) > 1000000) {
+          console.error('🚨 MAJOR DATA CORRUPTION DETECTED:');
+          console.error(`AI generated: ${oldValue}, User input: ${targetAmount}`);
+          console.error('Difference:', Math.abs(oldValue - targetAmount));
+        }
+        
         if (normalizedResults.dealEconomics) {
           normalizedResults.dealEconomics.purchasePrice = targetAmount;
-          corrections.push(`dealEconomics.purchasePrice: ${oldValue} → ${targetAmount}`);
+          corrections.push(`🔒 PROTECTED: dealEconomics.purchasePrice: ${oldValue} → ${targetAmount}`);
         }
       }
       
