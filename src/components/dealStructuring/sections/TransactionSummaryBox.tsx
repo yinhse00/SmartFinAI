@@ -55,7 +55,7 @@ export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummar
           <p className="text-sm leading-relaxed text-foreground">
             {acquiringCompany} is undertaking a {transactionType.toLowerCase()} to acquire {targetPercentage}% of {targetCompany} for a total consideration of {currency} {formatAmount(amount)}
             {paymentStructure?.cashPercentage && paymentStructure?.stockPercentage 
-              ? `, structured as ${paymentStructure.cashPercentage}% cash and ${paymentStructure.stockPercentage}% stock` 
+              ? `, structured as ${currency} ${formatAmount(Math.round(amount * (paymentStructure.cashPercentage / 100)))} in cash and ${currency} ${formatAmount(Math.round(amount * (paymentStructure.stockPercentage / 100)))} in stock` 
               : ''
             }. The transaction is expected to complete within {timeline}
             {results.timetable?.keyMilestones?.length > 0 

@@ -54,15 +54,8 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
         </div>
       </CardHeader>
       <CardContent className="space-y-4 p-4">
-        {/* Calculation debugger */}
-        <CalculationDebugger 
-          userInputs={userInputs}
-          finalAmount={transactionFlow.transactionContext.amount}
-          calculationDetails={(userInputs as any)?.calculationResult}
-        />
-        
         {/* Transaction flow diagram */}
-        <div className="h-[350px]">
+        <div className="h-[400px]">
           {diagramContent}
         </div>
       </CardContent>

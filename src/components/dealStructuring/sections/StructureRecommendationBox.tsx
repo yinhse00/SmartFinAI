@@ -197,19 +197,40 @@ export const StructureRecommendationBox = ({
               <h6 className="font-medium text-sm mb-2">Payment Structure</h6>
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div className="bg-white rounded p-2 border">
-                  <div className="text-gray-500">Cash</div>
+                  <div className="text-gray-500">Cash Component</div>
                   <div className="font-semibold text-green-600">
-                    {processedResults.structure.majorTerms.paymentStructure.cashPercentage}%
+                    {processedResults._calculatedConsideration ? 
+                      `${userInputs?.currency || 'HKD'} ${Math.round(processedResults._calculatedConsideration * (processedResults.structure.majorTerms.paymentStructure.cashPercentage / 100)).toLocaleString()}` :
+                      `${processedResults.structure.majorTerms.paymentStructure.cashPercentage}%`
+                    }
                   </div>
                 </div>
                 <div className="bg-white rounded p-2 border">
-                  <div className="text-gray-500">Stock</div>
+                  <div className="text-gray-500">Stock Component</div>
                   <div className="font-semibold text-green-600">
-                    {processedResults.structure.majorTerms.paymentStructure.stockPercentage}%
+                    {processedResults._calculatedConsideration ? 
+                      `${userInputs?.currency || 'HKD'} ${Math.round(processedResults._calculatedConsideration * (processedResults.structure.majorTerms.paymentStructure.stockPercentage / 100)).toLocaleString()}` :
+                      `${processedResults.structure.majorTerms.paymentStructure.stockPercentage}%`
+                    }
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Consideration Calculation Display */}
+            {processedResults._calculatedConsideration && (
+              <div>
+                <h6 className="font-medium text-sm mb-2">Consideration Calculation</h6>
+                <div className="text-xs text-green-700 bg-green-50 rounded p-2 border border-green-200">
+                  <div className="font-semibold mb-1">Total Consideration: {userInputs?.currency || 'HKD'} {processedResults._calculatedConsideration.toLocaleString()}</div>
+                  {userInputs && description && (
+                    <div className="text-gray-600">
+                      Calculated from transaction parameters
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Strategic Considerations - Using processed results */}
             {processedResults.structure.majorTerms.suggestionConsideration && <div>
@@ -218,12 +239,6 @@ export const StructureRecommendationBox = ({
                   {processedResults.structure.majorTerms.suggestionConsideration}
                 </p>
                 
-                {/* Show calculated consideration if available */}
-                {processedResults._calculatedConsideration && (
-                  <div className="mt-2 text-xs text-green-700 bg-green-50 rounded p-2 border border-green-200">
-                    <strong>Calculated Consideration:</strong> {userInputs?.currency || 'HKD'} {processedResults._calculatedConsideration.toLocaleString()}
-                  </div>
-                )}
               </div>}
 
             {/* Payment Schedule */}

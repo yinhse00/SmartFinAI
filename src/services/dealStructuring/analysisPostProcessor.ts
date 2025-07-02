@@ -63,7 +63,7 @@ export const analysisPostProcessor = {
       _postProcessed: true
     };
 
-    // Calculate proper consideration amount
+    // Calculate proper consideration amount with authority precedence
     let calculatedConsideration: number | undefined;
     
     if (userInputs && description) {
@@ -71,8 +71,15 @@ export const analysisPostProcessor = {
       if (calculation.isValid && calculation.calculationMethod === 'calculated') {
         calculatedConsideration = calculation.considerationAmount;
         processed._calculatedConsideration = calculatedConsideration;
-        console.log('✅ Using calculated consideration:', calculatedConsideration);
+        console.log('✅ Using calculated consideration (precedence):', calculatedConsideration);
       }
+    }
+
+    // Use user input amount if available (higher precedence than AI)
+    if (userInputs?.amount && !calculatedConsideration) {
+      calculatedConsideration = userInputs.amount;
+      processed._calculatedConsideration = calculatedConsideration;
+      console.log('✅ Using user input consideration:', calculatedConsideration);
     }
 
     // Fix suggestionConsideration field if it contains pricing
@@ -89,27 +96,37 @@ export const analysisPostProcessor = {
       }
     }
 
-    // Update amounts across all sections if calculated consideration is available
+    // Override AI amounts with calculated/user values - AUTHORITY PRECEDENCE
     if (calculatedConsideration) {
-      // Update dealEconomics
+      // Update dealEconomics - override AI amounts
       if (processed.dealEconomics) {
         processed.dealEconomics.purchasePrice = calculatedConsideration;
       }
 
-      // Update valuation
+      // Update valuation - override AI amounts
       if (processed.valuation?.transactionValue) {
         processed.valuation.transactionValue.amount = calculatedConsideration;
       }
 
-      // Update transactionFlow context
+      // Update transactionFlow context - override AI amounts
       if (processed.transactionFlow?.transactionContext) {
         processed.transactionFlow.transactionContext.amount = calculatedConsideration;
       }
 
-      console.log('✅ Updated all sections with calculated consideration:', calculatedConsideration);
+      // Update structure majorTerms if they contain incorrect amounts
+      if (processed.structure?.majorTerms) {
+        // Remove any pricing from suggestion field again (extra safety)
+        if (processed.structure.majorTerms.suggestionConsideration) {
+          processed.structure.majorTerms.suggestionConsideration = analysisPostProcessor.validateAndCleanSuggestionConsideration(
+            processed.structure.majorTerms.suggestionConsideration
+          );
+        }
+      }
+
+      console.log('✅ Overrode all AI amounts with authoritative consideration:', calculatedConsideration);
     }
 
-    console.log('✅ Post-processing completed');
+    console.log('✅ Post-processing completed with authority precedence');
     return processed;
   },
 
