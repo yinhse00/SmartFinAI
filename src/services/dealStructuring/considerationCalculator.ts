@@ -129,16 +129,17 @@ export const considerationCalculator = {
     const extractedValues = considerationCalculator.extractValues(description);
     const validationErrors: string[] = [];
     
-    // CRITICAL: Fixed Priority Logic - Target valuation calculation takes absolute precedence
-    // Priority 1: Calculate from target valuation × acquisition percentage (HIGHEST PRECEDENCE)
+    // ABSOLUTE PRIORITY: Calculate from target valuation × acquisition percentage
+    // This MUST override any AI amounts when both inputs are available
     let targetValuation: number | undefined;
     let acquisitionPercentage: number | undefined;
     
-    // Use user input amount as target valuation (not consideration) if both amount and percentage are provided
+    // CRITICAL: Use user input amount as target valuation when both amount and percentage provided
     if (userInputs?.amount && userInputs?.acquisitionPercentage) {
       targetValuation = userInputs.amount;
       acquisitionPercentage = userInputs.acquisitionPercentage;
-      console.log('📊 Using direct user input amount as target valuation:', targetValuation);
+      console.log('🎯 PRIORITY 1: Using user inputs for calculation');
+      console.log(`Target valuation: ${targetValuation.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
     } else {
       // Fallback to extracted values
       targetValuation = extractedValues.targetValuation;
@@ -148,26 +149,26 @@ export const considerationCalculator = {
     if (targetValuation && acquisitionPercentage) {
       const calculatedConsideration = targetValuation * (acquisitionPercentage / 100);
       
-      // Validation: consideration should be less than target valuation
+      console.log('🔒 CALCULATION AUTHORITY ENFORCED:');
+      console.log(`${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${calculatedConsideration.toLocaleString()}`);
+      
+      // Reject any AI amount that doesn't match calculation when we have valid inputs
+      if (aiEstimatedAmount && Math.abs(aiEstimatedAmount - calculatedConsideration) > calculatedConsideration * 0.01) {
+        console.log(`⚠️ REJECTING AI amount ${aiEstimatedAmount.toLocaleString()} - using calculated ${calculatedConsideration.toLocaleString()}`);
+      }
+      
+      // Standard validations
       if (calculatedConsideration > targetValuation) {
-        validationErrors.push(`Calculated consideration (${calculatedConsideration.toLocaleString()}) exceeds target valuation (${targetValuation.toLocaleString()})`);
+        validationErrors.push(`Calculated consideration exceeds target valuation`);
       }
       
-      // Validation: consideration should be less than market cap if available
       if (extractedValues.marketCap && calculatedConsideration > extractedValues.marketCap) {
-        validationErrors.push(`Calculated consideration (${calculatedConsideration.toLocaleString()}) exceeds market cap (${extractedValues.marketCap.toLocaleString()})`);
+        validationErrors.push(`Calculated consideration exceeds market cap`);
       }
       
-      // Validation: percentage should be reasonable
       if (acquisitionPercentage <= 0 || acquisitionPercentage > 100) {
-        validationErrors.push(`Acquisition percentage (${acquisitionPercentage}%) is not valid`);
+        validationErrors.push(`Invalid acquisition percentage: ${acquisitionPercentage}%`);
       }
-      
-      console.log('✅ Calculated consideration:', {
-        targetValuation,
-        acquisitionPercentage,
-        result: calculatedConsideration
-      });
       
       return {
         considerationAmount: calculatedConsideration,
@@ -177,7 +178,7 @@ export const considerationCalculator = {
           acquisitionPercentage,
           calculationFormula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${calculatedConsideration.toLocaleString()}`
         },
-        confidence: 0.95, // Higher confidence for calculated values
+        confidence: 0.95,
         isValid: validationErrors.length === 0,
         validationErrors
       };

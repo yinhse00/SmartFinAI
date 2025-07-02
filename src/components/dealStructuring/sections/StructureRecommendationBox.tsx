@@ -226,7 +226,7 @@ export const StructureRecommendationBox = ({
               </div>
             </div>
 
-            {/* Consideration Calculation Display with Validation */}
+            {/* Authoritative Consideration Display */}
             {processedResults._calculatedConsideration && (
               <div>
                 <h6 className="font-medium text-sm mb-2">Consideration Calculation</h6>

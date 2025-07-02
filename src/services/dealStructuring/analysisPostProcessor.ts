@@ -150,28 +150,26 @@ export const analysisPostProcessor = {
       }
     }
 
-    // AUTHORITY ENFORCEMENT: Override ALL AI amounts with calculated/user values
+    // CRITICAL: ABSOLUTE AUTHORITY ENFORCEMENT - No AI amounts can override calculated values
     if (calculatedConsideration) {
-      console.log('🔒 ENFORCING AUTHORITY PRECEDENCE - Overriding all AI amounts with:', calculatedConsideration);
+      console.log('🔒 ENFORCING CALCULATION AUTHORITY - Overriding ALL amounts with calculated value:', calculatedConsideration.toLocaleString());
       
-      // 1. Update dealEconomics - COMPLETE OVERRIDE
+      // PHASE 1: Complete override of all AI amounts
       if (processed.dealEconomics) {
         const oldAmount = processed.dealEconomics.purchasePrice;
         processed.dealEconomics.purchasePrice = calculatedConsideration;
-        if (oldAmount !== calculatedConsideration) {
-          console.log(`🔧 CORRECTED dealEconomics.purchasePrice: ${oldAmount?.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
+        if (oldAmount && oldAmount !== calculatedConsideration) {
+          console.log(`🔧 AUTHORITY OVERRIDE: dealEconomics.purchasePrice ${oldAmount.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
         }
       }
 
-      // 2. Update valuation - COMPLETE OVERRIDE
       if (processed.valuation?.transactionValue) {
         const oldAmount = processed.valuation.transactionValue.amount;
         processed.valuation.transactionValue.amount = calculatedConsideration;
-        if (oldAmount !== calculatedConsideration) {
-          console.log(`🔧 CORRECTED valuation.transactionValue.amount: ${oldAmount?.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
+        if (oldAmount && oldAmount !== calculatedConsideration) {
+          console.log(`🔧 AUTHORITY OVERRIDE: valuation.transactionValue.amount ${oldAmount.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
         }
         
-        // Update valuation range to match
         processed.valuation.valuationRange = {
           low: calculatedConsideration * 0.95,
           high: calculatedConsideration * 1.05,
@@ -179,26 +177,29 @@ export const analysisPostProcessor = {
         };
       }
 
-      // 3. Update transactionFlow context - COMPLETE OVERRIDE
       if (processed.transactionFlow?.transactionContext) {
         const oldAmount = processed.transactionFlow.transactionContext.amount;
         processed.transactionFlow.transactionContext.amount = calculatedConsideration;
-        if (oldAmount !== calculatedConsideration) {
-          console.log(`🔧 CORRECTED transactionFlow.transactionContext.amount: ${oldAmount?.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
+        if (oldAmount && oldAmount !== calculatedConsideration) {
+          console.log(`🔧 AUTHORITY OVERRIDE: transactionFlow.transactionContext.amount ${oldAmount.toLocaleString()} → ${calculatedConsideration.toLocaleString()}`);
         }
       }
 
-      // 4. Clean strategic considerations field
+      // PHASE 2: Ensure _calculatedConsideration is authoritative
+      processed._calculatedConsideration = calculatedConsideration;
+      console.log('✅ SET _calculatedConsideration to authoritative value:', calculatedConsideration.toLocaleString());
+
+      // PHASE 3: Clean strategic considerations
       if (processed.structure?.majorTerms?.suggestionConsideration) {
         processed.structure.majorTerms.suggestionConsideration = analysisPostProcessor.validateAndCleanSuggestionConsideration(
           processed.structure.majorTerms.suggestionConsideration
         );
       }
 
-      // 5. FINAL VALIDATION: Ensure no traces of incorrect amounts remain
+      // PHASE 4: Final validation to catch any remaining incorrect amounts
       analysisPostProcessor.performFinalValidation(processed, calculatedConsideration);
       
-      console.log('✅ AUTHORITY ENFORCEMENT COMPLETE - All amounts standardized to:', calculatedConsideration.toLocaleString());
+      console.log('✅ CALCULATION AUTHORITY COMPLETE - All systems aligned to:', calculatedConsideration.toLocaleString());
     }
 
     console.log('✅ Post-processing completed with authority precedence');
