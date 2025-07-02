@@ -134,14 +134,32 @@ export const considerationCalculator = {
     let targetValuation: number | undefined;
     let acquisitionPercentage: number | undefined;
     
-    // CRITICAL: Use user input amount as target valuation when both amount and percentage provided
+    // CRITICAL: When user provides both amount and percentage, amount is CONSIDERATION
     if (userInputs?.amount && userInputs?.acquisitionPercentage) {
-      targetValuation = userInputs.amount;
+      // Calculate target valuation from consideration: Target = Consideration ÷ Percentage
+      const userConsideration = userInputs.amount;
       acquisitionPercentage = userInputs.acquisitionPercentage;
-      console.log('🎯 PRIORITY 1: Using user inputs for calculation');
-      console.log(`Target valuation: ${targetValuation.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
+      targetValuation = userConsideration / (acquisitionPercentage / 100);
+      
+      console.log('🎯 PRIORITY 1: User provided consideration and percentage');
+      console.log(`Consideration: ${userConsideration.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
+      console.log(`Calculated target valuation: ${targetValuation.toLocaleString()}`);
+      
+      // Return the user's consideration amount directly
+      return {
+        considerationAmount: userConsideration,
+        calculationMethod: 'calculated',
+        calculationDetails: {
+          targetValuation,
+          acquisitionPercentage,
+          calculationFormula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${userConsideration.toLocaleString()}`
+        },
+        confidence: 0.95,
+        isValid: true,
+        validationErrors: []
+      };
     } else {
-      // Fallback to extracted values
+      // Fallback to extracted values for traditional calculation
       targetValuation = extractedValues.targetValuation;
       acquisitionPercentage = userInputs?.acquisitionPercentage || extractedValues.acquisitionPercentage;
     }
@@ -262,21 +280,12 @@ export const considerationCalculator = {
       calculationResult: calculation
     };
     
-    // CRITICAL: Set the correct consideration amount based on calculation method
-    if (calculation.calculationMethod === 'calculated' && calculation.calculationDetails.targetValuation) {
-      // When calculated from target valuation, the consideration is the calculated amount
-      enhanced.amount = calculation.considerationAmount;
+    // CRITICAL: Always preserve user input consideration amount
+    enhanced.amount = calculation.considerationAmount;
+    if (calculation.calculationDetails.acquisitionPercentage) {
       enhanced.acquisitionPercentage = calculation.calculationDetails.acquisitionPercentage;
-      console.log('🎯 Enhanced with calculated consideration:', enhanced.amount);
-    } else if (calculation.calculationMethod === 'direct_input') {
-      // When direct input, use the provided amount
-      enhanced.amount = calculation.considerationAmount;
-      console.log('📊 Enhanced with direct input consideration:', enhanced.amount);
-    } else {
-      // Fallback case
-      enhanced.amount = userInputs?.amount || calculation.considerationAmount;
-      console.log('⚠️ Enhanced with fallback consideration:', enhanced.amount);
     }
+    console.log('🎯 Enhanced with authoritative consideration:', enhanced.amount);
     
     console.log('🚀 Enhanced user inputs:', enhanced);
     return enhanced;
