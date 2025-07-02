@@ -158,7 +158,7 @@ export const ValuationAnalysisBox = ({ results, userInputs }: ValuationAnalysisB
   console.log('ExtractedData source:', extractedData.source);
 
   return (
-    <Card className="h-[500px]">
+    <Card className="h-[380px]">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-lg">
@@ -179,7 +179,7 @@ export const ValuationAnalysisBox = ({ results, userInputs }: ValuationAnalysisB
           </EnlargedContentDialog>
         </div>
       </CardHeader>
-      <CardContent className="h-[400px] overflow-y-auto space-y-4">
+      <CardContent className="h-[280px] overflow-y-auto space-y-4">
         {/* Valuation of the Target */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <h5 className="font-medium text-blue-800 mb-3 flex items-center gap-2">

@@ -209,9 +209,21 @@ const DealStructuring = () => {
                     </div>
                   )}
                 </div>
-                <button onClick={handleNewAnalysis} className="text-primary hover:underline">
-                  New Analysis
-                </button>
+                <div className="flex items-center gap-3">
+                  <button 
+                    onClick={() => {
+                      localStorage.setItem('executionAnalysisResults', JSON.stringify(analysisResults));
+                      window.open('/execution', '_blank');
+                    }}
+                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                  >
+                    <TrendingUp className="h-4 w-4" />
+                    Go to Execution
+                  </button>
+                  <button onClick={handleNewAnalysis} className="text-primary hover:underline">
+                    New Analysis
+                  </button>
+                </div>
               </div>
               <DealStructuringDashboard 
                 results={analysisResults} 

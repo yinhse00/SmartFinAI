@@ -168,7 +168,7 @@ export const OptimizationResultsBox = ({ results }: OptimizationResultsBoxProps)
   };
 
   return (
-    <Card className="h-[500px]">
+    <Card className="h-[380px]">
       <CardHeader className="pb-4">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
@@ -184,7 +184,7 @@ export const OptimizationResultsBox = ({ results }: OptimizationResultsBoxProps)
           </EnlargedContentDialog>
         </div>
       </CardHeader>
-      <CardContent className="h-[400px] overflow-y-auto space-y-4">
+      <CardContent className="h-[280px] overflow-y-auto space-y-4">
         {/* Recommended Structure */}
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
           <div className="flex items-center justify-between mb-2">

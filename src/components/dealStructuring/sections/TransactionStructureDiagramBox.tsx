@@ -15,14 +15,14 @@ export const TransactionStructureDiagramBox = ({ results }: TransactionStructure
   const entityNames = extractEntityNames(results); // Extract entity names
 
   return (
-    <Card className="h-[500px]">
+    <Card className="h-[380px]">
       <CardHeader className="pb-4">
         <CardTitle className="flex items-center gap-2">
           <Network className="h-5 w-5 text-blue-500" />
           Transaction Structure Diagram
         </CardTitle>
       </CardHeader>
-      <CardContent className="h-[400px]">
+      <CardContent className="h-[280px]">
         <Tabs defaultValue="shareholding" className="h-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="shareholding" className="flex items-center gap-2">
@@ -35,7 +35,7 @@ export const TransactionStructureDiagramBox = ({ results }: TransactionStructure
             </TabsTrigger>
           </TabsList>
           
-          <TabsContent value="shareholding" className="h-[340px] mt-4">
+          <TabsContent value="shareholding" className="h-[220px] mt-4">
             <ShareholdingDiagramVisualization 
               shareholdingChanges={results.shareholdingChanges}
               fallbackData={results.shareholding}
@@ -46,7 +46,7 @@ export const TransactionStructureDiagramBox = ({ results }: TransactionStructure
             />
           </TabsContent>
           
-          <TabsContent value="structure" className="h-[340px] mt-4">
+          <TabsContent value="structure" className="h-[220px] mt-4">
             <CorporateStructureDiagram 
               corporateStructure={results.corporateStructure}
               transactionType={results.transactionType}
