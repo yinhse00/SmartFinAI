@@ -81,6 +81,13 @@ export class DataNormalizationService {
         if (normalizedResults.transactionFlow?.transactionContext) {
           normalizedResults.transactionFlow.transactionContext.amount = targetAmount;
           corrections.push(`transactionFlow.transactionContext.amount: ${oldValue} → ${targetAmount}`);
+        } else if (normalizedResults.transactionFlow) {
+          // Create transactionContext if it doesn't exist
+          normalizedResults.transactionFlow.transactionContext = {
+            amount: targetAmount,
+            currency: userInputs.currency || 'HKD'
+          };
+          corrections.push(`Created transactionFlow.transactionContext with amount: ${targetAmount}`);
         }
       }
     }

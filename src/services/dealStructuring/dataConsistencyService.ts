@@ -43,21 +43,32 @@ export class DataConsistencyService {
       console.log('✅ PROTECTED: Using AUTHORITATIVE user input amount:', considerationAmount);
       
       // CRITICAL: Validate that AI hasn't corrupted user input
-      if (analysisResults.dealEconomics?.purchasePrice && 
-          Math.abs(analysisResults.dealEconomics.purchasePrice - userInputs.amount) > 1000) {
-        console.warn('🚨 DATA CORRUPTION DETECTED! AI amount differs from user input:');
-        console.warn('User input:', userInputs.amount);
-        console.warn('AI amount:', analysisResults.dealEconomics.purchasePrice);
-        console.warn('Using user input as authoritative source');
-      }
+      const aiAmounts = [
+        analysisResults.dealEconomics?.purchasePrice,
+        analysisResults.valuation?.transactionValue?.amount,
+        analysisResults.transactionFlow?.transactionContext?.amount
+      ].filter(amount => amount && amount > 0);
+      
+      aiAmounts.forEach((aiAmount, index) => {
+        if (aiAmount && Math.abs(aiAmount - userInputs.amount) > 1000) {
+          console.warn(`🚨 DATA CORRUPTION DETECTED in AI field ${index + 1}:`);
+          console.warn('User input:', userInputs.amount);
+          console.warn('AI amount:', aiAmount);
+          console.warn('Using user input as authoritative source');
+        }
+      });
     } else if (analysisResults.dealEconomics?.purchasePrice && analysisResults.dealEconomics.purchasePrice > 0) {
       considerationAmount = analysisResults.dealEconomics.purchasePrice;
       source = 'ai_fallback';
       console.log('⚠️ No user input, using AI fallback amount:', considerationAmount);
+    } else if (analysisResults.valuation?.transactionValue?.amount && analysisResults.valuation.transactionValue.amount > 0) {
+      considerationAmount = analysisResults.valuation.transactionValue.amount;
+      source = 'ai_fallback';
+      console.log('⚠️ No user input, using valuation amount:', considerationAmount);
     } else {
-      considerationAmount = 100000000; // 100M HKD default
-      source = 'default';
-      console.log('🛡️ Using safe default amount:', considerationAmount);
+      considerationAmount = analysisResults.transactionFlow?.transactionContext?.amount || 0;
+      source = considerationAmount > 0 ? 'ai_fallback' : 'default';
+      console.log(`⚠️ Using ${source} amount:`, considerationAmount);
     }
     
     // STEP 2: Extract currency with user input priority

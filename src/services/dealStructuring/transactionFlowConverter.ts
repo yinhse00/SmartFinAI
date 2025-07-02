@@ -20,11 +20,11 @@ export const convertAnalysisToTransactionFlow = (
   // CRITICAL: Apply normalization to ensure data consistency
   const normalizedResults = dataNormalizationService.normalizeAnalysisResults(results, userInputs);
   
-  // Extract consideration amount from normalized results
-  const considerationAmount = normalizedResults.transactionFlow?.transactionContext?.amount ||
+  // Extract consideration amount with ABSOLUTE user input priority
+  const considerationAmount = userInputs?.amount || 
+                             normalizedResults.transactionFlow?.transactionContext?.amount ||
                              normalizedResults.dealEconomics?.purchasePrice ||
-                             normalizedResults.valuation?.transactionValue?.amount ||
-                             (userInputs?.amount || 100000000);
+                             normalizedResults.valuation?.transactionValue?.amount;
                              
   console.log('Using consideration amount:', considerationAmount);
 
