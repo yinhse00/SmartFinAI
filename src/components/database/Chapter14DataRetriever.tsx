@@ -35,23 +35,24 @@ const Chapter14DataRetriever: React.FC = () => {
         description: 'Retrieving Chapter 14 data from SmartFinAI database...',
       });
       
+      // Use existing tables instead of non-existent regulatory_provisions
       const { data: provisions, error } = await supabase
-        .from('regulatory_provisions')
-        .select('id, rule_number, title, content, chapter, section')
+        .from('listingrule_new_gl')
+        .select('id, reference_no, title, particulars, chapter')
         .eq('chapter', 'Chapter 14')
-        .order('rule_number');
+        .order('reference_no');
         
       if (error) {
         throw new Error(`Database query failed: ${error.message}`);
       }
       
-      // Format the retrieved data
-      const formattedProvisions: FormattedChapter14Entry[] = provisions.map(item => ({
-        ruleNumber: item.rule_number,
+      // Format the retrieved data using available table structure
+      const formattedProvisions: FormattedChapter14Entry[] = (provisions || []).map(item => ({
+        ruleNumber: item.reference_no || '',
         title: item.title || '',
-        content: item.content || '',
+        content: item.particulars || '',
         chapter: item.chapter || 'Chapter 14',
-        section: item.section || '',
+        section: item.reference_no || '',
         categoryCode: 'CH14'
       }));
       

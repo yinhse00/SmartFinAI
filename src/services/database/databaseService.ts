@@ -45,16 +45,14 @@ export const databaseService = {
         // Insert entries into Supabase
         for (const entry of entries) {
           const { error } = await supabase
-            .from('regulatory_provisions')
+            .from('listingrule_new_gl')
             .insert({
-              rule_number: entry.id,
+              reference_no: entry.id,
               title: entry.title,
-              content: entry.content,
+              particulars: entry.content,
               chapter: chapter,
-              section: entry.section,
-              last_updated: new Date().toISOString(),
-              is_current: true,
-              path_reference: file.name
+              mblistingrules_Topics: entry.section,
+              created_at: new Date().toISOString()
             });
           
           if (error) {
@@ -85,11 +83,11 @@ export const databaseService = {
   getAllEntries: async (): Promise<RegulatoryEntry[]> => {
     console.log('Fetching all regulatory entries from Supabase');
     
-    // Use a simpler query that doesn't rely on relationships
+    // Use the existing listingrule_new_gl table
     const { data, error } = await supabase
-      .from('regulatory_provisions')
+      .from('listingrule_new_gl')
       .select('*')
-      .order('rule_number');
+      .order('reference_no');
       
     if (error) {
       console.error('Error fetching regulatory provisions:', error);
@@ -97,22 +95,22 @@ export const databaseService = {
     }
     
     // Map the Supabase data structure to our RegulatoryEntry type
-    return data.map(item => {
-      // Determine category from the chapter or rule number
+    return (data || []).map(item => {
+      // Determine category from the chapter or reference number
       let category: RegulatoryEntry['category'] = 'other';
       if (item.chapter?.includes('14')) category = 'listing_rules';
       else if (item.chapter?.includes('13')) category = 'listing_rules';
-      else if (item.rule_number?.includes('TO')) category = 'takeovers';
+      else if (item.reference_no?.includes('TO')) category = 'takeovers';
       
       return {
         id: item.id,
-        title: item.title,
-        content: item.content,
+        title: item.title || '',
+        content: item.particulars || '',
         category: category,
-        source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
-        section: item.section || undefined,
-        lastUpdated: new Date(item.last_updated),
-        status: item.is_current ? 'active' : 'archived'
+        source: item.chapter ? `${item.chapter}` : 'Unknown',
+        section: item.reference_no || undefined,
+        lastUpdated: new Date(item.created_at),
+        status: 'active'
       };
     });
   },
@@ -135,7 +133,7 @@ export const databaseService = {
     console.log(`Fetching regulatory entry with ID: ${id}`);
     
     const { data, error } = await supabase
-      .from('regulatory_provisions')
+      .from('listingrule_new_gl')
       .select('*')
       .eq('id', id)
       .single();
@@ -145,21 +143,21 @@ export const databaseService = {
       return null;
     }
     
-    // Determine category from the chapter or rule number
+    // Determine category from the chapter or reference number
     let category: RegulatoryEntry['category'] = 'other';
     if (data.chapter?.includes('14')) category = 'listing_rules';
     else if (data.chapter?.includes('13')) category = 'listing_rules';
-    else if (data.rule_number?.includes('TO')) category = 'takeovers';
+    else if (data.reference_no?.includes('TO')) category = 'takeovers';
     
     return {
       id: data.id,
-      title: data.title,
-      content: data.content,
+      title: data.title || '',
+      content: data.particulars || '',
       category: category,
-      source: data.chapter ? `${data.chapter} ${data.section || ''}` : 'Unknown',
-      section: data.section || undefined,
-      lastUpdated: new Date(data.last_updated),
-      status: data.is_current ? 'active' : 'archived'
+      source: data.chapter ? `${data.chapter}` : 'Unknown',
+      section: data.reference_no || undefined,
+      lastUpdated: new Date(data.created_at),
+      status: 'active'
     };
   },
   
@@ -174,16 +172,14 @@ export const databaseService = {
     
     // Insert the entry
     const { data, error } = await supabase
-      .from('regulatory_provisions')
+      .from('listingrule_new_gl')
       .insert({
-        id: newId,
-        rule_number: entry.source || newId,
+        reference_no: entry.source || newId,
         title: entry.title,
-        content: entry.content,
+        particulars: entry.content,
         chapter: entry.source?.split(' ')[0] || null,
-        section: entry.section || null,
-        last_updated: entry.lastUpdated.toISOString(),
-        is_current: entry.status === 'active'
+        mblistingrules_Topics: entry.section || null,
+        created_at: entry.lastUpdated.toISOString()
       })
       .select()
       .single();
@@ -199,13 +195,13 @@ export const databaseService = {
     
     return {
       id: data.id,
-      title: data.title,
-      content: data.content,
+      title: data.title || '',
+      content: data.particulars || '',
       category: entry.category,
-      source: data.chapter ? `${data.chapter} ${data.section || ''}` : 'Unknown',
+      source: data.chapter ? `${data.chapter}` : 'Unknown',
       section: entry.section || undefined,
-      lastUpdated: new Date(data.last_updated),
-      status: data.is_current ? 'active' : 'archived'
+      lastUpdated: new Date(data.created_at),
+      status: 'active'
     };
   },
   
@@ -223,15 +219,14 @@ export const databaseService = {
     
     try {
       const { data, error } = await supabase
-        .from('regulatory_provisions')
+        .from('listingrule_new_gl')
         .insert({
-          rule_number: provision.ruleNumber,
+          reference_no: provision.ruleNumber,
           title: provision.title,
-          content: provision.content,
+          particulars: provision.content,
           chapter: provision.chapter,
-          section: provision.section,
-          last_updated: new Date().toISOString(),
-          is_current: true
+          mblistingrules_Topics: provision.section,
+          created_at: new Date().toISOString()
         })
         .select('id')
         .single();
@@ -277,8 +272,14 @@ export const databaseService = {
       updateData.last_updated = new Date().toISOString();
       
       const { error } = await supabase
-        .from('regulatory_provisions')
-        .update(updateData)
+        .from('listingrule_new_gl')
+        .update({
+          reference_no: updates.ruleNumber,
+          title: updates.title,
+          particulars: updates.content,
+          chapter: updates.chapter,
+          mblistingrules_Topics: updates.section
+        })
         .eq('id', id);
         
       if (error) {
@@ -300,7 +301,7 @@ export const databaseService = {
     console.log(`Deleting provision with ID: ${id}`);
     
     const { error } = await supabase
-      .from('regulatory_provisions')
+      .from('listingrule_new_gl')
       .delete()
       .eq('id', id);
       
@@ -336,17 +337,16 @@ export const databaseService = {
       console.log(`Processing batch ${i + 1} of ${batches}`);
       
       const supabaseRows = batch.map(provision => ({
-        rule_number: provision.ruleNumber,
+        reference_no: provision.ruleNumber,
         title: provision.title,
-        content: provision.content,
+        particulars: provision.content,
         chapter: provision.chapter,
-        section: provision.section,
-        last_updated: new Date().toISOString(),
-        is_current: true
+        mblistingrules_Topics: provision.section,
+        created_at: new Date().toISOString()
       }));
       
       const { error } = await supabase
-        .from('regulatory_provisions')
+        .from('listingrule_new_gl')
         .insert(supabaseRows);
         
       if (error) {
