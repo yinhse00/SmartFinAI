@@ -20,6 +20,7 @@ import SettingsPage from "./pages/Settings";
 import BillingPage from "./pages/Billing";
 import SupportPage from "./pages/Support";
 import UpdatePasswordPage from "./pages/UpdatePassword";
+import ExecutionPage from "./pages/Execution";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -72,6 +73,11 @@ const App = () => (
               <Route path="/support" element={
                 <ProtectedRoute>
                   <SupportPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/execution" element={
+                <ProtectedRoute>
+                  <ExecutionPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />

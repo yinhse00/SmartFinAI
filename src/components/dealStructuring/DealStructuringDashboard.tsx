@@ -9,11 +9,14 @@ import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
 import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
 import { ValuationAnalysisBox } from './sections/ValuationAnalysisBox';
 import { DocumentPreparationBox } from './sections/DocumentPreparationBox';
-import { ExecutionControlCenter } from '../execution/ExecutionControlCenter';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
 import { ExecutionPlan } from '@/services/execution/executionPlanExtractor';
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Settings, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
@@ -28,13 +31,17 @@ export const DealStructuringDashboard = ({
   optimizationResult,
   userInputs 
 }: DealStructuringDashboardProps) => {
-  const [executionPlan, setExecutionPlan] = useState<ExecutionPlan | null>(null);
+  const navigate = useNavigate();
   
   console.log('=== DealStructuringDashboard ===');
   console.log('UserInputs received:', userInputs);
   
-  const handleExecutionStart = (plan: ExecutionPlan) => {
-    setExecutionPlan(plan);
+  const handleGoToExecution = () => {
+    // Store analysis results for the execution page
+    localStorage.setItem('executionAnalysisResults', JSON.stringify(results));
+    
+    // Navigate to execution page
+    navigate('/execution');
   };
   
   return (
@@ -73,12 +80,32 @@ export const DealStructuringDashboard = ({
             <DocumentPreparationBox results={results} />
           </div>
           
-          {/* Row 4: Execution Control Center, Regulatory Compliance */}
+          {/* Row 4: Execution Navigation, Regulatory Compliance */}
           <div>
-            <ExecutionControlCenter 
-              results={results} 
-              onExecutionStart={handleExecutionStart}
-            />
+            <Card className="h-full">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-primary" />
+                  Execution Planning
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <div className="mb-4">
+                    <Settings className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">Ready for Execution</h3>
+                    <p className="text-sm text-muted-foreground max-w-md mx-auto mb-6">
+                      Generate and manage your execution plan in a dedicated interface with enhanced task management capabilities.
+                    </p>
+                  </div>
+                  
+                  <Button onClick={handleGoToExecution} className="w-full">
+                    <ExternalLink className="h-4 w-4 mr-2" />
+                    Go to Execution Center
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
           <div>
             <RegulatoryComplianceBox results={results} />
