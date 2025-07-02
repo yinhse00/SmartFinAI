@@ -9,8 +9,11 @@ import { DealStructuringChatbox } from './sections/DealStructuringChatbox';
 import { TransactionFlowDiagramBox } from './sections/TransactionFlowDiagramBox';
 import { ValuationAnalysisBox } from './sections/ValuationAnalysisBox';
 import { DocumentPreparationBox } from './sections/DocumentPreparationBox';
+import { ExecutionControlCenter } from '../execution/ExecutionControlCenter';
 import { OptimizationResult } from '@/services/dealStructuring/optimizationEngine';
 import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
+import { ExecutionPlan } from '@/services/execution/executionPlanExtractor';
+import { useState } from 'react';
 
 interface DealStructuringDashboardProps {
   results: AnalysisResults;
@@ -25,8 +28,14 @@ export const DealStructuringDashboard = ({
   optimizationResult,
   userInputs 
 }: DealStructuringDashboardProps) => {
+  const [executionPlan, setExecutionPlan] = useState<ExecutionPlan | null>(null);
+  
   console.log('=== DealStructuringDashboard ===');
   console.log('UserInputs received:', userInputs);
+  
+  const handleExecutionStart = (plan: ExecutionPlan) => {
+    setExecutionPlan(plan);
+  };
   
   return (
     <div className="space-y-4">
@@ -64,9 +73,12 @@ export const DealStructuringDashboard = ({
             <DocumentPreparationBox results={results} />
           </div>
           
-          {/* Row 4: Execution Timetable, Regulatory Compliance */}
+          {/* Row 4: Execution Control Center, Regulatory Compliance */}
           <div>
-            <ExecutionTimetableBox results={results} />
+            <ExecutionControlCenter 
+              results={results} 
+              onExecutionStart={handleExecutionStart}
+            />
           </div>
           <div>
             <RegulatoryComplianceBox results={results} />

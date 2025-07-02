@@ -168,6 +168,60 @@ export type Database = {
         }
         Relationships: []
       }
+      listingrules_listed_timetable: {
+        Row: {
+          created_at: string
+          id: string
+          "no of day for preparing circular": string | null
+          "no of day for preparing listing document or prospectus or offer":
+            | string
+            | null
+          "no of day for preparing the announcement": string | null
+          "no of day for vetting circular": string | null
+          "no of day for vetting listing document or prospectus or offer d":
+            | string
+            | null
+          "no of days of vetting the annoucement": string | null
+          particulars: string | null
+          "relevant guidances": string
+          "vetting authority": string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          "no of day for preparing circular"?: string | null
+          "no of day for preparing listing document or prospectus or offer"?:
+            | string
+            | null
+          "no of day for preparing the announcement"?: string | null
+          "no of day for vetting circular"?: string | null
+          "no of day for vetting listing document or prospectus or offer d"?:
+            | string
+            | null
+          "no of days of vetting the annoucement"?: string | null
+          particulars?: string | null
+          "relevant guidances": string
+          "vetting authority"?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          "no of day for preparing circular"?: string | null
+          "no of day for preparing listing document or prospectus or offer"?:
+            | string
+            | null
+          "no of day for preparing the announcement"?: string | null
+          "no of day for vetting circular"?: string | null
+          "no of day for vetting listing document or prospectus or offer d"?:
+            | string
+            | null
+          "no of days of vetting the annoucement"?: string | null
+          particulars?: string | null
+          "relevant guidances"?: string
+          "vetting authority"?: string | null
+        }
+        Relationships: []
+      }
       mb_listingrule_documents: {
         Row: {
           category: string
@@ -225,66 +279,6 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
-        }
-        Relationships: []
-      }
-      regulatory_provisions: {
-        Row: {
-          category_id: string | null
-          chapter: string | null
-          content: string
-          created_at: string
-          effective_date: string | null
-          id: string
-          is_current: boolean | null
-          last_updated: string
-          parent_id: string | null
-          path_reference: string | null
-          rule_number: string
-          search_priority: number | null
-          section: string | null
-          source_document_id: string | null
-          subsection: string | null
-          title: string
-          version: string | null
-        }
-        Insert: {
-          category_id?: string | null
-          chapter?: string | null
-          content: string
-          created_at?: string
-          effective_date?: string | null
-          id?: string
-          is_current?: boolean | null
-          last_updated?: string
-          parent_id?: string | null
-          path_reference?: string | null
-          rule_number: string
-          search_priority?: number | null
-          section?: string | null
-          source_document_id?: string | null
-          subsection?: string | null
-          title: string
-          version?: string | null
-        }
-        Update: {
-          category_id?: string | null
-          chapter?: string | null
-          content?: string
-          created_at?: string
-          effective_date?: string | null
-          id?: string
-          is_current?: boolean | null
-          last_updated?: string
-          parent_id?: string | null
-          path_reference?: string | null
-          rule_number?: string
-          search_priority?: number | null
-          section?: string | null
-          source_document_id?: string | null
-          subsection?: string | null
-          title?: string
-          version?: string | null
         }
         Relationships: []
       }
