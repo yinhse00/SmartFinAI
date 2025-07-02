@@ -19,6 +19,7 @@ const DealStructuring = () => {
   const [userInputs, setUserInputs] = useState<ExtractedUserInputs | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0); // Key for resetting input component
+  const [transactionDescription, setTransactionDescription] = useState<string>('');
   const { toast } = useToast();
 
   const handleTransactionAnalysis = async (data: {
@@ -27,6 +28,7 @@ const DealStructuring = () => {
     extractedContent?: string[];
   }) => {
     setIsAnalyzing(true);
+    setTransactionDescription(data.description); // Store description for components
     try {
       // Convert the input data to TransactionAnalysisRequest format
       const request = {
@@ -216,6 +218,7 @@ const DealStructuring = () => {
                 onResultsUpdate={handleResultsUpdate} 
                 optimizationResult={enhancedResults?.optimization}
                 userInputs={userInputs}
+                transactionDescription={transactionDescription}
               />
             </div>
           )}

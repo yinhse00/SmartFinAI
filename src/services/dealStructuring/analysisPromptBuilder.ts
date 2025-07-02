@@ -48,7 +48,7 @@ Your analysis should include OPTIMIZATION-FOCUSED recommendations covering:
    - Optimal structure with clear commercial rationale based on market conditions
    - KEY PRICING MECHANISM (fixed price, formula-based, collar, earn-out) with market benchmarks
    - TARGET PERCENTAGE being acquired or affected by the transaction (specify exact percentage)
-   - STRATEGIC CONSIDERATIONS and deal optimization suggestions based on current market trends
+   - STRATEGIC CONSIDERATIONS and deal optimization suggestions based on current market trends (DO NOT include pricing amounts or transaction values in this field)
    - MAJOR PAYMENT TERMS (cash/stock mix, payment schedule, escrow arrangements) aligned with market standards
    - CRITICAL CONDITIONS PRECEDENT that affect deal completion and market acceptance
    - KEY STRUCTURAL DECISIONS (merger vs acquisition, tax optimization) considering regulatory environment
@@ -121,7 +121,7 @@ FORMAT your response as a structured JSON object with enhanced market intelligen
     "majorTerms": {
       "pricingMechanism": "fixed|formula|collar|earnout|hybrid",
       "targetPercentage": number (REQUIRED - exact percentage of target being acquired/affected),
-      "suggestionConsideration": "string with strategic considerations, deal optimization suggestions, and market intelligence insights",
+      "suggestionConsideration": "string - STRATEGIC AND OPTIMIZATION ADVICE ONLY - DO NOT include pricing amounts, transaction values, or consideration figures - focus on deal structure optimization, market timing, execution strategy, risk mitigation, and commercial advantages",
       "paymentStructure": {
         "cashPercentage": number,
         "stockPercentage": number,
@@ -231,7 +231,7 @@ FORMAT your response as a structured JSON object with enhanced market intelligen
 CRITICAL REQUIREMENTS FOR OPTIMIZATION:
 - MANDATORY: Include comprehensive EXECUTIVE SUMMARY with professional narrative content
 - MANDATORY: Include specific TARGET PERCENTAGE being acquired or affected (not optional)
-- MANDATORY: Provide STRATEGIC CONSIDERATIONS with specific deal optimization suggestions
+- MANDATORY: Provide STRATEGIC CONSIDERATIONS with specific deal optimization suggestions (EXCLUDE all pricing amounts and transaction values from strategic fields)
 - Incorporate MARKET INTELLIGENCE from recent transactions and current conditions
 - Provide OPTIMIZATION-BASED recommendations for all major deal terms
 - Include MARKET BENCHMARKS and comparative analysis where relevant

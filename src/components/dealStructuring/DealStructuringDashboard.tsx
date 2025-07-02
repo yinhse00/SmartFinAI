@@ -23,13 +23,15 @@ interface DealStructuringDashboardProps {
   onResultsUpdate: (updatedResults: AnalysisResults) => void;
   optimizationResult?: OptimizationResult;
   userInputs?: ExtractedUserInputs;
+  transactionDescription?: string;
 }
 
 export const DealStructuringDashboard = ({ 
   results, 
   onResultsUpdate, 
   optimizationResult,
-  userInputs 
+  userInputs,
+  transactionDescription 
 }: DealStructuringDashboardProps) => {
   const navigate = useNavigate();
   
@@ -54,7 +56,11 @@ export const DealStructuringDashboard = ({
         <div className="flex-1 grid grid-cols-2 gap-4">
           {/* Row 1: Structure Recommendation, Transaction Flow */}
           <div>
-            <StructureRecommendationBox results={results} />
+            <StructureRecommendationBox 
+              results={results} 
+              userInputs={userInputs}
+              description={transactionDescription}
+            />
           </div>
           <div>
             <TransactionFlowDiagramBox 
