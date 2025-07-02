@@ -8,29 +8,17 @@ import { EntityNames } from './converterUtils/entityHelpers';
 import { cleanTransactionType, extractTransactionPercentage } from './converterUtils/transactionTypeCleaner';
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 import { dataNormalizationService } from './dataNormalizationService';
-import { inputAuthorityService } from './inputAuthorityService';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
   entityNames: EntityNames,
   userInputs?: ExtractedUserInputs
 ): TransactionFlow => {
-  console.log('=== TRANSACTION FLOW CONVERTER WITH INPUT AUTHORITY ===');
+  console.log('=== TRANSACTION FLOW CONVERTER WITH NORMALIZATION ===');
   console.log('Starting conversion with user inputs:', userInputs);
   
-  // CRITICAL: Apply input authority enforcement to prevent AI corruption
-  let protectedResults = results;
-  if (userInputs && Object.keys(userInputs).length > 0) {
-    const authorityEnforcement = inputAuthorityService.enforceInputAuthority(results, userInputs);
-    protectedResults = authorityEnforcement.enforcedResults;
-    console.log('🛡️ INPUT AUTHORITY: Applied', authorityEnforcement.corrections.length, 'corrections');
-    if (authorityEnforcement.corruptionDetected) {
-      console.log('🚨 CORRUPTION DETECTED AND CORRECTED in transaction flow converter');
-    }
-  }
-  
-  // Apply normalization to protected results
-  const normalizedResults = dataNormalizationService.normalizeAnalysisResults(protectedResults, userInputs);
+  // CRITICAL: Apply normalization to ensure data consistency
+  const normalizedResults = dataNormalizationService.normalizeAnalysisResults(results, userInputs);
   
   // Extract consideration amount with ABSOLUTE user input priority
   const considerationAmount = userInputs?.amount || 
