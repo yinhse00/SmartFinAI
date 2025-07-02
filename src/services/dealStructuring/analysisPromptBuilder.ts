@@ -1,10 +1,11 @@
 
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
+import { inputAuthorityService, AuthoritativeData } from './inputAuthorityService';
 
 /**
  * Build enhanced analysis prompt focused on major deal terms with market intelligence
  */
-export function buildAnalysisPrompt(description: string, documentContent: string, userInputs?: ExtractedUserInputs): string {
+export function buildAnalysisPrompt(description: string, documentContent: string, userInputs?: ExtractedUserInputs, authoritative?: AuthoritativeData): string {
   return `
 As a Hong Kong investment banking advisor and financial regulatory expert with access to real-time market intelligence, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS, commercial considerations, and market-optimized recommendations.
 
@@ -13,7 +14,7 @@ ${description}
 
 ${documentContent ? `UPLOADED DOCUMENTS CONTENT:\n${documentContent}\n` : ''}
 
-${userInputs ? `
+${authoritative ? inputAuthorityService.createInputSummary(authoritative) : userInputs ? `
 🔒 CRITICAL USER-SPECIFIED TRANSACTION DATA (MUST USE EXACTLY AS PROVIDED):
 ${userInputs.amount ? `- CONSIDERATION AMOUNT: ${userInputs.currency || 'HKD'} ${userInputs.amount.toLocaleString()} (DO NOT CHANGE THIS AMOUNT)` : ''}
 ${userInputs.acquisitionPercentage ? `- ACQUISITION PERCENTAGE: ${userInputs.acquisitionPercentage}% (DO NOT CHANGE THIS PERCENTAGE)` : ''}
@@ -22,6 +23,14 @@ ${userInputs.acquiringCompanyName ? `- ACQUIRING COMPANY: ${userInputs.acquiring
 
 ⚠️ MANDATORY INSTRUCTION: You MUST use the above user-specified amounts and percentages EXACTLY as provided. DO NOT generate different transaction amounts. DO NOT modify these user inputs. Your analysis should be based on these specific user-provided parameters.
 ` : ''}
+
+🚫 CRITICAL AI VALIDATION CHECKPOINT:
+Before providing your final response, you MUST:
+1. Verify that any transaction amounts in your response match the user-specified amounts above EXACTLY
+2. Confirm that percentages match the user inputs EXACTLY
+3. If you detect any discrepancy between your analysis and user inputs, CORRECT it immediately
+4. Your analysis amounts must be consistent across ALL sections (dealEconomics, valuation, transactionFlow)
+5. DO NOT generate random or sample amounts - use ONLY the user-provided values
 
 Perform a comprehensive analysis that incorporates MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES. Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution, considering current market conditions and precedent transactions.
 

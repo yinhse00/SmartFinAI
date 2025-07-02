@@ -8,11 +8,13 @@ import { EntityNames } from './converterUtils/entityHelpers';
 import { cleanTransactionType, extractTransactionPercentage } from './converterUtils/transactionTypeCleaner';
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 import { dataNormalizationService } from './dataNormalizationService';
+import { inputAuthorityService, AuthoritativeData } from './inputAuthorityService';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
   entityNames: EntityNames,
-  userInputs?: ExtractedUserInputs
+  userInputs?: ExtractedUserInputs,
+  authoritative?: AuthoritativeData
 ): TransactionFlow => {
   console.log('=== TRANSACTION FLOW CONVERTER WITH NORMALIZATION ===');
   console.log('Starting conversion with user inputs:', userInputs);
@@ -20,8 +22,9 @@ export const convertAnalysisToTransactionFlow = (
   // CRITICAL: Apply normalization to ensure data consistency
   const normalizedResults = dataNormalizationService.normalizeAnalysisResults(results, userInputs);
   
-  // Extract consideration amount with ABSOLUTE user input priority
-  const considerationAmount = userInputs?.amount || 
+  // Extract consideration amount with ABSOLUTE authority priority
+  const considerationAmount = authoritative?.amount?.value ||
+                             userInputs?.amount || 
                              normalizedResults.transactionFlow?.transactionContext?.amount ||
                              normalizedResults.dealEconomics?.purchasePrice ||
                              normalizedResults.valuation?.transactionValue?.amount;

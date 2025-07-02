@@ -4,15 +4,15 @@ import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'
 import { createFallbackAnalysis } from './analysisFallbackData';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
 import { extractUserInputAmount } from './converterUtils/dataExtractors';
+import { inputValidationService, InputValidationResult } from './inputValidationService';
+import { inputAuthorityService, AuthoritativeData, InputAuthorityReport } from './inputAuthorityService';
 
 export interface EnhancedAnalysisResult {
   results: AnalysisResults;
   optimization: OptimizationResult;
-  inputValidation: {
-    isValid: boolean;
-    warnings: string[];
-    suggestions: string[];
-  };
+  inputValidation: InputValidationResult;
+  inputAuthority: InputAuthorityReport;
+  authoritative: AuthoritativeData;
   reconciliation: {
     reconciliationApplied: boolean;
     changes: string[];
@@ -47,110 +47,104 @@ export interface ExtractedUserInputs {
  */
 export const enhancedAiAnalysisService = {
   /**
-   * Extract structured data from user input
+   * Extract structured data from user input (legacy method - now uses inputValidationService)
    */
   extractUserInputs: (request: TransactionAnalysisRequest): ExtractedUserInputs => {
-    const extracted: ExtractedUserInputs = {};
-    
-    // Extract amount from description
-    const extractedAmount = extractUserInputAmount(request.description);
-    if (extractedAmount) {
-      extracted.amount = extractedAmount;
-      console.log('Extracted amount from user input:', extractedAmount);
-    }
-    
-    // Extract currency
-    const description = request.description.toLowerCase();
-    if (description.includes('hk$') || description.includes('hkd') || description.includes('hong kong dollar')) {
-      extracted.currency = 'HKD';
-    } else if (description.includes('usd') || description.includes('us$')) {
-      extracted.currency = 'USD';
-    }
-    
-    // Extract acquisition percentage
-    const percentageMatch = request.description.match(/(?:acquire|purchase|buy|obtaining?)\s+(?:a\s+)?(\d+(?:\.\d+)?)%/i);
-    if (percentageMatch) {
-      extracted.acquisitionPercentage = parseFloat(percentageMatch[1]);
-    }
-    
-    // Extract company names - simple pattern matching
-    const targetCompanyMatch = request.description.match(/(?:target|acquire|purchase|buy)\s+(?:company\s+)?([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))/i);
-    if (targetCompanyMatch) {
-      extracted.targetCompanyName = targetCompanyMatch[1].trim();
-    }
-    
-    const acquiringCompanyMatch = request.description.match(/([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))\s+(?:is|will)\s+(?:acquiring|purchasing|buying)/i);
-    if (acquiringCompanyMatch) {
-      extracted.acquiringCompanyName = acquiringCompanyMatch[1].trim();
-    }
-    
-    return extracted;
+    const validationResult = inputValidationService.extractAndValidateInputs(request);
+    return validationResult.extractedInputs;
   },
 
   /**
-   * Analyze transaction with optimization and validation
+   * Analyze transaction with enhanced input validation and authority enforcement
    */
   analyzeTransactionWithValidation: async (
     request: TransactionAnalysisRequest,
     optimizationParams?: OptimizationParameters
   ): Promise<EnhancedAnalysisResult> => {
-    console.log('Starting enhanced transaction analysis with optimization...');
+    console.log('=== ENHANCED ANALYSIS WITH INPUT AUTHORITY ===');
     
     try {
-      // Step 1: Extract user inputs before AI analysis
-      const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
-      console.log('Extracted user inputs:', userInputs);
-      console.log('=== VALIDATION: Passing userInputs to AI analysis ===');
+      // PHASE 1: Enhanced Input Validation FIRST
+      const inputValidation = inputValidationService.extractAndValidateInputs(request);
+      console.log('✅ Phase 1 - Input validation completed:', {
+        isValid: inputValidation.isValid,
+        confidence: inputValidation.confidence,
+        extractedAmount: inputValidation.extractedInputs.amount
+      });
       
-      // Step 2: Input validation
-      const inputValidation = enhancedAiAnalysisService.validateInput(request);
+      // PHASE 2: Create Authoritative Data Structure
+      const authoritative = inputAuthorityService.createAuthoritative(inputValidation);
+      console.log('✅ Phase 2 - Authoritative data created:', authoritative);
       
-      // Step 3: Get basic AI analysis WITH userInputs passed - THIS IS THE FIX
-      const basicResults = await aiAnalysisService.analyzeTransaction(request, userInputs);
-      console.log('AI analysis completed with userInputs passed');
+      // PHASE 3: AI Analysis with Enhanced User Input Context
+      const basicResults = await aiAnalysisService.analyzeTransaction(
+        request, 
+        inputValidation.extractedInputs
+      );
+      console.log('✅ Phase 3 - AI analysis completed');
       
-      // Step 4: Apply optimization if parameters provided
-      let optimization: OptimizationResult | null = null;
+      // PHASE 4: Enforce Input Authority over AI Results
+      const { protectedResults, report } = inputAuthorityService.enforceAuthority(
+        basicResults, 
+        authoritative
+      );
+      console.log('✅ Phase 4 - Input authority enforced, overrides:', report.overriddenFields.length);
+      
+      // PHASE 5: Apply Optimization
+      let optimization: OptimizationResult;
       if (optimizationParams) {
         optimization = await optimizationEngine.optimizeStructure(request, optimizationParams);
       } else {
-        // Use default optimization parameters based on analysis
-        const defaultParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, basicResults);
+        const defaultParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, protectedResults);
         optimization = await optimizationEngine.optimizeStructure(request, defaultParams);
       }
       
-      // Step 5: Reconcile AI results with optimization and user inputs - PASS userInputs to reconciliation
-      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization, userInputs);
+      // PHASE 6: Final Reconciliation with Authority Protection
+      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(
+        protectedResults, 
+        optimization, 
+        inputValidation.extractedInputs,
+        authoritative
+      );
       
       return {
         results: reconciledResults,
         optimization,
         inputValidation,
+        inputAuthority: report,
+        authoritative,
         reconciliation
       };
     } catch (error) {
       console.error('Enhanced analysis error:', error);
       
-      // Extract user inputs for fallback
-      const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
-      console.log('=== FALLBACK: Passing userInputs to fallback AI analysis ===');
+      // Fallback with input protection
+      const inputValidation = inputValidationService.extractAndValidateInputs(request);
+      const authoritative = inputAuthorityService.createAuthoritative(inputValidation);
       
-      // Fallback to basic analysis with user inputs preserved - THIS IS THE SECOND FIX
       try {
-        const basicResults = await aiAnalysisService.analyzeTransaction(request, userInputs);
-        console.log('Fallback AI analysis completed with userInputs passed');
+        const basicResults = await aiAnalysisService.analyzeTransaction(request, inputValidation.extractedInputs);
+        const { protectedResults, report } = inputAuthorityService.enforceAuthority(basicResults, authoritative);
+        
         return {
-          results: enhancedAiAnalysisService.applyUserInputsToResults(basicResults, userInputs),
+          results: protectedResults,
           optimization: enhancedAiAnalysisService.createFallbackOptimization(),
-          inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
+          inputValidation,
+          inputAuthority: report,
+          authoritative,
           reconciliation: { reconciliationApplied: true, changes: ['Applied user inputs to fallback data'] }
         };
       } catch (fallbackError) {
         console.error('Fallback analysis also failed:', fallbackError);
+        const fallbackResults = createFallbackAnalysis(request.description, inputValidation.extractedInputs);
+        const { protectedResults, report } = inputAuthorityService.enforceAuthority(fallbackResults, authoritative);
+        
         return {
-          results: createFallbackAnalysis(request.description, userInputs),
+          results: protectedResults,
           optimization: enhancedAiAnalysisService.createFallbackOptimization(),
-          inputValidation: { isValid: false, warnings: ['Analysis completed with limitations'], suggestions: [] },
+          inputValidation,
+          inputAuthority: report,
+          authoritative,
           reconciliation: { reconciliationApplied: false, changes: [] }
         };
       }
@@ -211,39 +205,15 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Validate transaction input
+   * Legacy input validation (now delegated to inputValidationService)
    */
   validateInput: (request: TransactionAnalysisRequest) => {
-    const warnings: string[] = [];
-    const suggestions: string[] = [];
-    let isValid = true;
-    
-    // Check description quality
-    if (!request.description || request.description.length < 50) {
-      warnings.push('Transaction description is very brief');
-      suggestions.push('Provide more detailed transaction description for better analysis');
-      isValid = false;
-    }
-    
-    // Check for amount
-    if (!request.amount) {
-      warnings.push('Transaction amount not specified');
-      suggestions.push('Specify transaction amount for more accurate cost and structure analysis');
-    }
-    
-    // Check for documents
-    if (!request.documents || request.documents.length === 0) {
-      warnings.push('No documents provided');
-      suggestions.push('Upload relevant documents (term sheets, agreements) for enhanced analysis');
-    }
-    
-    // Check transaction type specificity
-    if (request.transactionType === 'Transaction Analysis') {
-      warnings.push('Generic transaction type specified');
-      suggestions.push('Specify exact transaction type (e.g., "Merger", "Acquisition", "Rights Issue")');
-    }
-    
-    return { isValid, warnings, suggestions };
+    const result = inputValidationService.extractAndValidateInputs(request);
+    return {
+      isValid: result.isValid,
+      warnings: result.warnings,
+      suggestions: result.suggestions
+    };
   },
 
   /**
@@ -287,20 +257,27 @@ export const enhancedAiAnalysisService = {
   },
 
   /**
-   * Reconcile AI results with optimization recommendations and user inputs
+   * Reconcile AI results with optimization and enforce input authority
    */
-  reconcileResults: (basicResults: AnalysisResults, optimization: OptimizationResult, userInputs?: ExtractedUserInputs) => {
-    console.log('=== RECONCILING RESULTS WITH USER INPUT PROTECTION ===');
-    console.log('User inputs for reconciliation:', userInputs);
+  reconcileResults: (
+    basicResults: AnalysisResults, 
+    optimization: OptimizationResult, 
+    userInputs?: ExtractedUserInputs,
+    authoritative?: AuthoritativeData
+  ) => {
+    console.log('=== ENHANCED RECONCILIATION WITH AUTHORITY ===');
     
     const changes: string[] = [];
     let reconciledResults = { ...basicResults };
     
-    // CRITICAL FIX: Apply user inputs first and protect them throughout reconciliation
-    if (userInputs) {
-      console.log('🛡️ Protecting user inputs during reconciliation');
+    // PHASE 1: Apply authoritative user inputs if provided
+    if (authoritative) {
+      const { protectedResults, report } = inputAuthorityService.enforceAuthority(reconciledResults, authoritative);
+      reconciledResults = protectedResults;
+      changes.push(...report.overriddenFields.map(field => `Protected user input: ${field}`));
+    } else if (userInputs) {
+      // Fallback to legacy user input application
       reconciledResults = enhancedAiAnalysisService.applyUserInputsToResults(reconciledResults, userInputs);
-      
       if (userInputs.amount) {
         changes.push(`Applied user-specified amount: ${userInputs.amount.toLocaleString()}`);
       }
@@ -309,14 +286,14 @@ export const enhancedAiAnalysisService = {
       }
     }
     
-    // Update structure recommendation with optimized version (only if not overriding user preferences)
+    // PHASE 2: Apply optimization recommendations (without overriding user inputs)
     if (optimization.recommendedStructure.structure !== basicResults.structure.recommended) {
       changes.push('Updated structure recommendation based on optimization analysis');
       reconciledResults.structure.recommended = optimization.recommendedStructure.structure;
       reconciledResults.structure.rationale = `${basicResults.structure.rationale}\n\nOptimization Analysis: ${optimization.recommendedStructure.description}`;
     }
     
-    // Update cost estimates with optimization data (but don't override user amounts)
+    // PHASE 3: Update costs and timeline from optimization
     if (Math.abs(optimization.recommendedStructure.estimatedCost - basicResults.costs.total) > 500000) {
       changes.push('Refined cost estimates based on optimization scenarios');
       reconciledResults.costs.total = optimization.recommendedStructure.estimatedCost;
@@ -325,19 +302,17 @@ export const enhancedAiAnalysisService = {
       }
     }
     
-    // Update timeline with optimization data
     const optimizedDuration = optimization.recommendedStructure.estimatedDuration;
     if (optimizedDuration !== basicResults.timetable.totalDuration) {
       changes.push('Updated timeline based on optimization analysis');
       reconciledResults.timetable.totalDuration = optimizedDuration;
     }
     
-    // Add optimization insights to recommendations
+    // PHASE 4: Add optimization insights
     if (reconciledResults.compliance.recommendations) {
       reconciledResults.compliance.recommendations.push(...optimization.optimizationInsights);
     }
     
-    // Add market intelligence insights
     if (optimization.marketIntelligence.marketTrends.length > 0) {
       changes.push('Incorporated current market intelligence');
       if (reconciledResults.compliance.recommendations) {
@@ -347,44 +322,15 @@ export const enhancedAiAnalysisService = {
       }
     }
     
-    // CRITICAL FIX: Final validation with USER INPUT AUTHORITY
-    if (userInputs?.amount && reconciledResults.dealEconomics && reconciledResults.valuation) {
-      console.log('🔒 FINAL USER INPUT PROTECTION: Ensuring user amount is authoritative');
-      
-      // Override any potentially corrupted dealEconomics with user input
-      if (reconciledResults.dealEconomics.purchasePrice !== userInputs.amount) {
-        console.log('🚨 Correcting corrupted dealEconomics.purchasePrice:', reconciledResults.dealEconomics.purchasePrice, '→', userInputs.amount);
-        reconciledResults.dealEconomics.purchasePrice = userInputs.amount;
-        changes.push('Protected user input amount from AI corruption');
-      }
-      
-      // Ensure valuation matches user input (not potentially corrupted dealEconomics)
-      if (reconciledResults.valuation.transactionValue.amount !== userInputs.amount) {
-        console.log('🔧 Syncing valuation with user input:', reconciledResults.valuation.transactionValue.amount, '→', userInputs.amount);
-        reconciledResults.valuation.transactionValue.amount = userInputs.amount;
-        reconciledResults.valuation.transactionValue.currency = userInputs.currency || reconciledResults.valuation.transactionValue.currency;
-        reconciledResults.valuation.valuationRange = {
-          low: userInputs.amount * 0.9,
-          high: userInputs.amount * 1.1,
-          midpoint: userInputs.amount
-        };
-        changes.push('Synchronized valuation with protected user input');
-      }
-    } else if (reconciledResults.dealEconomics?.purchasePrice && reconciledResults.valuation?.transactionValue?.amount) {
-      // Only sync if both exist and no user input to protect
-      if (reconciledResults.dealEconomics.purchasePrice !== reconciledResults.valuation.transactionValue.amount) {
-        console.log('🔧 Standard reconciliation: syncing dealEconomics and valuation amounts');
-        reconciledResults.valuation.transactionValue.amount = reconciledResults.dealEconomics.purchasePrice;
-        reconciledResults.valuation.valuationRange = {
-          low: reconciledResults.dealEconomics.purchasePrice * 0.9,
-          high: reconciledResults.dealEconomics.purchasePrice * 1.1,
-          midpoint: reconciledResults.dealEconomics.purchasePrice
-        };
-        changes.push('Synchronized transaction amounts across all sections');
-      }
+    // PHASE 5: Final authority validation
+    if (authoritative && !inputAuthorityService.validateAuthority(reconciledResults, authoritative)) {
+      console.log('⚠️ Final authority validation failed, re-enforcing...');
+      const { protectedResults } = inputAuthorityService.enforceAuthority(reconciledResults, authoritative);
+      reconciledResults = protectedResults;
+      changes.push('Re-enforced user input authority after reconciliation');
     }
     
-    console.log('✅ Reconciliation completed with user input protection, changes:', changes);
+    console.log('✅ Enhanced reconciliation completed, changes:', changes.length);
     
     return {
       reconciledResults,

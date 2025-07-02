@@ -20,7 +20,7 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
   // Extract entity names using the proper helper function that returns EntityNames interface
   const entityNames = extractEntityNames(results);
   
-  // CRITICAL: Pass userInputs to the converter for proper normalization
+  // CRITICAL: Pass userInputs to the converter for proper normalization 
   const transactionFlow = convertAnalysisToTransactionFlow(results, entityNames, userInputs);
 
   const diagramContent = (
