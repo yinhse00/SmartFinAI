@@ -55,27 +55,56 @@ export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummar
           <p className="text-sm leading-relaxed text-foreground">
             {acquiringCompany} is undertaking a {transactionType.toLowerCase()} to acquire {targetPercentage}% of {targetCompany} for a total consideration of {currency} {formatAmount(amount)}
             {paymentStructure?.cashPercentage && paymentStructure?.stockPercentage 
-              ? `, structured as ${currency} ${formatAmount(Math.round(amount * (paymentStructure.cashPercentage / 100)))} in cash and ${currency} ${formatAmount(Math.round(amount * (paymentStructure.stockPercentage / 100)))} in stock` 
-              : ''
+              ? `, structured as ${paymentStructure.cashPercentage}% cash (${currency} ${formatAmount(Math.round(amount * (paymentStructure.cashPercentage / 100)))}) and ${paymentStructure.stockPercentage}% stock (${currency} ${formatAmount(Math.round(amount * (paymentStructure.stockPercentage / 100)))})` 
+              : paymentStructure?.cashPercentage === 100 
+                ? `, paid entirely in cash`
+                : paymentStructure?.stockPercentage === 100
+                  ? `, paid entirely in stock`
+                  : ''
             }. The transaction is expected to complete within {timeline}
             {results.timetable?.keyMilestones?.length > 0 
               ? `, with key milestones including ${results.timetable.keyMilestones.slice(0, 2).join(' and ')}` 
-              : ''
-            }
-            {(beforeShareholders.length > 0 || afterShareholders.length > 0) 
-              ? `, resulting in significant changes to the shareholding structure` 
               : ''
             }.
           </p>
         </div>
 
-        {/* Strategic Rationale */}
-        {results.executiveSummary?.strategicRationale && (
+        {/* Shareholding Structure Changes */}
+        {(results.shareholdingChanges?.keyChanges?.length > 0 || results.shareholding?.majorChanges?.length > 0 || beforeShareholders.length > 0 || afterShareholders.length > 0) && (
           <div className="pt-3 border-t">
-            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Strategic Rationale</h4>
-            <p className="text-sm text-muted-foreground leading-relaxed">
-              {results.executiveSummary.strategicRationale}
-            </p>
+            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Shareholding Structure Changes</h4>
+            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
+              {results.shareholdingChanges?.keyChanges?.map((change, index) => (
+                <p key={index}>• {change.shareholder}: {change.before}% → {change.after}% ({change.change > 0 ? '+' : ''}{change.change.toFixed(1)}%)</p>
+              ))}
+              {results.shareholding?.majorChanges?.map((change, index) => (
+                <p key={index}>• {change}</p>
+              ))}
+              {results.shareholdingChanges?.controlImplications?.map((implication, index) => (
+                <p key={index} className="font-medium">Control Impact: {implication}</p>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Material Compliance Issues */}
+        {(results.compliance?.risks?.length > 0 || results.compliance?.listingRules?.length > 0 || results.compliance?.takeoversCode?.length > 0 || results.compliance?.recommendations?.length > 0) && (
+          <div className="pt-3 border-t">
+            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Material Compliance Issues</h4>
+            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
+              {results.compliance?.risks?.map((risk, index) => (
+                <p key={index} className="text-orange-600">• Risk: {risk}</p>
+              ))}
+              {results.compliance?.listingRules?.map((rule, index) => (
+                <p key={index}>• Listing Rule: {rule}</p>
+              ))}
+              {results.compliance?.takeoversCode?.map((code, index) => (
+                <p key={index}>• Takeovers Code: {code}</p>
+              ))}
+              {results.compliance?.recommendations?.map((rec, index) => (
+                <p key={index} className="text-blue-600">• Recommendation: {rec}</p>
+              ))}
+            </div>
           </div>
         )}
       </CardContent>
