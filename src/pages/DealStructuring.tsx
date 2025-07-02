@@ -5,9 +5,12 @@ import { EnhancedTransactionInput } from '@/components/dealStructuring/EnhancedT
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { DealStructuringDashboard } from '@/components/dealStructuring/DealStructuringDashboard';
 import { enhancedAiAnalysisService, EnhancedAnalysisResult, ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
+import { executionPlanExtractor } from '@/services/execution/executionPlanExtractor';
+import { executionProjectService } from '@/services/execution/executionProjectService';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, CheckCircle, TrendingUp } from 'lucide-react';
+import { Brain, FileText, Calculator, Clock, Users, Shield, AlertTriangle, CheckCircle, TrendingUp, Play } from 'lucide-react';
 
 // Export the TransactionData type for other components
 export type { TransactionData } from '@/types/dealStructuring';
@@ -18,9 +21,11 @@ const DealStructuring = () => {
   const [enhancedResults, setEnhancedResults] = useState<EnhancedAnalysisResult | null>(null);
   const [userInputs, setUserInputs] = useState<ExtractedUserInputs | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isExecuting, setIsExecuting] = useState(false);
   const [analysisKey, setAnalysisKey] = useState(0); // Key for resetting input component
   const [transactionDescription, setTransactionDescription] = useState<string>('');
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const handleTransactionAnalysis = async (data: {
     description: string;
@@ -99,6 +104,53 @@ const DealStructuring = () => {
     setEnhancedResults(null);
     setUserInputs(null);
     setAnalysisKey(prev => prev + 1); // Increment key to force component reset
+  };
+
+  const handleExecuteTransaction = async () => {
+    if (!analysisResults || !enhancedResults) return;
+
+    setIsExecuting(true);
+    try {
+      // Generate execution plan automatically
+      const chatAnalysisContext = {
+        originalAnalysis: analysisResults,
+        chatHistory: [], // Empty for now, could be populated if chat is integrated
+        transactionType: analysisResults.transactionType || 'Transaction',
+        targetCompany: userInputs?.targetCompanyName || 'Target Company',
+        acquiringCompany: userInputs?.acquiringCompanyName || 'Acquiring Company'
+      };
+
+      const executionPlan = await executionPlanExtractor.extractExecutionPlan(chatAnalysisContext);
+      
+      // Create project automatically
+      const projectName = `${analysisResults.transactionType || 'Transaction'} - ${userInputs?.targetCompanyName || 'Target'} - ${new Date().toLocaleDateString()}`;
+      const projectDescription = `Execution plan for ${analysisResults.transactionType} involving ${userInputs?.targetCompanyName}`;
+      
+      const project = await executionProjectService.createProject(
+        projectName,
+        projectDescription,
+        analysisResults.transactionType || 'Transaction',
+        executionPlan
+      );
+
+      toast({
+        title: "Execution Plan Generated",
+        description: `Project "${projectName}" created successfully. Navigating to execution center.`,
+        variant: "default"
+      });
+
+      // Navigate to execution page with project loaded
+      navigate('/execution');
+    } catch (error) {
+      console.error('Error generating execution plan:', error);
+      toast({
+        title: "Execution Plan Failed",
+        description: "Unable to generate execution plan. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExecuting(false);
+    }
   };
 
   const handleResultsUpdate = (updatedResults: AnalysisResults) => {
@@ -211,14 +263,12 @@ const DealStructuring = () => {
                 </div>
                 <div className="flex items-center gap-3">
                   <button 
-                    onClick={() => {
-                      localStorage.setItem('executionAnalysisResults', JSON.stringify(analysisResults));
-                      window.open('/execution', '_blank');
-                    }}
-                    className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+                    onClick={handleExecuteTransaction}
+                    disabled={isExecuting}
+                    className="flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium"
                   >
-                    <TrendingUp className="h-4 w-4" />
-                    Go to Execution
+                    <Play className="h-4 w-4" />
+                    {isExecuting ? 'Generating Plan...' : 'Execute Transaction'}
                   </button>
                   <button onClick={handleNewAnalysis} className="text-primary hover:underline">
                     New Analysis

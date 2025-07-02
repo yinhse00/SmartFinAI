@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { ExecutionPlan } from '@/services/execution/executionPlanExtractor';
+import { executionProjectService } from '@/services/execution/executionProjectService';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ArrowLeft, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,29 @@ const Execution = () => {
         }
       }
     }
+
+    // Auto-load the latest execution plan if available
+    const loadLatestExecutionPlan = async () => {
+      try {
+        const projects = await executionProjectService.getUserProjects();
+        if (projects.length > 0) {
+          // Get the most recent project
+          const latestProject = projects.sort((a, b) => 
+            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          )[0];
+          
+          // Load the full project with execution plan
+          const projectWithPlan = await executionProjectService.getProjectWithPlan(latestProject.id);
+          if (projectWithPlan?.execution_plan) {
+            setExecutionPlan(projectWithPlan.execution_plan);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading latest execution plan:', error);
+      }
+    };
+
+    loadLatestExecutionPlan();
   }, [searchParams]);
 
   const handleExecutionStart = (plan: ExecutionPlan) => {
