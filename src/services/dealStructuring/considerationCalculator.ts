@@ -127,30 +127,24 @@ export const considerationCalculator = {
     console.log('AI estimated amount:', aiEstimatedAmount);
     
     const extractedValues = considerationCalculator.extractValues(description);
+    console.log('🔍 Extracted values from description:', extractedValues);
     const validationErrors: string[] = [];
     
-    // Priority 1: Direct consideration input from user
-    if (userInputs?.amount && description.toLowerCase().includes('consideration')) {
-      return {
-        considerationAmount: userInputs.amount,
-        calculationMethod: 'direct_input',
-        calculationDetails: {
-          directAmount: userInputs.amount
-        },
-        confidence: 0.95,
-        isValid: true,
-        validationErrors: []
-      };
-    }
-    
-    // Priority 2: Calculate from target valuation × acquisition percentage
+    // PRIORITY 1: Calculate from target valuation × acquisition percentage (HIGHEST PRIORITY)
     const targetValuation = userInputs?.amount || extractedValues.targetValuation;
     const acquisitionPercentage = userInputs?.acquisitionPercentage || extractedValues.acquisitionPercentage;
+    
+    console.log('📊 Calculation inputs:', { targetValuation, acquisitionPercentage });
     
     if (targetValuation && acquisitionPercentage) {
       const calculatedConsideration = targetValuation * (acquisitionPercentage / 100);
       
-      // Validation: consideration should be less than market cap
+      // Validation: prevent market cap from being used as consideration
+      if (extractedValues.marketCap && Math.abs(calculatedConsideration - extractedValues.marketCap) < extractedValues.marketCap * 0.1) {
+        console.log('⚠️ WARNING: Calculated consideration is close to market cap, this might be wrong');
+      }
+      
+      // Validation: consideration should be reasonable compared to market cap
       if (extractedValues.marketCap && calculatedConsideration > extractedValues.marketCap) {
         validationErrors.push(`Calculated consideration (${calculatedConsideration.toLocaleString()}) exceeds market cap (${extractedValues.marketCap.toLocaleString()})`);
       }
@@ -160,10 +154,11 @@ export const considerationCalculator = {
         validationErrors.push(`Acquisition percentage (${acquisitionPercentage}%) is not valid`);
       }
       
-      console.log('✅ Calculated consideration:', {
-        targetValuation,
-        acquisitionPercentage,
-        result: calculatedConsideration
+      console.log('✅ CALCULATED CONSIDERATION (PRIORITY 1):', {
+        targetValuation: targetValuation.toLocaleString(),
+        acquisitionPercentage: `${acquisitionPercentage}%`,
+        result: calculatedConsideration.toLocaleString(),
+        formula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${calculatedConsideration.toLocaleString()}`
       });
       
       return {
@@ -174,9 +169,24 @@ export const considerationCalculator = {
           acquisitionPercentage,
           calculationFormula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${calculatedConsideration.toLocaleString()}`
         },
-        confidence: 0.9,
+        confidence: 0.95, // Highest confidence for calculated values
         isValid: validationErrors.length === 0,
         validationErrors
+      };
+    }
+    
+    // Priority 2: Direct consideration input from user (but only if explicitly mentioned as consideration)
+    if (userInputs?.amount && description.toLowerCase().includes('consideration')) {
+      console.log('📝 Using direct consideration input:', userInputs.amount);
+      return {
+        considerationAmount: userInputs.amount,
+        calculationMethod: 'direct_input',
+        calculationDetails: {
+          directAmount: userInputs.amount
+        },
+        confidence: 0.9,
+        isValid: true,
+        validationErrors: []
       };
     }
     

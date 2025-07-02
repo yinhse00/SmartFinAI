@@ -57,29 +57,36 @@ export const analysisPostProcessor = {
     description?: string
   ): ProcessedAnalysisResults => {
     console.log('=== POST-PROCESSING ANALYSIS RESULTS ===');
+    console.log('🔍 Input userInputs:', userInputs);
+    console.log('🔍 Input description snippet:', description?.substring(0, 200));
     
     const processed: ProcessedAnalysisResults = {
       ...results,
       _postProcessed: true
     };
 
-    // Calculate proper consideration amount with authority precedence
+    // CRITICAL: Calculate proper consideration amount with STRICT authority precedence
     let calculatedConsideration: number | undefined;
+    let calculationDetails: any = undefined;
     
     if (userInputs && description) {
       const calculation = considerationCalculator.calculateConsideration(description, userInputs);
+      console.log('🧮 Calculation result:', calculation);
+      
+      // ENFORCE calculated values (570M × 80% = 456M) over ALL other sources
       if (calculation.isValid && calculation.calculationMethod === 'calculated') {
         calculatedConsideration = calculation.considerationAmount;
+        calculationDetails = calculation.calculationDetails;
         processed._calculatedConsideration = calculatedConsideration;
-        console.log('✅ Using calculated consideration (precedence):', calculatedConsideration);
+        console.log('🎯 ENFORCING CALCULATED CONSIDERATION:', calculatedConsideration.toLocaleString());
+        console.log('📐 Calculation formula:', calculation.calculationDetails.calculationFormula);
       }
-    }
-
-    // Use user input amount if available (higher precedence than AI)
-    if (userInputs?.amount && !calculatedConsideration) {
-      calculatedConsideration = userInputs.amount;
-      processed._calculatedConsideration = calculatedConsideration;
-      console.log('✅ Using user input consideration:', calculatedConsideration);
+      // Only use direct input if no calculation possible
+      else if (calculation.isValid && calculation.calculationMethod === 'direct_input') {
+        calculatedConsideration = calculation.considerationAmount;
+        processed._calculatedConsideration = calculatedConsideration;
+        console.log('📝 Using direct input consideration:', calculatedConsideration);
+      }
     }
 
     // Fix suggestionConsideration field if it contains pricing
