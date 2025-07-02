@@ -9,6 +9,7 @@ import { EnlargedContentDialog } from '../dialogs/EnlargedContentDialog';
 import { Maximize2 } from 'lucide-react';
 import { extractEntityNames } from '@/services/dealStructuring/converterUtils/entityHelpers';
 import { ExtractedUserInputs } from '@/services/dealStructuring/enhancedAiAnalysisService';
+import { CalculationDebugger } from '../CalculationDebugger';
 
 interface TransactionFlowDiagramBoxProps {
   results: AnalysisResults;
@@ -52,8 +53,18 @@ export const TransactionFlowDiagramBox = ({ results, optimizationResult, userInp
           </EnlargedContentDialog>
         </div>
       </CardHeader>
-      <CardContent className="p-4 h-[400px]">
-        {diagramContent}
+      <CardContent className="space-y-4 p-4">
+        {/* Calculation debugger */}
+        <CalculationDebugger 
+          userInputs={userInputs}
+          finalAmount={transactionFlow.transactionContext.amount}
+          calculationDetails={(userInputs as any)?.calculationResult}
+        />
+        
+        {/* Transaction flow diagram */}
+        <div className="h-[350px]">
+          {diagramContent}
+        </div>
       </CardContent>
     </Card>
   );

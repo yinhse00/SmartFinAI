@@ -6,6 +6,7 @@ import { optimizationEngine, OptimizationParameters, OptimizationResult } from '
 import { extractUserInputAmount } from './converterUtils/dataExtractors';
 import { inputValidationService, InputValidationResult } from './inputValidationService';
 import { inputAuthorityService, AuthoritativeData, InputAuthorityReport } from './inputAuthorityService';
+import { considerationCalculator } from './considerationCalculator';
 
 export interface EnhancedAnalysisResult {
   results: AnalysisResults;
@@ -50,8 +51,28 @@ export const enhancedAiAnalysisService = {
    * Extract structured data from user input (legacy method - now uses inputValidationService)
    */
   extractUserInputs: (request: TransactionAnalysisRequest): ExtractedUserInputs => {
+    console.log('=== EXTRACTING USER INPUTS ===');
+    console.log('Request description:', request.description);
+    
+    // Use the enhanced input validation service
     const validationResult = inputValidationService.extractAndValidateInputs(request);
-    return validationResult.extractedInputs;
+    
+    // Use consideration calculator for enhanced extraction
+    
+    // Enhance inputs with consideration calculation
+    const enhancedInputs = considerationCalculator.enhanceUserInputs(
+      request.description,
+      validationResult.extractedInputs
+    );
+    
+    console.log('✅ Enhanced user inputs extracted:', enhancedInputs);
+    console.log('Validation confidence:', validationResult.confidence);
+    
+    if (enhancedInputs.calculationResult) {
+      console.log('💰 Consideration calculation:', enhancedInputs.calculationResult.calculationDetails);
+    }
+    
+    return enhancedInputs;
   },
 
   /**

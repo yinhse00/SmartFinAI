@@ -9,6 +9,7 @@ import { cleanTransactionType, extractTransactionPercentage } from './converterU
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 import { dataNormalizationService } from './dataNormalizationService';
 import { inputAuthorityService, AuthoritativeData } from './inputAuthorityService';
+import { considerationCalculator } from './considerationCalculator';
 
 export const convertAnalysisToTransactionFlow = (
   results: AnalysisResults,
@@ -22,12 +23,44 @@ export const convertAnalysisToTransactionFlow = (
   // CRITICAL: Apply normalization to ensure data consistency
   const normalizedResults = dataNormalizationService.normalizeAnalysisResults(results, userInputs);
   
-  // Extract consideration amount with ABSOLUTE authority priority
-  const considerationAmount = authoritative?.amount?.value ||
-                             userInputs?.amount || 
-                             normalizedResults.transactionFlow?.transactionContext?.amount ||
-                             normalizedResults.dealEconomics?.purchasePrice ||
-                             normalizedResults.valuation?.transactionValue?.amount;
+  // Use consideration calculator for proper calculation
+  
+  // Calculate proper consideration amount - prioritize calculated values
+  let considerationAmount: number | undefined;
+  
+  // Priority 1: Authoritative amount (user specified)
+  if (authoritative?.amount?.value) {
+    considerationAmount = authoritative.amount.value;
+    console.log('🔒 Using authoritative amount:', considerationAmount);
+  }
+  // Priority 2: User inputs with calculation if target valuation + percentage available
+  else if (userInputs?.amount && userInputs?.acquisitionPercentage) {
+    // Check if this looks like a calculation scenario (target valuation * percentage)
+    const calculationResult = considerationCalculator.calculateConsideration(
+      normalizedResults.executiveSummary?.narrative || 'transaction analysis',
+      userInputs
+    );
+    
+    if (calculationResult.calculationMethod === 'calculated' && calculationResult.isValid) {
+      considerationAmount = calculationResult.considerationAmount;
+      console.log('💰 Using calculated consideration:', considerationAmount, calculationResult.calculationDetails.calculationFormula);
+    } else {
+      considerationAmount = userInputs.amount;
+      console.log('📊 Using direct user input amount:', considerationAmount);
+    }
+  }
+  // Priority 3: Direct user amount
+  else if (userInputs?.amount) {
+    considerationAmount = userInputs.amount;
+    console.log('📝 Using user input amount:', considerationAmount);
+  }
+  // Priority 4: Fallback to normalized results
+  else {
+    considerationAmount = normalizedResults.transactionFlow?.transactionContext?.amount ||
+                         normalizedResults.dealEconomics?.purchasePrice ||
+                         normalizedResults.valuation?.transactionValue?.amount;
+    console.log('🤖 Using AI-generated amount as fallback:', considerationAmount);
+  }
                              
   console.log('Using consideration amount:', considerationAmount);
 

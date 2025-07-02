@@ -1,5 +1,6 @@
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
 import { TransactionAnalysisRequest } from './aiAnalysisService';
+import { considerationCalculator } from './considerationCalculator';
 
 export interface InputValidationResult {
   isValid: boolean;
@@ -46,58 +47,96 @@ export const inputValidationService = {
     console.log('=== ENHANCED INPUT EXTRACTION & VALIDATION ===');
     console.log('Input description:', request.description);
     
+    // Use consideration calculator for context-aware extraction
+    
     const extractedInputs: ExtractedUserInputs = {};
     const warnings: string[] = [];
     const suggestions: string[] = [];
     
-    // Enhanced amount extraction with multiple pattern priorities
-    const amountValidation = inputValidationService.extractAmount(request.description);
-    if (amountValidation.found && amountValidation.processedValue) {
-      extractedInputs.amount = amountValidation.processedValue;
-      extractedInputs.currency = inputValidationService.extractCurrency(request.description);
+    // Use context-aware value extraction
+    const extractedValues = considerationCalculator.extractValues(request.description);
+    
+    // Prioritize target valuation for amount if available
+    if (extractedValues.targetValuation) {
+      extractedInputs.amount = extractedValues.targetValuation;
+      extractedInputs.currency = extractedValues.currency || 'HKD';
+      console.log('✅ Using target valuation as amount:', extractedInputs.amount);
+    } else if (extractedValues.directConsideration) {
+      extractedInputs.amount = extractedValues.directConsideration;
+      extractedInputs.currency = extractedValues.currency || 'HKD';
+      console.log('✅ Using direct consideration as amount:', extractedInputs.amount);
+    } else {
+      // Fallback to legacy extraction
+      const amountValidation = inputValidationService.extractAmount(request.description);
+      if (amountValidation.found && amountValidation.processedValue) {
+        extractedInputs.amount = amountValidation.processedValue;
+        extractedInputs.currency = inputValidationService.extractCurrency(request.description);
+        
+        // Check if extracted amount might be market cap instead of consideration
+        if (extractedValues.marketCap && Math.abs(extractedInputs.amount - extractedValues.marketCap) < extractedValues.marketCap * 0.1) {
+          warnings.push('Detected amount may be market cap instead of target valuation');
+          suggestions.push('Specify "target valuation" or "consideration amount" explicitly');
+        }
+      }
+    }
+    
+    // Extract acquisition percentage
+    if (extractedValues.acquisitionPercentage) {
+      extractedInputs.acquisitionPercentage = extractedValues.acquisitionPercentage;
+    } else {
+      const percentageValidation = inputValidationService.extractPercentage(request.description);
+      if (percentageValidation.found && percentageValidation.value) {
+        extractedInputs.acquisitionPercentage = percentageValidation.value;
+      }
     }
     
     // Enhanced company name extraction
     const companyValidation = inputValidationService.extractCompanyNames(request.description);
-    if (companyValidation.targetFound) {
-      // Extract from description - implementation would go here
-    }
-    if (companyValidation.acquirerFound) {
-      // Extract from description - implementation would go here
-    }
     
-    // Enhanced percentage extraction
-    const percentageValidation = inputValidationService.extractPercentage(request.description);
-    if (percentageValidation.found && percentageValidation.value) {
-      extractedInputs.acquisitionPercentage = percentageValidation.value;
-    }
+    // Create mock validation results for compatibility
+    const amountValidation = {
+      found: !!extractedInputs.amount,
+      source: extractedValues.targetValuation ? 'target valuation' : 'direct extraction',
+      confidence: extractedValues.targetValuation ? 0.9 : 0.7,
+      rawValue: extractedInputs.amount?.toString(),
+      processedValue: extractedInputs.amount
+    };
     
-    // Calculate overall confidence and validation
+    const percentageValidation = {
+      found: !!extractedInputs.acquisitionPercentage,
+      value: extractedInputs.acquisitionPercentage,
+      confidence: extractedValues.acquisitionPercentage ? 0.9 : 0.7
+    };
+    
+    // Calculate overall confidence
     const overallConfidence = inputValidationService.calculateConfidence(
       amountValidation, companyValidation, percentageValidation
     );
     
     const isValid = overallConfidence > 0.6 && amountValidation.found;
     
-    // Generate warnings and suggestions
+    // Generate context-aware warnings and suggestions
     if (!amountValidation.found) {
-      warnings.push('No transaction amount detected');
-      suggestions.push('Include transaction amount (e.g., "HKD 75 million")');
-    } else if (amountValidation.confidence < 0.8) {
-      warnings.push('Transaction amount detection has low confidence');
-      suggestions.push('Use clearer amount format (e.g., "HKD 75 million")');
+      warnings.push('No target valuation or consideration amount detected');
+      suggestions.push('Include target valuation (e.g., "target valuation of HKD 570 million")');
     }
     
     if (!percentageValidation.found) {
       warnings.push('No acquisition percentage detected');
-      suggestions.push('Specify percentage being acquired (e.g., "acquiring 51%")');
+      suggestions.push('Specify percentage being acquired (e.g., "acquiring 80%")');
     }
     
-    console.log('✅ Input validation completed:', {
+    if (extractedValues.marketCap && !extractedValues.targetValuation) {
+      suggestions.push('Consider specifying target valuation separately from market cap');
+    }
+    
+    console.log('✅ Context-aware validation completed:', {
       isValid,
       confidence: overallConfidence,
       extractedAmount: extractedInputs.amount,
-      extractedPercentage: extractedInputs.acquisitionPercentage
+      extractedPercentage: extractedInputs.acquisitionPercentage,
+      marketCap: extractedValues.marketCap,
+      targetValuation: extractedValues.targetValuation
     });
     
     return {
