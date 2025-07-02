@@ -83,44 +83,6 @@ export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummar
           </p>
         </div>
 
-        {/* Shareholding Structure Changes */}
-        {(results.shareholdingChanges?.keyChanges?.length > 0 || results.shareholding?.majorChanges?.length > 0 || beforeShareholders.length > 0 || afterShareholders.length > 0) && (
-          <div className="pt-3 border-t">
-            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Shareholding Structure Changes</h4>
-            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
-              {results.shareholdingChanges?.keyChanges?.map((change, index) => (
-                <p key={index}>• {change.shareholder}: {change.before}% → {change.after}% ({change.change > 0 ? '+' : ''}{change.change.toFixed(1)}%)</p>
-              ))}
-              {results.shareholding?.majorChanges?.map((change, index) => (
-                <p key={index}>• {change}</p>
-              ))}
-              {results.shareholdingChanges?.controlImplications?.map((implication, index) => (
-                <p key={index} className="font-medium">Control Impact: {implication}</p>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Material Compliance Issues */}
-        {(results.compliance?.risks?.length > 0 || results.compliance?.listingRules?.length > 0 || results.compliance?.takeoversCode?.length > 0 || results.compliance?.recommendations?.length > 0) && (
-          <div className="pt-3 border-t">
-            <h4 className="text-sm font-semibold text-muted-foreground mb-2">Material Compliance Issues</h4>
-            <div className="text-sm text-muted-foreground leading-relaxed space-y-1">
-              {results.compliance?.risks?.map((risk, index) => (
-                <p key={index} className="text-orange-600">• Risk: {risk}</p>
-              ))}
-              {results.compliance?.listingRules?.map((rule, index) => (
-                <p key={index}>• Listing Rule: {rule}</p>
-              ))}
-              {results.compliance?.takeoversCode?.map((code, index) => (
-                <p key={index}>• Takeovers Code: {code}</p>
-              ))}
-              {results.compliance?.recommendations?.map((rec, index) => (
-                <p key={index} className="text-blue-600">• Recommendation: {rec}</p>
-              ))}
-            </div>
-          </div>
-        )}
       </CardContent>
     </Card>
   );
