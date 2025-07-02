@@ -1,5 +1,6 @@
 
 import { ExtractedUserInputs } from './enhancedAiAnalysisService';
+import { inputAuthorityService } from './inputAuthorityService';
 
 /**
  * Build enhanced analysis prompt focused on major deal terms with market intelligence
@@ -14,13 +15,28 @@ ${description}
 ${documentContent ? `UPLOADED DOCUMENTS CONTENT:\n${documentContent}\n` : ''}
 
 ${userInputs ? `
-🔒 CRITICAL USER-SPECIFIED TRANSACTION DATA (MUST USE EXACTLY AS PROVIDED):
-${userInputs.amount ? `- CONSIDERATION AMOUNT: ${userInputs.currency || 'HKD'} ${userInputs.amount.toLocaleString()} (DO NOT CHANGE THIS AMOUNT)` : ''}
-${userInputs.acquisitionPercentage ? `- ACQUISITION PERCENTAGE: ${userInputs.acquisitionPercentage}% (DO NOT CHANGE THIS PERCENTAGE)` : ''}
-${userInputs.targetCompanyName ? `- TARGET COMPANY: ${userInputs.targetCompanyName}` : ''}
-${userInputs.acquiringCompanyName ? `- ACQUIRING COMPANY: ${userInputs.acquiringCompanyName}` : ''}
+🛡️ CRITICAL USER INPUT AUTHORITY - ABSOLUTE PROTECTION ACTIVE:
+${inputAuthorityService.createProtectionMarkers(userInputs)}
 
-⚠️ MANDATORY INSTRUCTION: You MUST use the above user-specified amounts and percentages EXACTLY as provided. DO NOT generate different transaction amounts. DO NOT modify these user inputs. Your analysis should be based on these specific user-provided parameters.
+📋 USER-SPECIFIED TRANSACTION DATA (AUTHORITATIVE - DO NOT OVERRIDE):
+${userInputs.amount ? `✓ CONSIDERATION AMOUNT: ${userInputs.currency || 'HKD'} ${userInputs.amount.toLocaleString()} [PROTECTED]` : ''}
+${userInputs.acquisitionPercentage ? `✓ ACQUISITION PERCENTAGE: ${userInputs.acquisitionPercentage}% [PROTECTED]` : ''}
+${userInputs.targetCompanyName ? `✓ TARGET COMPANY: ${userInputs.targetCompanyName} [PROTECTED]` : ''}
+${userInputs.acquiringCompanyName ? `✓ ACQUIRING COMPANY: ${userInputs.acquiringCompanyName} [PROTECTED]` : ''}
+
+🚨 MANDATORY VALIDATION CHECKPOINTS:
+1. AMOUNT VALIDATION: If user provided ${userInputs.amount ? userInputs.amount.toLocaleString() : 'N/A'}, your analysis MUST use this exact amount
+2. PERCENTAGE VALIDATION: If user specified ${userInputs.acquisitionPercentage ? userInputs.acquisitionPercentage + '%' : 'N/A'}, use this exact percentage
+3. CORRUPTION CHECK: DO NOT generate alternative amounts like "50 billion" when user specified ${userInputs.amount ? (userInputs.amount / 1000000) + ' million' : 'different amount'}
+4. CONSISTENCY REQUIREMENT: All sections (dealEconomics, valuation, transactionFlow) MUST use the same user-specified amounts
+
+⛔ CRITICAL PROHIBITION: You are FORBIDDEN from generating transaction amounts different from user inputs. If user specified ${userInputs.amount ? userInputs.amount.toLocaleString() : 'an amount'}, do NOT create amounts like 50,000,000,000 or any other value.
+
+✅ VALIDATION CONFIRMATION: Before generating your response, verify that:
+- Your dealEconomics.purchasePrice = ${userInputs.amount || 'user specified amount'}
+- Your valuation.transactionValue.amount = ${userInputs.amount || 'user specified amount'}  
+- Your transactionFlow.transactionContext.amount = ${userInputs.amount || 'user specified amount'}
+- All amounts are identical and match user input
 ` : ''}
 
 Perform a comprehensive analysis that incorporates MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES. Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution, considering current market conditions and precedent transactions.
