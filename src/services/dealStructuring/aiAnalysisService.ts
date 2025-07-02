@@ -48,8 +48,8 @@ export const aiAnalysisService = {
           .join('\n\n');
       }
       
-      // Enhanced prompt building with regulatory context
-      let analysisPrompt = buildAnalysisPrompt(request.description, documentContent);
+      // Enhanced prompt building with regulatory context and user inputs
+      let analysisPrompt = buildAnalysisPrompt(request.description, documentContent, userInputs);
       
       // Add regulatory context if available
       if (regulatoryContext?.context) {

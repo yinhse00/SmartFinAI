@@ -1,8 +1,10 @@
 
+import { ExtractedUserInputs } from './enhancedAiAnalysisService';
+
 /**
  * Build enhanced analysis prompt focused on major deal terms with market intelligence
  */
-export function buildAnalysisPrompt(description: string, documentContent: string): string {
+export function buildAnalysisPrompt(description: string, documentContent: string, userInputs?: ExtractedUserInputs): string {
   return `
 As a Hong Kong investment banking advisor and financial regulatory expert with access to real-time market intelligence, analyze the following transaction and provide professional-grade structuring advice focused on MAJOR DEAL TERMS, commercial considerations, and market-optimized recommendations.
 
@@ -10,6 +12,16 @@ TRANSACTION DESCRIPTION:
 ${description}
 
 ${documentContent ? `UPLOADED DOCUMENTS CONTENT:\n${documentContent}\n` : ''}
+
+${userInputs ? `
+🔒 CRITICAL USER-SPECIFIED TRANSACTION DATA (MUST USE EXACTLY AS PROVIDED):
+${userInputs.amount ? `- CONSIDERATION AMOUNT: ${userInputs.currency || 'HKD'} ${userInputs.amount.toLocaleString()} (DO NOT CHANGE THIS AMOUNT)` : ''}
+${userInputs.acquisitionPercentage ? `- ACQUISITION PERCENTAGE: ${userInputs.acquisitionPercentage}% (DO NOT CHANGE THIS PERCENTAGE)` : ''}
+${userInputs.targetCompanyName ? `- TARGET COMPANY: ${userInputs.targetCompanyName}` : ''}
+${userInputs.acquiringCompanyName ? `- ACQUIRING COMPANY: ${userInputs.acquiringCompanyName}` : ''}
+
+⚠️ MANDATORY INSTRUCTION: You MUST use the above user-specified amounts and percentages EXACTLY as provided. DO NOT generate different transaction amounts. DO NOT modify these user inputs. Your analysis should be based on these specific user-provided parameters.
+` : ''}
 
 Perform a comprehensive analysis that incorporates MARKET INTELLIGENCE and OPTIMIZATION PRINCIPLES. Focus your analysis on MAJOR COMMERCIAL AND STRUCTURAL TERMS that impact deal economics and execution, considering current market conditions and precedent transactions.
 
