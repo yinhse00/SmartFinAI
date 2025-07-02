@@ -4,8 +4,6 @@ import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults'
 import { createFallbackAnalysis } from './analysisFallbackData';
 import { optimizationEngine, OptimizationParameters, OptimizationResult } from './optimizationEngine';
 import { extractUserInputAmount } from './converterUtils/dataExtractors';
-import { inputValidationService, InputValidationResult } from './inputValidationService';
-import { inputAuthorityService, AuthorityEnforcementResult } from './inputAuthorityService';
 
 export interface EnhancedAnalysisResult {
   results: AnalysisResults;
@@ -49,26 +47,44 @@ export interface ExtractedUserInputs {
  */
 export const enhancedAiAnalysisService = {
   /**
-   * PHASE 1: Enhanced input extraction with validation service
+   * Extract structured data from user input
    */
   extractUserInputs: (request: TransactionAnalysisRequest): ExtractedUserInputs => {
-    console.log('=== ENHANCED INPUT EXTRACTION ===');
+    const extracted: ExtractedUserInputs = {};
     
-    // Use new validation service for comprehensive extraction
-    const validationResult = inputValidationService.extractAndValidateInputs(request);
-    
-    console.log('Validation result:', {
-      isValid: validationResult.isValid,
-      confidence: validationResult.confidence,
-      authorityLevel: validationResult.authorityLevel,
-      extractedInputs: validationResult.extractedInputs
-    });
-    
-    if (validationResult.warnings.length > 0) {
-      console.warn('Input extraction warnings:', validationResult.warnings);
+    // Extract amount from description
+    const extractedAmount = extractUserInputAmount(request.description);
+    if (extractedAmount) {
+      extracted.amount = extractedAmount;
+      console.log('Extracted amount from user input:', extractedAmount);
     }
     
-    return validationResult.extractedInputs;
+    // Extract currency
+    const description = request.description.toLowerCase();
+    if (description.includes('hk$') || description.includes('hkd') || description.includes('hong kong dollar')) {
+      extracted.currency = 'HKD';
+    } else if (description.includes('usd') || description.includes('us$')) {
+      extracted.currency = 'USD';
+    }
+    
+    // Extract acquisition percentage
+    const percentageMatch = request.description.match(/(?:acquire|purchase|buy|obtaining?)\s+(?:a\s+)?(\d+(?:\.\d+)?)%/i);
+    if (percentageMatch) {
+      extracted.acquisitionPercentage = parseFloat(percentageMatch[1]);
+    }
+    
+    // Extract company names - simple pattern matching
+    const targetCompanyMatch = request.description.match(/(?:target|acquire|purchase|buy)\s+(?:company\s+)?([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))/i);
+    if (targetCompanyMatch) {
+      extracted.targetCompanyName = targetCompanyMatch[1].trim();
+    }
+    
+    const acquiringCompanyMatch = request.description.match(/([A-Z][A-Za-z\s&]+(?:Ltd|Limited|Corp|Corporation|Inc|Company))\s+(?:is|will)\s+(?:acquiring|purchasing|buying)/i);
+    if (acquiringCompanyMatch) {
+      extracted.acquiringCompanyName = acquiringCompanyMatch[1].trim();
+    }
+    
+    return extracted;
   },
 
   /**
@@ -81,51 +97,30 @@ export const enhancedAiAnalysisService = {
     console.log('Starting enhanced transaction analysis with optimization...');
     
     try {
-      // PHASE 1: Enhanced input extraction with validation
+      // Step 1: Extract user inputs before AI analysis
       const userInputs = enhancedAiAnalysisService.extractUserInputs(request);
-      console.log('Enhanced extracted user inputs:', userInputs);
+      console.log('Extracted user inputs:', userInputs);
+      console.log('=== VALIDATION: Passing userInputs to AI analysis ===');
       
-      // PHASE 2: Validate input authority before AI processing
-      const authorityValidation = inputAuthorityService.validateInputAuthority(userInputs);
-      console.log('Input authority validation:', authorityValidation);
-      
-      // Step 2: Input validation (legacy)
+      // Step 2: Input validation
       const inputValidation = enhancedAiAnalysisService.validateInput(request);
       
-      // PHASE 3: Get AI analysis with protected user inputs
-      console.log('🛡️ PHASE 3: Requesting AI analysis with input protection active');
+      // Step 3: Get basic AI analysis WITH userInputs passed - THIS IS THE FIX
       const basicResults = await aiAnalysisService.analyzeTransaction(request, userInputs);
-      console.log('AI analysis completed - now enforcing input authority...');
-      
-      // PHASE 4: Enforce input authority immediately after AI processing
-      const authorityEnforcement = inputAuthorityService.enforceInputAuthority(basicResults, userInputs);
-      console.log('Authority enforcement result:', {
-        corrections: authorityEnforcement.corrections.length,
-        corruptionDetected: authorityEnforcement.corruptionDetected,
-        protectionLevel: authorityEnforcement.protectionLevel
-      });
-      
-      // Use authority-enforced results for further processing
-      const protectedResults = authorityEnforcement.enforcedResults;
+      console.log('AI analysis completed with userInputs passed');
       
       // Step 4: Apply optimization if parameters provided
       let optimization: OptimizationResult | null = null;
       if (optimizationParams) {
         optimization = await optimizationEngine.optimizeStructure(request, optimizationParams);
       } else {
-        // Use default optimization parameters based on protected results
-        const defaultParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, protectedResults);
+        // Use default optimization parameters based on analysis
+        const defaultParams = enhancedAiAnalysisService.generateDefaultOptimizationParams(request, basicResults);
         optimization = await optimizationEngine.optimizeStructure(request, defaultParams);
       }
       
-      // Step 5: Reconcile protected results with optimization and user inputs
-      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(protectedResults, optimization, userInputs);
-      
-      // Add authority enforcement details to reconciliation
-      reconciliation.changes.push(...authorityEnforcement.corrections);
-      if (authorityEnforcement.corruptionDetected) {
-        reconciliation.changes.push('🛡️ USER INPUT CORRUPTION DETECTED AND CORRECTED');
-      }
+      // Step 5: Reconcile AI results with optimization and user inputs - PASS userInputs to reconciliation
+      const { reconciledResults, reconciliation } = enhancedAiAnalysisService.reconcileResults(basicResults, optimization, userInputs);
       
       return {
         results: reconciledResults,
