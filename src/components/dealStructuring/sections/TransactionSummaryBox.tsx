@@ -65,6 +65,20 @@ export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummar
             {results.timetable?.keyMilestones?.length > 0 
               ? `, with key milestones including ${results.timetable.keyMilestones.slice(0, 2).join(' and ')}` 
               : ''
+            }
+            {results.shareholdingChanges?.keyChanges?.length > 0
+              ? `. The transaction will result in ${results.shareholdingChanges.keyChanges.slice(0, 2).map(change => `${change.shareholder} ${change.change > 0 ? 'increasing' : 'decreasing'} from ${change.before}% to ${change.after}%`).join(' and ')}`
+              : results.shareholding?.majorChanges?.length > 0
+                ? `. The transaction will result in ${results.shareholding.majorChanges[0]}`
+                : ''
+            }
+            {(results.compliance?.risks?.length > 0 || results.compliance?.listingRules?.length > 0 || results.compliance?.takeoversCode?.length > 0)
+              ? `. Key regulatory considerations include ${[
+                  ...(results.compliance?.risks?.slice(0, 1) || []),
+                  ...(results.compliance?.listingRules?.slice(0, 1) || []),
+                  ...(results.compliance?.takeoversCode?.slice(0, 1) || [])
+                ].slice(0, 2).join(' and ')}`
+              : ''
             }.
           </p>
         </div>
