@@ -50,90 +50,23 @@ export const TransactionSummaryBox = ({ results, userInputs }: TransactionSummar
       </CardHeader>
       
       <CardContent className="space-y-4">
-        {/* Parties Involved */}
-        <div className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
-          <Users className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <span className="text-blue-700">{acquiringCompany}</span>
-              <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <span className="text-green-700">{targetCompany}</span>
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Acquiring Company → Target Company</p>
-          </div>
-        </div>
-
-        {/* Transaction Nature & Key Terms */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Transaction Nature */}
-          <div className="flex items-start gap-3 p-3 border rounded-lg">
-            <Briefcase className="h-5 w-5 text-purple-600 mt-0.5 flex-shrink-0" />
-            <div>
-              <h4 className="font-medium text-sm">Transaction Nature</h4>
-              <p className="text-sm text-muted-foreground capitalize">{transactionType}</p>
-              <p className="text-xs text-muted-foreground mt-1">{targetPercentage}% acquisition</p>
-            </div>
-          </div>
-
-          {/* Key Terms */}
-          <div className="flex items-start gap-3 p-3 border rounded-lg">
-            <div className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0 flex items-center justify-center text-xs font-bold">
-              {currency}
-            </div>
-            <div>
-              <h4 className="font-medium text-sm">Total Consideration</h4>
-              <p className="text-sm font-semibold text-green-700">{currency} {formatAmount(amount)}</p>
-              {paymentStructure?.cashPercentage && paymentStructure?.stockPercentage && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {paymentStructure.cashPercentage}% cash + {paymentStructure.stockPercentage}% stock
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Shareholding Changes */}
-        {(beforeShareholders.length > 0 || afterShareholders.length > 0) && (
-          <div className="flex items-start gap-3 p-3 border rounded-lg">
-            <Percent className="h-5 w-5 text-orange-600 mt-0.5 flex-shrink-0" />
-            <div className="flex-1">
-              <h4 className="font-medium text-sm mb-2">Shareholding Changes</h4>
-              <div className="grid grid-cols-2 gap-4 text-xs">
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">Before</p>
-                  {beforeShareholders.slice(0, 3).map((sh, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span className="truncate">{sh.name}</span>
-                      <span>{sh.percentage}%</span>
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <p className="font-medium text-muted-foreground mb-1">After</p>
-                  {afterShareholders.slice(0, 3).map((sh, idx) => (
-                    <div key={idx} className="flex justify-between">
-                      <span className="truncate">{sh.name}</span>
-                      <span>{sh.percentage}%</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Duration & Timeline */}
-        <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-          <Clock className="h-5 w-5 text-blue-600 flex-shrink-0" />
-          <div>
-            <h4 className="font-medium text-sm">Timeline</h4>
-            <p className="text-sm text-blue-700">{timeline}</p>
-            {results.timetable?.keyMilestones && (
-              <p className="text-xs text-blue-600 mt-1">
-                {results.timetable.keyMilestones.slice(0, 2).join(' • ')}
-              </p>
-            )}
-          </div>
+        {/* Transaction Summary Paragraph */}
+        <div className="p-4 bg-muted/30 rounded-lg">
+          <p className="text-sm leading-relaxed text-foreground">
+            {acquiringCompany} is undertaking a {transactionType.toLowerCase()} to acquire {targetPercentage}% of {targetCompany} for a total consideration of {currency} {formatAmount(amount)}
+            {paymentStructure?.cashPercentage && paymentStructure?.stockPercentage 
+              ? `, structured as ${paymentStructure.cashPercentage}% cash and ${paymentStructure.stockPercentage}% stock` 
+              : ''
+            }. The transaction is expected to complete within {timeline}
+            {results.timetable?.keyMilestones?.length > 0 
+              ? `, with key milestones including ${results.timetable.keyMilestones.slice(0, 2).join(' and ')}` 
+              : ''
+            }
+            {(beforeShareholders.length > 0 || afterShareholders.length > 0) 
+              ? `, resulting in significant changes to the shareholding structure` 
+              : ''
+            }.
+          </p>
         </div>
 
         {/* Strategic Rationale */}
