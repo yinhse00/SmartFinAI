@@ -56,11 +56,11 @@ export const inputValidationService = {
     // Use context-aware value extraction
     const extractedValues = considerationCalculator.extractValues(request.description);
     
-    // Prioritize target valuation for amount if available
+    // CRITICAL FIX: Distinguish between target valuation and consideration
     if (extractedValues.targetValuation) {
-      extractedInputs.amount = extractedValues.targetValuation;
+      extractedInputs.targetValuation = extractedValues.targetValuation;
       extractedInputs.currency = extractedValues.currency || 'HKD';
-      console.log('✅ Using target valuation as amount:', extractedInputs.amount);
+      console.log('✅ Using target valuation (100% equity):', extractedInputs.targetValuation);
     } else if (extractedValues.directConsideration) {
       extractedInputs.amount = extractedValues.directConsideration;
       extractedInputs.currency = extractedValues.currency || 'HKD';
@@ -89,6 +89,16 @@ export const inputValidationService = {
         extractedInputs.acquisitionPercentage = percentageValidation.value;
       }
     }
+
+    // CRITICAL: Calculate consideration from target valuation if both are available
+    if (extractedInputs.targetValuation && extractedInputs.acquisitionPercentage && !extractedInputs.amount) {
+      extractedInputs.amount = extractedInputs.targetValuation * (extractedInputs.acquisitionPercentage / 100);
+      console.log('✅ CALCULATED consideration from target valuation:', {
+        targetValuation: extractedInputs.targetValuation,
+        percentage: extractedInputs.acquisitionPercentage,
+        calculatedConsideration: extractedInputs.amount
+      });
+    }
     
     // Enhanced company name extraction
     const companyValidation = inputValidationService.extractCompanyNames(request.description);
@@ -96,8 +106,8 @@ export const inputValidationService = {
     // Create mock validation results for compatibility
     const amountValidation = {
       found: !!extractedInputs.amount,
-      source: extractedValues.targetValuation ? 'target valuation' : 'direct extraction',
-      confidence: extractedValues.targetValuation ? 0.9 : 0.7,
+      source: extractedInputs.targetValuation ? 'calculated from target valuation' : 'direct extraction',
+      confidence: extractedInputs.targetValuation ? 0.95 : 0.7,
       rawValue: extractedInputs.amount?.toString(),
       processedValue: extractedInputs.amount
     };

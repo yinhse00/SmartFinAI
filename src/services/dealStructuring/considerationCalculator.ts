@@ -134,25 +134,46 @@ export const considerationCalculator = {
     let targetValuation: number | undefined;
     let acquisitionPercentage: number | undefined;
     
-    // CRITICAL: When user provides both amount and percentage, amount is CONSIDERATION
-    if (userInputs?.amount && userInputs?.acquisitionPercentage) {
-      // Calculate target valuation from consideration: Target = Consideration ÷ Percentage
-      const userConsideration = userInputs.amount;
+    // PRIORITY 1: User provided target valuation + acquisition percentage
+    if (userInputs?.targetValuation && userInputs?.acquisitionPercentage) {
+      targetValuation = userInputs.targetValuation;
       acquisitionPercentage = userInputs.acquisitionPercentage;
-      targetValuation = userConsideration / (acquisitionPercentage / 100);
+      const calculatedConsideration = targetValuation * (acquisitionPercentage / 100);
       
-      console.log('🎯 PRIORITY 1: User provided consideration and percentage');
-      console.log(`Consideration: ${userConsideration.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
-      console.log(`Calculated target valuation: ${targetValuation.toLocaleString()}`);
+      console.log('🎯 PRIORITY 1: User provided target valuation and percentage');
+      console.log(`Target Valuation: ${targetValuation.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
+      console.log(`Calculated consideration: ${calculatedConsideration.toLocaleString()}`);
       
-      // Return the user's consideration amount directly
       return {
-        considerationAmount: userConsideration,
+        considerationAmount: calculatedConsideration,
         calculationMethod: 'calculated',
         calculationDetails: {
           targetValuation,
           acquisitionPercentage,
-          calculationFormula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${userConsideration.toLocaleString()}`
+          calculationFormula: `${targetValuation.toLocaleString()} × ${acquisitionPercentage}% = ${calculatedConsideration.toLocaleString()}`
+        },
+        confidence: 0.95,
+        isValid: true,
+        validationErrors: []
+      };
+    } 
+    // PRIORITY 2: User provided consideration directly
+    else if (userInputs?.amount && userInputs?.acquisitionPercentage) {
+      const userConsideration = userInputs.amount;
+      acquisitionPercentage = userInputs.acquisitionPercentage;
+      targetValuation = userConsideration / (acquisitionPercentage / 100);
+      
+      console.log('🎯 PRIORITY 2: User provided consideration and percentage');
+      console.log(`Consideration: ${userConsideration.toLocaleString()}, Percentage: ${acquisitionPercentage}%`);
+      console.log(`Calculated target valuation: ${targetValuation.toLocaleString()}`);
+      
+      return {
+        considerationAmount: userConsideration,
+        calculationMethod: 'direct_input',
+        calculationDetails: {
+          targetValuation,
+          acquisitionPercentage,
+          calculationFormula: `${userConsideration.toLocaleString()} for ${acquisitionPercentage}% stake`
         },
         confidence: 0.95,
         isValid: true,
@@ -160,7 +181,7 @@ export const considerationCalculator = {
       };
     } else {
       // Fallback to extracted values for traditional calculation
-      targetValuation = extractedValues.targetValuation;
+      targetValuation = userInputs?.targetValuation || extractedValues.targetValuation;
       acquisitionPercentage = userInputs?.acquisitionPercentage || extractedValues.acquisitionPercentage;
     }
     

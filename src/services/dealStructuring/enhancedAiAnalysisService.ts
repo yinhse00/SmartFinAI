@@ -36,7 +36,8 @@ export interface AnalysisQualityReport {
 }
 
 export interface ExtractedUserInputs {
-  amount?: number;
+  amount?: number; // This represents CONSIDERATION amount (what's being paid)
+  targetValuation?: number; // This represents TARGET VALUATION (100% equity value)
   currency?: string;
   acquisitionPercentage?: number;
   targetCompanyName?: string;

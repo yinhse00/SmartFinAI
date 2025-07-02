@@ -36,12 +36,25 @@ export class DataConsistencyService {
     
     // STEP 1: Extract consideration amount with ABSOLUTE user input priority
     let considerationAmount: number;
+    let targetValuation: number;
     let source: 'user_input' | 'ai_fallback' | 'default';
     
-    if (userInputs?.amount && userInputs.amount > 0) {
+    // CRITICAL: Handle target valuation vs consideration properly
+    if (userInputs?.targetValuation && userInputs?.acquisitionPercentage) {
+      // Calculate consideration from target valuation: Consideration = Target Valuation × Percentage
+      targetValuation = userInputs.targetValuation;
+      const acquisitionPercentage = userInputs.acquisitionPercentage;
+      considerationAmount = targetValuation * (acquisitionPercentage / 100);
+      source = 'user_input';
+      console.log('✅ CALCULATED consideration from user target valuation:', {
+        targetValuation,
+        acquisitionPercentage,
+        calculatedConsideration: considerationAmount
+      });
+    } else if (userInputs?.amount && userInputs.amount > 0) {
       considerationAmount = userInputs.amount;
       source = 'user_input';
-      console.log('✅ PROTECTED: Using AUTHORITATIVE user input amount:', considerationAmount);
+      console.log('✅ PROTECTED: Using AUTHORITATIVE user input consideration:', considerationAmount);
       
       // CRITICAL: Validate that AI hasn't corrupted user input
       const aiAmounts = [
@@ -51,7 +64,7 @@ export class DataConsistencyService {
       ].filter(amount => amount && amount > 0);
       
       aiAmounts.forEach((aiAmount, index) => {
-        if (aiAmount && Math.abs(aiAmount - userInputs.amount) > 1000) {
+        if (aiAmount && Math.abs(aiAmount - userInputs.amount!) > 1000) {
           console.warn(`🚨 DATA CORRUPTION DETECTED in AI field ${index + 1}:`);
           console.warn('User input:', userInputs.amount);
           console.warn('AI amount:', aiAmount);
@@ -89,10 +102,12 @@ export class DataConsistencyService {
                                 this.extractAcquiringCompanyFromStructure(analysisResults) || 
                                 'Acquiring Company';
     
-    // STEP 5: Calculate target valuation (100% equity interest)
-    const targetValuation = acquisitionPercentage > 0 && acquisitionPercentage < 100 
-      ? considerationAmount / (acquisitionPercentage / 100)
-      : considerationAmount;
+    // STEP 5: Calculate target valuation (100% equity interest) if not already set
+    if (!targetValuation) {
+      targetValuation = acquisitionPercentage > 0 && acquisitionPercentage < 100 
+        ? considerationAmount / (acquisitionPercentage / 100)
+        : considerationAmount;
+    }
     
     console.log('🎯 Target valuation calculation:');
     console.log(`Consideration: ${considerationAmount}, Acquisition %: ${acquisitionPercentage}%`);
