@@ -72,7 +72,7 @@ export const aiRegulatoryDiscoveryService = {
       return {
         context,
         processingTime,
-        tablesSearched: ['regulatory_provisions', 'listingrule_listed_faq', 'listingrule_new_faq', 'announcement_pre_vetting_requirements', 'search_index'],
+        tablesSearched: ['search_index', 'listingrule_listed_faq', 'listingrule_new_faq', 'announcement_pre_vetting_requirements'],
         reasoning: searchStrategy.reasoning
       };
 
@@ -184,30 +184,30 @@ Return ONLY the JSON object.`;
   },
 
   /**
-   * Search regulatory provisions table
+   * Search search_index and source tables for regulatory provisions
    */
   searchRegulatoryProvisions: async (keywords: string[]) => {
     try {
       const searchTerms = keywords.join(' OR ');
       
+      // Search search_index for relevant entries
       const { data, error } = await supabase
-        .from('regulatory_provisions')
-        .select('id, title, content, rule_number, chapter, section')
-        .or(`title.ilike.%${searchTerms}%,content.ilike.%${searchTerms}%,rule_number.ilike.%${searchTerms}%`)
-        .eq('is_current', true)
+        .from('search_index')
+        .select('*')
+        .ilike('particulars', `%${searchTerms}%`)
         .limit(10);
 
       if (error) {
-        console.error('Error searching regulatory provisions:', error);
+        console.error('Error searching search_index:', error);
         return [];
       }
 
       return data?.map(item => ({
         id: item.id,
-        title: item.title,
-        content: item.content,
-        rule_number: item.rule_number,
-        source: `${item.chapter || ''} ${item.section || ''}`.trim() || 'Regulatory Provision'
+        title: `Entry from ${item.tableindex || 'Unknown Source'}`,
+        content: item.particulars || '',
+        rule_number: item.id,
+        source: item.tableindex || 'Search Index'
       })) || [];
 
     } catch (error) {

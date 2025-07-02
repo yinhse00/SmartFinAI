@@ -8,57 +8,114 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const searchService = {
   /**
-   * Search the regulatory database
+   * Search the regulatory database using search_index as central hub
    */
   search: async (query: string, category?: string): Promise<RegulatoryEntry[]> => {
     console.log(`Searching for "${query}" in category: ${category || 'all'}`);
     
-    // Convert query to lowercase for case-insensitive matching
-    const queryLower = query.toLowerCase();
-    
-    // Prepare the Supabase query - simplified without problematic relationships
-    let supabaseQuery = supabase
-      .from('regulatory_provisions')
-      .select('id, rule_number, title, content, chapter, section, last_updated, is_current');
-    
-    // Add search condition
-    const { data, error } = await supabaseQuery;
-    
-    if (error) {
-      console.error('Error searching regulatory provisions:', error);
-      return [];
-    }
-    
-    // Filter results client-side
-    const filteredData = data.filter(item => {
-      return (
-        item.title.toLowerCase().includes(queryLower) ||
-        item.content.toLowerCase().includes(queryLower) ||
-        item.rule_number.toLowerCase().includes(queryLower)
-      );
-    });
-    
-    // Map the Supabase data structure to our RegulatoryEntry type
-    return filteredData.map(item => {
-      // Determine category based on chapter or rule number
-      let mappedCategory: RegulatoryEntry['category'] = 'other';
-      if (item.chapter?.includes('14') || item.chapter?.includes('13')) {
-        mappedCategory = 'listing_rules';
-      } else if (item.rule_number?.includes('TO')) {
-        mappedCategory = 'takeovers';
+    try {
+      // Step 1: Search search_index table for matching content
+      let searchQuery = supabase
+        .from('search_index')
+        .select('*');
+      
+      // Add text search on particulars
+      if (query.trim()) {
+        searchQuery = searchQuery.ilike('particulars', `%${query}%`);
       }
       
-      return {
-        id: item.id,
-        title: item.title,
-        content: item.content,
-        category: mappedCategory,
-        source: item.chapter ? `${item.chapter} ${item.section || ''}` : 'Unknown',
-        section: item.section || undefined,
-        lastUpdated: new Date(item.last_updated),
-        status: item.is_current ? 'active' : 'archived'
-      };
-    });
+      // Add category filter if specified
+      if (category) {
+        searchQuery = searchQuery.eq('category', category);
+      }
+      
+      const { data: searchResults, error: searchError } = await searchQuery.limit(50);
+      
+      if (searchError) {
+        console.error('Error searching search_index:', searchError);
+        return [];
+      }
+      
+      if (!searchResults || searchResults.length === 0) {
+        return [];
+      }
+      
+      // Step 2: Group results by tableindex and fetch detailed data
+      const tableGroups = searchResults.reduce((groups, result) => {
+        const table = result.tableindex;
+        if (table) {
+          if (!groups[table]) groups[table] = [];
+          groups[table].push(result);
+        }
+        return groups;
+      }, {} as Record<string, any[]>);
+      
+      // Step 3: Fetch detailed data from source tables and map to RegulatoryEntry
+      const allEntries: RegulatoryEntry[] = [];
+      
+      for (const [tableName, indexResults] of Object.entries(tableGroups)) {
+        const detailedEntries = await searchService.fetchDetailedDataFromTable(tableName, indexResults);
+        allEntries.push(...detailedEntries);
+      }
+      
+      return allEntries;
+    } catch (error) {
+      console.error('Error in search:', error);
+      return [];
+    }
+  },
+
+  /**
+   * Fetch detailed data from specific table and map to RegulatoryEntry interface
+   */
+  fetchDetailedDataFromTable: async (tableName: string, indexResults: any[]): Promise<RegulatoryEntry[]> => {
+    try {
+      // Use particulars from search_index as fallback for detailed content
+      return indexResults.map(indexResult => {
+        // Map common fields based on table type
+        let entry: RegulatoryEntry = {
+          id: indexResult.id,
+          title: '',
+          content: indexResult.particulars || '',
+          category: searchService.mapCategory(indexResult.category, tableName),
+          source: tableName,
+          lastUpdated: new Date(),
+          status: 'active'
+        };
+
+        // Table-specific mapping
+        if (tableName === 'listingrule_new_gl') {
+          entry.title = 'Listing Rule Guidance';
+          entry.section = indexResult.reference_no || undefined;
+        } else if (tableName === 'listingrule_listed_faq') {
+          entry.title = 'Listed Company FAQ';
+          entry.section = indexResult.reference_nos || undefined;
+        } else if (tableName === 'listingrule_new_faq') {
+          entry.title = 'New Listing FAQ';
+          entry.section = indexResult.question_no || undefined;
+        } else if (tableName === 'announcement_pre_vetting_requirements') {
+          entry.title = 'Pre-Vetting Requirements';
+          entry.category = 'documentation';
+        }
+
+        return entry;
+      });
+    } catch (error) {
+      console.error(`Error fetching detailed data from ${tableName}:`, error);
+      return [];
+    }
+  },
+
+  /**
+   * Map category strings to RegulatoryEntry category enum
+   */
+  mapCategory: (categoryStr: string | null, tableName: string): RegulatoryEntry['category'] => {
+    if (categoryStr?.toLowerCase().includes('listing')) return 'listing_rules';
+    if (categoryStr?.toLowerCase().includes('takeover')) return 'takeovers';
+    if (categoryStr?.toLowerCase().includes('faq')) return 'faqs';
+    if (tableName.includes('faq')) return 'faqs';
+    if (tableName.includes('listingrule')) return 'listing_rules';
+    return 'other';
   },
   
   /**

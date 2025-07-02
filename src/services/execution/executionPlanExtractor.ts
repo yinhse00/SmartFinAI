@@ -145,17 +145,17 @@ Focus on practical, Hong Kong market-specific tasks that can be tracked and exec
         id: `exec_plan_${Date.now()}`,
         title: extractedPlan.title,
         description: extractedPlan.description,
-        tasks: extractedPlan.tasks.map((task: any, index: number) => ({
+        tasks: extractedPlan.tasks?.map((task: any, index: number) => ({
           ...task,
           id: task.id || `task_${index + 1}`,
           status: 'pending' as const
-        })),
-        totalEstimatedDays: extractedPlan.tasks.reduce((total: number, task: any) => total + (task.estimatedDays || 0), 0),
-        criticalPath: this.calculateCriticalPath(extractedPlan.tasks),
-        milestones: extractedPlan.milestones.map((milestone: any) => ({
+        })) || [],
+        totalEstimatedDays: extractedPlan.tasks?.reduce((total: number, task: any) => total + (task.estimatedDays || 0), 0) || 0,
+        criticalPath: executionPlanExtractor.calculateCriticalPath(extractedPlan.tasks || []),
+        milestones: extractedPlan.milestones?.map((milestone: any) => ({
           ...milestone,
           date: new Date(milestone.date)
-        })),
+        })) || [],
         createdAt: new Date(),
         updatedAt: new Date()
       };
@@ -169,7 +169,7 @@ Focus on practical, Hong Kong market-specific tasks that can be tracked and exec
       console.error('Error extracting execution plan:', error);
       
       // Fallback execution plan based on analysis results
-      return this.createFallbackExecutionPlan(context);
+      return executionPlanExtractor.createFallbackExecutionPlan(context);
     }
   },
 
