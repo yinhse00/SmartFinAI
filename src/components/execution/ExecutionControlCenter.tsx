@@ -14,15 +14,23 @@ import {
   Users,
   FileText,
   Plus,
-  RotateCcw
+  RotateCcw,
+  MessageSquare,
+  TrendingUp
 } from 'lucide-react';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
 import { ExecutionTaskManager } from './ExecutionTaskManager';
 import { ExecutionProgressTracker } from './ExecutionProgressTracker';
 import { SaveProjectDialog } from './SaveProjectDialog';
 import { ProjectSelector } from './ProjectSelector';
+import { ExecutionCollaborationPanel } from './collaboration/ExecutionCollaborationPanel';
+import { ExecutionMonitoringDashboard } from './monitoring/ExecutionMonitoringDashboard';
 import { executionPlanExtractor, ExecutionPlan, ExecutionTask, ChatAnalysisContext } from '@/services/execution/executionPlanExtractor';
 import { ExecutionProjectWithPlan } from '@/services/execution/executionProjectService';
+import { 
+  executionCollaborationService, 
+  ProjectMember 
+} from '@/services/execution/executionCollaborationService';
 import { useToast } from '@/hooks/use-toast';
 
 interface ExecutionControlCenterProps {
@@ -45,6 +53,8 @@ export const ExecutionControlCenter = ({
   const [activeTab, setActiveTab] = useState('overview');
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [currentProjectName, setCurrentProjectName] = useState<string>('');
+  const [projectMembers, setProjectMembers] = useState<ProjectMember[]>([]);
+  const [currentUserRole, setCurrentUserRole] = useState<'admin' | 'manager' | 'team_member' | 'external_advisor' | 'client'>('admin');
   const { toast } = useToast();
 
   const generateExecutionPlan = async () => {
@@ -103,13 +113,21 @@ export const ExecutionControlCenter = ({
     });
   };
 
-  const handleProjectSelected = (project: ExecutionProjectWithPlan) => {
+  const handleProjectSelected = async (project: ExecutionProjectWithPlan) => {
     if (project.execution_plan) {
       setExecutionPlan(project.execution_plan);
       setCurrentProjectId(project.id);
       setCurrentProjectName(project.name);
       setActiveTab('tasks');
       onExecutionStart?.(project.execution_plan);
+      
+      // Load project members for collaboration
+      try {
+        const members = await executionCollaborationService.getProjectMembers(project.id);
+        setProjectMembers(members);
+      } catch (error) {
+        console.error('Error loading project members:', error);
+      }
     }
   };
 
@@ -288,7 +306,7 @@ export const ExecutionControlCenter = ({
 
               {/* Execution Tabs */}
               <Tabs value={activeTab} onValueChange={setActiveTab}>
-                <TabsList className="grid w-full grid-cols-3">
+                <TabsList className="grid w-full grid-cols-5">
                   <TabsTrigger value="overview" className="flex items-center gap-1">
                     <BarChart3 className="h-4 w-4" />
                     Overview
@@ -300,6 +318,14 @@ export const ExecutionControlCenter = ({
                   <TabsTrigger value="progress" className="flex items-center gap-1">
                     <Clock className="h-4 w-4" />
                     Progress
+                  </TabsTrigger>
+                  <TabsTrigger value="collaboration" className="flex items-center gap-1">
+                    <Users className="h-4 w-4" />
+                    Team
+                  </TabsTrigger>
+                  <TabsTrigger value="monitoring" className="flex items-center gap-1">
+                    <TrendingUp className="h-4 w-4" />
+                    Analytics
                   </TabsTrigger>
                 </TabsList>
 
@@ -346,6 +372,7 @@ export const ExecutionControlCenter = ({
                 <TabsContent value="tasks" className="mt-4">
                   <ExecutionTaskManager
                     executionPlan={executionPlan}
+                    projectId={currentProjectId || undefined}
                     onTaskUpdate={handleTaskUpdate}
                     onPlanUpdate={handlePlanUpdate}
                   />
@@ -353,6 +380,35 @@ export const ExecutionControlCenter = ({
 
                 <TabsContent value="progress" className="mt-4">
                   <ExecutionProgressTracker executionPlan={executionPlan} />
+                </TabsContent>
+
+                <TabsContent value="collaboration" className="mt-4">
+                  {currentProjectId ? (
+                    <ExecutionCollaborationPanel 
+                      projectId={currentProjectId}
+                      currentUserRole={currentUserRole}
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Save your execution plan as a project to enable team collaboration</p>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="monitoring" className="mt-4">
+                  {currentProjectId && executionPlan ? (
+                    <ExecutionMonitoringDashboard 
+                      projectId={currentProjectId}
+                      executionPlan={executionPlan}
+                      members={projectMembers}
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Save your execution plan as a project to enable advanced monitoring and analytics</p>
+                    </div>
+                  )}
                 </TabsContent>
               </Tabs>
             </div>

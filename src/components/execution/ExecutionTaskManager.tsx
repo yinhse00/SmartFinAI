@@ -12,22 +12,27 @@ import {
   Play, 
   Pause,
   FileText,
-  Calendar
+  Calendar,
+  MessageSquare
 } from 'lucide-react';
 import { ExecutionTask, ExecutionPlan } from '@/services/execution/executionPlanExtractor';
+import { TaskCommentsPanel } from './collaboration/TaskCommentsPanel';
 
 interface ExecutionTaskManagerProps {
   executionPlan: ExecutionPlan;
+  projectId?: string;
   onTaskUpdate: (taskId: string, status: ExecutionTask['status']) => void;
   onPlanUpdate: (plan: ExecutionPlan) => void;
 }
 
 export const ExecutionTaskManager = ({ 
   executionPlan, 
+  projectId,
   onTaskUpdate, 
   onPlanUpdate 
 }: ExecutionTaskManagerProps) => {
   const [selectedTask, setSelectedTask] = useState<string | null>(null);
+  const [showComments, setShowComments] = useState<string | null>(null);
 
   const getStatusIcon = (status: ExecutionTask['status']) => {
     switch (status) {
@@ -241,53 +246,79 @@ export const ExecutionTaskManager = ({
                         </div>
                       )}
 
-                      <div className="flex gap-2 pt-2">
-                        {task.status === 'pending' && canStartTask(task) && (
-                          <Button
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleTaskStatusChange(task.id, 'in_progress');
-                            }}
-                          >
-                            <Play className="h-3 w-3 mr-1" />
-                            Start Task
-                          </Button>
-                        )}
-                        
-                        {task.status === 'in_progress' && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleTaskStatusChange(task.id, 'pending');
-                              }}
-                            >
-                              <Pause className="h-3 w-3 mr-1" />
-                              Pause
-                            </Button>
-                            <Button
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleTaskStatusChange(task.id, 'completed');
-                              }}
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
-                            </Button>
-                          </>
-                        )}
+                       <div className="flex justify-between items-center pt-2">
+                         <div className="flex gap-2">
+                           {task.status === 'pending' && canStartTask(task) && (
+                             <Button
+                               size="sm"
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 handleTaskStatusChange(task.id, 'in_progress');
+                               }}
+                             >
+                               <Play className="h-3 w-3 mr-1" />
+                               Start Task
+                             </Button>
+                           )}
+                           
+                           {task.status === 'in_progress' && (
+                             <>
+                               <Button
+                                 size="sm"
+                                 variant="outline"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleTaskStatusChange(task.id, 'pending');
+                                 }}
+                               >
+                                 <Pause className="h-3 w-3 mr-1" />
+                                 Pause
+                               </Button>
+                               <Button
+                                 size="sm"
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   handleTaskStatusChange(task.id, 'completed');
+                                 }}
+                               >
+                                 <CheckCircle className="h-3 w-3 mr-1" />
+                                 Complete
+                               </Button>
+                             </>
+                           )}
 
-                        {task.status === 'pending' && !canStartTask(task) && (
-                          <Button size="sm" disabled>
-                            <AlertTriangle className="h-3 w-3 mr-1" />
-                            Waiting for Dependencies
-                          </Button>
-                        )}
-                      </div>
+                           {task.status === 'pending' && !canStartTask(task) && (
+                             <Button size="sm" disabled>
+                               <AlertTriangle className="h-3 w-3 mr-1" />
+                               Waiting for Dependencies
+                             </Button>
+                           )}
+                         </div>
+                         
+                         {projectId && (
+                           <Button
+                             size="sm"
+                             variant="outline"
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               setShowComments(showComments === task.id ? null : task.id);
+                             }}
+                           >
+                             <MessageSquare className="h-3 w-3 mr-1" />
+                             Comments
+                           </Button>
+                         )}
+                       </div>
+                       
+                       {showComments === task.id && projectId && (
+                         <div className="mt-4 pt-4 border-t">
+                           <TaskCommentsPanel
+                             projectId={projectId}
+                             taskId={task.id}
+                             taskTitle={task.title}
+                           />
+                         </div>
+                       )}
                     </div>
                   )}
                 </div>
