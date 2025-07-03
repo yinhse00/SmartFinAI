@@ -94,9 +94,7 @@ export const EnhancedExecutionControlCenter = ({
             chatHistory={chatHistory}
             onExecutionStart={(plan) => {
               onExecutionStart?.(plan);
-              if (plan.projectId) {
-                setCurrentProjectId(plan.projectId);
-              }
+              // Project ID will be set through the project selection mechanism
             }}
           />
         </TabsContent>
