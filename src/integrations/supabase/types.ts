@@ -48,6 +48,183 @@ export type Database = {
         }
         Relationships: []
       }
+      execution_notifications: {
+        Row: {
+          created_at: string
+          data: Json | null
+          email: string | null
+          id: string
+          message: string
+          project_id: string
+          read_at: string | null
+          title: string
+          type: string
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          data?: Json | null
+          email?: string | null
+          id?: string
+          message: string
+          project_id: string
+          read_at?: string | null
+          title: string
+          type: string
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          data?: Json | null
+          email?: string | null
+          id?: string
+          message?: string
+          project_id?: string
+          read_at?: string | null
+          title?: string
+          type?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "execution_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_project_members: {
+        Row: {
+          created_at: string
+          email: string | null
+          id: string
+          invited_at: string | null
+          invited_by: string | null
+          joined_at: string | null
+          permissions: Json | null
+          project_id: string
+          role: Database["public"]["Enums"]["execution_role"]
+          status: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          permissions?: Json | null
+          project_id: string
+          role?: Database["public"]["Enums"]["execution_role"]
+          status?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          id?: string
+          invited_at?: string | null
+          invited_by?: string | null
+          joined_at?: string | null
+          permissions?: Json | null
+          project_id?: string
+          role?: Database["public"]["Enums"]["execution_role"]
+          status?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_project_members_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "execution_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      execution_projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          execution_plan: Json | null
+          id: string
+          name: string
+          status: string | null
+          transaction_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          execution_plan?: Json | null
+          id?: string
+          name: string
+          status?: string | null
+          transaction_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          execution_plan?: Json | null
+          id?: string
+          name?: string
+          status?: string | null
+          transaction_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      execution_task_comments: {
+        Row: {
+          author_email: string | null
+          author_name: string | null
+          content: string
+          created_at: string
+          id: string
+          project_id: string
+          task_id: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          author_email?: string | null
+          author_name?: string | null
+          content: string
+          created_at?: string
+          id?: string
+          project_id: string
+          task_id: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          author_email?: string | null
+          author_name?: string | null
+          content?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          task_id?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "execution_task_comments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "execution_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       listingrule_listed_faq: {
         Row: {
           category: string
@@ -343,7 +520,12 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      execution_role:
+        | "admin"
+        | "manager"
+        | "team_member"
+        | "external_advisor"
+        | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -458,6 +640,14 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      execution_role: [
+        "admin",
+        "manager",
+        "team_member",
+        "external_advisor",
+        "client",
+      ],
+    },
   },
 } as const
