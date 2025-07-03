@@ -190,12 +190,44 @@ class EmailIntegrationService {
     config: EmailIntegrationConfig
   ): Promise<void> {
     try {
-      // Store in localStorage for now until migration is applied
-      const configKey = `email_config_${projectId}`;
-      localStorage.setItem(configKey, JSON.stringify(config));
-      console.log('Email monitoring config stored locally for project:', projectId);
+      const { error } = await supabase
+        .from('execution_email_configs')
+        .upsert({
+          project_id: projectId,
+          config: config as any,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error setting up email monitoring:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Add stakeholder to project
+   */
+  async addStakeholder(
+    projectId: string,
+    stakeholder: Omit<StakeholderContext, 'id'>
+  ): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('execution_stakeholders')
+        .upsert({
+          project_id: projectId,
+          email: stakeholder.contact_info.email,
+          name: stakeholder.name,
+          role: stakeholder.role,
+          communication_style: stakeholder.communication_style,
+          expertise_areas: stakeholder.expertise_areas,
+          contact_info: stakeholder.contact_info
+        });
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error adding stakeholder:', error);
       throw error;
     }
   }
@@ -208,7 +240,26 @@ class EmailIntegrationService {
     projectId: string
   ): Promise<StakeholderContext> {
     try {
-      // Try to find stakeholder in project members
+      // Try to find stakeholder in dedicated stakeholders table
+      const { data: stakeholder } = await supabase
+        .from('execution_stakeholders')
+        .select('*')
+        .eq('project_id', projectId)
+        .eq('email', email)
+        .single();
+
+      if (stakeholder) {
+        return {
+          id: stakeholder.id,
+          name: stakeholder.name || stakeholder.email,
+          role: stakeholder.role as StakeholderContext['role'],
+          communication_style: stakeholder.communication_style as StakeholderContext['communication_style'],
+          expertise_areas: (stakeholder.expertise_areas as string[]) || [],
+          contact_info: (stakeholder.contact_info as any) || { email: stakeholder.email }
+        };
+      }
+
+      // Try to find in project members as fallback
       const { data: member } = await supabase
         .from('execution_project_members')
         .select('*')
@@ -217,19 +268,13 @@ class EmailIntegrationService {
         .single();
 
       if (member) {
-        // Map execution_role to stakeholder role
-        const roleMap: Record<string, StakeholderContext['role']> = {
-          'admin': 'team_member',
-          'manager': 'team_member', 
-          'team_member': 'team_member',
-          'external_advisor': 'external_advisor',
-          'client': 'client'
-        };
+        const memberRole = ['admin', 'manager'].includes(member.role) ? 'team_member' : 
+                          member.role === 'client' ? 'client' : 'team_member';
         
         return {
           id: member.id,
           name: member.email,
-          role: roleMap[member.role] || 'external_advisor',
+          role: memberRole as StakeholderContext['role'],
           communication_style: 'professional',
           expertise_areas: [],
           contact_info: { email: member.email }
@@ -281,15 +326,13 @@ class EmailIntegrationService {
    */
   private async getIntegrationConfig(projectId: string): Promise<EmailIntegrationConfig> {
     try {
-      // Use localStorage until migration is applied
-      const configKey = `email_config_${projectId}`;
-      const stored = localStorage.getItem(configKey);
-      
-      if (stored) {
-        return JSON.parse(stored);
-      }
-      
-      return {
+      const { data } = await supabase
+        .from('execution_email_configs')
+        .select('config')
+        .eq('project_id', projectId)
+        .single();
+
+      return (data?.config as unknown as EmailIntegrationConfig) || {
         projectId,
         autoReply: true,
         stakeholderRules: [],
@@ -378,22 +421,22 @@ class EmailIntegrationService {
    */
   private async storeProcessedEmail(email: EmailMessage): Promise<void> {
     try {
-      // Store in localStorage until migration is applied
-      const emailKey = `processed_email_${email.id}`;
-      const emailData = {
-        id: email.id,
-        project_id: email.projectId,
-        from_email: email.from,
-        to_email: email.to,
-        subject: email.subject,
-        body: email.body,
-        analysis: email.analysis,
-        ai_response: email.aiResponse,
-        status: email.status,
-        timestamp: email.timestamp.toISOString()
-      };
-      localStorage.setItem(emailKey, JSON.stringify(emailData));
-      console.log('Email stored locally:', email.id);
+      const { error } = await supabase
+        .from('execution_emails')
+        .upsert({
+          id: email.id,
+          project_id: email.projectId,
+          from_email: email.from,
+          to_email: email.to,
+          subject: email.subject,
+          body: email.body,
+          analysis: email.analysis as any,
+          ai_response: email.aiResponse,
+          status: email.status,
+          timestamp: email.timestamp.toISOString()
+        });
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error storing processed email:', error);
     }
@@ -404,16 +447,12 @@ class EmailIntegrationService {
    */
   private async updateEmailStatus(emailId: string, status: EmailMessage['status']): Promise<void> {
     try {
-      // Update in localStorage until migration is applied
-      const emailKey = `processed_email_${emailId}`;
-      const stored = localStorage.getItem(emailKey);
-      if (stored) {
-        const emailData = JSON.parse(stored);
-        emailData.status = status;
-        emailData.updated_at = new Date().toISOString();
-        localStorage.setItem(emailKey, JSON.stringify(emailData));
-        console.log('Email status updated locally:', emailId, status);
-      }
+      const { error } = await supabase
+        .from('execution_emails')
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq('id', emailId);
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error updating email status:', error);
     }
@@ -428,16 +467,16 @@ class EmailIntegrationService {
     details: string
   ): Promise<void> {
     try {
-      // Store in localStorage until migration is applied
-      const logKey = `email_log_${emailId}_${Date.now()}`;
-      const logData = {
-        email_id: emailId,
-        action,
-        details,
-        timestamp: new Date().toISOString()
-      };
-      localStorage.setItem(logKey, JSON.stringify(logData));
-      console.log('Email interaction logged locally:', emailId, action);
+      const { error } = await supabase
+        .from('execution_email_logs')
+        .insert({
+          email_id: emailId,
+          action,
+          details,
+          timestamp: new Date().toISOString()
+        });
+
+      if (error) throw error;
     } catch (error) {
       console.error('Error logging email interaction:', error);
     }
