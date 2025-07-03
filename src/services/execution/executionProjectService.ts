@@ -120,12 +120,39 @@ export const executionProjectService = {
       if (!stored) return [];
       
       const parsed = JSON.parse(stored);
-      return parsed.map((p: any) => ({
-        ...p,
-        created_at: new Date(p.created_at),
-        updated_at: new Date(p.updated_at)
-      }));
-    } catch {
+      return parsed.map((p: any) => {
+        // Restore project dates
+        const project: ExecutionProjectWithPlan = {
+          ...p,
+          created_at: new Date(p.created_at),
+          updated_at: new Date(p.updated_at)
+        };
+
+        // Restore execution plan dates if execution plan exists
+        if (p.execution_plan) {
+          project.execution_plan = {
+            ...p.execution_plan,
+            // Restore plan dates
+            createdAt: new Date(p.execution_plan.createdAt),
+            updatedAt: new Date(p.execution_plan.updatedAt),
+            // Restore milestone dates
+            milestones: p.execution_plan.milestones?.map((milestone: any) => ({
+              ...milestone,
+              date: new Date(milestone.date)
+            })) || [],
+            // Restore task dates
+            tasks: p.execution_plan.tasks?.map((task: any) => ({
+              ...task,
+              startDate: task.startDate ? new Date(task.startDate) : undefined,
+              completionDate: task.completionDate ? new Date(task.completionDate) : undefined
+            })) || []
+          };
+        }
+
+        return project;
+      });
+    } catch (error) {
+      console.error('Error parsing stored projects:', error);
       return [];
     }
   }
