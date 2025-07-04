@@ -1,5 +1,5 @@
 import MainLayout from '@/components/layout/MainLayout';
-import { EnhancedExecutionControlCenter } from '@/components/execution/ai/EnhancedExecutionControlCenter';
+import { ExecutionControlCenter } from '@/components/execution/ExecutionControlCenter';
 import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { AnalysisResults } from '@/components/dealStructuring/AIAnalysisResults';
@@ -125,7 +125,7 @@ const Execution = () => {
 
         {/* Execution Control Center - Full Width */}
         <div className="space-y-6">
-          <EnhancedExecutionControlCenter
+          <ExecutionControlCenter
             results={analysisResults}
             onExecutionStart={handleExecutionStart}
           />
