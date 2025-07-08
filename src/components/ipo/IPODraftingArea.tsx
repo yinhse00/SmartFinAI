@@ -53,8 +53,10 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
 
   // Load existing content when section changes
   useEffect(() => {
-    loadExistingContent(projectId, selectedSection);
-  }, [projectId, selectedSection, loadExistingContent]);
+    if (projectId && selectedSection) {
+      loadExistingContent(projectId, selectedSection);
+    }
+  }, [projectId, selectedSection]);
 
   // Pass current content to chat when it opens or content changes
   useEffect(() => {

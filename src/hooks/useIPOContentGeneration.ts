@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
@@ -69,7 +69,7 @@ export const useIPOContentGeneration = () => {
     return generateContent(request);
   };
 
-  const loadExistingContent = async (projectId: string, sectionType: string): Promise<boolean> => {
+  const loadExistingContent = useCallback(async (projectId: string, sectionType: string): Promise<boolean> => {
     console.log('🔄 Loading existing content for:', { projectId, sectionType });
     setIsLoading(true);
     try {
@@ -116,7 +116,7 @@ export const useIPOContentGeneration = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [toast]);
 
   const clearContent = () => {
     setGeneratedContent('');
