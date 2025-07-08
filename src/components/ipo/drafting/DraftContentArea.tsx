@@ -27,30 +27,42 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
   layoutMode = 'drafting'
 }) => {
   const borderClass = layoutMode === 'drafting' ? 'border-2' : 'border';
-  const paddingClass = layoutMode === 'drafting' ? 'p-6' : 'p-4';
+  const paddingClass = layoutMode === 'drafting' ? 'p-4' : 'p-3';
+  
+  // Calculate optimal height based on layout mode and screen size
+  const getContentHeight = () => {
+    if (layoutMode === 'drafting') {
+      // For drafting mode, use most of viewport height minus header/footer space
+      return 'h-[calc(100vh-16rem)]';
+    }
+    // For tab mode, use available flex space with max height constraint
+    return 'h-[calc(100vh-20rem)] max-h-[800px]';
+  };
 
   return (
-    <div className="flex-1 p-6">
+    <div className={`flex-1 ${layoutMode === 'drafting' ? 'p-4' : 'p-3'} overflow-hidden`}>
       <div className="h-full flex flex-col">
-        <div className="flex items-center justify-between mb-4">
+        {/* Header with controls */}
+        <div className="flex items-center justify-between mb-3 flex-shrink-0">
           <div className="flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            <span className="font-medium">Draft Content</span>
+            <FileText className="h-4 w-4" />
+            <span className="font-medium text-sm">Draft Content</span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => setIsEditMode(!isEditMode)}
+              className="h-7 px-2 text-xs"
             >
               {isEditMode ? (
                 <>
-                  <EyeIcon className="h-4 w-4 mr-2" />
+                  <EyeIcon className="h-3 w-3 mr-1" />
                   View
                 </>
               ) : (
                 <>
-                  <Edit3 className="h-4 w-4 mr-2" />
+                  <Edit3 className="h-3 w-3 mr-1" />
                   Edit
                 </>
               )}
@@ -60,63 +72,76 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
               size="sm"
               onClick={onRegenerate}
               disabled={isGenerating}
+              className="h-7 px-2 text-xs"
             >
               {isGenerating ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
               ) : (
-                <RotateCcw className="h-4 w-4 mr-2" />
+                <RotateCcw className="h-3 w-3 mr-1" />
               )}
               Regenerate
             </Button>
             {layoutMode === 'tab' && (
-              <Button size="sm" disabled={!generatedContent}>
-                <Save className="h-4 w-4 mr-2" />
+              <Button size="sm" disabled={!generatedContent} className="h-7 px-2 text-xs">
+                <Save className="h-3 w-3 mr-1" />
                 Save
               </Button>
             )}
           </div>
         </div>
         
-        {isEditMode ? (
-          <Textarea
-            placeholder={layoutMode === 'drafting' 
-              ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
-              : "Generated content will appear here..."
-            }
-            value={generatedContent}
-            onChange={(e) => setGeneratedContent(e.target.value)}
-            className={`flex-1 resize-none ${borderClass} focus:ring-2 ${paddingClass} text-base leading-relaxed`}
-          />
-        ) : (
-          <ScrollArea className={`flex-1 ${borderClass} rounded-md min-h-0`} type="always">
-            <div className={`${paddingClass} min-h-full`}>
-              {isLoading ? (
-                <div className="text-center py-12">
-                  <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin opacity-50" />
-                  <p className="text-muted-foreground">Loading existing content...</p>
-                </div>
-              ) : generatedContent ? (
-                <div 
-                  className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
-                  dangerouslySetInnerHTML={{ 
-                    __html: ipoMessageFormatter.formatMessage(generatedContent) 
-                  }}
-                />
-              ) : (
-                <div className="text-muted-foreground text-center py-12">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No content generated yet.</p>
-                  <p className="text-sm">
-                    {layoutMode === 'drafting' 
-                      ? "Use the AI chat to request improvements, compliance checks, or refinements."
-                      : "Generate content using the Input & Generate tab."
-                    }
-                  </p>
-                </div>
-              )}
+        {/* Content area with proper height constraints */}
+        <div className={`flex-1 ${getContentHeight()} relative`}>
+          {isEditMode ? (
+            <Textarea
+              placeholder={layoutMode === 'drafting' 
+                ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
+                : "Generated content will appear here..."
+              }
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              className={`w-full h-full resize-none ${borderClass} focus:ring-2 ${paddingClass} text-sm leading-relaxed overflow-y-auto`}
+            />
+          ) : (
+            <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
+              <div className={`${paddingClass} min-h-full w-full`}>
+                {isLoading ? (
+                  <div className="text-center py-8">
+                    <Loader2 className="h-6 w-6 mx-auto mb-3 animate-spin opacity-50" />
+                    <p className="text-muted-foreground text-sm">Loading existing content...</p>
+                  </div>
+                ) : generatedContent ? (
+                  <div 
+                    className="regulatory-content prose prose-sm max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                    dangerouslySetInnerHTML={{ 
+                      __html: ipoMessageFormatter.formatMessage(generatedContent) 
+                    }}
+                  />
+                ) : (
+                  <div className="text-muted-foreground text-center py-8">
+                    <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                    <p className="text-sm font-medium">No content generated yet.</p>
+                    <p className="text-xs mt-1">
+                      {layoutMode === 'drafting' 
+                        ? "Use the AI chat to request improvements, compliance checks, or refinements."
+                        : "Generate content using the Input & Generate tab."
+                      }
+                    </p>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+          )}
+          
+          {/* Scroll indicator for non-edit mode when content is scrollable */}
+          {!isEditMode && generatedContent && (
+            <div className="absolute bottom-2 right-6 pointer-events-none">
+              <div className="bg-background/80 backdrop-blur-sm rounded-full px-2 py-1 text-xs text-muted-foreground border shadow-sm">
+                Scroll to view more
+              </div>
             </div>
-          </ScrollArea>
-        )}
+          )}
+        </div>
       </div>
     </div>
   );
