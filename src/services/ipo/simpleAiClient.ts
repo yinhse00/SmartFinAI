@@ -42,7 +42,7 @@ export class SimpleAiClient {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          model: 'grok-beta',
+          model: 'grok-3-beta',
           messages: [
             {
               role: 'user',
