@@ -42,22 +42,44 @@ export class IPOContentGenerationService {
       // Get section template if specified
       let template = null;
       if (request.template_id) {
-        const { data: templateData } = await supabase
+        const { data: templateData, error: templateError } = await supabase
           .from('ipo_section_templates')
           .select('*')
           .eq('id', request.template_id)
-          .single();
-        template = templateData;
+          .maybeSingle();
+        
+        if (templateError) {
+          console.warn('⚠️ Error fetching template by ID:', templateError);
+        } else {
+          template = templateData;
+        }
       } else {
         // Get default template for section type and industry
-        const { data: templateData } = await supabase
+        const { data: templateData, error: templateError } = await supabase
           .from('ipo_section_templates')
           .select('*')
           .eq('section_type', request.section_type)
           .eq('industry', project.industry || 'general')
           .limit(1)
-          .single();
-        template = templateData;
+          .maybeSingle();
+        
+        if (templateError) {
+          console.warn('⚠️ Error fetching template:', templateError);
+        } else {
+          template = templateData;
+        }
+        
+        // If no template found for specific industry, try general template
+        if (!template) {
+          const { data: generalTemplate } = await supabase
+            .from('ipo_section_templates')
+            .select('*')
+            .eq('section_type', request.section_type)
+            .eq('industry', 'general')
+            .limit(1)
+            .maybeSingle();
+          template = generalTemplate;
+        }
       }
 
       console.log('📋 Template found:', template?.template_name || 'No template');
