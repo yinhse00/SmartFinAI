@@ -313,10 +313,12 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
                   </CardHeader>
                   <CardContent>
                     <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
-                        {generatedContent.substring(0, 500)}
-                        {generatedContent.length > 500 && '...'}
-                      </p>
+                      <div 
+                        className="text-sm leading-relaxed prose prose-sm max-w-none"
+                        dangerouslySetInnerHTML={{ 
+                          __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
+                        }}
+                      />
                     </div>
                     <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
                       <span>{generatedContent.split(' ').length} words generated</span>
