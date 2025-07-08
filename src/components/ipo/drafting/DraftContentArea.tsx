@@ -10,6 +10,7 @@ interface DraftContentAreaProps {
   isEditMode: boolean;
   setIsEditMode: (mode: boolean) => void;
   isGenerating: boolean;
+  isLoading?: boolean;
   onRegenerate: () => void;
   layoutMode?: 'drafting' | 'tab';
 }
@@ -20,6 +21,7 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
   isEditMode,
   setIsEditMode,
   isGenerating,
+  isLoading = false,
   onRegenerate,
   layoutMode = 'drafting'
 }) => {
@@ -86,7 +88,12 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
           />
         ) : (
           <div className={`flex-1 overflow-y-auto ${borderClass} rounded-md ${paddingClass}`}>
-            {generatedContent ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin opacity-50" />
+                <p className="text-muted-foreground">Loading existing content...</p>
+              </div>
+            ) : generatedContent ? (
               <div 
                 className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
                 dangerouslySetInnerHTML={{ 

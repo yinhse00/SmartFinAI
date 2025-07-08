@@ -35,10 +35,12 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
 
   const {
     isGenerating,
+    isLoading,
     generatedContent,
     lastGeneratedResponse,
     generateContent,
     regenerateContent,
+    loadExistingContent,
     setGeneratedContent
   } = useIPOContentGeneration();
 
@@ -48,6 +50,11 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
       setActiveTab('draft');
     }
   }, [generatedContent]);
+
+  // Load existing content when section changes
+  useEffect(() => {
+    loadExistingContent(projectId, selectedSection);
+  }, [projectId, selectedSection, loadExistingContent]);
 
   // Pass current content to chat when it opens or content changes
   useEffect(() => {
@@ -115,6 +122,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
           isEditMode={isEditMode}
           setIsEditMode={setIsEditMode}
           isGenerating={isGenerating}
+          isLoading={isLoading}
           onRegenerate={handleRegenerateContent}
           layoutMode={layoutMode}
         />
@@ -156,6 +164,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
             isEditMode={isEditMode}
             setIsEditMode={setIsEditMode}
             isGenerating={isGenerating}
+            isLoading={isLoading}
             onRegenerate={handleRegenerateContent}
             layoutMode={layoutMode}
           />

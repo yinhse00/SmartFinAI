@@ -5,6 +5,7 @@ import { useToast } from '@/hooks/use-toast';
 
 export const useIPOContentGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [generatedContent, setGeneratedContent] = useState<string>('');
   const [lastGeneratedResponse, setLastGeneratedResponse] = useState<IPOContentGenerationResponse | null>(null);
   const { toast } = useToast();
@@ -68,6 +69,55 @@ export const useIPOContentGeneration = () => {
     return generateContent(request);
   };
 
+  const loadExistingContent = async (projectId: string, sectionType: string): Promise<boolean> => {
+    console.log('🔄 Loading existing content for:', { projectId, sectionType });
+    setIsLoading(true);
+    try {
+      const existingSection = await ipoContentGenerationService.loadSectionContent(projectId, sectionType);
+      
+      if (existingSection && existingSection.content) {
+        console.log('✅ Found existing content, loading into state');
+        setGeneratedContent(existingSection.content);
+        
+        // Reconstruct the response object from the saved data
+        const reconstructedResponse: IPOContentGenerationResponse = {
+          content: existingSection.content,
+          sources: existingSection.sources || [],
+          confidence_score: existingSection.confidence_score || 0,
+          regulatory_compliance: {
+            requirements_met: [],
+            missing_requirements: [],
+            recommendations: []
+          },
+          quality_metrics: {
+            completeness: 0.8,
+            accuracy: 0.8,
+            regulatory_alignment: 0.8,
+            professional_language: 0.8
+          }
+        };
+        
+        setLastGeneratedResponse(reconstructedResponse);
+        return true;
+      } else {
+        console.log('📝 No existing content found');
+        setGeneratedContent('');
+        setLastGeneratedResponse(null);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Error loading existing content:', error);
+      toast({
+        title: "Failed to Load Content",
+        description: error.message || "Could not load existing content",
+        variant: "destructive"
+      });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const clearContent = () => {
     setGeneratedContent('');
     setLastGeneratedResponse(null);
@@ -75,10 +125,12 @@ export const useIPOContentGeneration = () => {
 
   return {
     isGenerating,
+    isLoading,
     generatedContent,
     lastGeneratedResponse,
     generateContent,
     regenerateContent,
+    loadExistingContent,
     clearContent,
     setGeneratedContent
   };

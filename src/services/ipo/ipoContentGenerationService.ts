@@ -135,6 +135,61 @@ export class IPOContentGenerationService {
   }
 
   /**
+   * Load existing section content from database
+   */
+  async loadSectionContent(projectId: string, sectionType: string): Promise<IPOSection | null> {
+    try {
+      console.log('🔍 Loading existing content for:', { projectId, sectionType });
+
+      const { data: section, error } = await supabase
+        .from('ipo_prospectus_sections')
+        .select(`
+          *,
+          ipo_source_attribution (
+            id,
+            content_snippet,
+            source_type,
+            source_reference,
+            confidence_score,
+            created_at
+          )
+        `)
+        .eq('project_id', projectId)
+        .eq('section_type', sectionType)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') {
+          // No content found - this is normal for new sections
+          console.log('📝 No existing content found for section');
+          return null;
+        }
+        throw error;
+      }
+
+      console.log('✅ Existing content loaded:', {
+        contentLength: section.content?.length || 0,
+        sourcesCount: section.ipo_source_attribution?.length || 0
+      });
+
+      // Transform the data to match our expected format
+      const transformedSources = (section.ipo_source_attribution || []).map(source => ({
+        ...source,
+        section_id: section.id
+      }));
+
+      return {
+        ...section,
+        sources: transformedSources
+      } as IPOSection;
+
+    } catch (error) {
+      console.error('❌ Error loading section content:', error);
+      throw new Error(`Failed to load content: ${error.message}`);
+    }
+  }
+
+  /**
    * Save generated content to database
    */
   async saveSectionContent(
