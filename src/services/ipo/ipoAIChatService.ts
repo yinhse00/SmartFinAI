@@ -1,6 +1,7 @@
 import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { contextService } from '@/services/regulatory/contextService';
+import { ipoMessageFormatter } from './ipoMessageFormatter';
 
 interface SourceReference {
   type: 'regulation' | 'template' | 'guidance' | 'faq';
@@ -262,7 +263,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
       const updatedContent = aiText.replace('CONTENT_UPDATE:', '').trim();
       return {
         type: 'CONTENT_UPDATE',
-        message: 'I\'ve updated your content based on your request and regulatory requirements. The changes incorporate HKEX compliance standards.',
+        message: ipoMessageFormatter.formatMessage('I\'ve updated your content based on your request and regulatory requirements. The changes incorporate HKEX compliance standards.'),
         updatedContent,
         sources,
         confidence
@@ -274,7 +275,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
       const complianceIssues = this.extractComplianceIssues(analysis);
       return {
         type: 'COMPLIANCE_CHECK',
-        message: analysis,
+        message: ipoMessageFormatter.formatMessage(analysis),
         sources,
         complianceIssues,
         confidence
@@ -284,7 +285,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
     if (aiText.startsWith('SOURCE_REFERENCE:')) {
       return {
         type: 'SOURCE_REFERENCE',
-        message: aiText.replace('SOURCE_REFERENCE:', '').trim(),
+        message: ipoMessageFormatter.formatMessage(aiText.replace('SOURCE_REFERENCE:', '').trim()),
         sources,
         confidence
       };
@@ -294,7 +295,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
       const suggestions = this.extractSuggestions(aiText.replace('SUGGESTION:', '').trim());
       return {
         type: 'SUGGESTION',
-        message: aiText.replace('SUGGESTION:', '').trim(),
+        message: ipoMessageFormatter.formatMessage(aiText.replace('SUGGESTION:', '').trim()),
         sources,
         suggestions,
         confidence
@@ -304,7 +305,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
     if (aiText.startsWith('GUIDANCE:')) {
       return {
         type: 'GUIDANCE',
-        message: aiText.replace('GUIDANCE:', '').trim(),
+        message: ipoMessageFormatter.formatMessage(aiText.replace('GUIDANCE:', '').trim()),
         sources,
         confidence
       };
@@ -313,7 +314,7 @@ Respond with the most helpful and accurate assistance based on the user's reques
     // Default case - treat as guidance
     return {
       type: 'GUIDANCE',
-      message: aiText,
+      message: ipoMessageFormatter.formatMessage(aiText),
       sources,
       confidence
     };

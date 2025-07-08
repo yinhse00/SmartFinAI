@@ -13,6 +13,7 @@ import {
   CheckCircle, AlertCircle
 } from 'lucide-react';
 import { useIPOAIChat } from '@/hooks/useIPOAIChat';
+import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 
 interface IPOAIChatProps {
   projectId: string;
@@ -93,7 +94,16 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                       : 'bg-muted'
                   }`}
                 >
-                  <p className="leading-relaxed">{message.content}</p>
+                  {message.type === 'user' ? (
+                    <p className="leading-relaxed whitespace-pre-line">{message.content}</p>
+                  ) : (
+                    <div 
+                      dangerouslySetInnerHTML={{ 
+                        __html: ipoMessageFormatter.formatMessage(message.content) 
+                      }}
+                      className="regulatory-content [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                    />
+                  )}
                   
                   {/* Enhanced AI Response Features */}
                   {message.type === 'ai' && (
