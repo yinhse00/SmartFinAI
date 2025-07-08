@@ -67,6 +67,9 @@ export const useIPOAIChat = ({
     setIsProcessing(true);
 
     try {
+      console.log('🔵 useIPOAIChat: Starting message processing...');
+      console.log('Input params:', { userMessage, projectId, selectedSection, currentContent: currentContent?.length || 0 });
+      
       // Use enhanced IPO AI chat service
       const response = await ipoAIChatService.processMessage(
         userMessage,
@@ -74,6 +77,8 @@ export const useIPOAIChat = ({
         selectedSection,
         currentContent
       );
+      
+      console.log('🟢 useIPOAIChat: Service response received:', response);
 
       const aiChatMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -104,7 +109,11 @@ export const useIPOAIChat = ({
       }
 
     } catch (error) {
-      console.error('Error processing IPO chat message:', error);
+      console.error('🔴 useIPOAIChat ERROR CAUGHT:');
+      console.error('Error object:', error);
+      console.error('Error type:', typeof error);
+      console.error('Error constructor:', error?.constructor?.name);
+      console.error('Error message:', error?.message);
       
       // Create more specific error messages based on error type
       let errorContent = 'I apologize, but I encountered an error processing your request.';

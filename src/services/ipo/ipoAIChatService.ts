@@ -39,22 +39,36 @@ export class IPOAIChatService {
     currentContent: string
   ): Promise<IPOChatResponse> {
     try {
-      console.log('IPO Chat: Processing message:', { userMessage, projectId, sectionType });
+      console.log('🟡 IPO Chat Service: Entry point reached');
+      console.log('🟡 Input validation:', { 
+        hasUserMessage: !!userMessage?.trim(), 
+        hasProjectId: !!projectId, 
+        hasSectionType: !!sectionType 
+      });
       
       // Validate inputs
       if (!userMessage?.trim()) {
+        console.error('❌ Validation failed: User message is empty');
         throw new Error('User message is required');
       }
       if (!projectId) {
+        console.error('❌ Validation failed: Project ID is missing');
         throw new Error('Project ID is required');
       }
       if (!sectionType) {
+        console.error('❌ Validation failed: Section type is missing');
         throw new Error('Section type is required');
       }
 
+      console.log('✅ Input validation passed');
+      
       // Check if Grok API key is available
-      if (!grokService.hasApiKey()) {
-        console.warn('IPO Chat: No Grok API key available');
+      console.log('🟡 Checking API key availability...');
+      const hasKey = grokService.hasApiKey();
+      console.log('🟡 API key check result:', hasKey);
+      
+      if (!hasKey) {
+        console.warn('⚠️ IPO Chat: No Grok API key available');
         return this.createFallbackResponse('Please configure your API key in the settings to use the AI chat feature.');
       }
 
