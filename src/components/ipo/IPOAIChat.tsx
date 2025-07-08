@@ -4,7 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { X, Send, Bot, User, RefreshCw, Loader2 } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Separator } from '@/components/ui/separator';
+import { 
+  X, Send, Bot, User, RefreshCw, Loader2, 
+  FileText, AlertTriangle, Lightbulb, 
+  ExternalLink, ChevronDown, ChevronUp,
+  CheckCircle, AlertCircle
+} from 'lucide-react';
 import { useIPOAIChat } from '@/hooks/useIPOAIChat';
 
 interface IPOAIChatProps {
@@ -87,12 +94,117 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                   }`}
                 >
                   <p className="leading-relaxed">{message.content}</p>
-                  {message.changes && (
-                    <div className="mt-3">
-                      <Badge variant="secondary" className="text-xs">
-                        <RefreshCw className="h-3 w-3 mr-1" />
-                        Content Updated
-                      </Badge>
+                  
+                  {/* Enhanced AI Response Features */}
+                  {message.type === 'ai' && (
+                    <div className="mt-3 space-y-2">
+                      {/* Response Type Badge */}
+                      {message.responseType && (
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={message.responseType === 'CONTENT_UPDATE' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {message.responseType === 'CONTENT_UPDATE' && <RefreshCw className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'COMPLIANCE_CHECK' && <CheckCircle className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'SUGGESTION' && <Lightbulb className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'SOURCE_REFERENCE' && <FileText className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'GUIDANCE' && <Bot className="h-3 w-3 mr-1" />}
+                            {message.responseType.replace('_', ' ')}
+                          </Badge>
+                          {message.confidence && (
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round(message.confidence * 100)}% confidence
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Compliance Issues */}
+                      {message.complianceIssues && message.complianceIssues.length > 0 && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-destructive hover:text-destructive/80">
+                            <AlertTriangle className="h-3 w-3" />
+                            {message.complianceIssues.length} Compliance Issue{message.complianceIssues.length > 1 ? 's' : ''}
+                            <ChevronDown className="h-3 w-3" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-2">
+                            <div className="space-y-1">
+                              {message.complianceIssues.map((issue, index) => (
+                                <div key={index} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
+                                  <AlertCircle className="h-3 w-3 inline mr-1" />
+                                  {issue}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {/* Suggestions */}
+                      {message.suggestions && message.suggestions.length > 0 && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800">
+                            <Lightbulb className="h-3 w-3" />
+                            {message.suggestions.length} Suggestion{message.suggestions.length > 1 ? 's' : ''}
+                            <ChevronDown className="h-3 w-3" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-2">
+                            <div className="space-y-1">
+                              {message.suggestions.map((suggestion, index) => (
+                                <div key={index} className="text-xs bg-blue-50 p-2 rounded">
+                                  {suggestion}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {/* Sources */}
+                      {message.sources && message.sources.length > 0 && (
+                        <Collapsible>
+                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
+                            <FileText className="h-3 w-3" />
+                            {message.sources.length} Source{message.sources.length > 1 ? 's' : ''}
+                            <ChevronDown className="h-3 w-3" />
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="mt-2">
+                            <div className="space-y-2">
+                              {message.sources.map((source, index) => (
+                                <div key={index} className="text-xs bg-muted/50 p-2 rounded">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <Badge variant="outline" className="text-xs">
+                                      {source.type}
+                                    </Badge>
+                                    <span className="text-xs text-muted-foreground">
+                                      {Math.round(source.confidence * 100)}%
+                                    </span>
+                                  </div>
+                                  <p className="font-medium">{source.title}</p>
+                                  <p className="text-muted-foreground">
+                                    {source.content.substring(0, 100)}...
+                                  </p>
+                                  {source.reference && (
+                                    <div className="flex items-center gap-1 mt-1">
+                                      <ExternalLink className="h-3 w-3" />
+                                      <span className="text-xs">{source.reference}</span>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {/* Legacy changes indicator */}
+                      {message.changes && (
+                        <Badge variant="secondary" className="text-xs">
+                          <RefreshCw className="h-3 w-3 mr-1" />
+                          Content Updated
+                        </Badge>
+                      )}
                     </div>
                   )}
                 </div>
@@ -123,9 +235,37 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
         
         {/* Input */}
         <div className="p-4 border-t">
+          {/* Quick suggestion buttons */}
+          <div className="flex flex-wrap gap-1 mb-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Check compliance with HKEX requirements")}
+            >
+              Check Compliance
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Improve professional language and tone")}
+            >
+              Improve Language
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Add more specific details and examples")}
+            >
+              Add Details
+            </Button>
+          </div>
+          
           <div className="flex gap-2">
             <Input
-              placeholder="Ask for revisions or improvements..."
+              placeholder="Ask for compliance checks, content improvements, or regulatory guidance..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
