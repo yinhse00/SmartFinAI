@@ -132,15 +132,6 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
               </div>
             </ScrollArea>
           )}
-          
-          {/* Scroll indicator for non-edit mode when content is scrollable */}
-          {!isEditMode && generatedContent && (
-            <div className="absolute bottom-2 right-6 pointer-events-none">
-              <div className="bg-background/80 backdrop-blur-sm rounded-full px-2 py-1 text-xs text-muted-foreground border shadow-sm">
-                Scroll to view more
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
