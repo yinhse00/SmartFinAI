@@ -1,5 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
-import { grokService } from '@/services/grokService';
+import { simpleAiClient } from './simpleAiClient';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection, SourceAttribution } from '@/types/ipo';
 
 /**
@@ -72,11 +72,10 @@ export class IPOContentGenerationService {
 
       console.log('📝 Generated prompt length:', prompt.length);
 
-      // Generate content using Grok AI
-      console.log('🤖 Calling Grok AI service...');
-      const response = await grokService.generateResponse({
+      // Generate content using simple AI client (no complex sampling)
+      console.log('🤖 Calling simple AI client...');
+      const response = await simpleAiClient.generateContent({
         prompt: prompt,
-        apiKey: undefined, // Will use stored key
         metadata: {
           projectId: request.project_id,
           sectionType: request.section_type,
@@ -84,11 +83,11 @@ export class IPOContentGenerationService {
         }
       });
 
-      console.log('✅ Grok AI response received, length:', response.text?.length || 0);
-      console.log('📄 Response preview:', response.text?.substring(0, 200) + '...');
+      console.log('✅ AI response received, success:', response.success);
+      console.log('📄 Response length:', response.text?.length || 0);
 
-      if (!response.text || response.text.trim().length === 0) {
-        throw new Error('Empty response from AI service');
+      if (!response.success || !response.text || response.text.trim().length === 0) {
+        throw new Error(response.error || 'Empty response from AI service');
       }
 
       // Parse the generated content and extract quality metrics
