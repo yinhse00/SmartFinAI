@@ -113,14 +113,33 @@ export class IPOAIChatService {
       return parsedResponse;
 
     } catch (error) {
-      console.error('Error in IPO chat service:', error);
-      console.error('Error details:', {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name
-      });
+      console.error('🚨 IPO CHAT SERVICE ERROR - DETAILED ANALYSIS:');
+      console.error('Error type:', error?.constructor?.name);
+      console.error('Error message:', error?.message);
+      console.error('Error stack:', error?.stack);
+      console.error('Input params:', { userMessage, projectId, sectionType });
+      console.error('API key available:', !!grokService.hasApiKey());
       
-      // Return user-friendly error response instead of throwing
+      // Log the exact step where it failed
+      if (error?.message?.includes('Project ID')) {
+        console.error('❌ FAILURE: Missing or invalid project ID');
+      } else if (error?.message?.includes('API key')) {
+        console.error('❌ FAILURE: API key configuration issue');
+      } else if (error?.message?.includes('timeout')) {
+        console.error('❌ FAILURE: Service timeout (likely contextService or grokService)');
+      } else if (error?.message?.includes('network')) {
+        console.error('❌ FAILURE: Network connectivity issue');
+      } else if (error?.message?.includes('database') || error?.message?.includes('supabase')) {
+        console.error('❌ FAILURE: Database query issue');
+      } else {
+        console.error('❌ FAILURE: Unknown error - investigating service chain...');
+        console.error('Available services check:');
+        console.error('- grokService available:', typeof grokService);
+        console.error('- contextService available:', typeof contextService);
+        console.error('- supabase available:', typeof supabase);
+      }
+      
+      // Return user-friendly error response with more specificity
       return this.createErrorResponse(error);
     }
   }
