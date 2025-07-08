@@ -31,6 +31,9 @@ const Navbar = () => {
               <Link to="/execution" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
                 Execution
               </Link>
+              <Link to="/ipo-prospectus" className="text-gray-600 dark:text-gray-400 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
+                IPO Prospectus
+              </Link>
             </>
           ) : (
             <>
@@ -45,6 +48,10 @@ const Navbar = () => {
               <Link to="/auth" className="flex items-center text-gray-500 dark:text-gray-500 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
                 <Lock className="mr-1 h-3 w-3" />
                 <span>Execution</span>
+              </Link>
+              <Link to="/auth" className="flex items-center text-gray-500 dark:text-gray-500 hover:text-finance-light-blue dark:hover:text-finance-accent-blue">
+                <Lock className="mr-1 h-3 w-3" />
+                <span>IPO Prospectus</span>
               </Link>
             </>
           )}
