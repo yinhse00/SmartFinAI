@@ -72,8 +72,8 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
       
       <CardContent className="flex flex-col h-[calc(100%-5rem)] p-0">
         {/* Messages */}
-        <ScrollArea className="flex-1 px-4">
-          <div className="space-y-4 pb-4">
+        <ScrollArea className="flex-1 px-4 min-h-0" type="always">
+          <div className="space-y-4 pb-4 min-h-full">
             {messages.map((message) => (
               <div
                 key={message.id}

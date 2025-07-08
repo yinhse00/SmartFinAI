@@ -39,21 +39,44 @@ export class IPOAIChatService {
     currentContent: string
   ): Promise<IPOChatResponse> {
     try {
+      console.log('IPO Chat: Processing message:', { userMessage, projectId, sectionType });
+      
+      // Validate inputs
+      if (!userMessage?.trim()) {
+        throw new Error('User message is required');
+      }
+      if (!projectId) {
+        throw new Error('Project ID is required');
+      }
+      if (!sectionType) {
+        throw new Error('Section type is required');
+      }
+
+      // Check if Grok API key is available
+      if (!grokService.hasApiKey()) {
+        console.warn('IPO Chat: No Grok API key available');
+        return this.createFallbackResponse('Please configure your API key in the settings to use the AI chat feature.');
+      }
+
       // Generate cache key with better uniqueness
       const cacheKey = this.generateCacheKey(userMessage, projectId, sectionType, currentContent);
       
       // Check cache first
       const cachedResponse = this.getFromCache(cacheKey);
       if (cachedResponse) {
+        console.log('IPO Chat: Using cached response');
         return cachedResponse;
       }
 
-      // Get regulatory context for the message
+      console.log('IPO Chat: Getting regulatory context...');
+      // Get regulatory context for the message with error handling
       const regulatoryContext = await this.getRegulatoryContext(userMessage, sectionType);
       
-      // Get section-specific templates and guidance
+      console.log('IPO Chat: Getting section guidance...');
+      // Get section-specific templates and guidance with error handling
       const sectionGuidance = await this.getSectionGuidance(sectionType, projectId);
       
+      console.log('IPO Chat: Building prompt...');
       // Build enhanced prompt with sources
       const prompt = this.buildEnhancedPrompt(
         userMessage,
@@ -63,7 +86,8 @@ export class IPOAIChatService {
         sectionGuidance
       );
 
-      // Generate response using Grok
+      console.log('IPO Chat: Generating response via Grok...');
+      // Generate response using Grok with enhanced error handling
       const response = await grokService.generateResponse({
         prompt,
         metadata: {
@@ -74,17 +98,30 @@ export class IPOAIChatService {
         }
       });
 
+      if (!response?.text) {
+        throw new Error('No response received from AI service');
+      }
+
+      console.log('IPO Chat: Parsing response...');
       // Parse enhanced response
       const parsedResponse = this.parseEnhancedResponse(response.text, currentContent, regulatoryContext.sources);
       
       // Cache the response
       this.setCache(cacheKey, parsedResponse);
       
+      console.log('IPO Chat: Response processed successfully');
       return parsedResponse;
 
     } catch (error) {
       console.error('Error in IPO chat service:', error);
-      throw new Error(`Chat processing failed: ${error.message}`);
+      console.error('Error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name
+      });
+      
+      // Return user-friendly error response instead of throwing
+      return this.createErrorResponse(error);
     }
   }
 
@@ -95,53 +132,79 @@ export class IPOAIChatService {
     const sources: SourceReference[] = [];
     
     try {
+      console.log('IPO Chat: Fetching regulatory documents...');
+      
       // Get relevant listing rules and guidance
-      const { data: listingDocs } = await supabase
+      const { data: listingDocs, error: docsError } = await supabase
         .from('mb_listingrule_documents')
         .select('title, description, file_url')
         .ilike('title', '%prospectus%')
         .limit(3);
 
-      if (listingDocs) {
+      if (docsError) {
+        console.warn('Error fetching listing documents:', docsError);
+      } else if (listingDocs && listingDocs.length > 0) {
         sources.push(...listingDocs.map(doc => ({
           type: 'regulation' as const,
-          title: doc.title,
-          content: doc.description || '',
-          reference: doc.file_url,
+          title: doc.title || 'Untitled Document',
+          content: doc.description || 'No description available',
+          reference: doc.file_url || 'No URL available',
           confidence: 0.9
         })));
+        console.log(`IPO Chat: Found ${listingDocs.length} regulatory documents`);
       }
 
-      // Get relevant FAQs
-      const { data: faqs } = await supabase
+      // Get relevant FAQs with better error handling
+      console.log('IPO Chat: Fetching relevant FAQs...');
+      const searchTerm = userMessage.split(' ')[0] || 'general';
+      const { data: faqs, error: faqsError } = await supabase
         .from('listingrule_listed_faq')
         .select('category, particulars, listingrules')
-        .or(`particulars.ilike.%${userMessage.split(' ')[0]}%,category.ilike.%prospectus%`)
+        .or(`particulars.ilike.%${searchTerm}%,category.ilike.%prospectus%`)
         .limit(2);
 
-      if (faqs) {
+      if (faqsError) {
+        console.warn('Error fetching FAQs:', faqsError);
+      } else if (faqs && faqs.length > 0) {
         sources.push(...faqs.map(faq => ({
           type: 'faq' as const,
-          title: faq.category,
-          content: faq.particulars,
+          title: faq.category || 'General FAQ',
+          content: faq.particulars || 'No details available',
           reference: faq.listingrules || 'HKEX Listing Rules',
           confidence: 0.8
         })));
+        console.log(`IPO Chat: Found ${faqs.length} relevant FAQs`);
       }
 
-      // Get Grok's regulatory context
-      const grokContext = await contextService.getRegulatoryContext(
-        `Hong Kong IPO prospectus ${sectionType}: ${userMessage}`,
-        { isPreliminaryAssessment: false }
-      );
+      // Get Grok's regulatory context with timeout and error handling
+      console.log('IPO Chat: Getting contextual regulatory information...');
+      let grokContext = '';
+      try {
+        grokContext = await Promise.race([
+          contextService.getRegulatoryContext(
+            `Hong Kong IPO prospectus ${sectionType}: ${userMessage}`,
+            { isPreliminaryAssessment: false }
+          ),
+          new Promise<string>((_, reject) => 
+            setTimeout(() => reject(new Error('Context service timeout')), 10000)
+          )
+        ]);
+      } catch (contextError) {
+        console.warn('Error getting Grok context, continuing without it:', contextError);
+        grokContext = '';
+      }
 
+      console.log(`IPO Chat: Regulatory context prepared with ${sources.length} sources`);
       return {
         context: grokContext,
         sources
       };
     } catch (error) {
       console.error('Error getting regulatory context:', error);
-      return { context: '', sources: [] };
+      return { 
+        context: 'Unable to fetch regulatory context at this time.', 
+        sources: [] 
+      };
     }
   }
 
@@ -150,30 +213,63 @@ export class IPOAIChatService {
    */
   private async getSectionGuidance(sectionType: string, projectId: string) {
     try {
-      // Get project details
-      const { data: project } = await supabase
+      console.log('IPO Chat: Getting project details...');
+      
+      // Get project details with error handling
+      const { data: project, error: projectError } = await supabase
         .from('ipo_prospectus_projects')
         .select('industry, company_name')
         .eq('id', projectId)
         .single();
 
-      // Get section template
-      const { data: template } = await supabase
+      if (projectError) {
+        console.warn('Error fetching project details:', projectError);
+      }
+
+      console.log('IPO Chat: Getting section templates...');
+      
+      // Get section template with fallback logic
+      let template = null;
+      const industry = project?.industry || 'general';
+      
+      // Try industry-specific template first
+      const { data: industryTemplate, error: templateError } = await supabase
         .from('ipo_section_templates')
         .select('template_name, template_content, regulatory_requirements, sample_content')
         .eq('section_type', sectionType)
-        .eq('industry', project?.industry || 'general')
+        .eq('industry', industry)
         .limit(1)
-        .single();
+        .maybeSingle();
+
+      if (!templateError && industryTemplate) {
+        template = industryTemplate;
+        console.log(`IPO Chat: Found industry-specific template for ${industry}`);
+      } else {
+        // Fallback to general template
+        console.log('IPO Chat: Falling back to general template...');
+        const { data: generalTemplate } = await supabase
+          .from('ipo_section_templates')
+          .select('template_name, template_content, regulatory_requirements, sample_content')
+          .eq('section_type', sectionType)
+          .eq('industry', 'general')
+          .limit(1)
+          .maybeSingle();
+        
+        template = generalTemplate;
+      }
 
       return {
         project,
         template,
-        industryContext: project?.industry || 'general'
+        industryContext: industry
       };
     } catch (error) {
       console.error('Error getting section guidance:', error);
-      return { project: null, template: null, industryContext: 'general' };
+      return { 
+        project: null, 
+        template: null, 
+        industryContext: 'general' 
+      };
     }
   }
 
@@ -430,6 +526,44 @@ Respond with the most helpful and accurate assistance based on the user's reques
       'risk_factors': 'Risk Factors'
     };
     return titles[sectionType] || 'Business Section';
+  }
+
+  /**
+   * Create fallback response when API key is missing
+   */
+  private createFallbackResponse(message: string): IPOChatResponse {
+    return {
+      type: 'GUIDANCE',
+      message,
+      sources: [],
+      confidence: 0.5
+    };
+  }
+
+  /**
+   * Create error response for failed requests
+   */
+  private createErrorResponse(error: any): IPOChatResponse {
+    const isApiKeyError = error?.message?.toLowerCase().includes('api key') || 
+                         error?.message?.toLowerCase().includes('unauthorized');
+    
+    let message = '';
+    if (isApiKeyError) {
+      message = 'Please check your API key configuration. Go to settings to verify your Grok API key is correctly set up.';
+    } else if (error?.message?.includes('timeout')) {
+      message = 'The request timed out. Please try again with a shorter message or check your internet connection.';
+    } else if (error?.message?.includes('network')) {
+      message = 'Network error occurred. Please check your internet connection and try again.';
+    } else {
+      message = 'I encountered an issue processing your request. Please try rephrasing your question or try again in a moment.';
+    }
+
+    return {
+      type: 'GUIDANCE',
+      message,
+      sources: [],
+      confidence: 0.1
+    };
   }
 }
 

@@ -106,10 +106,27 @@ export const useIPOAIChat = ({
     } catch (error) {
       console.error('Error processing IPO chat message:', error);
       
+      // Create more specific error messages based on error type
+      let errorContent = 'I apologize, but I encountered an error processing your request.';
+      let toastDescription = 'Failed to process your request. Please try again.';
+      
+      if (error?.message?.toLowerCase().includes('api key')) {
+        errorContent = 'Please configure your API key in the settings to use the AI chat feature. Click the "Setup API Key" button in the top bar.';
+        toastDescription = 'API key required. Please check your settings.';
+      } else if (error?.message?.toLowerCase().includes('timeout')) {
+        errorContent = 'The request timed out. Please try again with a shorter message.';
+        toastDescription = 'Request timed out. Please try again.';
+      } else if (error?.message?.toLowerCase().includes('network')) {
+        errorContent = 'Network error occurred. Please check your internet connection and try again.';
+        toastDescription = 'Network error. Please check your connection.';
+      } else {
+        errorContent = 'I encountered an issue processing your request. Please try rephrasing your question or try again in a moment.';
+      }
+      
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        content: 'I apologize, but I encountered an error processing your request. Please try rephrasing your question or check your API connection.',
+        content: errorContent,
         timestamp: new Date()
       };
       
@@ -117,7 +134,7 @@ export const useIPOAIChat = ({
       
       toast({
         title: "Error",
-        description: "Failed to process your request. Please try again.",
+        description: toastDescription,
         variant: "destructive"
       });
     } finally {
