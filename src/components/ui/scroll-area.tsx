@@ -36,7 +36,7 @@ const ScrollBar = React.forwardRef<
         "h-full w-4 border-l border-l-transparent p-[2px]",
       orientation === "horizontal" &&
         "h-4 flex-col border-t border-t-transparent p-[2px]",
-      "opacity-100 z-20 bg-gray-50 dark:bg-gray-800", // Always visible with background
+      "opacity-100 z-20 bg-border/20 hover:bg-border/40", // Always visible with better contrast
       className
     )}
     {...props}

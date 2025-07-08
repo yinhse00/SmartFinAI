@@ -29,14 +29,14 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
   const borderClass = layoutMode === 'drafting' ? 'border-2' : 'border';
   const paddingClass = layoutMode === 'drafting' ? 'p-4' : 'p-3';
   
-  // Calculate optimal height based on layout mode and screen size
+  // Calculate optimal height to fit content in one screen with proper scrollbar
   const getContentHeight = () => {
     if (layoutMode === 'drafting') {
-      // For drafting mode, use most of viewport height minus header/footer space
-      return 'h-[calc(100vh-16rem)]';
+      // For drafting mode, use viewport height minus header/footer/controls space
+      return 'h-[calc(100vh-12rem)] min-h-[400px] max-h-[calc(100vh-12rem)]';
     }
-    // For tab mode, use available flex space with max height constraint
-    return 'h-[calc(100vh-20rem)] max-h-[800px]';
+    // For tab mode, use available flex space with fixed constraints
+    return 'h-[calc(100vh-16rem)] min-h-[400px] max-h-[calc(100vh-16rem)]';
   };
 
   return (
@@ -100,7 +100,7 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
               }
               value={generatedContent}
               onChange={(e) => setGeneratedContent(e.target.value)}
-              className={`w-full h-full resize-none ${borderClass} focus:ring-2 ${paddingClass} text-sm leading-relaxed overflow-y-auto`}
+              className={`w-full h-full resize-none ${borderClass} focus:ring-2 ${paddingClass} text-sm leading-relaxed overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800`}
             />
           ) : (
             <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
