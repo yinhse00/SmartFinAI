@@ -3,8 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   MessageSquare, 
   FileText, 
@@ -16,9 +14,9 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
+import { EnhancedSourcesDisplay } from './EnhancedSourcesDisplay';
 
 interface IPODraftingAreaProps {
   projectId: string;
@@ -35,7 +33,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   isChatOpen,
   onPassContentToChat
 }) => {
-  const [activeTab, setActiveTab] = useState('input');
+  const [activeTab, setActiveTab] = useState('draft');
   const [keyElements, setKeyElements] = useState({
     company_description: '',
     principal_activities: '',
@@ -90,15 +88,14 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   };
 
   const handleUploadDD = () => {
-    // This will open file upload dialog
     console.log('Upload DD documents');
   };
 
   return (
     <div className="h-full flex flex-col">
-      {/* Header */}
+      {/* Header with Controls */}
       <div className="border-b bg-background p-4">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-3">
           <div>
             <h2 className="text-lg font-semibold">Business Overview</h2>
             <p className="text-sm text-muted-foreground">
@@ -121,18 +118,78 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
             </Button>
           </div>
         </div>
+        
+        {/* Tab Navigation in Header */}
+        <div className="flex items-center gap-2">
+          <Button 
+            variant={activeTab === 'draft' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('draft')}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Draft Content
+          </Button>
+          <Button 
+            variant={activeTab === 'input' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('input')}
+          >
+            <Sparkles className="h-4 w-4 mr-2" />
+            Input & Generate
+          </Button>
+          <Button 
+            variant={activeTab === 'sources' ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setActiveTab('sources')}
+          >
+            <ExternalLink className="h-4 w-4 mr-2" />
+            Sources
+          </Button>
+        </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 p-4">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="input">Input & Generate</TabsTrigger>
-            <TabsTrigger value="draft">Draft Content</TabsTrigger>
-            <TabsTrigger value="sources">Sources</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="input" className="h-full mt-4">
+      {/* Maximized Content Area */}
+      <div className="flex-1 overflow-hidden">
+        {activeTab === 'draft' && (
+          <div className="h-full p-4">
+            <div className="h-full flex flex-col">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  <span className="font-medium">Draft Content</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleRegenerateContent}
+                    disabled={isGenerating}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <RotateCcw className="h-4 w-4 mr-2" />
+                    )}
+                    Regenerate
+                  </Button>
+                  <Button size="sm" disabled={!generatedContent}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save
+                  </Button>
+                </div>
+              </div>
+              <Textarea
+                placeholder="Generated content will appear here..."
+                value={generatedContent}
+                onChange={(e) => setGeneratedContent(e.target.value)}
+                className="flex-1 resize-none border-0 focus:ring-0 p-6 text-base leading-relaxed"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'input' && (
+          <div className="h-full p-4">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
               {/* Key Elements Input */}
               <Card>
@@ -235,81 +292,14 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
-          
-          <TabsContent value="draft" className="h-full mt-4">
-            <Card className="h-full">
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">Draft Content</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleRegenerateContent}
-                      disabled={isGenerating}
-                    >
-                      {isGenerating ? (
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                        <RotateCcw className="h-4 w-4 mr-2" />
-                      )}
-                      Regenerate
-                    </Button>
-                    <Button size="sm" disabled={!generatedContent}>
-                      <Save className="h-4 w-4 mr-2" />
-                      Save
-                    </Button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="h-full">
-                <Textarea
-                  placeholder="Generated content will appear here..."
-                  value={generatedContent}
-                  onChange={(e) => setGeneratedContent(e.target.value)}
-                  className="h-[calc(100%-4rem)] resize-none"
-                />
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="sources" className="h-full mt-4">
-            <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="text-base">Source Attribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {lastGeneratedResponse?.sources && lastGeneratedResponse.sources.length > 0 ? (
-                  <div className="space-y-4">
-                    {lastGeneratedResponse.sources.map((source, index) => (
-                      <div key={index} className="p-3 border rounded-lg">
-                        <div className="flex items-center justify-between mb-2">
-                          <Badge variant="outline">{source.source_type}</Badge>
-                          <span className="text-xs text-muted-foreground">
-                            Confidence: {(source.confidence_score * 100).toFixed(0)}%
-                          </span>
-                        </div>
-                        <p className="text-sm">{source.content_snippet}</p>
-                        {source.source_reference && (
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Source: {source.source_reference}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <FileText className="h-8 w-8 mx-auto mb-2" />
-                    <p className="text-sm">No sources available yet</p>
-                    <p className="text-xs">Generate content to see source attribution</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+          </div>
+        )}
+
+        {activeTab === 'sources' && (
+          <div className="h-full">
+            <EnhancedSourcesDisplay sources={lastGeneratedResponse?.sources || []} />
+          </div>
+        )}
       </div>
     </div>
   );
