@@ -13,16 +13,31 @@ export class IPOContentGenerationService {
    */
   async generateSectionContent(request: IPOContentGenerationRequest): Promise<IPOContentGenerationResponse> {
     try {
+      console.log('🚀 Starting IPO content generation for:', request.section_type);
+      console.log('📝 Request details:', { 
+        projectId: request.project_id, 
+        sectionType: request.section_type,
+        keyElements: request.key_elements 
+      });
+
       // Get project details for context
-      const { data: project } = await supabase
+      const { data: project, error: projectError } = await supabase
         .from('ipo_prospectus_projects')
         .select('*')
         .eq('id', request.project_id)
         .single();
 
+      if (projectError) {
+        console.error('❌ Database error fetching project:', projectError);
+        throw new Error(`Database error: ${projectError.message}`);
+      }
+
       if (!project) {
+        console.error('❌ Project not found for ID:', request.project_id);
         throw new Error('Project not found');
       }
+
+      console.log('✅ Project found:', project.company_name);
 
       // Get section template if specified
       let template = null;
@@ -45,6 +60,8 @@ export class IPOContentGenerationService {
         template = templateData;
       }
 
+      console.log('📋 Template found:', template?.template_name || 'No template');
+
       // Build comprehensive prompt for content generation
       const prompt = this.buildContentGenerationPrompt(
         project,
@@ -53,7 +70,10 @@ export class IPOContentGenerationService {
         request.key_elements
       );
 
+      console.log('📝 Generated prompt length:', prompt.length);
+
       // Generate content using Grok AI
+      console.log('🤖 Calling Grok AI service...');
       const response = await grokService.generateResponse({
         prompt: prompt,
         apiKey: undefined, // Will use stored key
@@ -64,13 +84,26 @@ export class IPOContentGenerationService {
         }
       });
 
+      console.log('✅ Grok AI response received, length:', response.text?.length || 0);
+      console.log('📄 Response preview:', response.text?.substring(0, 200) + '...');
+
+      if (!response.text || response.text.trim().length === 0) {
+        throw new Error('Empty response from AI service');
+      }
+
       // Parse the generated content and extract quality metrics
+      console.log('📊 Analyzing generated content...');
       const contentAnalysis = this.analyzeGeneratedContent(response.text);
+      console.log('✅ Content analysis complete:', {
+        contentLength: contentAnalysis.content.length,
+        confidence: contentAnalysis.confidence
+      });
 
       // Create source attributions
       const sources = this.createSourceAttributions(response, template);
+      console.log('📚 Source attributions created:', sources.length);
 
-      return {
+      const result = {
         content: contentAnalysis.content,
         sources,
         confidence_score: contentAnalysis.confidence,
@@ -87,8 +120,16 @@ export class IPOContentGenerationService {
         }
       };
 
+      console.log('🎉 Content generation completed successfully');
+      return result;
+
     } catch (error) {
-      console.error('Error generating IPO content:', error);
+      console.error('❌ Error generating IPO content:', error);
+      console.error('📋 Error details:', {
+        message: error.message,
+        stack: error.stack,
+        request: request
+      });
       throw new Error(`Content generation failed: ${error.message}`);
     }
   }

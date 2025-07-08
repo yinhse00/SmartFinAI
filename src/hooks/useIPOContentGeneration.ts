@@ -10,19 +10,33 @@ export const useIPOContentGeneration = () => {
   const { toast } = useToast();
 
   const generateContent = async (request: IPOContentGenerationRequest): Promise<IPOSection | null> => {
+    console.log('🎯 useIPOContentGeneration: Starting generation process');
     setIsGenerating(true);
     try {
+      console.log('📋 Request being sent to service:', request);
+      
       // Generate the content
+      console.log('🔄 Calling ipoContentGenerationService.generateSectionContent...');
       const response = await ipoContentGenerationService.generateSectionContent(request);
+      
+      console.log('✅ Service response received:', {
+        contentLength: response.content?.length || 0,
+        sourcesCount: response.sources?.length || 0,
+        confidence: response.confidence_score
+      });
+      
       setLastGeneratedResponse(response);
       setGeneratedContent(response.content);
+      console.log('📝 State updated with generated content');
 
       // Save to database
+      console.log('💾 Saving content to database...');
       const savedSection = await ipoContentGenerationService.saveSectionContent(
         request.project_id,
         request.section_type,
         response
       );
+      console.log('✅ Content saved to database successfully');
 
       toast({
         title: "Content Generated Successfully",
@@ -31,7 +45,13 @@ export const useIPOContentGeneration = () => {
 
       return savedSection;
     } catch (error) {
-      console.error('Content generation error:', error);
+      console.error('❌ Content generation error in hook:', error);
+      console.error('📋 Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
       toast({
         title: "Generation Failed",
         description: error.message || "Failed to generate content. Please try again.",
@@ -39,6 +59,7 @@ export const useIPOContentGeneration = () => {
       });
       return null;
     } finally {
+      console.log('🏁 Generation process completed, setting isGenerating to false');
       setIsGenerating(false);
     }
   };

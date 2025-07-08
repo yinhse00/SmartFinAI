@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
+import { useToast } from '@/hooks/use-toast';
 
 interface IPOInputGenerateLayoutProps {
   projectId: string;
@@ -50,6 +51,8 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     generateContent,
     clearContent
   } = useIPOContentGeneration();
+  
+  const { toast } = useToast();
 
   // Auto-switch to drafting layout when content is generated
   useEffect(() => {
@@ -61,6 +64,21 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
   }, [generatedContent, isGenerating, onContentGenerated]);
 
   const handleGenerateContent = async () => {
+    console.log('🎯 IPOInputGenerateLayout: Generate button clicked');
+    console.log('📋 Current form data:', keyElements);
+    console.log('🎯 Selected section:', selectedSection);
+    console.log('🏢 Project ID:', projectId);
+
+    // Validate inputs
+    if (!keyElements.company_description?.trim()) {
+      toast({
+        title: "Missing Information",
+        description: "Please provide a company description before generating content.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const request: IPOContentGenerationRequest = {
       project_id: projectId,
       section_type: selectedSection,
@@ -69,7 +87,9 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
     };
 
-    await generateContent(request);
+    console.log('📤 Sending generation request:', request);
+    const result = await generateContent(request);
+    console.log('📥 Generation result:', result ? 'Success' : 'Failed');
   };
 
   const handleUploadDD = () => {
