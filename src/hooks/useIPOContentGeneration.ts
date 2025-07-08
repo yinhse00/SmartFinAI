@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
+import { loadKeysFromStorage } from '@/services/apiKey/keyStorage';
 
 export const useIPOContentGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -14,6 +15,12 @@ export const useIPOContentGeneration = () => {
     console.log('🎯 useIPOContentGeneration: Starting generation process');
     setIsGenerating(true);
     try {
+      // Check if API key is available before attempting generation
+      const apiKeys = loadKeysFromStorage();
+      if (apiKeys.length === 0) {
+        throw new Error('No API key configured. Please set up your X.AI API key in the workspace settings.');
+      }
+      
       console.log('📋 Request being sent to service:', request);
       
       // Generate the content

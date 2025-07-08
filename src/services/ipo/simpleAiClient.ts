@@ -1,4 +1,5 @@
 import { supabase } from '@/integrations/supabase/client';
+import { loadKeysFromStorage } from '@/services/apiKey/keyStorage';
 
 interface SimpleAiRequest {
   prompt: string;
@@ -97,19 +98,14 @@ export class SimpleAiClient {
    */
   private async getApiKey(): Promise<string | null> {
     try {
-      // Try to get from localStorage first (for development)
-      const storedKeys = localStorage.getItem('grok_api_keys');
-      if (storedKeys) {
-        const keys = JSON.parse(storedKeys);
-        if (keys.length > 0) {
-          console.log('🔑 Using API key from localStorage');
-          return keys[0];
-        }
+      // Use the existing key storage system
+      const keys = loadKeysFromStorage();
+      if (keys.length > 0) {
+        console.log('🔑 Using API key from key storage');
+        return keys[0];
       }
 
-      // If no key in localStorage, this would normally use Supabase secrets
-      // For now, return null to show clear error
-      console.log('❌ No API key found in localStorage');
+      console.log('❌ No API key found in storage');
       return null;
     } catch (error) {
       console.error('❌ Error getting API key:', error);

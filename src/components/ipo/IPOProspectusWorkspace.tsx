@@ -4,9 +4,11 @@ import { IPODraftingArea } from './IPODraftingArea';
 import { IPOAIChat } from './IPOAIChat';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Edit3, FileText } from 'lucide-react';
+import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { IPOInputGenerateLayout } from './IPOInputGenerateLayout';
+import { useApiKeyState } from '@/components/chat/hooks/useApiKeyState';
+import APIKeyDialog from '@/components/chat/APIKeyDialog';
 
 interface IPOProspectusWorkspaceProps {
   project: IPOProject;
@@ -24,6 +26,16 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   const [chatContent, setChatContent] = useState<string>('');
   const [chatContentUpdater, setChatContentUpdater] = useState<((content: string) => void) | null>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('input-generate');
+  
+  // API key management
+  const { 
+    isGrokApiKeySet, 
+    apiKeyDialogOpen, 
+    setApiKeyDialogOpen,
+    handleSaveApiKeys,
+    grokApiKeyInput,
+    setGrokApiKeyInput 
+  } = useApiKeyState();
 
   const handlePassContentToChat = (content: string, onUpdate: (newContent: string) => void) => {
     setChatContent(content);
@@ -78,6 +90,18 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
                 Draft & Edit
               </Button>
             </div>
+            
+            {/* API Key Setup */}
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setApiKeyDialogOpen(true)}
+              className={!isGrokApiKeySet ? 'border-destructive text-destructive' : ''}
+            >
+              <Key className="h-4 w-4 mr-2" />
+              {isGrokApiKeySet ? 'API Key' : 'Setup API Key'}
+              <div className={`ml-2 w-2 h-2 rounded-full ${isGrokApiKeySet ? 'bg-green-500' : 'bg-red-500'}`} />
+            </Button>
             
             <Button variant="outline" size="sm">
               <Settings className="h-4 w-4 mr-2" />
@@ -141,6 +165,15 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
           </ResizablePanelGroup>
         )}
       </div>
+
+      {/* API Key Dialog */}
+      <APIKeyDialog
+        open={apiKeyDialogOpen}
+        onOpenChange={setApiKeyDialogOpen}
+        grokApiKeyInput={grokApiKeyInput}
+        setGrokApiKeyInput={setGrokApiKeyInput}
+        handleSaveApiKeys={handleSaveApiKeys}
+      />
     </div>
   );
 };
