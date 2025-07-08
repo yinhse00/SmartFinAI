@@ -13,8 +13,11 @@ import {
   ExternalLink,
   Sparkles,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Edit3,
+  EyeIcon
 } from 'lucide-react';
+import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
 import { EnhancedSourcesDisplay } from './EnhancedSourcesDisplay';
@@ -37,6 +40,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   layoutMode = 'drafting'
 }) => {
   const [activeTab, setActiveTab] = useState('draft');
+  const [isEditMode, setIsEditMode] = useState(false);
   const [keyElements, setKeyElements] = useState({
     company_description: '',
     principal_activities: '',
@@ -155,6 +159,23 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                 <Button 
                   variant="outline" 
                   size="sm"
+                  onClick={() => setIsEditMode(!isEditMode)}
+                >
+                  {isEditMode ? (
+                    <>
+                      <EyeIcon className="h-4 w-4 mr-2" />
+                      View
+                    </>
+                  ) : (
+                    <>
+                      <Edit3 className="h-4 w-4 mr-2" />
+                      Edit
+                    </>
+                  )}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
                   onClick={handleRegenerateContent}
                   disabled={isGenerating}
                 >
@@ -167,12 +188,32 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                 </Button>
               </div>
             </div>
-            <Textarea
-              placeholder="Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
-              value={generatedContent}
-              onChange={(e) => setGeneratedContent(e.target.value)}
-              className="flex-1 resize-none border-2 focus:ring-2 p-6 text-base leading-relaxed"
-            />
+            
+            {isEditMode ? (
+              <Textarea
+                placeholder="Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
+                value={generatedContent}
+                onChange={(e) => setGeneratedContent(e.target.value)}
+                className="flex-1 resize-none border-2 focus:ring-2 p-6 text-base leading-relaxed"
+              />
+            ) : (
+              <div className="flex-1 overflow-y-auto border-2 rounded-md p-6">
+                {generatedContent ? (
+                  <div 
+                    className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                    dangerouslySetInnerHTML={{ 
+                      __html: ipoMessageFormatter.formatMessage(generatedContent) 
+                    }}
+                  />
+                ) : (
+                  <div className="text-muted-foreground text-center py-12">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No content generated yet.</p>
+                    <p className="text-sm">Use the AI chat to request improvements, compliance checks, or refinements.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
@@ -272,6 +313,23 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                   <Button 
                     variant="outline" 
                     size="sm"
+                    onClick={() => setIsEditMode(!isEditMode)}
+                  >
+                    {isEditMode ? (
+                      <>
+                        <EyeIcon className="h-4 w-4 mr-2" />
+                        View
+                      </>
+                    ) : (
+                      <>
+                        <Edit3 className="h-4 w-4 mr-2" />
+                        Edit
+                      </>
+                    )}
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
                     onClick={handleRegenerateContent}
                     disabled={isGenerating}
                   >
@@ -288,12 +346,32 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                   </Button>
                 </div>
               </div>
-              <Textarea
-                placeholder="Generated content will appear here..."
-                value={generatedContent}
-                onChange={(e) => setGeneratedContent(e.target.value)}
-                className="flex-1 resize-none border-0 focus:ring-0 p-6 text-base leading-relaxed"
-              />
+              
+              {isEditMode ? (
+                <Textarea
+                  placeholder="Generated content will appear here..."
+                  value={generatedContent}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
+                  className="flex-1 resize-none border-0 focus:ring-0 p-6 text-base leading-relaxed"
+                />
+              ) : (
+                <div className="flex-1 overflow-y-auto border rounded-md p-6">
+                  {generatedContent ? (
+                    <div 
+                      className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                      dangerouslySetInnerHTML={{ 
+                        __html: ipoMessageFormatter.formatMessage(generatedContent) 
+                      }}
+                    />
+                  ) : (
+                    <div className="text-muted-foreground text-center py-12">
+                      <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No content generated yet.</p>
+                      <p className="text-sm">Generate content using the Input & Generate tab.</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         )}
