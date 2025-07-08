@@ -141,9 +141,10 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       </div>
 
       {/* Main Content */}
-      <ScrollArea className="h-[calc(100vh-10rem)]">
-        <div className="max-w-6xl mx-auto p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="flex-1 overflow-hidden">
+        <ScrollArea className="h-full">
+          <div className="max-w-4xl mx-auto p-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Left Column: Input Configuration */}
             <div className="space-y-6">
               {/* Selected Section Info */}
@@ -330,9 +331,10 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
                 </Card>
               )}
             </div>
+            </div>
           </div>
-        </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
     </div>
   );
 };

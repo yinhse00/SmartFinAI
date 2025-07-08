@@ -42,7 +42,7 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   };
 
   return (
-    <div className="h-screen flex flex-col">
+    <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b bg-background px-6 py-4">
         <div className="flex items-center justify-between">
