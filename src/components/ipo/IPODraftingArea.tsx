@@ -12,7 +12,8 @@ import {
   RotateCcw,
   ExternalLink,
   Sparkles,
-  Loader2
+  Loader2,
+  ArrowRight
 } from 'lucide-react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
@@ -24,6 +25,7 @@ interface IPODraftingAreaProps {
   onToggleChat: () => void;
   isChatOpen: boolean;
   onPassContentToChat: (content: string, onUpdate: (newContent: string) => void) => void;
+  layoutMode?: 'drafting' | 'tab';
 }
 
 export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
@@ -31,7 +33,8 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   selectedSection,
   onToggleChat,
   isChatOpen,
-  onPassContentToChat
+  onPassContentToChat,
+  layoutMode = 'drafting'
 }) => {
   const [activeTab, setActiveTab] = useState('draft');
   const [keyElements, setKeyElements] = useState({
@@ -91,15 +94,122 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
     console.log('Upload DD documents');
   };
 
+  // Get section title for display
+  const getSectionTitle = (section: string) => {
+    const sectionMap = {
+      'overview': 'Business Overview',
+      'history': 'History & Development', 
+      'products': 'Products & Services',
+      'strengths': 'Competitive Strengths',
+      'strategy': 'Business Strategy',
+      'summary': 'Financial Summary',
+      'risk_factors': 'Risk Factors'
+    };
+    return sectionMap[section] || 'Business Section';
+  };
+
+  if (layoutMode === 'drafting') {
+    // Simplified drafting layout - full screen draft editor
+    return (
+      <div className="h-full flex flex-col">
+        {/* Minimal Header */}
+        <div className="border-b bg-background p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">{getSectionTitle(selectedSection)}</h2>
+              <p className="text-sm text-muted-foreground">
+                App1A Part A - {getSectionTitle(selectedSection)} content
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary">Draft</Badge>
+              <Button variant="outline" size="sm">
+                <Eye className="h-4 w-4 mr-2" />
+                Preview
+              </Button>
+              <Button variant="outline" size="sm">
+                <Save className="h-4 w-4 mr-2" />
+                Save
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={onToggleChat}
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                {isChatOpen ? 'Hide' : 'Show'} AI Chat
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        {/* Maximized Draft Content */}
+        <div className="flex-1 p-6">
+          <div className="h-full flex flex-col">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                <span className="font-medium">Draft Content</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleRegenerateContent}
+                  disabled={isGenerating}
+                >
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                  )}
+                  Regenerate
+                </Button>
+              </div>
+            </div>
+            <Textarea
+              placeholder="Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
+              value={generatedContent}
+              onChange={(e) => setGeneratedContent(e.target.value)}
+              className="flex-1 resize-none border-2 focus:ring-2 p-6 text-base leading-relaxed"
+            />
+          </div>
+        </div>
+
+        {/* Sources Footer */}
+        {lastGeneratedResponse?.sources && lastGeneratedResponse.sources.length > 0 && (
+          <div className="border-t bg-muted/30 p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" />
+                <span className="text-sm font-medium">
+                  {lastGeneratedResponse.sources.length} source{lastGeneratedResponse.sources.length !== 1 ? 's' : ''} referenced
+                </span>
+              </div>
+              <Button 
+                variant="ghost" 
+                size="sm"
+                onClick={() => setActiveTab('sources')}
+              >
+                View Sources
+                <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       {/* Header with Controls */}
       <div className="border-b bg-background p-4">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h2 className="text-lg font-semibold">Business Overview</h2>
+            <h2 className="text-lg font-semibold">{getSectionTitle(selectedSection)}</h2>
             <p className="text-sm text-muted-foreground">
-              App1A Part A para 32 - Company business description
+              App1A Part A - {getSectionTitle(selectedSection)} content
             </p>
           </div>
           <div className="flex items-center gap-2">
