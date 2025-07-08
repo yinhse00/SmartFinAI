@@ -1,6 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { FileText, Edit3, EyeIcon, RotateCcw, Save, Loader2 } from 'lucide-react';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 
@@ -87,32 +88,34 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
             className={`flex-1 resize-none ${borderClass} focus:ring-2 ${paddingClass} text-base leading-relaxed`}
           />
         ) : (
-          <div className={`flex-1 overflow-y-auto ${borderClass} rounded-md ${paddingClass}`}>
-            {isLoading ? (
-              <div className="text-center py-12">
-                <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin opacity-50" />
-                <p className="text-muted-foreground">Loading existing content...</p>
-              </div>
-            ) : generatedContent ? (
-              <div 
-                className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
-                dangerouslySetInnerHTML={{ 
-                  __html: ipoMessageFormatter.formatMessage(generatedContent) 
-                }}
-              />
-            ) : (
-              <div className="text-muted-foreground text-center py-12">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No content generated yet.</p>
-                <p className="text-sm">
-                  {layoutMode === 'drafting' 
-                    ? "Use the AI chat to request improvements, compliance checks, or refinements."
-                    : "Generate content using the Input & Generate tab."
-                  }
-                </p>
-              </div>
-            )}
-          </div>
+          <ScrollArea className={`flex-1 ${borderClass} rounded-md`}>
+            <div className={`${paddingClass}`}>
+              {isLoading ? (
+                <div className="text-center py-12">
+                  <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin opacity-50" />
+                  <p className="text-muted-foreground">Loading existing content...</p>
+                </div>
+              ) : generatedContent ? (
+                <div 
+                  className="regulatory-content prose prose-lg max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                  dangerouslySetInnerHTML={{ 
+                    __html: ipoMessageFormatter.formatMessage(generatedContent) 
+                  }}
+                />
+              ) : (
+                <div className="text-muted-foreground text-center py-12">
+                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No content generated yet.</p>
+                  <p className="text-sm">
+                    {layoutMode === 'drafting' 
+                      ? "Use the AI chat to request improvements, compliance checks, or refinements."
+                      : "Generate content using the Input & Generate tab."
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         )}
       </div>
     </div>
