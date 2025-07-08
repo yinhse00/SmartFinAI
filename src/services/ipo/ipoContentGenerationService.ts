@@ -156,15 +156,19 @@ export class IPOContentGenerationService {
         `)
         .eq('project_id', projectId)
         .eq('section_type', sectionType)
-        .single();
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       if (error) {
-        if (error.code === 'PGRST116') {
-          // No content found - this is normal for new sections
-          console.log('📝 No existing content found for section');
-          return null;
-        }
+        console.error('❌ Database error loading section content:', error);
         throw error;
+      }
+
+      if (!section) {
+        // No content found - this is normal for new sections
+        console.log('📝 No existing content found for section');
+        return null;
       }
 
       console.log('✅ Existing content loaded:', {
@@ -198,7 +202,7 @@ export class IPOContentGenerationService {
     generatedContent: IPOContentGenerationResponse
   ): Promise<IPOSection> {
     try {
-      // Create or update the section
+      // Create or update the section - use explicit conflict resolution
       const { data: section, error } = await supabase
         .from('ipo_prospectus_sections')
         .upsert({
@@ -209,6 +213,9 @@ export class IPOContentGenerationService {
           sources: generatedContent.sources as any, // JSON field
           confidence_score: generatedContent.confidence_score,
           status: 'draft'
+        }, {
+          onConflict: 'project_id,section_type',
+          ignoreDuplicates: false
         })
         .select()
         .single();
