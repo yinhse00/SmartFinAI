@@ -88,8 +88,8 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
             className={`flex-1 resize-none ${borderClass} focus:ring-2 ${paddingClass} text-base leading-relaxed`}
           />
         ) : (
-          <ScrollArea className={`flex-1 ${borderClass} rounded-md`}>
-            <div className={`${paddingClass}`}>
+          <ScrollArea className={`flex-1 ${borderClass} rounded-md min-h-0`} type="always">
+            <div className={`${paddingClass} min-h-full`}>
               {isLoading ? (
                 <div className="text-center py-12">
                   <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin opacity-50" />
