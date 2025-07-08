@@ -25,13 +25,15 @@ interface IPODraftingAreaProps {
   selectedSection: string;
   onToggleChat: () => void;
   isChatOpen: boolean;
+  onPassContentToChat: (content: string, onUpdate: (newContent: string) => void) => void;
 }
 
 export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   projectId,
   selectedSection,
   onToggleChat,
-  isChatOpen
+  isChatOpen,
+  onPassContentToChat
 }) => {
   const [activeTab, setActiveTab] = useState('input');
   const [keyElements, setKeyElements] = useState({
@@ -55,6 +57,13 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
       setActiveTab('draft');
     }
   }, [generatedContent]);
+
+  // Pass current content to chat when it opens or content changes
+  useEffect(() => {
+    if (isChatOpen && generatedContent) {
+      onPassContentToChat(generatedContent, setGeneratedContent);
+    }
+  }, [isChatOpen, generatedContent, onPassContentToChat, setGeneratedContent]);
 
   const handleGenerateContent = async () => {
     const request: IPOContentGenerationRequest = {

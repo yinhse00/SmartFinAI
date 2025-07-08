@@ -3,59 +3,39 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { X, Send, Bot, User } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { X, Send, Bot, User, RefreshCw, Loader2 } from 'lucide-react';
+import { useIPOAIChat } from '@/hooks/useIPOAIChat';
 
 interface IPOAIChatProps {
   projectId: string;
   selectedSection: string;
+  currentContent: string;
+  onContentUpdate: (newContent: string) => void;
   onClose: () => void;
-}
-
-interface ChatMessage {
-  id: string;
-  type: 'user' | 'ai';
-  content: string;
-  timestamp: Date;
 }
 
 export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   projectId,
   selectedSection,
+  currentContent,
+  onContentUpdate,
   onClose
 }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: '1',
-      type: 'ai',
-      content: 'Hello! I\'m here to help you refine the business section of your prospectus. You can ask me to:\n\n• Expand on specific points\n• Improve language and tone\n• Add regulatory compliance details\n• Enhance with market context\n• Review for completeness\n\nWhat would you like to work on?',
-      timestamp: new Date()
-    }
-  ]);
+  const { messages, isProcessing, processMessage } = useIPOAIChat({
+    projectId,
+    selectedSection,
+    currentContent,
+    onContentUpdate
+  });
+  
   const [inputValue, setInputValue] = useState('');
 
   const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputValue,
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, userMessage]);
+    if (!inputValue.trim() || isProcessing) return;
+    
+    processMessage(inputValue);
     setInputValue('');
-
-    // Simulate AI response (this will be replaced with actual AI service)
-    setTimeout(() => {
-      const aiResponse: ChatMessage = {
-        id: (Date.now() + 1).toString(),
-        type: 'ai',
-        content: 'I understand you want to work on that aspect. Let me help you refine that section based on HKEX requirements and market best practices.',
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -106,7 +86,15 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                       : 'bg-muted'
                   }`}
                 >
-                  {message.content}
+                  <p className="leading-relaxed">{message.content}</p>
+                  {message.changes && (
+                    <div className="mt-3">
+                      <Badge variant="secondary" className="text-xs">
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Content Updated
+                      </Badge>
+                    </div>
+                  )}
                 </div>
                 
                 {message.type === 'user' && (
@@ -116,6 +104,20 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                 )}
               </div>
             ))}
+            
+            {isProcessing && (
+              <div className="flex justify-start">
+                <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1 mr-3">
+                  <Bot className="h-3 w-3 text-primary-foreground" />
+                </div>
+                <div className="bg-muted rounded-lg p-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <span>Analyzing your request and improving content...</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </ScrollArea>
         
@@ -128,9 +130,10 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
               className="flex-1"
+              disabled={isProcessing}
             />
-            <Button size="sm" onClick={handleSendMessage}>
-              <Send className="h-4 w-4" />
+            <Button size="sm" onClick={handleSendMessage} disabled={!inputValue.trim() || isProcessing}>
+              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </Button>
           </div>
         </div>

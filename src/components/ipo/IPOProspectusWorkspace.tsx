@@ -18,6 +18,19 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
 }) => {
   const [selectedSection, setSelectedSection] = useState<string>('business');
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(true);
+  const [chatContent, setChatContent] = useState<string>('');
+  const [chatContentUpdater, setChatContentUpdater] = useState<((content: string) => void) | null>(null);
+
+  const handlePassContentToChat = (content: string, onUpdate: (newContent: string) => void) => {
+    setChatContent(content);
+    setChatContentUpdater(() => onUpdate);
+  };
+
+  const handleChatContentUpdate = (newContent: string) => {
+    if (chatContentUpdater) {
+      chatContentUpdater(newContent);
+    }
+  };
 
   return (
     <div className="h-screen flex flex-col">
@@ -64,6 +77,7 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
               selectedSection={selectedSection}
               onToggleChat={() => setIsChatPanelOpen(!isChatPanelOpen)}
               isChatOpen={isChatPanelOpen}
+              onPassContentToChat={handlePassContentToChat}
             />
           </ResizablePanel>
 
@@ -75,6 +89,8 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
                 <IPOAIChat
                   projectId={project.id}
                   selectedSection={selectedSection}
+                  currentContent={chatContent}
+                  onContentUpdate={handleChatContentUpdate}
                   onClose={() => setIsChatPanelOpen(false)}
                 />
               </ResizablePanel>
