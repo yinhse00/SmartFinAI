@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,9 +13,12 @@ import {
   Eye, 
   RotateCcw,
   ExternalLink,
-  Sparkles
+  Sparkles,
+  Loader2
 } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
+import { IPOContentGenerationRequest } from '@/types/ipo';
 
 interface IPODraftingAreaProps {
   projectId: string;
@@ -31,16 +34,50 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   isChatOpen
 }) => {
   const [activeTab, setActiveTab] = useState('input');
-  const [content, setContent] = useState('');
   const [keyElements, setKeyElements] = useState({
     company_description: '',
     principal_activities: '',
     business_model: ''
   });
 
-  const handleGenerateContent = () => {
-    // This will be implemented with the AI service
-    console.log('Generating content for section:', selectedSection);
+  const {
+    isGenerating,
+    generatedContent,
+    lastGeneratedResponse,
+    generateContent,
+    regenerateContent,
+    setGeneratedContent
+  } = useIPOContentGeneration();
+
+  // Update content when generated content changes
+  useEffect(() => {
+    if (generatedContent) {
+      setActiveTab('draft');
+    }
+  }, [generatedContent]);
+
+  const handleGenerateContent = async () => {
+    const request: IPOContentGenerationRequest = {
+      project_id: projectId,
+      section_type: selectedSection,
+      key_elements: keyElements,
+      industry_context: 'Hong Kong IPO',
+      regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
+    };
+
+    await generateContent(request);
+  };
+
+  const handleRegenerateContent = async () => {
+    const request: IPOContentGenerationRequest = {
+      project_id: projectId,
+      section_type: selectedSection,
+      key_elements: keyElements,
+      industry_context: 'Hong Kong IPO',
+      regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
+    };
+
+    await regenerateContent(request);
   };
 
   const handleUploadDD = () => {
@@ -145,9 +182,14 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                   <Button 
                     className="w-full" 
                     onClick={handleGenerateContent}
+                    disabled={isGenerating}
                   >
-                    <Sparkles className="h-4 w-4 mr-2" />
-                    Generate First Draft
+                    {isGenerating ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="h-4 w-4 mr-2" />
+                    )}
+                    {isGenerating ? 'Generating...' : 'Generate First Draft'}
                   </Button>
                 </CardContent>
               </Card>
@@ -192,11 +234,20 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                 <div className="flex items-center justify-between">
                   <CardTitle className="text-base">Draft Content</CardTitle>
                   <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                      <RotateCcw className="h-4 w-4 mr-2" />
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handleRegenerateContent}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <RotateCcw className="h-4 w-4 mr-2" />
+                      )}
                       Regenerate
                     </Button>
-                    <Button size="sm">
+                    <Button size="sm" disabled={!generatedContent}>
                       <Save className="h-4 w-4 mr-2" />
                       Save
                     </Button>
@@ -206,8 +257,8 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
               <CardContent className="h-full">
                 <Textarea
                   placeholder="Generated content will appear here..."
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
+                  value={generatedContent}
+                  onChange={(e) => setGeneratedContent(e.target.value)}
                   className="h-[calc(100%-4rem)] resize-none"
                 />
               </CardContent>
@@ -220,11 +271,32 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
                 <CardTitle className="text-base">Source Attribution</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2" />
-                  <p className="text-sm">No sources available yet</p>
-                  <p className="text-xs">Generate content to see source attribution</p>
-                </div>
+                {lastGeneratedResponse?.sources && lastGeneratedResponse.sources.length > 0 ? (
+                  <div className="space-y-4">
+                    {lastGeneratedResponse.sources.map((source, index) => (
+                      <div key={index} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between mb-2">
+                          <Badge variant="outline">{source.source_type}</Badge>
+                          <span className="text-xs text-muted-foreground">
+                            Confidence: {(source.confidence_score * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                        <p className="text-sm">{source.content_snippet}</p>
+                        {source.source_reference && (
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Source: {source.source_reference}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-8 w-8 mx-auto mb-2" />
+                    <p className="text-sm">No sources available yet</p>
+                    <p className="text-xs">Generate content to see source attribution</p>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
