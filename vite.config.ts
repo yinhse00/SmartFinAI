@@ -11,9 +11,9 @@ export default defineConfig(({ mode }) => ({
     cors: true,
     proxy: {
       '/api/grok': {
-        target: 'https://api.x.ai',
+        target: 'https://petoxjdikxxugbrzajpj.supabase.co/functions/v1/grok-proxy',
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/grok/, '/v1'),
+        rewrite: (path) => path.replace(/^\/api\/grok/, ''),
         secure: true,
         timeout: 600000,
         configure: (proxy, _options) => {

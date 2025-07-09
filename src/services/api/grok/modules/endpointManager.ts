@@ -37,8 +37,10 @@ const getResetTimeout = (failures: number): number => {
   return calculatedTimeout;
 };
 
-// Proxy endpoint
-const PROXY_ENDPOINT = '/api/grok';
+// Proxy endpoint - use edge function in production, local proxy in development
+const PROXY_ENDPOINT = import.meta.env.DEV 
+  ? '/api/grok' 
+  : 'https://petoxjdikxxugbrzajpj.supabase.co/functions/v1/grok-proxy';
 
 // Time threshold for automatic periodic reset attempts (20 minutes)
 const AUTO_RESET_THRESHOLD = 20 * 60 * 1000;
