@@ -12,9 +12,13 @@ interface SourceReference {
 }
 
 interface IPOChatResponse {
-  type: 'CONTENT_UPDATE' | 'GUIDANCE' | 'COMPLIANCE_CHECK' | 'SOURCE_REFERENCE' | 'SUGGESTION';
+  type: 'CONTENT_UPDATE' | 'PARTIAL_UPDATE' | 'DRAFT_SUGGESTION' | 'COMPLIANCE_CHECK' | 'STRUCTURE_GUIDANCE' | 'GUIDANCE' | 'SOURCE_REFERENCE' | 'SUGGESTION';
   message: string;
   updatedContent?: string;
+  partialUpdate?: {
+    searchText: string;
+    replaceWith: string;
+  };
   sources: SourceReference[];
   complianceIssues?: string[];
   suggestions?: string[];
@@ -307,7 +311,7 @@ export class IPOAIChatService {
   }
 
   /**
-   * Build enhanced prompt with regulatory context and sources
+   * Build enhanced prompt with regulatory context and sources - DRAFT-FOCUSED
    */
   private buildEnhancedPrompt(
     userMessage: string,
@@ -319,10 +323,13 @@ export class IPOAIChatService {
     const sectionTitle = this.getSectionTitle(sectionType);
     
     return `
-You are an expert Hong Kong IPO prospectus drafting specialist with deep HKEX regulatory knowledge. You are assisting with the "${sectionTitle}" section of an IPO prospectus.
+You are an expert Hong Kong IPO prospectus drafting AI assistant. Your primary role is to ACTIVELY HELP USERS DRAFT AND IMPROVE their IPO prospectus content through specific, actionable assistance.
 
-**CURRENT SECTION CONTENT:**
-${currentContent || 'No content yet - starting from scratch.'}
+**CURRENT DRAFT SECTION: ${sectionTitle}**
+**CURRENT CONTENT LENGTH: ${currentContent?.length || 0} characters**
+
+**EXISTING DRAFT:**
+${currentContent || '⚠️ NO CONTENT YET - Ready to start drafting from scratch.'}
 
 **USER REQUEST:**
 ${userMessage}
@@ -335,7 +342,7 @@ ${regulatoryContext.sources.map(source =>
   `- ${source.type.toUpperCase()}: ${source.title}\n  Content: ${source.content.substring(0, 200)}...\n  Reference: ${source.reference}`
 ).join('\n')}
 
-**SECTION TEMPLATE GUIDANCE:**
+**SECTION REQUIREMENTS:**
 ${sectionGuidance.template ? `
 Template: ${sectionGuidance.template.template_name}
 Requirements: ${JSON.stringify(sectionGuidance.template.regulatory_requirements)}
@@ -346,40 +353,48 @@ Sample Content: ${sectionGuidance.template.sample_content?.substring(0, 300)}...
 Industry: ${sectionGuidance.industryContext}
 Company: ${sectionGuidance.project?.company_name || 'Not specified'}
 
-**RESPONSE INSTRUCTIONS:**
-Choose the most appropriate response type:
+**RESPONSE TYPES - BE ACTIONABLE:**
 
-1. **CONTENT_UPDATE:** Use when user wants to modify/improve the current content
-   Format: "CONTENT_UPDATE: [new complete content]"
+1. **CONTENT_UPDATE:** For content improvements/additions (PREFERRED for drafting)
+   Format: "CONTENT_UPDATE: [complete improved section content]"
+   Use when: User wants content written, improved, or expanded
 
-2. **GUIDANCE:** Use for advice, explanations, or recommendations
-   Format: "GUIDANCE: [your advice]"
+2. **PARTIAL_UPDATE:** For specific paragraph/section improvements
+   Format: "PARTIAL_UPDATE: REPLACE '[existing text snippet]' WITH '[new text]'"
+   Use when: User wants specific parts modified
 
-3. **COMPLIANCE_CHECK:** Use when reviewing compliance issues
-   Format: "COMPLIANCE_CHECK: [compliance analysis]"
+3. **DRAFT_SUGGESTION:** For multiple specific drafting recommendations
+   Format: "DRAFT_SUGGESTION: 1. Add [specific content]... 2. Improve [specific area]..."
+   Use when: User wants suggestions they can apply themselves
 
-4. **SOURCE_REFERENCE:** Use when providing specific regulatory references
-   Format: "SOURCE_REFERENCE: [specific regulation/rule citations]"
+4. **COMPLIANCE_CHECK:** For regulatory compliance analysis
+   Format: "COMPLIANCE_CHECK: [analysis with specific fixes needed]"
+   Use when: User wants compliance validation
 
-5. **SUGGESTION:** Use for multiple improvement suggestions
-   Format: "SUGGESTION: [numbered list of suggestions]"
+5. **STRUCTURE_GUIDANCE:** For section organization and flow
+   Format: "STRUCTURE_GUIDANCE: [recommended structure with content outline]"
+   Use when: User needs help organizing content
 
-**QUALITY REQUIREMENTS:**
-- Maintain professional investment banking language
-- Ensure HKEX Main Board compliance
-- Include specific regulatory references where relevant
-- Consider industry-specific requirements
-- Provide actionable, detailed guidance
-- Reference sources from the regulatory context when applicable
+**DRAFTING PRIORITIES:**
+✅ ALWAYS provide concrete, implementable suggestions
+✅ Write in professional investment banking language
+✅ Ensure HKEX Main Board compliance (App1A Part A)
+✅ Include specific regulatory references
+✅ Consider industry-specific requirements
+✅ Make content ready-to-use in prospectus
+✅ Focus on ACTIONABLE improvements user can apply immediately
 
-**COMPLIANCE FOCUS AREAS:**
-- App1A Part A requirements
-- HKEX Listing Rules Chapter 9 (for continuing obligations)
-- Chapter 14 (if transaction-related)
-- Chapter 17 (if financial services)
+**KEY COMPLIANCE AREAS:**
+- App1A Part A disclosure requirements
+- HKEX Listing Rules Chapter 9 (continuing obligations)
+- Chapter 14 (notifiable transactions if relevant)
+- Chapter 17 (financial services if relevant)
 - SFC codes and guidelines
 
-Respond with the most helpful and accurate assistance based on the user's request and available regulatory sources.`;
+**RESPONSE APPROACH:**
+Be DIRECTIVE and HELPFUL. Don't just give advice - provide actual content improvements, specific text suggestions, and ready-to-implement solutions. Focus on making the user's draft better through concrete actions.
+
+Respond with the most actionable assistance to improve their IPO prospectus draft.`;
   }
 
   /**
@@ -394,6 +409,43 @@ Respond with the most helpful and accurate assistance based on the user's reques
         type: 'CONTENT_UPDATE',
         message: ipoMessageFormatter.formatMessage('I\'ve updated your content based on your request and regulatory requirements. The changes incorporate HKEX compliance standards.'),
         updatedContent,
+        sources,
+        confidence
+      };
+    }
+    
+    if (aiText.startsWith('PARTIAL_UPDATE:')) {
+      const updateText = aiText.replace('PARTIAL_UPDATE:', '').trim();
+      const match = updateText.match(/REPLACE '(.+?)' WITH '(.+?)'/s);
+      if (match) {
+        return {
+          type: 'PARTIAL_UPDATE',
+          message: ipoMessageFormatter.formatMessage('I can help you make this specific improvement to your content.'),
+          partialUpdate: {
+            searchText: match[1],
+            replaceWith: match[2]
+          },
+          sources,
+          confidence
+        };
+      }
+    }
+    
+    if (aiText.startsWith('DRAFT_SUGGESTION:')) {
+      const suggestions = this.extractSuggestions(aiText.replace('DRAFT_SUGGESTION:', '').trim());
+      return {
+        type: 'DRAFT_SUGGESTION',
+        message: ipoMessageFormatter.formatMessage(aiText.replace('DRAFT_SUGGESTION:', '').trim()),
+        sources,
+        suggestions,
+        confidence
+      };
+    }
+    
+    if (aiText.startsWith('STRUCTURE_GUIDANCE:')) {
+      return {
+        type: 'STRUCTURE_GUIDANCE',
+        message: ipoMessageFormatter.formatMessage(aiText.replace('STRUCTURE_GUIDANCE:', '').trim()),
         sources,
         confidence
       };

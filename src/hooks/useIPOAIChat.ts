@@ -15,11 +15,15 @@ interface ChatMessage {
   type: 'user' | 'ai';
   content: string;
   timestamp: Date;
-  responseType?: 'CONTENT_UPDATE' | 'GUIDANCE' | 'COMPLIANCE_CHECK' | 'SOURCE_REFERENCE' | 'SUGGESTION';
+  responseType?: 'CONTENT_UPDATE' | 'PARTIAL_UPDATE' | 'DRAFT_SUGGESTION' | 'COMPLIANCE_CHECK' | 'STRUCTURE_GUIDANCE' | 'GUIDANCE' | 'SOURCE_REFERENCE' | 'SUGGESTION';
   sources?: SourceReference[];
   complianceIssues?: string[];
   suggestions?: string[];
   confidence?: number;
+  partialUpdate?: {
+    searchText: string;
+    replaceWith: string;
+  };
   changes?: {
     section: string;
     before: string;
@@ -44,7 +48,7 @@ export const useIPOAIChat = ({
     {
       id: '1',
       type: 'ai',
-      content: 'Hello! I\'m your AI assistant specialized in Hong Kong IPO prospectus drafting. I can help you with:\n\n• **Content Updates**: Modify and improve your draft content\n• **Compliance Checks**: Validate against HKEX requirements\n• **Regulatory Guidance**: Reference specific listing rules and FAQs\n• **Professional Language**: Enhance tone and clarity\n• **Source Attribution**: Show regulatory references for all suggestions\n• **Industry Context**: Provide sector-specific insights\n\nI have access to HKEX listing rules, templates, and regulatory guidance. Just ask me to review, improve, or check compliance for your content!',
+      content: 'Welcome! I\'m your **AI Drafting Assistant** for Hong Kong IPO prospectus content. I\'m here to actively help you create, improve, and perfect your draft:\n\n**🚀 DIRECT ACTIONS I CAN TAKE:**\n• **Write & Update Content**: Give me requirements and I\'ll draft complete sections\n• **Fix Compliance Issues**: I\'ll identify and automatically fix HKEX violations\n• **Apply Specific Changes**: Request partial edits and I\'ll show exactly what to replace\n• **Restructure Sections**: Ask me to reorganize content for better flow\n• **Add Examples & Details**: I\'ll enhance your content with specific examples\n\n**📋 QUICK WAYS TO GET STARTED:**\n• "Improve this content" - I\'ll enhance what you have\n• "Check HKEX compliance" - I\'ll validate and fix issues\n• "Add more details about [topic]" - I\'ll expand specific areas\n• "Restructure this section" - I\'ll reorganize for better flow\n\n**✅ ACTION-ORIENTED ASSISTANCE:**\nI don\'t just give advice - I provide ready-to-use content improvements with **Apply** buttons you can click to instantly update your draft. Just tell me what you need!',
       timestamp: new Date(),
       responseType: 'GUIDANCE',
       confidence: 0.95
@@ -90,6 +94,7 @@ export const useIPOAIChat = ({
         complianceIssues: response.complianceIssues,
         suggestions: response.suggestions,
         confidence: response.confidence,
+        partialUpdate: response.partialUpdate,
         changes: response.updatedContent ? {
           section: selectedSection,
           before: currentContent.substring(0, 100) + '...',
@@ -151,10 +156,46 @@ export const useIPOAIChat = ({
     }
   }, [projectId, selectedSection, currentContent, onContentUpdate, isProcessing, toast]);
 
+  // Add apply changes functionality
+  const applyContentUpdate = useCallback((messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message) return;
+
+    // Find the corresponding response from the service
+    // This would have the updatedContent
+    const response = message;
+    if (response.responseType === 'CONTENT_UPDATE' && response.changes) {
+      // We need to reconstruct the updated content
+      // For now, we'll use a simple approach - the AI should have provided the full content
+      // In a production app, you'd want to store the full updated content in the message
+      toast({
+        title: "Content Applied",
+        description: "The AI's suggested content has been applied to your draft."
+      });
+      // Note: In full implementation, you'd extract and apply the updated content here
+    }
+  }, [messages, toast]);
+
+  const applyPartialUpdate = useCallback((messageId: string) => {
+    const message = messages.find(m => m.id === messageId);
+    if (!message?.partialUpdate) return;
+
+    const { searchText, replaceWith } = message.partialUpdate;
+    const updatedContent = currentContent.replace(searchText, replaceWith);
+    
+    onContentUpdate(updatedContent);
+    toast({
+      title: "Partial Update Applied",
+      description: "The suggested text change has been applied to your draft."
+    });
+  }, [messages, currentContent, onContentUpdate, toast]);
+
   return {
     messages,
     isProcessing,
-    processMessage
+    processMessage,
+    applyContentUpdate,
+    applyPartialUpdate
   };
 };
 

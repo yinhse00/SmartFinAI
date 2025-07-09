@@ -10,7 +10,8 @@ import {
   X, Send, Bot, User, RefreshCw, Loader2, 
   FileText, AlertTriangle, Lightbulb, 
   ExternalLink, ChevronDown, ChevronUp,
-  CheckCircle, AlertCircle
+  CheckCircle, AlertCircle, Play, Edit, 
+  Building, BookOpen, Target
 } from 'lucide-react';
 import { useIPOAIChat } from '@/hooks/useIPOAIChat';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
@@ -30,7 +31,13 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   onContentUpdate,
   onClose
 }) => {
-  const { messages, isProcessing, processMessage } = useIPOAIChat({
+  const { 
+    messages, 
+    isProcessing, 
+    processMessage, 
+    applyContentUpdate, 
+    applyPartialUpdate 
+  } = useIPOAIChat({
     projectId,
     selectedSection,
     currentContent,
@@ -108,25 +115,81 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                   {/* Enhanced AI Response Features */}
                   {message.type === 'ai' && (
                     <div className="mt-3 space-y-2">
-                      {/* Response Type Badge */}
+                      {/* Response Type Badge and Action Buttons */}
                       {message.responseType && (
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={message.responseType === 'CONTENT_UPDATE' ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {message.responseType === 'CONTENT_UPDATE' && <RefreshCw className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'COMPLIANCE_CHECK' && <CheckCircle className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'SUGGESTION' && <Lightbulb className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'SOURCE_REFERENCE' && <FileText className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'GUIDANCE' && <Bot className="h-3 w-3 mr-1" />}
-                            {message.responseType.replace('_', ' ')}
-                          </Badge>
-                          {message.confidence && (
-                            <Badge variant="outline" className="text-xs">
-                              {Math.round(message.confidence * 100)}% confidence
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              variant={['CONTENT_UPDATE', 'PARTIAL_UPDATE', 'DRAFT_SUGGESTION'].includes(message.responseType) ? 'default' : 'secondary'}
+                              className="text-xs"
+                            >
+                              {message.responseType === 'CONTENT_UPDATE' && <RefreshCw className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'PARTIAL_UPDATE' && <Edit className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'DRAFT_SUGGESTION' && <Target className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'COMPLIANCE_CHECK' && <CheckCircle className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'STRUCTURE_GUIDANCE' && <Building className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'SUGGESTION' && <Lightbulb className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'SOURCE_REFERENCE' && <FileText className="h-3 w-3 mr-1" />}
+                              {message.responseType === 'GUIDANCE' && <Bot className="h-3 w-3 mr-1" />}
+                              {message.responseType.replace('_', ' ')}
                             </Badge>
-                          )}
+                            {message.confidence && (
+                              <Badge variant="outline" className="text-xs">
+                                {Math.round(message.confidence * 100)}% confidence
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {/* Action Buttons */}
+                          <div className="flex gap-2">
+                            {message.responseType === 'CONTENT_UPDATE' && message.changes && (
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                className="text-xs h-7"
+                                onClick={() => applyContentUpdate(message.id)}
+                              >
+                                <Play className="h-3 w-3 mr-1" />
+                                Apply Content Update
+                              </Button>
+                            )}
+                            
+                            {message.responseType === 'PARTIAL_UPDATE' && message.partialUpdate && (
+                              <Button 
+                                size="sm" 
+                                variant="default"
+                                className="text-xs h-7"
+                                onClick={() => applyPartialUpdate(message.id)}
+                              >
+                                <Edit className="h-3 w-3 mr-1" />
+                                Apply Change
+                              </Button>
+                            )}
+                            
+                            {['DRAFT_SUGGESTION', 'STRUCTURE_GUIDANCE'].includes(message.responseType) && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-xs h-7"
+                                onClick={() => setInputValue("Apply the suggestions you provided")}
+                              >
+                                <Target className="h-3 w-3 mr-1" />
+                                Request Implementation
+                              </Button>
+                            )}
+                            
+                            {message.responseType === 'COMPLIANCE_CHECK' && message.complianceIssues && message.complianceIssues.length > 0 && (
+                              <Button 
+                                size="sm" 
+                                variant="outline"
+                                className="text-xs h-7"
+                                onClick={() => setInputValue("Fix the compliance issues you identified")}
+                              >
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Fix Issues
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       )}
 
@@ -245,37 +308,49 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
         
         {/* Input */}
         <div className="p-4 border-t">
-          {/* Quick suggestion buttons */}
+          {/* Enhanced Quick Action Buttons */}
           <div className="flex flex-wrap gap-1 mb-3">
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Check compliance with HKEX requirements")}
+              onClick={() => setInputValue("Improve and expand the current content with better details and professional language")}
             >
+              <Edit className="h-3 w-3 mr-1" />
+              Improve Content
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Check compliance with HKEX requirements and fix any issues")}
+            >
+              <CheckCircle className="h-3 w-3 mr-1" />
               Check Compliance
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Improve professional language and tone")}
+              onClick={() => setInputValue("Restructure this content for better flow and organization")}
             >
-              Improve Language
+              <Building className="h-3 w-3 mr-1" />
+              Restructure
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Add more specific details and examples")}
+              onClick={() => setInputValue("Add specific examples and strengthen the regulatory references")}
             >
-              Add Details
+              <Target className="h-3 w-3 mr-1" />
+              Add Examples
             </Button>
           </div>
           
           <div className="flex gap-2">
             <Input
-              placeholder="Ask for compliance checks, content improvements, or regulatory guidance..."
+              placeholder="Tell me what to improve, add, or fix in your draft content..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
