@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { grokService } from '@/services/grokService';
 import { contextService } from '@/services/regulatory/contextService';
 import { ipoMessageFormatter } from './ipoMessageFormatter';
+import { commandProcessor, CommandAnalysis } from './commandProcessor';
 
 interface SourceReference {
   type: 'regulation' | 'template' | 'guidance' | 'faq';
@@ -94,14 +95,20 @@ export class IPOAIChatService {
       // Get section-specific templates and guidance with error handling
       const sectionGuidance = await this.getSectionGuidance(sectionType, projectId);
       
-      console.log('IPO Chat: Building prompt...');
-      // Build enhanced prompt with sources
+      console.log('IPO Chat: Analyzing command...');
+      // Analyze user command for intent and targets
+      const commandAnalysis = commandProcessor.analyzeCommand(userMessage);
+      console.log('IPO Chat: Command analysis:', commandAnalysis);
+      
+      console.log('IPO Chat: Building enhanced prompt...');
+      // Build enhanced prompt with command analysis and sources
       const prompt = this.buildEnhancedPrompt(
         userMessage,
         sectionType,
         currentContent,
         regulatoryContext,
-        sectionGuidance
+        sectionGuidance,
+        commandAnalysis
       );
 
       console.log('IPO Chat: Generating response via Grok...');
@@ -318,15 +325,32 @@ export class IPOAIChatService {
     sectionType: string,
     currentContent: string,
     regulatoryContext: any,
-    sectionGuidance: any
+    sectionGuidance: any,
+    commandAnalysis: CommandAnalysis
   ): string {
     const sectionTitle = this.getSectionTitle(sectionType);
+    
+    // Generate command-specific guidance
+    const commandGuidance = commandProcessor.generateEnhancedPrompt(
+      commandAnalysis, 
+      currentContent, 
+      sectionType
+    );
     
     return `
 You are an expert Hong Kong IPO prospectus drafting AI assistant. Your primary role is to ACTIVELY HELP USERS DRAFT AND IMPROVE their IPO prospectus content through specific, actionable assistance.
 
 **CURRENT DRAFT SECTION: ${sectionTitle}**
 **CURRENT CONTENT LENGTH: ${currentContent?.length || 0} characters**
+
+**COMMAND ANALYSIS:**
+Intent: ${commandAnalysis.intent}
+Targets: ${commandAnalysis.targets.join(', ') || 'General content'}
+Modifiers: ${commandAnalysis.modifiers.join(', ') || 'Standard approach'}
+Confidence: ${Math.round(commandAnalysis.confidence * 100)}%
+
+**COMMAND-SPECIFIC GUIDANCE:**
+${commandGuidance}
 
 **EXISTING DRAFT:**
 ${currentContent || '⚠️ NO CONTENT YET - Ready to start drafting from scratch.'}

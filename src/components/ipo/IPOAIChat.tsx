@@ -314,25 +314,43 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Improve and expand the current content with better details and professional language")}
+              onClick={() => setInputValue("Make this more professional and formal for institutional investors")}
             >
               <Edit className="h-3 w-3 mr-1" />
-              Improve Content
+              Make Professional
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Check compliance with HKEX requirements and fix any issues")}
+              onClick={() => setInputValue("Add regulatory citations and HKEX listing rules references")}
+            >
+              <BookOpen className="h-3 w-3 mr-1" />
+              Add Citations
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Expand this content with more details and comprehensive information")}
+            >
+              <Target className="h-3 w-3 mr-1" />
+              Expand Content
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Fix compliance issues and ensure HKEX requirements are met")}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
-              Check Compliance
+              Fix Compliance
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Restructure this content for better flow and organization")}
+              onClick={() => setInputValue("Restructure this for better flow and logical organization")}
             >
               <Building className="h-3 w-3 mr-1" />
               Restructure
@@ -341,16 +359,16 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Add specific examples and strengthen the regulatory references")}
+              onClick={() => setInputValue("Add specific examples to strengthen the content")}
             >
-              <Target className="h-3 w-3 mr-1" />
+              <Lightbulb className="h-3 w-3 mr-1" />
               Add Examples
             </Button>
           </div>
           
           <div className="flex gap-2">
             <Input
-              placeholder="Tell me what to improve, add, or fix in your draft content..."
+              placeholder="Try: 'Make this more professional' or 'Add regulatory citations' or 'Fix compliance issues'..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
