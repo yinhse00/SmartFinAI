@@ -88,7 +88,7 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
       regulatoryContext: responseContext,
       maxTokens: isComplexQuery ? 25000 : 15000, // Higher token limits for quality
       temperature: 0.5, // Balanced temperature for better quality
-      model: "grok-3-beta", // Always use the full model for user responses
+      model: "grok-4-0709", // Always use the full model for user responses
       progressCallback: (progress: number, stage: string) => {
         // Update progress during response generation
         setStepProgress(`${lastInputWasChinese ? '生成回复' : 'Generating'} - ${Math.round(progress)}%`);

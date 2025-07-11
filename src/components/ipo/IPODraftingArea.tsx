@@ -127,6 +127,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
           isLoading={isLoading}
           onRegenerate={handleRegenerateContent}
           layoutMode={layoutMode}
+          sectionType={selectedSection}
         />
 
         <SourcesFooter
@@ -169,6 +170,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
             isLoading={isLoading}
             onRegenerate={handleRegenerateContent}
             layoutMode={layoutMode}
+            sectionType={selectedSection}
           />
         )}
 

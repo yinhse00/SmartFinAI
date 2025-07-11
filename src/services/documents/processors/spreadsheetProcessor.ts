@@ -253,7 +253,7 @@ export const spreadsheetProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-3-beta",
+        model: "grok-4-0709",
         messages: [
           {
             role: "system" as const, 
@@ -344,7 +344,7 @@ export const spreadsheetProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-3-beta",
+        model: "grok-4-0709",
         messages: [
           {
             role: "system" as const, 
