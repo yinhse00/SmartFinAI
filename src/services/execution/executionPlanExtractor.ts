@@ -119,7 +119,7 @@ Focus on practical, Hong Kong market-specific tasks that can be tracked and exec
           { role: 'system', content: 'You are a Hong Kong financial advisory execution planning expert.' },
           { role: 'user', content: extractionPrompt }
         ],
-        model: 'grok-3-beta',
+        model: 'grok-4-0709',
         temperature: 0.2,
         max_tokens: 8000,
         metadata: {

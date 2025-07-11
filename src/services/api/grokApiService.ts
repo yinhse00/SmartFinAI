@@ -2,6 +2,7 @@
 import { connectionTester } from './grok/connectionTester';
 import { apiClient } from './grok/apiClient';
 import { offlineResponseGenerator } from './grok/offlineResponseGenerator';
+import { GROK_MODELS } from '@/config/grokModels';
 
 // Context cache implementation
 const contextCache = new Map<string, {
@@ -61,8 +62,8 @@ export const grokApiService = {
       Ensure your response is complete, accurate, and provides the user with all relevant information.
       `;
       
-      // OPTIMIZATION: Always use grok-3-beta to maintain quality
-      const model = 'grok-3-beta';
+      // OPTIMIZATION: Always use primary model to maintain quality
+      const model = GROK_MODELS.PRIMARY;
       
       // Enhanced API call with quality-optimized parameters
       const response = await apiClient.callChatCompletions({
@@ -116,7 +117,7 @@ export const grokApiService = {
             content: `Classify: ${query}`
           }
         ],
-        model: 'grok-3-beta', // OPTIMIZATION: Use full model for classification
+        model: GROK_MODELS.PRIMARY, // OPTIMIZATION: Use full model for classification
         temperature: 0.3,
         max_tokens: 1000, // Sufficient for classification
         metadata: {

@@ -38,7 +38,7 @@ export const responseGeneratorCore = {
       
       // OPTIMIZED: Always use full model for all responses to maintain quality
       if (!requestBody.model) {
-        requestBody.model = 'grok-3-beta';
+        requestBody.model = 'grok-4-0709';
       }
       
       // Forward request to API client
@@ -62,7 +62,7 @@ export const responseGeneratorCore = {
           { role: 'system', content: systemPrompt },
           { role: 'user', content: prompt }
         ],
-        model: "grok-3-beta",
+        model: "grok-4-0709",
         temperature: 0.4,
         max_tokens: 15000 // Enhanced for quality responses
       };

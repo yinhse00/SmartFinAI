@@ -51,7 +51,7 @@ export const imageProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-3-beta", // OPTIMIZATION: Always use full model for image processing
+        model: "grok-4-0709", // OPTIMIZATION: Always use full model for image processing
         messages: [
           {
             role: "user" as const, 

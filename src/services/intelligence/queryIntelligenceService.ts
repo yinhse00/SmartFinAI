@@ -51,7 +51,7 @@ Return ONLY the JSON object, no other text.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze this query: ${query}` }
         ],
-        model: 'grok-3-beta',
+        model: 'grok-4-0709',
         temperature: 0.2,
         max_tokens: 800,
         metadata: { processingStage: 'query_analysis' }
@@ -139,7 +139,7 @@ Return ONLY the JSON object, no other text.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze the query "${query}" and provide a search strategy.` }
         ],
-        model: 'grok-3-beta',
+        model: 'grok-4-0709',
         temperature: 0.1,
         max_tokens: 1200,
         metadata: { processingStage: 'ai_search_strategy' }

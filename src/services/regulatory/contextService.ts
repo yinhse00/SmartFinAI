@@ -23,7 +23,7 @@ export const contextService = {
       const metadata = {
         ...(options?.metadata || {}),
         specializedQuery: isIFAQuery ? 'ifa' : (isTakeoversQuery ? 'takeovers' : undefined),
-        model: isIFAQuery || isTakeoversQuery ? 'grok-3-beta' : 'grok-3-mini-beta',
+        model: isIFAQuery || isTakeoversQuery ? 'grok-4-0709' : 'grok-3-mini-beta',
         processingStage: options?.isPreliminaryAssessment ? 'preliminary' : 'main',
         hasRegulatoryDatabase: false // Never use database files
       };

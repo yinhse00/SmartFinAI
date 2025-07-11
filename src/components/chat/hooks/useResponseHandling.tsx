@@ -66,7 +66,7 @@ export const useResponseHandling = (
           financialQueryType,
           reasoning,
           processingTime: 0, // Default value since response structure may not have this
-          model: 'grok-3-beta', // Default model
+          model: 'grok-4-0709', // Default model
           temperature: 0.5, // Default temperature
           maxTokens: 15000, // Default max tokens
           isTruncated: false, // Default to false, will be updated if needed
