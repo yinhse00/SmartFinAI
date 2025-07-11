@@ -89,7 +89,7 @@ Ensure the updatedResults maintains the exact same TypeScript interface structur
           { role: 'system', content: 'You are a Hong Kong financial advisory expert specializing in deal structuring and regulatory compliance.' },
           { role: 'user', content: followUpPrompt }
         ],
-        model: 'grok-4-0709',
+        model: 'grok-3-beta',
         temperature: 0.3,
         max_tokens: 15000,
         metadata: {

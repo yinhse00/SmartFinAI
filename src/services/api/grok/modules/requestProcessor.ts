@@ -205,7 +205,7 @@ export const processApiRequest = async (
   }
   
   // OPTIMIZATION: Always use full model for all queries to maintain quality
-  requestBody.model = "grok-4-0709";
+  requestBody.model = "grok-3-beta";
   
   // Prepare request parameters without aggressive token capping
   const { effectiveTokenLimit } = prepareRequestParameters(requestBody);

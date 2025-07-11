@@ -21,7 +21,7 @@ For listing-related queries, determine whether they relate to new listing applic
 Provide confidence scores (0-1) for each potential category.
 DO NOT answer the query - ONLY classify it.`;
       
-      // Call the Grok-4-0709 model for enhanced classification
+      // Call the Grok-3-Beta model for enhanced classification
       const response = await grokApiService.callChatCompletions({
         messages: [
           { role: 'system', content: systemMessage },
@@ -46,7 +46,7 @@ Output ONLY a JSON object with these fields:
 }` 
           }
         ],
-        model: 'grok-4-0709',
+        model: 'grok-3-beta',
         temperature: 0.2,
         max_tokens: 1000,
         metadata: {

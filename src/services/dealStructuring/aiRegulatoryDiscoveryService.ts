@@ -131,7 +131,7 @@ Return ONLY the JSON object.`;
           { role: 'system', content: systemPrompt },
           { role: 'user', content: `Analyze: ${transactionDescription}` }
         ],
-        model: 'grok-4-0709',
+        model: 'grok-3-beta',
         temperature: 0.1,
         max_tokens: 800,
         metadata: { processingStage: 'regulatory_discovery' }

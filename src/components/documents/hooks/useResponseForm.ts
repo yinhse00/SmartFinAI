@@ -166,7 +166,7 @@ export function useResponseForm(): UseResponseFormReturn {
       const response = await grokService.generateResponse({
         prompt: formattedPrompt,
         regulatoryContext: regulatoryContext || undefined,
-        model: 'grok-4-0709',
+        model: 'grok-3-beta',
         maxTokens: 25000, // Higher token limit for comprehensive document responses
         temperature: 0.4  // Lower temperature for more consistent formatting
       });

@@ -190,7 +190,7 @@ export const documentProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-4-0709",
+        model: "grok-3-beta",
         messages: [
           {
             role: "system" as const, 
@@ -266,7 +266,7 @@ export const documentProcessor = {
       }
       
       const requestBody: ChatCompletionRequest = {
-        model: "grok-4-0709",
+        model: "grok-3-beta",
         messages: [
           {
             role: "user" as const, 
