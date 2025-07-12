@@ -7,6 +7,7 @@ import { DraftContentArea } from './drafting/DraftContentArea';
 import { SourcesFooter } from './drafting/SourcesFooter';
 import { TabNavigation } from './drafting/TabNavigation';
 import { InputGenerateTab } from './drafting/InputGenerateTab';
+import { LaTeXEditor } from './latex/LaTeXEditor';
 
 interface IPODraftingAreaProps {
   projectId: string;
@@ -15,6 +16,7 @@ interface IPODraftingAreaProps {
   isChatOpen: boolean;
   onPassContentToChat: (content: string, onUpdate: (newContent: string) => void) => void;
   layoutMode?: 'drafting' | 'tab';
+  enableLaTeX?: boolean;
 }
 
 export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
@@ -23,7 +25,8 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
   onToggleChat,
   isChatOpen,
   onPassContentToChat,
-  layoutMode = 'drafting'
+  layoutMode = 'drafting',
+  enableLaTeX = false
 }) => {
   const [activeTab, setActiveTab] = useState('draft');
   const [isEditMode, setIsEditMode] = useState(false);
@@ -154,6 +157,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
           <TabNavigation
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            enableLaTeX={enableLaTeX}
           />
         </div>
       </div>
@@ -187,6 +191,21 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
         {activeTab === 'sources' && (
           <div className="h-full">
             <EnhancedSourcesDisplay sources={lastGeneratedResponse?.sources || []} />
+          </div>
+        )}
+
+        {activeTab === 'latex' && enableLaTeX && (
+          <div className="h-full">
+            <LaTeXEditor
+              projectId={projectId}
+              sectionType={selectedSection}
+              initialContent={generatedContent}
+              onContentChange={setGeneratedContent}
+              onSave={(content) => {
+                setGeneratedContent(content);
+                // Could trigger save to database here
+              }}
+            />
           </div>
         )}
       </div>
