@@ -239,13 +239,18 @@ export const connectionTester = {
     }
   },
   
-  // Start a background health check
-  startBackgroundHealthCheck: () => {
+  // Start a background health check (now controlled by user settings)
+  startBackgroundHealthCheck: (isEnabled: boolean = false) => {
+    if (!isEnabled) {
+      console.log('Background health checks disabled by user settings');
+      return;
+    }
+    
     if (healthCheckInterval) {
       return; // Already running
     }
     
-    // Check every 2 minutes
+    // Check every 10 minutes (reduced frequency)
     healthCheckInterval = window.setInterval(() => {
       const apiKey = getGrokApiKey();
       if (!apiKey) {
@@ -260,7 +265,7 @@ export const connectionTester = {
           // Silent failure for background checks
         });
       }
-    }, 120000); // 2 minutes
+    }, 600000); // 10 minutes (reduced from 2 minutes)
   },
   
   // Stop background health check

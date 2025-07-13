@@ -23,30 +23,9 @@ export const useRealTimeAnalysis = ({
   const [dismissedSuggestions, setDismissedSuggestions] = useState<Set<string>>(new Set());
   const lastAnalysisRef = useRef<string>('');
 
-  // Analyze content when it changes
-  useEffect(() => {
-    if (!isEnabled || !content.trim() || content === lastAnalysisRef.current) {
-      return;
-    }
-
-    setIsAnalyzing(true);
-    
-    realTimeAnalyzer.analyzeContent(
-      content,
-      sectionType,
-      (result) => {
-        setAnalysisResult(result);
-        setIsAnalyzing(false);
-        lastAnalysisRef.current = content;
-      },
-      debounceMs
-    );
-
-    // Cleanup function to prevent stale updates
-    return () => {
-      setIsAnalyzing(false);
-    };
-  }, [content, sectionType, isEnabled, debounceMs]);
+  // Manual analysis only - no automatic content analysis
+  // Real-time analysis is disabled to reduce API usage
+  // Use forceAnalysis() method for manual analysis
 
   // Get filtered suggestions (excluding dismissed ones)
   const activeSuggestions = analysisResult?.suggestions.filter(

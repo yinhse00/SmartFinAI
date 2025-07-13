@@ -10,7 +10,8 @@ const Chat = () => {
   const [demoMode, setDemoMode] = useState(false);
   
   useEffect(() => {
-    const checkAndSetApiKey = () => {
+    // Single API key check on mount (no automatic intervals)
+    const checkApiKey = () => {
       try {
         const currentApiKey = getGrokApiKey();
         const isValidKey = currentApiKey && 
@@ -18,54 +19,21 @@ const Chat = () => {
                           currentApiKey.length >= 20;
         
         if (isValidKey) {
-          console.log('Valid API key already exists');
+          console.log('Valid API key found');
           setDemoMode(false);
-          return;
+        } else {
+          console.log('No valid API key available');
+          setDemoMode(true);
         }
-        
-        if (currentApiKey && (!currentApiKey.startsWith('xai-') || currentApiKey.length < 20)) {
-          console.warn('Invalid API key format detected, clearing');
-          try {
-            localStorage.removeItem('GROK_API_KEY');
-            localStorage.removeItem('grokApiKey');
-          } catch (e) {
-            console.error('Failed to clear invalid API keys', e);
-          }
-        }
-        
-        // For security reasons, don't hardcode API keys - user should provide them
-        setDemoMode(true);
-        console.log('No valid API key available');
-        
-        setTimeout(() => {
-          const storedKey = getGrokApiKey();
-          if (!storedKey || !storedKey.startsWith('xai-') || storedKey.length < 20) {
-            setDemoMode(true);
-          } else {
-            setDemoMode(false);
-          }
-        }, 300);
-        
       } catch (e) {
-        console.error('Error in API key handling:', e);
+        console.error('Error checking API key:', e);
+        setDemoMode(true);
       }
     };
     
-    checkAndSetApiKey();
-    setTimeout(checkAndSetApiKey, 500);
-    
-    const intervalCheck = setInterval(() => {
-      const key = getGrokApiKey();
-      if (!key || !key.startsWith('xai-') || key.length < 20) {
-        console.warn('Periodic check: API key missing or invalid, attempting to fix');
-        checkAndSetApiKey();
-      }
-    }, 60000);
-    
-    return () => {
-      clearInterval(intervalCheck);
-    };
-  }, [toast]);
+    // Check once on mount
+    checkApiKey();
+  }, []);
 
   return (
     <MainLayout>

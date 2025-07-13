@@ -76,8 +76,14 @@ export const useIPOContentGeneration = () => {
     return generateContent(request);
   };
 
-  const loadExistingContent = useCallback(async (projectId: string, sectionType: string): Promise<boolean> => {
-    console.log('🔄 Loading existing content for:', { projectId, sectionType });
+  const loadExistingContent = useCallback(async (projectId: string, sectionType: string, forceLoad: boolean = false): Promise<boolean> => {
+    // Only load if explicitly requested (forceLoad = true) to reduce automatic API usage
+    if (!forceLoad) {
+      console.log('📝 Automatic content loading disabled - use manual load');
+      return false;
+    }
+    
+    console.log('🔄 Manual loading of existing content for:', { projectId, sectionType });
     setIsLoading(true);
     try {
       const existingSection = await ipoContentGenerationService.loadSectionContent(projectId, sectionType);

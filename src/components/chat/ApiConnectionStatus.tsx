@@ -120,12 +120,7 @@ const ApiConnectionStatus = ({
       checkConnection();
     }
   };
-  useEffect(() => {
-    // Only check connection if external offline mode is not provided
-    if (externalOfflineMode === undefined) {
-      checkConnection();
-    }
-  }, [externalOfflineMode]);
+  // No automatic connection check on mount - user must manually test
   return <div className="mb-4">
       {connectionStatus.loading ? <Alert className="bg-finance-light-blue/10 border-finance-light-blue">
           <RefreshCw className="h-4 w-4 animate-spin text-finance-medium-blue" />

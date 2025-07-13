@@ -7,6 +7,7 @@ import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useFileHandling } from './hooks/useFileHandling';
 import ApiConnectionStatus from './ApiConnectionStatus';
+import { ApiUsageControl } from './ApiUsageControl';
 
 const ChatInterface: React.FC = () => {
   const {
@@ -70,11 +71,17 @@ const ChatInterface: React.FC = () => {
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
-        <ApiConnectionStatus 
-          onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
-          isOfflineMode={isOfflineMode}
-          onTryReconnect={tryReconnect}
-        />
+        <div className="space-y-4 mb-6">
+          <ApiConnectionStatus 
+            onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
+            isOfflineMode={isOfflineMode}
+            onTryReconnect={tryReconnect}
+          />
+          
+          <ApiUsageControl 
+            onTestConnection={async () => { await tryReconnect(); }}
+          />
+        </div>
         
         <ChatContainer
           messages={messages}
