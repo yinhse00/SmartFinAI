@@ -1,19 +1,18 @@
-import React, { useState } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Separator } from '@/components/ui/separator';
 import { 
-  X, Send, Bot, User, RefreshCw, Loader2, 
-  FileText, AlertTriangle, Lightbulb, 
-  ExternalLink, ChevronDown, ChevronUp,
-  CheckCircle, AlertCircle, Play, Edit, 
-  Building, BookOpen, Target
+  X, Send, Bot, User, Loader2, 
+  Brain, Target, CheckCircle,
+  Building, BookOpen, Edit, Lightbulb
 } from 'lucide-react';
-import { useIPOAIChat } from '@/hooks/useIPOAIChat';
+import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
+import { ProactiveSuggestions } from './ProactiveSuggestions';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 
 interface IPOAIChatProps {
@@ -34,10 +33,13 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   const { 
     messages, 
     isProcessing, 
+    currentAnalysis,
     processMessage, 
-    applyContentUpdate, 
-    applyPartialUpdate 
-  } = useIPOAIChat({
+    applyAutoFix,
+    applyImprovement,
+    refreshAnalysis,
+    analyzeCurrentContent
+  } = useEnhancedIPOAIChat({
     projectId,
     selectedSection,
     currentContent,
@@ -45,6 +47,13 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   });
   
   const [inputValue, setInputValue] = useState('');
+
+  // Auto-analyze content when it changes
+  useEffect(() => {
+    if (currentContent && currentContent.trim().length > 50) {
+      analyzeCurrentContent();
+    }
+  }, [currentContent, analyzeCurrentContent]);
 
   const handleSendMessage = () => {
     if (!inputValue.trim() || isProcessing) return;
@@ -65,21 +74,34 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
-            <Bot className="h-4 w-4" />
-            AI Assistant
+            <Brain className="h-4 w-4" />
+            Enhanced AI Assistant
           </CardTitle>
           <Button variant="ghost" size="sm" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>
         </div>
         <p className="text-xs text-muted-foreground">
-          Context: {selectedSection} section
+          Proactive analysis for {selectedSection} section
         </p>
       </CardHeader>
       
       <CardContent className="flex flex-col h-[calc(100%-5rem)] p-0">
+        {/* Proactive Suggestions Panel */}
+        {currentAnalysis && currentAnalysis.hasIssues && (
+          <div className="px-4 pb-4 border-b">
+            <ProactiveSuggestions
+              analysis={currentAnalysis}
+              onApplyFix={applyAutoFix}
+              onApplyImprovement={applyImprovement}
+              onRefreshAnalysis={refreshAnalysis}
+              isLoading={isProcessing}
+            />
+          </div>
+        )}
+
         {/* Messages */}
-        <ScrollArea className="flex-1 px-4 min-h-0 h-[calc(100vh-20rem)] max-h-[calc(100vh-20rem)]" type="always">
+        <ScrollArea className="flex-1 px-4 min-h-0" type="always">
           <div className="space-y-4 pb-4 min-h-full">
             {messages.map((message) => (
               <div
@@ -108,175 +130,54 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                       dangerouslySetInnerHTML={{ 
                         __html: ipoMessageFormatter.formatMessage(message.content) 
                       }}
-                      className="regulatory-content [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
+                      className="regulatory-content"
                     />
                   )}
                   
-                  {/* Enhanced AI Response Features */}
+                  {/* Enhanced Response Features */}
                   {message.type === 'ai' && (
                     <div className="mt-3 space-y-2">
-                      {/* Response Type Badge and Action Buttons */}
+                      {/* Response Type Badge */}
                       {message.responseType && (
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2">
-                            <Badge 
-                              variant={['CONTENT_UPDATE', 'PARTIAL_UPDATE', 'DRAFT_SUGGESTION'].includes(message.responseType) ? 'default' : 'secondary'}
-                              className="text-xs"
-                            >
-                              {message.responseType === 'CONTENT_UPDATE' && <RefreshCw className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'PARTIAL_UPDATE' && <Edit className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'DRAFT_SUGGESTION' && <Target className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'COMPLIANCE_CHECK' && <CheckCircle className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'STRUCTURE_GUIDANCE' && <Building className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'SUGGESTION' && <Lightbulb className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'SOURCE_REFERENCE' && <FileText className="h-3 w-3 mr-1" />}
-                              {message.responseType === 'GUIDANCE' && <Bot className="h-3 w-3 mr-1" />}
-                              {message.responseType.replace('_', ' ')}
+                        <div className="flex items-center gap-2">
+                          <Badge 
+                            variant={message.responseType.includes('UPDATE') ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {message.responseType === 'PROACTIVE_ANALYSIS' && <Brain className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'TARGETED_IMPROVEMENTS' && <Target className="h-3 w-3 mr-1" />}
+                            {message.responseType === 'CONTENT_UPDATE' && <Edit className="h-3 w-3 mr-1" />}
+                            {message.responseType.replace('_', ' ')}
+                          </Badge>
+                          {message.confidence && (
+                            <Badge variant="outline" className="text-xs">
+                              {Math.round(message.confidence * 100)}% confidence
                             </Badge>
-                            {message.confidence && (
-                              <Badge variant="outline" className="text-xs">
-                                {Math.round(message.confidence * 100)}% confidence
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          {/* Action Buttons */}
-                          <div className="flex gap-2">
-                            {message.responseType === 'CONTENT_UPDATE' && message.changes && (
-                              <Button 
-                                size="sm" 
-                                variant="default"
-                                className="text-xs h-7"
-                                onClick={() => applyContentUpdate(message.id)}
-                              >
-                                <Play className="h-3 w-3 mr-1" />
-                                Apply Content Update
-                              </Button>
-                            )}
-                            
-                            {message.responseType === 'PARTIAL_UPDATE' && message.partialUpdate && (
-                              <Button 
-                                size="sm" 
-                                variant="default"
-                                className="text-xs h-7"
-                                onClick={() => applyPartialUpdate(message.id)}
-                              >
-                                <Edit className="h-3 w-3 mr-1" />
-                                Apply Change
-                              </Button>
-                            )}
-                            
-                            {['DRAFT_SUGGESTION', 'STRUCTURE_GUIDANCE'].includes(message.responseType) && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-xs h-7"
-                                onClick={() => setInputValue("Apply the suggestions you provided")}
-                              >
-                                <Target className="h-3 w-3 mr-1" />
-                                Request Implementation
-                              </Button>
-                            )}
-                            
-                            {message.responseType === 'COMPLIANCE_CHECK' && message.complianceIssues && message.complianceIssues.length > 0 && (
-                              <Button 
-                                size="sm" 
-                                variant="outline"
-                                className="text-xs h-7"
-                                onClick={() => setInputValue("Fix the compliance issues you identified")}
-                              >
-                                <CheckCircle className="h-3 w-3 mr-1" />
-                                Fix Issues
-                              </Button>
-                            )}
-                          </div>
+                          )}
                         </div>
                       )}
 
-                      {/* Compliance Issues */}
-                      {message.complianceIssues && message.complianceIssues.length > 0 && (
-                        <Collapsible>
-                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-destructive hover:text-destructive/80">
-                            <AlertTriangle className="h-3 w-3" />
-                            {message.complianceIssues.length} Compliance Issue{message.complianceIssues.length > 1 ? 's' : ''}
-                            <ChevronDown className="h-3 w-3" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="mt-2">
-                            <div className="space-y-1">
-                              {message.complianceIssues.map((issue, index) => (
-                                <div key={index} className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                                  <AlertCircle className="h-3 w-3 inline mr-1" />
-                                  {issue}
-                                </div>
-                              ))}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
-
-                      {/* Suggestions */}
-                      {message.suggestions && message.suggestions.length > 0 && (
-                        <Collapsible>
-                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-blue-600 hover:text-blue-800">
-                            <Lightbulb className="h-3 w-3" />
-                            {message.suggestions.length} Suggestion{message.suggestions.length > 1 ? 's' : ''}
-                            <ChevronDown className="h-3 w-3" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="mt-2">
-                            <div className="space-y-1">
-                              {message.suggestions.map((suggestion, index) => (
-                                <div key={index} className="text-xs bg-blue-50 p-2 rounded">
-                                  {suggestion}
-                                </div>
-                              ))}
-                            </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
-
-                      {/* Sources */}
-                      {message.sources && message.sources.length > 0 && (
-                        <Collapsible>
-                          <CollapsibleTrigger className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground">
-                            <FileText className="h-3 w-3" />
-                            {message.sources.length} Source{message.sources.length > 1 ? 's' : ''}
-                            <ChevronDown className="h-3 w-3" />
-                          </CollapsibleTrigger>
-                          <CollapsibleContent className="mt-2">
-                            <div className="space-y-2">
-                              {message.sources.map((source, index) => (
-                                <div key={index} className="text-xs bg-muted/50 p-2 rounded">
-                                  <div className="flex items-center justify-between mb-1">
-                                    <Badge variant="outline" className="text-xs">
-                                      {source.type}
-                                    </Badge>
-                                    <span className="text-xs text-muted-foreground">
-                                      {Math.round(source.confidence * 100)}%
-                                    </span>
-                                  </div>
-                                  <p className="font-medium">{source.title}</p>
-                                  <p className="text-muted-foreground">
-                                    {source.content.substring(0, 100)}...
+                      {/* Targeted Edits Display */}
+                      {message.targetedEdits && message.targetedEdits.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium">Targeted Improvements:</p>
+                          {message.targetedEdits.map((edit, index) => (
+                            <div key={edit.id} className="bg-blue-50 border border-blue-200 rounded p-2">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <p className="text-xs font-medium text-blue-800">{edit.title}</p>
+                                  <p className="text-xs text-blue-600 mt-1">{edit.description}</p>
+                                  <p className="text-xs text-blue-500 mt-1 font-mono bg-blue-100 p-1 rounded">
+                                    {edit.previewText}
                                   </p>
-                                  {source.reference && (
-                                    <div className="flex items-center gap-1 mt-1">
-                                      <ExternalLink className="h-3 w-3" />
-                                      <span className="text-xs">{source.reference}</span>
-                                    </div>
-                                  )}
                                 </div>
-                              ))}
+                                <Badge variant="outline" className="text-xs">
+                                  {Math.round(edit.confidence * 100)}%
+                                </Badge>
+                              </div>
                             </div>
-                          </CollapsibleContent>
-                        </Collapsible>
-                      )}
-
-                      {/* Legacy changes indicator */}
-                      {message.changes && (
-                        <Badge variant="secondary" className="text-xs">
-                          <RefreshCw className="h-3 w-3 mr-1" />
-                          Content Updated
-                        </Badge>
+                          ))}
+                        </div>
                       )}
                     </div>
                   )}
@@ -298,7 +199,7 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
                 <div className="bg-muted rounded-lg p-3 text-sm">
                   <div className="flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    <span>Analyzing your request and improving content...</span>
+                    <span>Analyzing content and generating intelligent suggestions...</span>
                   </div>
                 </div>
               </div>
@@ -306,42 +207,24 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
           </div>
         </ScrollArea>
         
-        {/* Input */}
+        {/* Enhanced Input with Smart Actions */}
         <div className="p-4 border-t">
-          {/* Enhanced Quick Action Buttons */}
+          {/* Smart Quick Actions */}
           <div className="flex flex-wrap gap-1 mb-3">
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Make this more professional and formal for institutional investors")}
+              onClick={() => setInputValue("Analyze my content for issues and improvements")}
             >
-              <Edit className="h-3 w-3 mr-1" />
-              Make Professional
+              <Brain className="h-3 w-3 mr-1" />
+              Analyze Content
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Add regulatory citations and HKEX listing rules references")}
-            >
-              <BookOpen className="h-3 w-3 mr-1" />
-              Add Citations
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs h-6"
-              onClick={() => setInputValue("Expand this content with more details and comprehensive information")}
-            >
-              <Target className="h-3 w-3 mr-1" />
-              Expand Content
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-xs h-6"
-              onClick={() => setInputValue("Fix compliance issues and ensure HKEX requirements are met")}
+              onClick={() => setInputValue("Fix all compliance issues automatically")}
             >
               <CheckCircle className="h-3 w-3 mr-1" />
               Fix Compliance
@@ -350,25 +233,43 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Restructure this for better flow and logical organization")}
+              onClick={() => setInputValue("Apply all quick improvements you found")}
             >
-              <Building className="h-3 w-3 mr-1" />
-              Restructure
+              <Target className="h-3 w-3 mr-1" />
+              Apply Improvements
             </Button>
             <Button
               variant="outline"
               size="sm"
               className="text-xs h-6"
-              onClick={() => setInputValue("Add specific examples to strengthen the content")}
+              onClick={() => setInputValue("Make this content more professional and detailed")}
             >
-              <Lightbulb className="h-3 w-3 mr-1" />
+              <Edit className="h-3 w-3 mr-1" />
+              Enhance Quality
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Add specific examples and regulatory citations")}
+            >
+              <BookOpen className="h-3 w-3 mr-1" />
               Add Examples
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-6"
+              onClick={() => setInputValue("Restructure this for better organization and flow")}
+            >
+              <Building className="h-3 w-3 mr-1" />
+              Restructure
             </Button>
           </div>
           
           <div className="flex gap-2">
             <Input
-              placeholder="Try: 'Make this more professional' or 'Add regulatory citations' or 'Fix compliance issues'..."
+              placeholder="Try: 'Analyze my content', 'Fix compliance issues', 'Apply improvements', or ask specific questions..."
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyPress={handleKeyPress}
