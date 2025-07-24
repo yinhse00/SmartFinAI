@@ -115,10 +115,10 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
     return (
       <div className="h-full flex flex-col">
         <DraftingHeader
-          sectionTitle={getSectionTitle(selectedSection)}
+          selectedSection={selectedSection}
+          onSelectSection={() => {}} // Will be passed from parent
           isChatOpen={isChatOpen}
           onToggleChat={onToggleChat}
-          layoutMode={layoutMode}
         />
 
         <DraftContentArea
@@ -146,10 +146,10 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
       {/* Header with Controls */}
       <div className="border-b bg-background p-4">
         <DraftingHeader
-          sectionTitle={getSectionTitle(selectedSection)}
+          selectedSection={selectedSection}
+          onSelectSection={() => {}} // Will be passed from parent
           isChatOpen={isChatOpen}
           onToggleChat={onToggleChat}
-          layoutMode={layoutMode}
         />
         
         {/* Tab Navigation in Header */}

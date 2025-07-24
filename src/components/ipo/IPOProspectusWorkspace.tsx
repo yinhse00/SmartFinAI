@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { IPOChapterNavigation } from './IPOChapterNavigation';
-import { IPODraftingArea } from './IPODraftingArea';
+import { MaximizedDraftingArea } from './MaximizedDraftingArea';
 import { IPOAIChat } from './IPOAIChat';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
@@ -122,28 +121,17 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
             onContentGenerated={handleContentGenerated}
           />
         ) : (
-          // Layout 2: Drafting Mode
+          // Layout 2: Drafting Mode - Maximized with optional AI Chat
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            {/* Chapter Navigation Panel */}
-            <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
-              <IPOChapterNavigation
+            {/* Main Drafting Screen - Takes full width when chat is closed */}
+            <ResizablePanel defaultSize={isChatPanelOpen ? 70 : 100} minSize={60}>
+              <MaximizedDraftingArea
                 projectId={project.id}
                 selectedSection={selectedSection}
                 onSelectSection={setSelectedSection}
-              />
-            </ResizablePanel>
-
-            <ResizableHandle />
-
-            {/* Main Drafting Screen */}
-            <ResizablePanel defaultSize={isChatPanelOpen ? 50 : 80} minSize={40}>
-              <IPODraftingArea
-                projectId={project.id}
-                selectedSection={selectedSection}
                 onToggleChat={() => setIsChatPanelOpen(!isChatPanelOpen)}
                 isChatOpen={isChatPanelOpen}
                 onPassContentToChat={handlePassContentToChat}
-                layoutMode="drafting"
               />
             </ResizablePanel>
 
