@@ -4,10 +4,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Badge } from '@/components/ui/badge';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { 
   FileText, Edit3, EyeIcon, RotateCcw, Save, Loader2, 
-  BarChart3, Zap, AlertTriangle, CheckCircle, TrendingUp 
+  BarChart3, Zap, AlertTriangle, CheckCircle, TrendingUp,
+  Download, FileType, FileSpreadsheet
 } from 'lucide-react';
+import { documentService } from '@/services/documents/documentService';
+import { useToast } from '@/hooks/use-toast';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
 import { SmartSuggestions } from '@/components/ipo/analysis/SmartSuggestions';
@@ -37,6 +41,8 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
   sectionType
 }) => {
   const [showAnalysis, setShowAnalysis] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
+  const { toast } = useToast();
   
   // Real-time analysis hook
   const {
@@ -68,6 +74,70 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
 
   const handleApplySuggestion = (suggestion: any) => {
     applySuggestion(suggestion, setGeneratedContent);
+  };
+
+  // Export functionality
+  const handleExport = async (format: 'word' | 'pdf' | 'excel') => {
+    if (!generatedContent.trim()) {
+      toast({
+        title: "No content to export",
+        description: "Please generate some content first.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      // Clean content for export (remove HTML formatting)
+      const cleanContent = generatedContent.replace(/<[^>]*>/g, '').trim();
+      
+      let blob: Blob;
+      let filename: string;
+      const timestamp = new Date().toISOString().slice(0, 10);
+      const sectionName = sectionType.replace(/[^a-zA-Z0-9]/g, '_');
+      
+      switch (format) {
+        case 'word':
+          blob = await documentService.generateWordDocument(cleanContent);
+          filename = `IPO_${sectionName}_${timestamp}.doc`;
+          break;
+        case 'pdf':
+          blob = await documentService.generatePdfDocument(cleanContent);
+          filename = `IPO_${sectionName}_${timestamp}.html`;
+          break;
+        case 'excel':
+          blob = await documentService.generateExcelDocument(cleanContent);
+          filename = `IPO_${sectionName}_${timestamp}.csv`;
+          break;
+        default:
+          throw new Error('Unsupported export format');
+      }
+
+      // Create download link
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Export successful",
+        description: `Document exported as ${filename}`,
+      });
+    } catch (error) {
+      console.error('Export error:', error);
+      toast({
+        title: "Export failed",
+        description: "There was an error exporting the document.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -163,6 +233,48 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
               )}
               Regenerate
             </Button>
+
+            {/* Export Dropdown */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  disabled={!generatedContent.trim() || isExporting}
+                  className="h-7 px-2 text-xs"
+                >
+                  {isExporting ? (
+                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                  ) : (
+                    <Download className="h-3 w-3 mr-1" />
+                  )}
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem 
+                  onClick={() => handleExport('word')}
+                  disabled={isExporting}
+                >
+                  <FileType className="h-4 w-4 mr-2" />
+                  Export as Word (.doc)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleExport('pdf')}
+                  disabled={isExporting}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Export as PDF (.html)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleExport('excel')}
+                  disabled={isExporting}
+                >
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />
+                  Export as Excel (.csv)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
             
             {layoutMode === 'tab' && (
               <Button size="sm" disabled={!generatedContent} className="h-7 px-2 text-xs">
