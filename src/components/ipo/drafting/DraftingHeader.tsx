@@ -3,13 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Save, MessageSquare, BarChart3, Download } from 'lucide-react';
 import { SectionDropdown } from '../SectionDropdown';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 interface DraftingHeaderProps {
   selectedSection: string;
   onSelectSection: (section: string) => void;
@@ -19,7 +13,6 @@ interface DraftingHeaderProps {
   onExport?: (format: 'word' | 'pdf' | 'excel') => void;
   isExporting?: boolean;
 }
-
 export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
   selectedSection,
   onSelectSection,
@@ -34,24 +27,15 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
       onExport(format);
     }
   };
-
-  return (
-    <div className="border-b bg-background p-4">
+  return <div className="border-b bg-background p-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <SectionDropdown
-            selectedSection={selectedSection}
-            onSelectSection={onSelectSection}
-          />
-          <Badge variant="secondary">Draft</Badge>
+          <SectionDropdown selectedSection={selectedSection} onSelectSection={onSelectSection} />
+          
         </div>
         
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onSave}
-          >
+          <Button variant="outline" size="sm" onClick={onSave}>
             <Save className="h-4 w-4 mr-2" />
             Save
           </Button>
@@ -81,16 +65,11 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
             Analysis
           </Button>
           
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={onToggleChat}
-          >
+          <Button variant="outline" size="sm" onClick={onToggleChat}>
             <MessageSquare className="h-4 w-4 mr-2" />
             {isChatOpen ? 'Hide' : 'Show'} AI Chat
           </Button>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
