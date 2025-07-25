@@ -120,7 +120,7 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
   };
 
   const handleExport = async (format: 'word' | 'pdf' | 'excel') => {
-    if (!generatedContent) {
+    if (!generatedContent?.trim()) {
       toast({
         title: "No Content",
         description: "Please generate content before exporting.",
@@ -135,21 +135,21 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
       const filename = `${sectionTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`;
       
       let blob: Blob;
-      let mimeType: string;
       let fileExtension: string;
 
       switch (format) {
         case 'word':
           blob = await documentService.generateWordDocument(generatedContent);
-          mimeType = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
-          fileExtension = 'docx';
+          fileExtension = 'doc';
           break;
         case 'pdf':
-          // PDF generation would be implemented here
-          throw new Error('PDF export not yet implemented');
+          blob = await documentService.generatePdfDocument(generatedContent);
+          fileExtension = 'html';
+          break;
         case 'excel':
-          // Excel generation would be implemented here  
-          throw new Error('Excel export not yet implemented');
+          blob = await documentService.generateExcelDocument(generatedContent);
+          fileExtension = 'csv';
+          break;
         default:
           throw new Error('Unsupported export format');
       }
