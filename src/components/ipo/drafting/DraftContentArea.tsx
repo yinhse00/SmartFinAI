@@ -35,10 +35,6 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
   sectionType
 }) => {
   const [showAnalysis, setShowAnalysis] = useState(true);
-  const [isExporting, setIsExporting] = useState(false);
-  const {
-    toast
-  } = useToast();
 
   // Real-time analysis hook
   const {
@@ -56,6 +52,7 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
     sectionType,
     isEnabled: showAnalysis && !!generatedContent.trim()
   });
+  
   const borderClass = layoutMode === 'drafting' ? 'border-2' : 'border';
   const paddingClass = layoutMode === 'drafting' ? 'p-4' : 'p-3';
 
@@ -66,68 +63,9 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
     }
     return showAnalysis ? 'h-[calc(100vh-20rem)]' : 'h-[calc(100vh-16rem)]';
   };
+  
   const handleApplySuggestion = (suggestion: any) => {
     applySuggestion(suggestion, setGeneratedContent);
-  };
-
-  // Export functionality
-  const handleExport = async (format: 'word' | 'pdf' | 'excel') => {
-    if (!generatedContent.trim()) {
-      toast({
-        title: "No content to export",
-        description: "Please generate some content first.",
-        variant: "destructive"
-      });
-      return;
-    }
-    setIsExporting(true);
-    try {
-      // Clean content for export (remove HTML formatting)
-      const cleanContent = generatedContent.replace(/<[^>]*>/g, '').trim();
-      let blob: Blob;
-      let filename: string;
-      const timestamp = new Date().toISOString().slice(0, 10);
-      const sectionName = sectionType.replace(/[^a-zA-Z0-9]/g, '_');
-      switch (format) {
-        case 'word':
-          blob = await documentService.generateWordDocument(cleanContent);
-          filename = `IPO_${sectionName}_${timestamp}.doc`;
-          break;
-        case 'pdf':
-          blob = await documentService.generatePdfDocument(cleanContent);
-          filename = `IPO_${sectionName}_${timestamp}.html`;
-          break;
-        case 'excel':
-          blob = await documentService.generateExcelDocument(cleanContent);
-          filename = `IPO_${sectionName}_${timestamp}.csv`;
-          break;
-        default:
-          throw new Error('Unsupported export format');
-      }
-
-      // Create download link
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      toast({
-        title: "Export successful",
-        description: `Document exported as ${filename}`
-      });
-    } catch (error) {
-      console.error('Export error:', error);
-      toast({
-        title: "Export failed",
-        description: "There was an error exporting the document.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsExporting(false);
-    }
   };
   return <div className={`flex-1 ${layoutMode === 'drafting' ? 'p-4' : 'p-3'} overflow-hidden`}>
       <div className="h-full flex flex-col">

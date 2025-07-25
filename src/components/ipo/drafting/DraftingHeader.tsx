@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Save, MessageSquare, BarChart3, Download } from 'lucide-react';
+import { Save, MessageSquare, BarChart3, Download, Loader2 } from 'lucide-react';
 import { SectionDropdown } from '../SectionDropdown';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 interface DraftingHeaderProps {
@@ -12,6 +12,7 @@ interface DraftingHeaderProps {
   onSave?: () => void;
   onExport?: (format: 'word' | 'pdf' | 'excel') => void;
   isExporting?: boolean;
+  isSaving?: boolean;
 }
 export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
   selectedSection,
@@ -20,7 +21,8 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
   onToggleChat,
   onSave,
   onExport,
-  isExporting = false
+  isExporting = false,
+  isSaving = false
 }) => {
   const handleExport = (format: 'word' | 'pdf' | 'excel') => {
     if (onExport) {
@@ -35,9 +37,13 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
         </div>
         
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={onSave}>
-            <Save className="h-4 w-4 mr-2" />
-            Save
+          <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4 mr-2" />
+            )}
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
           
           <DropdownMenu>

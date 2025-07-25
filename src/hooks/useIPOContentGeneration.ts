@@ -76,10 +76,10 @@ export const useIPOContentGeneration = () => {
     return generateContent(request);
   };
 
-  const loadExistingContent = useCallback(async (projectId: string, sectionType: string, forceLoad: boolean = false): Promise<boolean> => {
-    // Only load if explicitly requested (forceLoad = true) to reduce automatic API usage
+  const loadExistingContent = useCallback(async (projectId: string, sectionType: string, forceLoad: boolean = true): Promise<boolean> => {
+    // Auto-load existing content by default for better UX
     if (!forceLoad) {
-      console.log('📝 Automatic content loading disabled - use manual load');
+      console.log('📝 Content loading skipped');
       return false;
     }
     

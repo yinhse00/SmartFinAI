@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
-import { IPOContentGenerationRequest } from '@/types/ipo';
+import { IPOContentGenerationRequest, IPOContentGenerationResponse } from '@/types/ipo';
 import { DraftingHeader } from './drafting/DraftingHeader';
 import { DraftContentArea } from './drafting/DraftContentArea';
 import { useToast } from '@/hooks/use-toast';
 import { documentService } from '@/services/documents/documentService';
+import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
 
 interface MaximizedDraftingAreaProps {
   projectId: string;
@@ -24,6 +25,8 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
   onPassContentToChat
 }) => {
   const [isExporting, setIsExporting] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [lastSavedSection, setLastSavedSection] = useState<string>('');
   const { toast } = useToast();
 
   const {
@@ -34,15 +37,34 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
     generateContent,
     regenerateContent,
     loadExistingContent,
-    setGeneratedContent
+    setGeneratedContent,
+    clearContent
   } = useIPOContentGeneration();
 
-  // Load existing content when section changes
+  // Auto-save and load content when section changes
   useEffect(() => {
-    if (projectId && selectedSection) {
-      loadExistingContent(projectId, selectedSection);
-    }
-  }, [projectId, selectedSection]);
+    const handleSectionChange = async () => {
+      if (!projectId) return;
+
+      // Auto-save current content before switching sections
+      if (lastSavedSection && lastSavedSection !== selectedSection && generatedContent.trim()) {
+        console.log('🔄 Auto-saving content before section switch');
+        await saveCurrentContent(lastSavedSection);
+      }
+
+      // Clear content state when switching sections
+      if (selectedSection && selectedSection !== lastSavedSection) {
+        console.log('🔄 Switching to section:', selectedSection);
+        clearContent();
+        
+        // Load existing content for new section
+        await loadExistingContent(projectId, selectedSection, true);
+        setLastSavedSection(selectedSection);
+      }
+    };
+
+    handleSectionChange();
+  }, [projectId, selectedSection, generatedContent, lastSavedSection, loadExistingContent, clearContent]);
 
   // Pass current content to chat when it opens or content changes
   useEffect(() => {
@@ -51,12 +73,50 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
     }
   }, [isChatOpen, generatedContent, onPassContentToChat, setGeneratedContent]);
 
+  const saveCurrentContent = async (sectionType: string = selectedSection) => {
+    if (!generatedContent.trim() || !projectId || !sectionType) return;
+
+    setIsSaving(true);
+    try {
+      console.log('💾 Saving content for section:', sectionType);
+      
+      const response: IPOContentGenerationResponse = {
+        content: generatedContent,
+        sources: lastGeneratedResponse?.sources || [],
+        confidence_score: lastGeneratedResponse?.confidence_score || 0.8,
+        regulatory_compliance: lastGeneratedResponse?.regulatory_compliance || {
+          requirements_met: [],
+          missing_requirements: [],
+          recommendations: []
+        },
+        quality_metrics: lastGeneratedResponse?.quality_metrics || {
+          completeness: 0.8,
+          accuracy: 0.8,
+          regulatory_alignment: 0.8,
+          professional_language: 0.8
+        }
+      };
+
+      await ipoContentGenerationService.saveSectionContent(projectId, sectionType, response);
+      
+      toast({
+        title: "Saved",
+        description: "Section content has been saved successfully.",
+      });
+    } catch (error) {
+      console.error('❌ Save error:', error);
+      toast({
+        title: "Save Failed",
+        description: error instanceof Error ? error.message : "Failed to save content",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSave = () => {
-    // Save functionality
-    toast({
-      title: "Saved",
-      description: "Section content has been saved successfully.",
-    });
+    saveCurrentContent();
   };
 
   const handleExport = async (format: 'word' | 'pdf' | 'excel') => {
@@ -154,6 +214,7 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
         onSave={handleSave}
         onExport={handleExport}
         isExporting={isExporting}
+        isSaving={isSaving}
       />
 
       <DraftContentArea
