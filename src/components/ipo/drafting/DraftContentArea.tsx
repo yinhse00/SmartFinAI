@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Badge } from '@/components/ui/badge';
@@ -77,7 +78,15 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
             {/* Main Content Panel */}
             <Panel defaultSize={70} minSize={50}>
               <div className="h-full pr-2">
-                {isEditMode ? <Textarea placeholder={layoutMode === 'drafting' ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..." : "Generated content will appear here..."} value={generatedContent} onChange={e => setGeneratedContent(e.target.value)} className={`w-full h-full resize-none ${borderClass} focus:ring-2 ${paddingClass} text-sm leading-relaxed`} /> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
+                {isEditMode ? <div className={`w-full h-full ${borderClass} rounded-md overflow-hidden`}>
+                    <RichTextEditor
+                      value={generatedContent}
+                      onChange={setGeneratedContent}
+                      placeholder={layoutMode === 'drafting' ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..." : "Generated content will appear here..."}
+                      height={400}
+                      className="w-full"
+                    />
+                  </div> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
                     <div className={`${paddingClass} min-h-full w-full`}>
                       {isLoading ? <div className="text-center py-8">
                           <Loader2 className="h-6 w-6 mx-auto mb-3 animate-spin opacity-50" />
@@ -115,7 +124,15 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
             </Panel>
           </PanelGroup> : (/* Single Panel Layout */
       <div className={`flex-1 ${getContentHeight()} relative`}>
-            {isEditMode ? <Textarea placeholder={layoutMode === 'drafting' ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..." : "Generated content will appear here..."} value={generatedContent} onChange={e => setGeneratedContent(e.target.value)} className={`w-full h-full resize-none ${borderClass} focus:ring-2 ${paddingClass} text-sm leading-relaxed overflow-y-scroll scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 dark:scrollbar-thumb-gray-600 dark:scrollbar-track-gray-800`} /> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
+            {isEditMode ? <div className={`w-full h-full ${borderClass} rounded-md overflow-hidden`}>
+                <RichTextEditor
+                  value={generatedContent}
+                  onChange={setGeneratedContent}
+                  placeholder={layoutMode === 'drafting' ? "Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..." : "Generated content will appear here..."}
+                  height={500}
+                  className="w-full"
+                />
+              </div> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
                 <div className={`${paddingClass} min-h-full w-full`}>
                   {isLoading ? <div className="text-center py-8">
                       <Loader2 className="h-6 w-6 mx-auto mb-3 animate-spin opacity-50" />
