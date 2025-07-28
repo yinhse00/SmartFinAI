@@ -1,5 +1,5 @@
-import React from 'react';
-import { Editor } from '@tinymce/tinymce-react';
+import React, { useMemo } from 'react';
+import JoditEditor from 'jodit-react';
 import { cn } from '@/lib/utils';
 
 interface RichTextEditorProps {
@@ -15,110 +15,95 @@ export const RichTextEditor = React.forwardRef<
   HTMLDivElement,
   RichTextEditorProps
 >(({ value, onChange, placeholder, className, height = 400, disabled = false }, ref) => {
+  const config = useMemo(() => ({
+    readonly: disabled,
+    placeholder: placeholder || 'Start typing...',
+    height: height,
+    showCharsCounter: false,
+    showWordsCounter: false,
+    showXPathInStatusbar: false,
+    askBeforePasteHTML: false,
+    askBeforePasteFromWord: false,
+    beautyHTML: true,
+    
+    // Toolbar configuration for IPO documents
+    buttons: [
+      'source', '|',
+      'bold', 'italic', 'underline', '|',
+      'ul', 'ol', '|',
+      'outdent', 'indent', '|',
+      'font', 'fontsize', 'brush', 'paragraph', '|',
+      'left', 'center', 'right', 'justify', '|',
+      'table', 'link', '|',
+      'undo', 'redo', '|',
+      'hr', 'eraser', 'fullsize'
+    ],
+    
+    // Custom CSS for Word-compatible styling
+    iframeStyle: `
+      body { 
+        font-family: 'Times New Roman', serif !important; 
+        font-size: 12pt !important; 
+        line-height: 1.6 !important; 
+        margin: 1in !important;
+        color: #000 !important;
+        background: #fff !important;
+      }
+      h1 { 
+        font-size: 18pt !important; 
+        font-weight: bold !important; 
+        margin: 24pt 0 12pt 0 !important;
+        page-break-after: avoid !important;
+      }
+      h2 { 
+        font-size: 16pt !important; 
+        font-weight: bold !important; 
+        margin: 18pt 0 6pt 0 !important;
+        page-break-after: avoid !important;
+      }
+      h3 { 
+        font-size: 14pt !important; 
+        font-weight: bold !important; 
+        margin: 12pt 0 6pt 0 !important;
+        page-break-after: avoid !important;
+      }
+      p { 
+        margin: 6pt 0 !important; 
+        text-align: justify !important;
+      }
+      table { 
+        border-collapse: collapse !important; 
+        width: 100% !important; 
+        margin: 12pt 0 !important;
+      }
+      table, th, td { 
+        border: 1px solid #000 !important; 
+      }
+      th, td { 
+        padding: 6pt !important; 
+        text-align: left !important;
+      }
+      th { 
+        background-color: #f0f0f0 !important; 
+        font-weight: bold !important;
+      }
+      ul, ol { 
+        margin: 6pt 0 !important; 
+        padding-left: 24pt !important;
+      }
+      li { 
+        margin: 3pt 0 !important;
+      }
+    `
+  }), [disabled, placeholder, height]);
+
   return (
     <div ref={ref} className={cn("rich-text-editor", className)}>
-      <Editor
+      <JoditEditor
         value={value}
-        onEditorChange={onChange}
-        disabled={disabled}
-        init={{
-          height: height,
-          menubar: false,
-          plugins: [
-            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
-            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-            'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount',
-            'paste', 'directionality'
-          ],
-          toolbar: 'undo redo | blocks | ' +
-            'bold italic forecolor backcolor | alignleft aligncenter ' +
-            'alignright alignjustify | bullist numlist outdent indent | ' +
-            'removeformat | table | help',
-          content_style: `
-            body { 
-              font-family: 'Times New Roman', serif; 
-              font-size: 12pt; 
-              line-height: 1.6; 
-              margin: 1in;
-              color: #000;
-              background: #fff;
-            }
-            h1 { 
-              font-size: 18pt; 
-              font-weight: bold; 
-              margin: 24pt 0 12pt 0;
-              page-break-after: avoid;
-            }
-            h2 { 
-              font-size: 16pt; 
-              font-weight: bold; 
-              margin: 18pt 0 6pt 0;
-              page-break-after: avoid;
-            }
-            h3 { 
-              font-size: 14pt; 
-              font-weight: bold; 
-              margin: 12pt 0 6pt 0;
-              page-break-after: avoid;
-            }
-            p { 
-              margin: 6pt 0; 
-              text-align: justify;
-            }
-            table { 
-              border-collapse: collapse; 
-              width: 100%; 
-              margin: 12pt 0;
-            }
-            table, th, td { 
-              border: 1px solid #000; 
-            }
-            th, td { 
-              padding: 6pt; 
-              text-align: left;
-            }
-            th { 
-              background-color: #f0f0f0; 
-              font-weight: bold;
-            }
-            ul, ol { 
-              margin: 6pt 0; 
-              padding-left: 24pt;
-            }
-            li { 
-              margin: 3pt 0;
-            }
-          `,
-          placeholder: placeholder,
-          paste_as_text: false,
-          paste_retain_style_properties: "font-family font-size font-weight font-style text-decoration text-align",
-          table_default_attributes: {
-            border: '1'
-          },
-          table_default_styles: {
-            'border-collapse': 'collapse'
-          },
-          formats: {
-            h1: { block: 'h1', styles: { fontSize: '18pt', fontWeight: 'bold' } },
-            h2: { block: 'h2', styles: { fontSize: '16pt', fontWeight: 'bold' } },
-            h3: { block: 'h3', styles: { fontSize: '14pt', fontWeight: 'bold' } },
-          },
-          style_formats: [
-            { title: 'Headings', items: [
-              { title: 'Heading 1', format: 'h1' },
-              { title: 'Heading 2', format: 'h2' },
-              { title: 'Heading 3', format: 'h3' },
-            ]},
-            { title: 'Inline', items: [
-              { title: 'Bold', format: 'bold' },
-              { title: 'Italic', format: 'italic' },
-            ]},
-            { title: 'Blocks', items: [
-              { title: 'Paragraph', format: 'p' },
-            ]},
-          ],
-          block_formats: 'Paragraph=p; Heading 1=h1; Heading 2=h2; Heading 3=h3',
-        }}
+        config={config}
+        onBlur={onChange}
+        onChange={() => {}} // We use onBlur for better performance
       />
     </div>
   );
