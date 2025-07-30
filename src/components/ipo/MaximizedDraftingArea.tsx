@@ -119,7 +119,7 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
     saveCurrentContent();
   };
 
-  const handleExport = async (format: 'word' | 'pdf' | 'excel') => {
+  const handleExport = async (format: 'word' | 'pdf' | 'excel' | 'powerpoint') => {
     if (!generatedContent?.trim()) {
       toast({
         title: "No Content",
@@ -149,6 +149,10 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
         case 'excel':
           blob = await documentService.generateExcelDocument(generatedContent);
           fileExtension = 'csv';
+          break;
+        case 'powerpoint':
+          blob = await documentService.generatePowerPointDocument(generatedContent, sectionTitle);
+          fileExtension = 'pptx';
           break;
         default:
           throw new Error('Unsupported export format');

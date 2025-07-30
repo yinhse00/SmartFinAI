@@ -10,7 +10,7 @@ interface DraftingHeaderProps {
   isChatOpen: boolean;
   onToggleChat: () => void;
   onSave?: () => void;
-  onExport?: (format: 'word' | 'pdf' | 'excel') => void;
+  onExport?: (format: 'word' | 'pdf' | 'excel' | 'powerpoint') => void;
   isExporting?: boolean;
   isSaving?: boolean;
 }
@@ -24,7 +24,7 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
   isExporting = false,
   isSaving = false
 }) => {
-  const handleExport = (format: 'word' | 'pdf' | 'excel') => {
+  const handleExport = (format: 'word' | 'pdf' | 'excel' | 'powerpoint') => {
     if (onExport) {
       onExport(format);
     }
@@ -62,6 +62,9 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => handleExport('excel')}>
                 Export as Excel (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('powerpoint')}>
+                Export as PowerPoint (.pptx)
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

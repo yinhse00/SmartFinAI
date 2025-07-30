@@ -24,5 +24,10 @@ export const documentService = {
   /**
    * Generate an Excel document from text
    */
-  generateExcelDocument: documentGenerationService.generateExcelDocument
+  generateExcelDocument: documentGenerationService.generateExcelDocument,
+
+  /**
+   * Generate a PowerPoint document from text
+   */
+  generatePowerPointDocument: documentGenerationService.generatePowerPointDocument
 };
