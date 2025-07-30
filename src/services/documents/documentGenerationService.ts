@@ -389,9 +389,9 @@ export const documentGenerationService = {
         }
       }
       
-      // Generate and return blob
-      const pptxData = await pres.writeFile();
-      return new Blob([pptxData], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
+      // Generate and return blob  
+      const pptxBuffer = await pres.write({ outputType: 'arraybuffer' });
+      return new Blob([pptxBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
     } catch (error) {
       console.error("Error generating PowerPoint document:", error);
       throw new Error("Failed to generate PowerPoint document.");
