@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { fileProcessingService } from '@/services/documents/fileProcessingService';
+import { enhancedOCRService } from '@/services/documents/ocr/enhancedOCRService';
 import { formatExtractedContent } from '@/utils/fileContentFormatter';
 import { checkApiAvailability } from '@/services/api/grok/modules/endpointManager';
 import { getGrokApiKey } from '@/services/apiKeyService';
@@ -16,9 +17,9 @@ export const useFileProcessing = () => {
   }>({ mammothAvailable: false, xlsxAvailable: false });
   const { toast } = useToast();
 
-  // Check document processing libraries availability
+  // Check document processing libraries availability and initialize enhanced OCR
   useEffect(() => {
-    const checkLibraries = () => {
+    const checkLibraries = async () => {
       const status = fileProcessingService.checkLibrariesAvailable();
       setLibraryStatus(status);
       
@@ -28,6 +29,14 @@ export const useFileProcessing = () => {
       
       if (!status.xlsxAvailable) {
         console.warn("SheetJS library not detected - Excel processing will be limited");
+      }
+      
+      // Initialize enhanced OCR service
+      try {
+        await enhancedOCRService.initialize();
+        console.log('Enhanced OCR service initialized successfully');
+      } catch (error) {
+        console.error('Failed to initialize enhanced OCR service:', error);
       }
     };
     
@@ -42,6 +51,8 @@ export const useFileProcessing = () => {
     
     return () => {
       window.removeEventListener('focus', handleFocus);
+      // Cleanup enhanced OCR service
+      enhancedOCRService.cleanup();
     };
   }, []);
 
@@ -230,9 +241,15 @@ export const useFileProcessing = () => {
           variant: "default"
         });
       } else {
+        // Show enhanced processing details
+        const hasOCRResults = results.some(r => r.content.includes('Enhanced') || r.content.includes('OCR'));
+        const description = hasOCRResults 
+          ? `Successfully processed ${files.length} file(s) with enhanced OCR and structure analysis.`
+          : `Successfully processed ${files.length} file(s).`;
+          
         toast({
           title: "File processing complete",
-          description: `Successfully processed ${files.length} file(s).`,
+          description,
         });
       }
       

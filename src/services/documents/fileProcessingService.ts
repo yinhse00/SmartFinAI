@@ -1,6 +1,8 @@
 
 import { fileTypeDetector } from './utils/fileTypeDetector';
 import { imageProcessor } from './processors/imageProcessor';
+import { enhancedImageProcessor } from './processors/enhancedImageProcessor';
+import { enhancedPdfProcessor } from './processors/enhancedPdfProcessor';
 import { documentProcessor } from './processors/documentProcessor';
 import { spreadsheetProcessor } from './processors/spreadsheetProcessor';
 
@@ -50,7 +52,8 @@ export const fileProcessingService = {
       let result;
       switch (fileType) {
         case 'pdf':
-          result = await documentProcessor.extractPdfText(file);
+          // Use enhanced PDF processor with better OCR and structure analysis
+          result = await enhancedPdfProcessor.extractText(file);
           break;
         case 'word':
           result = await documentProcessor.extractWordText(file, mammothAvailable);
@@ -68,7 +71,8 @@ export const fileProcessingService = {
           }
           break;
         case 'image':
-          result = await imageProcessor.extractText(file);
+          // Use enhanced image processor with OCR capabilities and structure analysis
+          result = await enhancedImageProcessor.extractText(file);
           break;
         default:
           return { content: `Unable to extract text from ${file.name}`, source: file.name };
