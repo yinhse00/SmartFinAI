@@ -3,18 +3,19 @@ import { MaximizedDraftingArea } from './MaximizedDraftingArea';
 import { IPOAIChat } from './IPOAIChat';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
+import { ArrowLeft, Settings, Edit3, FileText, Key, Presentation } from 'lucide-react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { IPOInputGenerateLayout } from './IPOInputGenerateLayout';
 import { useApiKeyState } from '@/components/chat/hooks/useApiKeyState';
 import APIKeyDialog from '@/components/chat/APIKeyDialog';
+import { PresentationWorkspace } from '@/components/presentation/PresentationWorkspace';
 
 interface IPOProspectusWorkspaceProps {
   project: IPOProject;
   onSwitchProject: () => void;
 }
 
-type LayoutMode = 'input-generate' | 'drafting';
+type LayoutMode = 'input-generate' | 'drafting' | 'presentation';
 
 export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   project,
@@ -88,6 +89,15 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
                 <FileText className="h-3 w-3 mr-1" />
                 Draft & Edit
               </Button>
+              <Button
+                variant={layoutMode === 'presentation' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setLayoutMode('presentation')}
+                className="h-7 px-3"
+              >
+                <Presentation className="h-3 w-3 mr-1" />
+                PowerPoint
+              </Button>
             </div>
             
             {/* API Key Setup */}
@@ -119,6 +129,13 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
             selectedSection={selectedSection}
             onSectionSelect={setSelectedSection}
             onContentGenerated={handleContentGenerated}
+          />
+        ) : layoutMode === 'presentation' ? (
+          // Layout 3: Interactive PowerPoint Mode
+          <PresentationWorkspace
+            projectId={project.id}
+            presentationType="ipo_roadshow"
+            onBack={() => setLayoutMode('drafting')}
           />
         ) : (
           // Layout 2: Drafting Mode - Maximized with optional AI Chat
