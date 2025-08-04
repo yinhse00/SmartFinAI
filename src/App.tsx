@@ -22,6 +22,7 @@ import SupportPage from "./pages/Support";
 import UpdatePasswordPage from "./pages/UpdatePassword";
 import ExecutionPage from "./pages/Execution";
 import IPOProspectusPage from "./pages/IPOProspectus";
+import PresentationsPage from "./pages/Presentations";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -74,6 +75,11 @@ const App = () => (
               <Route path="/support" element={
                 <ProtectedRoute>
                   <SupportPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/presentations" element={
+                <ProtectedRoute>
+                  <PresentationsPage />
                 </ProtectedRoute>
               } />
               <Route path="/execution" element={

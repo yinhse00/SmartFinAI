@@ -66,6 +66,9 @@ export type PresentationType =
   | 'ipo_roadshow'
   | 'investment_banking_pitch'
   | 'deal_structuring'
+  | 'client_presentation'
+  | 'credentials_presentation'
+  | 'market_analysis'
   | 'custom';
 
 export interface PresentationMetadata {

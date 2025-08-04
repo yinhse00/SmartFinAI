@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquareText, History, Database, ChevronRight, Upload } from 'lucide-react';
+import { MessageSquareText, History, Database, ChevronRight, Upload, Presentation } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const QuickAction = ({ 
@@ -44,10 +44,10 @@ const QuickActions = () => {
           to="/chat"
         />
         <QuickAction
-          icon={History}
-          title="View Recent Activity"
-          description="Check recent queries and responses"
-          to="/history"
+          icon={Presentation}
+          title="Create Presentation"
+          description="Build pitch books and client presentations"
+          to="/presentations"
         />
         <QuickAction
           icon={Database}
