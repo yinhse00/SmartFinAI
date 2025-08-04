@@ -134,7 +134,7 @@ export const SlideEditor: React.FC<SlideEditorProps> = ({
                 // Invalid JSON, don't update
               }
             }}
-            height="100%"
+            height={400}
             className="font-mono text-sm"
           />
         </div>

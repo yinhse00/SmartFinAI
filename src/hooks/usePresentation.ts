@@ -158,7 +158,7 @@ export const usePresentation = ({ projectId, presentationType }: UsePresentation
       return [
         ...commonSlides,
         {
-          type: 'executive_summary',
+          type: 'executive_summary' as SlideType,
           title: 'Executive Summary',
           content: {
             title: 'Executive Summary',
@@ -171,7 +171,7 @@ export const usePresentation = ({ projectId, presentationType }: UsePresentation
           }
         },
         {
-          type: 'credentials',
+          type: 'credentials' as SlideType,
           title: 'Our Credentials',
           content: {
             title: 'Our Credentials',
