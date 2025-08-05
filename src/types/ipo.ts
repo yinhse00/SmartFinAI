@@ -96,4 +96,11 @@ export interface IPOContentGenerationResponse {
     regulatory_alignment: number;
     professional_language: number;
   };
+  processing_metadata?: {
+    totalTime: number;
+    aiTime: number;
+    dataFetchTime: number;
+    usedParallelProcessing: boolean;
+    sourcesUsed: number;
+  };
 }
