@@ -176,9 +176,11 @@ export class LaTeXContentService {
 
       if (error) throw error;
       if (section) {
+        // Transform to match IPOSection interface
         return {
           ...section,
-          sources: section.sources ? JSON.parse(JSON.stringify(section.sources)) : []
+          sources: [], // Initialize empty sources array for now
+          status: section.status as 'draft' | 'review' | 'completed' | 'pending'
         } as IPOSection;
       }
       return null;
@@ -206,12 +208,8 @@ export class LaTeXContentService {
           section_type: sectionType,
           title: this.getSectionTitle(sectionType),
           content: response.latexContent,
-          sources: response.sources as any,
           confidence_score: response.confidence_score,
           status: 'draft'
-        }, {
-          onConflict: 'project_id,section_type',
-          ignoreDuplicates: false
         })
         .select()
         .single();

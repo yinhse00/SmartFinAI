@@ -68,16 +68,29 @@ export class IPOParallelProcessingService {
             .limit(3)
         ),
 
-        // Existing content - use existing project for now since ipo_prospectus_sections may not exist
+        // Existing content from sections table
         this.safeQuery(async () => 
           await supabase
-            .from('ipo_prospectus_projects')
-            .select('*')
-            .eq('id', projectId)
+            .from('ipo_prospectus_sections')
+            .select(`
+              *,
+              ipo_source_attribution (
+                id,
+                content_snippet,
+                source_type,
+                source_reference,
+                confidence_score,
+                created_at
+              )
+            `)
+            .eq('project_id', projectId)
+            .eq('section_type', sectionType)
+            .order('updated_at', { ascending: false })
+            .limit(1)
             .maybeSingle()
         ),
 
-        // Skip template lookup for now since table may not exist
+        // Specific template by ID if provided - skip for now since table structure may vary
         Promise.resolve({ data: null, error: null })
       ];
 

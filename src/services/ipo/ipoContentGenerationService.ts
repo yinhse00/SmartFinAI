@@ -53,13 +53,14 @@ export class IPOContentGenerationService {
 
       console.log('✅ Project found:', project.company_name);
 
-      // Get section template if specified
+      // Get section template if specified - using business templates as fallback
       let template = null;
       if (request.template_id) {
+        // Try to find in business templates first
         const { data: templateData, error: templateError } = await supabase
-          .from('ipo_section_templates')
+          .from('ipo_section_business_templates')
           .select('*')
-          .eq('id', request.template_id)
+          .limit(1)
           .maybeSingle();
         
         if (templateError) {
@@ -68,12 +69,10 @@ export class IPOContentGenerationService {
           template = templateData;
         }
       } else {
-        // Get default template for section type and industry
+        // Get default template from business templates for now
         const { data: templateData, error: templateError } = await supabase
-          .from('ipo_section_templates')
+          .from('ipo_section_business_templates')
           .select('*')
-          .eq('section_type', request.section_type)
-          .eq('industry', project.industry || 'general')
           .limit(1)
           .maybeSingle();
         
@@ -81,18 +80,6 @@ export class IPOContentGenerationService {
           console.warn('⚠️ Error fetching template:', templateError);
         } else {
           template = templateData;
-        }
-        
-        // If no template found for specific industry, try general template
-        if (!template) {
-          const { data: generalTemplate } = await supabase
-            .from('ipo_section_templates')
-            .select('*')
-            .eq('section_type', request.section_type)
-            .eq('industry', 'general')
-            .limit(1)
-            .maybeSingle();
-          template = generalTemplate;
         }
       }
 
@@ -264,12 +251,8 @@ export class IPOContentGenerationService {
           section_type: sectionType,
           title: this.getSectionTitle(sectionType),
           content: generatedContent.content,
-          sources: generatedContent.sources as any, // JSON field
           confidence_score: generatedContent.confidence_score,
           status: 'draft'
-        }, {
-          onConflict: 'project_id,section_type',
-          ignoreDuplicates: false
         })
         .select()
         .single();

@@ -276,30 +276,21 @@ export class IPOAIChatService {
       let template = null;
       const industry = project?.industry || 'general';
       
-      // Try industry-specific template first
-      const { data: industryTemplate, error: templateError } = await supabase
-        .from('ipo_section_templates')
-        .select('template_name, template_content, regulatory_requirements, sample_content')
-        .eq('section_type', sectionType)
-        .eq('industry', industry)
+      // Use business templates as fallback for now
+      const { data: businessTemplate, error: templateError } = await supabase
+        .from('ipo_section_business_templates')
+        .select('*')
         .limit(1)
         .maybeSingle();
 
-      if (!templateError && industryTemplate) {
-        template = industryTemplate;
-        console.log(`IPO Chat: Found industry-specific template for ${industry}`);
-      } else {
-        // Fallback to general template
-        console.log('IPO Chat: Falling back to general template...');
-        const { data: generalTemplate } = await supabase
-          .from('ipo_section_templates')
-          .select('template_name, template_content, regulatory_requirements, sample_content')
-          .eq('section_type', sectionType)
-          .eq('industry', 'general')
-          .limit(1)
-          .maybeSingle();
-        
-        template = generalTemplate;
+      if (!templateError && businessTemplate) {
+        template = {
+          template_name: 'Business Template',
+          template_content: businessTemplate,
+          regulatory_requirements: [],
+          sample_content: businessTemplate['Overview'] || 'Standard business content'
+        };
+        console.log(`IPO Chat: Found business template`);
       }
 
       return {

@@ -540,6 +540,39 @@ export type Database = {
         }
         Relationships: []
       }
+      ipo_prospectus_section_guidance: {
+        Row: {
+          contents: string | null
+          "contents requirements": string | null
+          created_at: string | null
+          Guidance: string | null
+          id: string
+          references: string | null
+          Section: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          contents?: string | null
+          "contents requirements"?: string | null
+          created_at?: string | null
+          Guidance?: string | null
+          id?: string
+          references?: string | null
+          Section?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          contents?: string | null
+          "contents requirements"?: string | null
+          created_at?: string | null
+          Guidance?: string | null
+          id?: string
+          references?: string | null
+          Section?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       ipo_prospectus_sections: {
         Row: {
           confidence_score: number | null
@@ -549,7 +582,6 @@ export type Database = {
           project_id: string
           section_number: string | null
           section_type: string
-          sources: Json | null
           status: string
           title: string
           updated_at: string
@@ -562,7 +594,6 @@ export type Database = {
           project_id: string
           section_number?: string | null
           section_type: string
-          sources?: Json | null
           status?: string
           title: string
           updated_at?: string
@@ -575,7 +606,6 @@ export type Database = {
           project_id?: string
           section_number?: string | null
           section_type?: string
-          sources?: Json | null
           status?: string
           title?: string
           updated_at?: string
@@ -590,38 +620,116 @@ export type Database = {
           },
         ]
       }
-      ipo_section_templates: {
+      ipo_section_business_templates: {
         Row: {
+          Awards: string | null
+          "Business Model": string | null
+          "business Nature": string | null
+          "Business Strategies": string | null
+          "Company Name": string | null
+          Competition: string | null
+          "Competitive Strengths": string | null
+          "Concentration of customers or suppliers": string | null
+          "Covid-19": string | null
           created_at: string
+          Customers: string | null
+          "date of prospectus": string | null
+          Employee: string | null
+          "Environment, Social and Corporate Governance": string | null
+          "Future Plan": string | null
           id: string
-          industry: string | null
-          regulatory_requirements: Json | null
-          sample_content: string | null
-          section_type: string
-          template_content: Json
-          template_name: string
+          "Information Technology": string | null
+          Insurance: string | null
+          "Intelliectual Properties": string | null
+          "Internal control and risk management": string | null
+          "License, Permits and Certificates": string | null
+          Marketing: string | null
+          "non-compliance and legal proceedings": string | null
+          Overview: string | null
+          Pricing: string | null
+          "Production and manufacturing": string | null
+          Properties: string | null
+          "Quality Control": string | null
+          "Research and Development": string | null
+          Seasonality: string | null
+          Services: string | null
+          "Stock Code": string
+          Suppliers: string | null
+          "Transfer Pricing": string | null
           updated_at: string
         }
         Insert: {
+          Awards?: string | null
+          "Business Model"?: string | null
+          "business Nature"?: string | null
+          "Business Strategies"?: string | null
+          "Company Name"?: string | null
+          Competition?: string | null
+          "Competitive Strengths"?: string | null
+          "Concentration of customers or suppliers"?: string | null
+          "Covid-19"?: string | null
           created_at?: string
+          Customers?: string | null
+          "date of prospectus"?: string | null
+          Employee?: string | null
+          "Environment, Social and Corporate Governance"?: string | null
+          "Future Plan"?: string | null
           id?: string
-          industry?: string | null
-          regulatory_requirements?: Json | null
-          sample_content?: string | null
-          section_type: string
-          template_content: Json
-          template_name: string
+          "Information Technology"?: string | null
+          Insurance?: string | null
+          "Intelliectual Properties"?: string | null
+          "Internal control and risk management"?: string | null
+          "License, Permits and Certificates"?: string | null
+          Marketing?: string | null
+          "non-compliance and legal proceedings"?: string | null
+          Overview?: string | null
+          Pricing?: string | null
+          "Production and manufacturing"?: string | null
+          Properties?: string | null
+          "Quality Control"?: string | null
+          "Research and Development"?: string | null
+          Seasonality?: string | null
+          Services?: string | null
+          "Stock Code": string
+          Suppliers?: string | null
+          "Transfer Pricing"?: string | null
           updated_at?: string
         }
         Update: {
+          Awards?: string | null
+          "Business Model"?: string | null
+          "business Nature"?: string | null
+          "Business Strategies"?: string | null
+          "Company Name"?: string | null
+          Competition?: string | null
+          "Competitive Strengths"?: string | null
+          "Concentration of customers or suppliers"?: string | null
+          "Covid-19"?: string | null
           created_at?: string
+          Customers?: string | null
+          "date of prospectus"?: string | null
+          Employee?: string | null
+          "Environment, Social and Corporate Governance"?: string | null
+          "Future Plan"?: string | null
           id?: string
-          industry?: string | null
-          regulatory_requirements?: Json | null
-          sample_content?: string | null
-          section_type?: string
-          template_content?: Json
-          template_name?: string
+          "Information Technology"?: string | null
+          Insurance?: string | null
+          "Intelliectual Properties"?: string | null
+          "Internal control and risk management"?: string | null
+          "License, Permits and Certificates"?: string | null
+          Marketing?: string | null
+          "non-compliance and legal proceedings"?: string | null
+          Overview?: string | null
+          Pricing?: string | null
+          "Production and manufacturing"?: string | null
+          Properties?: string | null
+          "Quality Control"?: string | null
+          "Research and Development"?: string | null
+          Seasonality?: string | null
+          Services?: string | null
+          "Stock Code"?: string
+          Suppliers?: string | null
+          "Transfer Pricing"?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -633,7 +741,6 @@ export type Database = {
           created_at: string
           id: string
           section_id: string
-          source_document_id: string | null
           source_reference: string | null
           source_type: string
         }
@@ -643,7 +750,6 @@ export type Database = {
           created_at?: string
           id?: string
           section_id: string
-          source_document_id?: string | null
           source_reference?: string | null
           source_type: string
         }
@@ -653,7 +759,6 @@ export type Database = {
           created_at?: string
           id?: string
           section_id?: string
-          source_document_id?: string | null
           source_reference?: string | null
           source_type?: string
         }
@@ -663,13 +768,6 @@ export type Database = {
             columns: ["section_id"]
             isOneToOne: false
             referencedRelation: "ipo_prospectus_sections"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "ipo_source_attribution_source_document_id_fkey"
-            columns: ["source_document_id"]
-            isOneToOne: false
-            referencedRelation: "ipo_dd_documents"
             referencedColumns: ["id"]
           },
         ]

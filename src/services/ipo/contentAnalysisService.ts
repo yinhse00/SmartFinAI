@@ -414,14 +414,14 @@ Be specific and actionable in your analysis.`;
 
   private async getRegulatoryRequirements(sectionType: string) {
     try {
+      // Use business templates as fallback for now
       const { data } = await supabase
-        .from('ipo_section_templates')
-        .select('regulatory_requirements')
-        .eq('section_type', sectionType)
+        .from('ipo_section_business_templates')
+        .select('*')
         .limit(1)
         .maybeSingle();
       
-      return data?.regulatory_requirements || {};
+      return data || {};
     } catch (error) {
       console.error('Error fetching requirements:', error);
       return {};
