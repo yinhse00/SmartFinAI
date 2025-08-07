@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
   Upload, 
   Sparkles, 
@@ -14,11 +15,15 @@ import {
   Target,
   TrendingUp,
   CheckCircle2,
-  ArrowRight
+  ArrowRight,
+  Shield,
+  Building2
 } from 'lucide-react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
+import { SegmentAlignmentValidator } from './SegmentAlignmentValidator';
+import { ComplianceDashboard } from './ComplianceDashboard';
 
 interface IPOInputGenerateLayoutProps {
   projectId: string;
@@ -43,6 +48,20 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     company_description: '',
     principal_activities: '',
     business_model: ''
+  });
+
+  // Segment alignment state
+  const [segmentAlignmentValid, setSegmentAlignmentValid] = useState(true);
+  const [segmentIssues, setSegmentIssues] = useState<string[]>([]);
+  
+  // Compliance state
+  const [complianceIssues, setComplianceIssues] = useState([]);
+  const [complianceMetrics, setComplianceMetrics] = useState({
+    overallScore: 85,
+    businessFinancialAlignment: 75,
+    materialityCompliance: 90,
+    disclosureCompleteness: 80,
+    citationAccuracy: 85
   });
 
   const {
@@ -79,17 +98,42 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       return;
     }
 
+    // Check segment alignment for business sections
+    if (['overview', 'products', 'strategy'].includes(selectedSection) && !segmentAlignmentValid) {
+      toast({
+        title: "Segment Alignment Issues",
+        description: "Please resolve business-financial segment alignment issues before generating content.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     const request: IPOContentGenerationRequest = {
       project_id: projectId,
       section_type: selectedSection,
       key_elements: keyElements,
       industry_context: 'Hong Kong IPO',
-      regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
+      regulatory_requirements: ['HKEX Main Board', 'App1A Part A', 'Business-Financial Segment Alignment']
     };
 
     console.log('📤 Sending generation request:', request);
     const result = await generateContent(request);
     console.log('📥 Generation result:', result ? 'Success' : 'Failed');
+  };
+
+  const handleSegmentValidationUpdate = (isValid: boolean, issues: string[]) => {
+    setSegmentAlignmentValid(isValid);
+    setSegmentIssues(issues);
+  };
+
+  const handleFixComplianceIssue = (issueId: string) => {
+    console.log('Fixing compliance issue:', issueId);
+    // Implementation would call segment alignment service
+  };
+
+  const handleRefreshCompliance = () => {
+    console.log('Refreshing compliance analysis');
+    // Implementation would refresh analysis
   };
 
   const handleUploadDD = () => {
@@ -143,10 +187,27 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <div className="max-w-4xl mx-auto p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Left Column: Input Configuration */}
-            <div className="space-y-6">
+          <div className="max-w-6xl mx-auto p-6">
+            <Tabs defaultValue="input" className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
+                <TabsTrigger value="input" className="flex items-center gap-2">
+                  <Building className="h-4 w-4" />
+                  Input & Configure
+                </TabsTrigger>
+                <TabsTrigger value="alignment" className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4" />
+                  Segment Alignment
+                </TabsTrigger>
+                <TabsTrigger value="compliance" className="flex items-center gap-2">
+                  <Shield className="h-4 w-4" />
+                  Compliance Check
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="input" className="mt-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Left Column: Input Configuration */}
+                  <div className="space-y-6">
               {/* Selected Section Info */}
               <Card className="border-primary/20">
                 <CardHeader className="pb-4">
@@ -330,8 +391,100 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
                   </CardContent>
                 </Card>
               )}
-            </div>
-            </div>
+                  </div>
+
+                  {/* Right Column: Support & Upload */}
+                  <div className="space-y-6">
+                    {/* Due Diligence Upload */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Upload className="h-4 w-4" />
+                          Supporting Documents
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
+                          <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
+                          <h4 className="font-medium mb-2">Upload Due Diligence Documents</h4>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            Upload relevant business documents to enhance content generation
+                          </p>
+                          <Button variant="outline" onClick={handleUploadDD}>
+                            Select Documents
+                          </Button>
+                        </div>
+                        
+                        <div className="mt-6">
+                          <h4 className="text-sm font-medium mb-3">Recommended Document Types:</h4>
+                          <div className="space-y-2">
+                            {[
+                              'Business plans and strategy documents',
+                              'Management presentations',
+                              'Market research and analysis',
+                              'Financial statements and projections',
+                              'Product/service documentation',
+                              'Industry reports and benchmarks'
+                            ].map((item, index) => (
+                              <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+                                {item}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Content Preview */}
+                    {generatedContent && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <FileText className="h-4 w-4" />
+                            Generated Preview
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
+                            <div 
+                              className="text-sm leading-relaxed prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ 
+                                __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
+                              }}
+                            />
+                          </div>
+                          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{generatedContent.split(' ').length} words generated</span>
+                            <Button variant="ghost" size="sm" onClick={clearContent}>
+                              Clear & Restart
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="alignment" className="mt-6">
+                <SegmentAlignmentValidator
+                  projectId={projectId}
+                  onValidationUpdate={handleSegmentValidationUpdate}
+                />
+              </TabsContent>
+
+              <TabsContent value="compliance" className="mt-6">
+                <ComplianceDashboard
+                  projectId={projectId}
+                  selectedSection={selectedSection}
+                  issues={complianceIssues}
+                  metrics={complianceMetrics}
+                  onFixIssue={handleFixComplianceIssue}
+                  onRefreshAnalysis={handleRefreshCompliance}
+                />
+              </TabsContent>
+            </Tabs>
           </div>
         </ScrollArea>
       </div>

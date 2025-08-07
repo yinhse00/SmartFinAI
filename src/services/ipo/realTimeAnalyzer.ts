@@ -42,7 +42,9 @@ const HKEX_DISCLOSURE_REQUIREMENTS = {
     'business model',
     'competitive position',
     'key performance indicators',
-    'regulatory environment'
+    'regulatory environment',
+    'segment reporting alignment',
+    'materiality thresholds'
   ],
   history: [
     'incorporation date',
@@ -56,7 +58,9 @@ const HKEX_DISCLOSURE_REQUIREMENTS = {
     'major customers',
     'supplier dependencies',
     'intellectual property',
-    'regulatory approvals'
+    'regulatory approvals',
+    'segment financial alignment',
+    'materiality-based disclosure'
   ],
   strengths: [
     'competitive advantages',
