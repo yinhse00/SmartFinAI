@@ -7,16 +7,17 @@ export const documentGenerationService = {
   /**
    * Generate a Word document from text
    */
-  generateWordDocument: async (content: string): Promise<Blob> => {
+  generateWordDocument: async (content: string, title?: string): Promise<Blob> => {
     try {
       console.log("Generating Word document with content:", content);
       
+      const safeTitle = title?.toString().trim();
       // Create a Word XML document that preserves rich formatting
       const wordXml = `
         <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'>
         <head>
           <meta charset="utf-8">
-          <title>Generated Document</title>
+          <title>${safeTitle || 'Document'}</title>
           <style>
             @page { 
               margin: 1in; 
@@ -34,6 +35,7 @@ export const documentGenerationService = {
               font-weight: bold; 
               margin: 24pt 0 12pt 0;
               page-break-after: avoid;
+              text-align: center;
             }
             h2 { 
               font-size: 16pt; 
@@ -77,6 +79,7 @@ export const documentGenerationService = {
           </style>
         </head>
         <body>
+          ${safeTitle ? `<h1>${safeTitle}</h1>` : ''}
           <div>
             ${content}
           </div>
@@ -92,10 +95,7 @@ export const documentGenerationService = {
     }
   },
 
-  /**
-   * Generate a PDF document from text
-   */
-  generatePdfDocument: async (content: string): Promise<Blob> => {
+  generatePdfDocument: async (content: string, title?: string): Promise<Blob> => {
     try {
       console.log("Generating PDF document with content:", content);
 
@@ -139,13 +139,15 @@ export const documentGenerationService = {
         }
       };
 
-      // Title
-      doc.setFont('Times', 'bold');
-      doc.setFontSize(16);
-      const title = 'Generated Document';
-      const titleWidth = doc.getTextWidth(title);
-      doc.text(title, (pageWidth - titleWidth) / 2, y);
-      y += lineHeight * 1.5;
+      // Optional Title
+      const safeTitle = title?.toString().trim();
+      if (safeTitle) {
+        doc.setFont('Times', 'bold');
+        doc.setFontSize(16);
+        const titleWidth = doc.getTextWidth(safeTitle);
+        doc.text(safeTitle, (pageWidth - titleWidth) / 2, y);
+        y += lineHeight * 1.5;
+      }
 
       // Body
       doc.setFont('Times', 'normal');
@@ -165,19 +167,23 @@ export const documentGenerationService = {
     }
   },
   
-  /**
-   * Generate an Excel document from text
-   */
-  generateExcelDocument: async (content: string): Promise<Blob> => {
+  generateExcelDocument: async (content: string, title?: string): Promise<Blob> => {
     try {
       console.log("Generating Excel document with content:", content);
       
       // Create a basic CSV format from the content
-      let csvContent = "Content\n";
+      let csvContent = '';
+
+      const safeTitle = title?.toString().trim();
+      if (safeTitle) {
+        csvContent += `"${safeTitle.replace(/"/g, '""')}"\n\n`;
+      } else {
+        csvContent += "Content\n";
+      }
       
       // Add each line as a separate row
       content.split('\n').forEach(line => {
-        // Escape any commas in the content
+        // Escape any quotes in the content
         csvContent += `"${line.replace(/"/g, '""')}"\n`;
       });
       

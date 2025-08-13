@@ -140,15 +140,15 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
 
       switch (format) {
         case 'word':
-          blob = await documentService.generateWordDocument(generatedContent);
+          blob = await documentService.generateWordDocument(generatedContent, sectionTitle);
           fileExtension = 'doc';
           break;
         case 'pdf':
-          blob = await documentService.generatePdfDocument(generatedContent);
+          blob = await documentService.generatePdfDocument(generatedContent, sectionTitle);
           fileExtension = 'pdf';
           break;
         case 'excel':
-          blob = await documentService.generateExcelDocument(generatedContent);
+          blob = await documentService.generateExcelDocument(generatedContent, sectionTitle);
           fileExtension = 'csv';
           break;
         case 'powerpoint':
