@@ -1,6 +1,7 @@
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
+import Mermaid from '@/components/mermaid/Mermaid';
 import { ArrowRight, TrendingUp, TrendingDown } from 'lucide-react';
-import { ShareholdingChanges, Shareholder, PaymentStructure, DealEconomics, ShareholderData } from '@/types/dealStructuring';
+import { ShareholdingChanges, PaymentStructure, DealEconomics, ShareholderData } from '@/types/dealStructuring';
+import { buildMermaidShareholdingPies } from '@/components/dealStructuring/flow/mermaid/buildMermaidShareholdingPie';
 
 interface ShareholdingDiagramVisualizationProps {
   shareholdingChanges?: ShareholdingChanges;
@@ -66,19 +67,11 @@ export const ShareholdingDiagramVisualization = ({
 
   const keyChanges = shareholdingChanges?.keyChanges || [];
 
-  const CustomTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload[0]) {
-      const data = payload[0].payload as Shareholder;
-      return (
-        <div className="bg-white p-3 border rounded-lg shadow-lg">
-          <p className="font-medium">{data.name}</p>
-          <p className="text-sm text-gray-600">{data.percentage.toFixed(2)}%</p>
-          <p className="text-xs text-gray-500 capitalize">{data.type?.replace(/_/g, ' ') || 'N/A'}</p>
-        </div>
-      );
-    }
-    return null;
-  };
+  const { beforeChart, afterChart } = buildMermaidShareholdingPies(beforeData, afterData, {
+    beforeTitle: 'Acquirer: Before New Equity',
+    afterTitle: 'Acquirer: After New Equity',
+  });
+
 
   if (beforeData.length === 0 && afterData.length === 0) {
     return (
@@ -95,28 +88,11 @@ export const ShareholdingDiagramVisualization = ({
         {/* Before Transaction (Acquirer's Shareholders) */}
         <div className="text-center">
           <h4 className="font-medium mb-2">Acquirer: Before New Equity</h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={beforeData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="percentage"
-                nameKey="name"
-              >
-                {beforeData.map((entry, index) => (
-                  <Cell 
-                    key={`before-${index}`} 
-                    fill={COLORS[getShareholderTypeForColor(entry.type)] || '#8884d8'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          {beforeData.length > 0 ? (
+            <Mermaid chart={beforeChart} className="w-full h-full" />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500 text-sm">No data</div>
+          )}
         </div>
 
         {/* Arrow and Summary */}
@@ -129,11 +105,12 @@ export const ShareholdingDiagramVisualization = ({
                 {keyChanges.slice(0, 3).map((changeItem, index) => (
                   <div key={index} className="flex items-center gap-2 text-xs">
                     {getChangeIcon(changeItem.change)}
-                    <span 
-                      className="truncate" 
+                    <span
+                      className="truncate"
                       title={`${changeItem.shareholder}: ${changeItem.before?.toFixed(1)}% -> ${changeItem.after?.toFixed(1)}% (${changeItem.change > 0 ? '+' : ''}${changeItem.change.toFixed(1)}%)`}
                     >
-                      {changeItem.shareholder}: {changeItem.change > 0 ? '+' : ''}{changeItem.change.toFixed(1)}%
+                      {changeItem.shareholder}: {changeItem.change > 0 ? '+' : ''}
+                      {changeItem.change.toFixed(1)}%
                     </span>
                   </div>
                 ))}
@@ -145,28 +122,11 @@ export const ShareholdingDiagramVisualization = ({
         {/* After Transaction (Acquirer's Shareholders) */}
         <div className="text-center">
           <h4 className="font-medium mb-2">Acquirer: After New Equity</h4>
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={afterData}
-                cx="50%"
-                cy="50%"
-                innerRadius={30}
-                outerRadius={80}
-                paddingAngle={2}
-                dataKey="percentage"
-                nameKey="name"
-              >
-                {afterData.map((entry, index) => (
-                  <Cell 
-                    key={`after-${index}`} 
-                    fill={COLORS[getShareholderTypeForColor(entry.type)] || '#8884d8'} 
-                  />
-                ))}
-              </Pie>
-              <Tooltip content={<CustomTooltip />} />
-            </PieChart>
-          </ResponsiveContainer>
+          {afterData.length > 0 ? (
+            <Mermaid chart={afterChart} className="w-full h-full" />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500 text-sm">No data</div>
+          )}
         </div>
       </div>
 
