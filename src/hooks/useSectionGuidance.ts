@@ -25,19 +25,65 @@ function slugify(label: string) {
 
 function parseRequirements(raw?: string | null): GuidanceField[] {
   if (!raw) return [];
-  const lines = raw
-    .split(/\r?\n/)
-    .map(l => l.trim())
-    .filter(Boolean);
-
+  
+  console.log('Parsing requirements raw data:', raw);
+  
+  // Split by different patterns - handle numbered/lettered lists better
+  const segments = raw.split(/(?=\([ivxlcdm]+\)|(?:\d+\.|\([a-z]\)|\([A-Z]\)))/i);
+  
   const fields: GuidanceField[] = [];
-  for (const line of lines) {
-    const cleaned = line.replace(/^[-•\d\.\)\s]+/, '').trim();
-    if (!cleaned) continue;
-    const required = /\b(must|shall|required)\b/i.test(line);
-    const id = slugify(cleaned);
-    fields.push({ id, label: cleaned, required, type: cleaned.length > 60 ? 'textarea' : 'text' });
+  
+  for (const segment of segments) {
+    const trimmed = segment.trim();
+    if (!trimmed) continue;
+    
+    // Extract meaningful content after list markers
+    let cleaned = trimmed
+      .replace(/^\([ivxlcdm]+\)\s*/i, '') // Remove roman numerals (i), (ii), etc.
+      .replace(/^\([a-zA-Z]\)\s*/, '') // Remove letter markers (a), (b), etc.
+      .replace(/^\d+\.\s*/, '') // Remove number markers 1., 2., etc.
+      .replace(/^[-•]\s*/, '') // Remove bullet points
+      .trim();
+    
+    if (!cleaned || cleaned.length < 3) continue;
+    
+    // Extract the main topic/subject from the first sentence or clause
+    const firstSentence = cleaned.split(/[.;:]|(?=\s(?:including|such as|for example))/i)[0].trim();
+    let label = firstSentence;
+    
+    // Clean up common prefixes and make more user-friendly
+    label = label
+      .replace(/^(details?|information|description|outline)\s+(of|on|about)\s+/i, '')
+      .replace(/^(the\s+)?company'?s?\s+/i, '')
+      .replace(/^(provide|include|describe|explain|state|list)\s+/i, '')
+      .trim();
+    
+    // Capitalize first letter
+    if (label) {
+      label = label.charAt(0).toUpperCase() + label.slice(1);
+    }
+    
+    if (!label || label.length < 3) continue;
+    
+    const required = /\b(must|shall|required|mandatory)\b/i.test(trimmed);
+    const id = slugify(label);
+    
+    // Determine field type based on content complexity
+    const isComplex = cleaned.length > 100 || 
+                     /\b(details?|description|explanation|analysis|discussion)\b/i.test(cleaned) ||
+                     cleaned.includes('\n');
+    
+    fields.push({ 
+      id, 
+      label, 
+      required, 
+      type: isComplex ? 'textarea' : 'text' 
+    });
+    
+    console.log('Extracted field:', { id, label, required, type: isComplex ? 'textarea' : 'text' });
   }
+  
+  console.log('Final parsed fields:', fields);
   return fields;
 }
 
