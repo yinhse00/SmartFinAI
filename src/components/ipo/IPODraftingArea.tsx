@@ -31,11 +31,12 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState('draft');
   const [isEditMode, setIsEditMode] = useState(false);
-  const [keyElements, setKeyElements] = useState({
+  const [keyElements, setKeyElements] = useState<Record<string, any>>({
     company_description: '',
     principal_activities: '',
     business_model: ''
   });
+  const [ddDocumentIds, setDdDocumentIds] = useState<string[]>([]);
 
   const {
     isGenerating,
@@ -74,6 +75,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
       project_id: projectId,
       section_type: selectedSection,
       key_elements: keyElements,
+      dd_documents: ddDocumentIds,
       industry_context: 'Hong Kong IPO',
       regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
     };
@@ -86,6 +88,7 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
       project_id: projectId,
       section_type: selectedSection,
       key_elements: keyElements,
+      dd_documents: ddDocumentIds,
       industry_context: 'Hong Kong IPO',
       regulatory_requirements: ['HKEX Main Board', 'App1A Part A']
     };
@@ -168,11 +171,14 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
 
         {activeTab === 'input' && (
           <InputGenerateTab
+            projectId={projectId}
+            sectionType={selectedSection}
             keyElements={keyElements}
             setKeyElements={setKeyElements}
             isGenerating={isGenerating}
             onGenerate={handleGenerateContent}
             onUploadDD={handleUploadDD}
+            onDDDocumentsChange={setDdDocumentIds}
           />
         )}
 
