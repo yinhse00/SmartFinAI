@@ -1,5 +1,8 @@
 
 project_id = "petoxjdikxxugbrzajpj"
 
-[functions.market-data]
+[functions.parse-vetting-requirements]
+verify_jwt = false
+
+[functions.grok-proxy]
 verify_jwt = false
