@@ -28,8 +28,8 @@ function parseRequirements(raw?: string | null): GuidanceField[] {
   
   console.log('Parsing requirements raw data:', raw);
   
-  // Split by different patterns - handle numbered/lettered lists better
-  const segments = raw.split(/(?=\([ivxlcdm]+\)|(?:\d+\.|\([a-z]\)|\([A-Z]\)))/i);
+  // Split by roman numeral patterns - handle IPO guidance format
+  const segments = raw.split(/(?=\([ivxlcdmv]+\)\s+)/i);
   
   const fields: GuidanceField[] = [];
   
@@ -37,9 +37,11 @@ function parseRequirements(raw?: string | null): GuidanceField[] {
     const trimmed = segment.trim();
     if (!trimmed) continue;
     
+    console.log('Processing segment:', trimmed);
+    
     // Extract meaningful content after list markers
     let cleaned = trimmed
-      .replace(/^\([ivxlcdm]+\)\s*/i, '') // Remove roman numerals (i), (ii), etc.
+      .replace(/^\([ivxlcdmv]+\)\s+/i, '') // Remove roman numerals (i), (ii), etc. with spaces
       .replace(/^\([a-zA-Z]\)\s*/, '') // Remove letter markers (a), (b), etc.
       .replace(/^\d+\.\s*/, '') // Remove number markers 1., 2., etc.
       .replace(/^[-•]\s*/, '') // Remove bullet points
@@ -47,40 +49,49 @@ function parseRequirements(raw?: string | null): GuidanceField[] {
     
     if (!cleaned || cleaned.length < 3) continue;
     
-    // Extract the main topic/subject from the first sentence or clause
-    const firstSentence = cleaned.split(/[.;:]|(?=\s(?:including|such as|for example))/i)[0].trim();
-    let label = firstSentence;
+    console.log('Cleaned content:', cleaned);
     
-    // Clean up common prefixes and make more user-friendly
+    // Extract the main topic/subject - stop at parentheses or examples
+    const firstPart = cleaned.split(/\s*\(|(?:\s+e\.g\.)|(?:\s+such as)|(?:\s+including)/i)[0].trim();
+    let label = firstPart;
+    
+    // Clean up common prefixes while preserving business terms
     label = label
-      .replace(/^(details?|information|description|outline)\s+(of|on|about)\s+/i, '')
-      .replace(/^(the\s+)?company'?s?\s+/i, '')
+      .replace(/^(details?\s+of|information\s+about|description\s+of|outline\s+of)\s+/i, '')
       .replace(/^(provide|include|describe|explain|state|list)\s+/i, '')
+      .replace(/^(the\s+)?company'?s?\s+/i, '')
       .trim();
     
+    // Remove trailing punctuation
+    label = label.replace(/[,.\s]+$/, '');
+    
     // Capitalize first letter
-    if (label) {
+    if (label && label.length >= 3) {
       label = label.charAt(0).toUpperCase() + label.slice(1);
     }
     
-    if (!label || label.length < 3) continue;
+    if (!label || label.length < 3) {
+      console.log('Skipping short label:', label);
+      continue;
+    }
     
     const required = /\b(must|shall|required|mandatory)\b/i.test(trimmed);
     const id = slugify(label);
     
     // Determine field type based on content complexity
     const isComplex = cleaned.length > 100 || 
-                     /\b(details?|description|explanation|analysis|discussion)\b/i.test(cleaned) ||
+                     /\b(details?|description|explanation|analysis|discussion|expansion plans|implementation)\b/i.test(cleaned) ||
                      cleaned.includes('\n');
     
-    fields.push({ 
+    const field: GuidanceField = { 
       id, 
       label, 
       required, 
       type: isComplex ? 'textarea' : 'text' 
-    });
+    };
     
-    console.log('Extracted field:', { id, label, required, type: isComplex ? 'textarea' : 'text' });
+    fields.push(field);
+    console.log('Added field:', field);
   }
   
   console.log('Final parsed fields:', fields);
