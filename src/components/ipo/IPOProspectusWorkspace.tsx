@@ -21,7 +21,7 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   project,
   onSwitchProject
 }) => {
-  const [selectedSection, setSelectedSection] = useState<string>('overview');
+  const [selectedSection, setSelectedSection] = useState<string>('business');
   const [isChatPanelOpen, setIsChatPanelOpen] = useState(true);
   const [chatContent, setChatContent] = useState<string>('');
   const [chatContentUpdater, setChatContentUpdater] = useState<((content: string) => void) | null>(null);

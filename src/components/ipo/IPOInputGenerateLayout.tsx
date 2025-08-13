@@ -3,27 +3,20 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Upload, 
   Sparkles, 
   Loader2, 
   FileText, 
   Building, 
-  Target,
   TrendingUp,
   CheckCircle2,
-  ArrowRight,
-  Shield,
-  Building2
+  ArrowRight
 } from 'lucide-react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
-import { SegmentAlignmentValidator } from './SegmentAlignmentValidator';
-import { ComplianceDashboard } from './ComplianceDashboard';
+import { SupportingDocumentsUploader } from './drafting/SupportingDocumentsUploader';
 
 interface IPOInputGenerateLayoutProps {
   projectId: string;
@@ -33,9 +26,8 @@ interface IPOInputGenerateLayoutProps {
 }
 
 const QUICK_SECTIONS = [
-  { id: 'overview', title: 'Business Overview', icon: Building, description: 'Company description and core business' },
-  { id: 'strategy', title: 'Business Strategy', icon: Target, description: 'Strategic objectives and competitive positioning' },
-  { id: 'future_outlook', title: 'Future Outlook', icon: TrendingUp, description: 'Growth prospects and market opportunities' }
+  { id: 'business', title: 'Business', icon: Building, description: 'Company description and core business' },
+  { id: 'financial', title: 'Financial Information', icon: TrendingUp, description: 'Key financials and performance' }
 ];
 
 export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
@@ -50,19 +42,6 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     business_model: ''
   });
 
-  // Segment alignment state
-  const [segmentAlignmentValid, setSegmentAlignmentValid] = useState(true);
-  const [segmentIssues, setSegmentIssues] = useState<string[]>([]);
-  
-  // Compliance state
-  const [complianceIssues, setComplianceIssues] = useState([]);
-  const [complianceMetrics, setComplianceMetrics] = useState({
-    overallScore: 85,
-    businessFinancialAlignment: 75,
-    materialityCompliance: 90,
-    disclosureCompleteness: 80,
-    citationAccuracy: 85
-  });
 
   const {
     isGenerating,
@@ -98,15 +77,6 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       return;
     }
 
-    // Check segment alignment for business sections
-    if (['overview', 'products', 'strategy'].includes(selectedSection) && !segmentAlignmentValid) {
-      toast({
-        title: "Segment Alignment Issues",
-        description: "Please resolve business-financial segment alignment issues before generating content.",
-        variant: "destructive"
-      });
-      return;
-    }
 
     const request: IPOContentGenerationRequest = {
       project_id: projectId,
@@ -121,24 +91,6 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     console.log('📥 Generation result:', result ? 'Success' : 'Failed');
   };
 
-  const handleSegmentValidationUpdate = (isValid: boolean, issues: string[]) => {
-    setSegmentAlignmentValid(isValid);
-    setSegmentIssues(issues);
-  };
-
-  const handleFixComplianceIssue = (issueId: string) => {
-    console.log('Fixing compliance issue:', issueId);
-    // Implementation would call segment alignment service
-  };
-
-  const handleRefreshCompliance = () => {
-    console.log('Refreshing compliance analysis');
-    // Implementation would refresh analysis
-  };
-
-  const handleUploadDD = () => {
-    console.log('Upload DD documents');
-  };
 
   const selectedSectionData = QUICK_SECTIONS.find(s => s.id === selectedSection) || QUICK_SECTIONS[0];
 
@@ -188,303 +140,161 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
           <div className="max-w-6xl mx-auto p-6">
-            <Tabs defaultValue="input" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="input" className="flex items-center gap-2">
-                  <Building className="h-4 w-4" />
-                  Input & Configure
-                </TabsTrigger>
-                <TabsTrigger value="alignment" className="flex items-center gap-2">
-                  <Building2 className="h-4 w-4" />
-                  Segment Alignment
-                </TabsTrigger>
-                <TabsTrigger value="compliance" className="flex items-center gap-2">
-                  <Shield className="h-4 w-4" />
-                  Compliance Check
-                </TabsTrigger>
-              </TabsList>
+            {/* Streamlined layout without tabs */}
 
-              <TabsContent value="input" className="mt-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Left Column: Input Configuration */}
-                  <div className="space-y-6">
-              {/* Selected Section Info */}
-              <Card className="border-primary/20">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-primary/10 rounded-lg">
-                      <selectedSectionData.icon className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{selectedSectionData.title}</CardTitle>
-                      <p className="text-sm text-muted-foreground">{selectedSectionData.description}</p>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Company Description
-                      </label>
-                      <Textarea
-                        placeholder="Describe the company's core business, market position, and key value propositions..."
-                        value={keyElements.company_description}
-                        onChange={(e) => setKeyElements(prev => ({
-                          ...prev,
-                          company_description: e.target.value
-                        }))}
-                        rows={4}
-                        className="resize-none"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Principal Activities
-                      </label>
-                      <Textarea
-                        placeholder="List the main business activities, revenue streams, and operational focus areas..."
-                        value={keyElements.principal_activities}
-                        onChange={(e) => setKeyElements(prev => ({
-                          ...prev,
-                          principal_activities: e.target.value
-                        }))}
-                        rows={3}
-                        className="resize-none"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="text-sm font-medium mb-2 block">
-                        Business Model
-                      </label>
-                      <Textarea
-                        placeholder="Explain how the company generates revenue, key competitive advantages, and market strategy..."
-                        value={keyElements.business_model}
-                        onChange={(e) => setKeyElements(prev => ({
-                          ...prev,
-                          business_model: e.target.value
-                        }))}
-                        rows={3}
-                        className="resize-none"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Generation Controls */}
-              <Card>
-                <CardContent className="pt-6">
-                  <Button 
-                    className="w-full h-12 text-base" 
-                    onClick={handleGenerateContent}
-                    disabled={isGenerating}
-                  >
-                    {isGenerating ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Generating Content...
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="h-5 w-5 mr-2" />
-                        Generate {selectedSectionData.title}
-                      </>
-                    )}
-                  </Button>
-                  
-                  {generatedContent && (
-                    <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-600" />
-                          <span className="text-sm font-medium text-green-800">Content Generated Successfully</span>
-                        </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm"
-                          onClick={onContentGenerated}
-                          className="border-green-300 text-green-700 hover:bg-green-100"
-                        >
-                          Switch to Editor
-                          <ArrowRight className="h-3 w-3 ml-1" />
-                        </Button>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+              {/* Left Column: Input Configuration */}
+              <div className="space-y-6">
+                {/* Selected Section Info */}
+                <Card className="border-primary/20">
+                  <CardHeader className="pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-primary/10 rounded-lg">
+                        <selectedSectionData.icon className="h-5 w-5 text-primary" />
                       </div>
-                      <p className="text-xs text-green-700 mt-1">
-                        Ready to edit and refine in the drafting workspace
-                      </p>
+                      <div>
+                        <CardTitle className="text-lg">{selectedSectionData.title}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{selectedSectionData.description}</p>
+                      </div>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Right Column: Support & Upload */}
-            <div className="space-y-6">
-              {/* Due Diligence Upload */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Upload className="h-4 w-4" />
-                    Supporting Documents
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                    <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                    <h4 className="font-medium mb-2">Upload Due Diligence Documents</h4>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Upload relevant business documents to enhance content generation
-                    </p>
-                    <Button variant="outline" onClick={handleUploadDD}>
-                      Select Documents
-                    </Button>
-                  </div>
-                  
-                  <div className="mt-6">
-                    <h4 className="text-sm font-medium mb-3">Recommended Document Types:</h4>
-                    <div className="space-y-2">
-                      {[
-                        'Business plans and strategy documents',
-                        'Management presentations',
-                        'Market research and analysis',
-                        'Financial statements and projections',
-                        'Product/service documentation',
-                        'Industry reports and benchmarks'
-                      ].map((item, index) => (
-                        <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                          {item}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Content Preview */}
-              {generatedContent && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <FileText className="h-4 w-4" />
-                      Generated Preview
-                    </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
-                      <div 
-                        className="text-sm leading-relaxed prose prose-sm max-w-none"
-                        dangerouslySetInnerHTML={{ 
-                          __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
-                        }}
-                      />
-                    </div>
-                    <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                      <span>{generatedContent.split(' ').length} words generated</span>
-                      <Button variant="ghost" size="sm" onClick={clearContent}>
-                        Clear & Restart
-                      </Button>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Company Description
+                        </label>
+                        <Textarea
+                          placeholder="Describe the company's core business, market position, and key value propositions..."
+                          value={keyElements.company_description}
+                          onChange={(e) => setKeyElements(prev => ({
+                            ...prev,
+                            company_description: e.target.value
+                          }))}
+                          rows={4}
+                          className="resize-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Principal Activities
+                        </label>
+                        <Textarea
+                          placeholder="List the main business activities, revenue streams, and operational focus areas..."
+                          value={keyElements.principal_activities}
+                          onChange={(e) => setKeyElements(prev => ({
+                            ...prev,
+                            principal_activities: e.target.value
+                          }))}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
+                      
+                      <div>
+                        <label className="text-sm font-medium mb-2 block">
+                          Business Model
+                        </label>
+                        <Textarea
+                          placeholder="Explain how the company generates revenue, key competitive advantages, and market strategy..."
+                          value={keyElements.business_model}
+                          onChange={(e) => setKeyElements(prev => ({
+                            ...prev,
+                            business_model: e.target.value
+                          }))}
+                          rows={3}
+                          className="resize-none"
+                        />
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-              )}
-                  </div>
 
-                  {/* Right Column: Support & Upload */}
-                  <div className="space-y-6">
-                    {/* Due Diligence Upload */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <Upload className="h-4 w-4" />
-                          Supporting Documents
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
-                          <Upload className="h-10 w-10 mx-auto mb-3 text-muted-foreground" />
-                          <h4 className="font-medium mb-2">Upload Due Diligence Documents</h4>
-                          <p className="text-sm text-muted-foreground mb-4">
-                            Upload relevant business documents to enhance content generation
-                          </p>
-                          <Button variant="outline" onClick={handleUploadDD}>
-                            Select Documents
+                {/* Generation Controls */}
+                <Card>
+                  <CardContent className="pt-6">
+                    <Button 
+                      className="w-full h-12 text-base" 
+                      onClick={handleGenerateContent}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <>
+                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                          Generating Content...
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="h-5 w-5 mr-2" />
+                          Generate {selectedSectionData.title}
+                        </>
+                      )}
+                    </Button>
+                    
+                    {generatedContent && (
+                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <span className="text-sm font-medium text-green-800">Content Generated Successfully</span>
+                          </div>
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={onContentGenerated}
+                            className="border-green-300 text-green-700 hover:bg-green-100"
+                          >
+                            Switch to Editor
+                            <ArrowRight className="h-3 w-3 ml-1" />
                           </Button>
                         </div>
-                        
-                        <div className="mt-6">
-                          <h4 className="text-sm font-medium mb-3">Recommended Document Types:</h4>
-                          <div className="space-y-2">
-                            {[
-                              'Business plans and strategy documents',
-                              'Management presentations',
-                              'Market research and analysis',
-                              'Financial statements and projections',
-                              'Product/service documentation',
-                              'Industry reports and benchmarks'
-                            ].map((item, index) => (
-                              <div key={index} className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <div className="w-1.5 h-1.5 bg-primary rounded-full" />
-                                {item}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Content Preview */}
-                    {generatedContent && (
-                      <Card>
-                        <CardHeader>
-                          <CardTitle className="text-base flex items-center gap-2">
-                            <FileText className="h-4 w-4" />
-                            Generated Preview
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                          <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
-                            <div 
-                              className="text-sm leading-relaxed prose prose-sm max-w-none"
-                              dangerouslySetInnerHTML={{ 
-                                __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
-                              }}
-                            />
-                          </div>
-                          <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{generatedContent.split(' ').length} words generated</span>
-                            <Button variant="ghost" size="sm" onClick={clearContent}>
-                              Clear & Restart
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+                        <p className="text-xs text-green-700 mt-1">
+                          Ready to edit and refine in the drafting workspace
+                        </p>
+                      </div>
                     )}
-                  </div>
-                </div>
-              </TabsContent>
+                  </CardContent>
+                </Card>
+              </div>
 
-              <TabsContent value="alignment" className="mt-6">
-                <SegmentAlignmentValidator
+              {/* Right Column: Supporting Documents & Preview */}
+              <div className="space-y-6">
+                <SupportingDocumentsUploader
                   projectId={projectId}
-                  onValidationUpdate={handleSegmentValidationUpdate}
+                  sectionType={selectedSection}
                 />
-              </TabsContent>
 
-              <TabsContent value="compliance" className="mt-6">
-                <ComplianceDashboard
-                  projectId={projectId}
-                  selectedSection={selectedSection}
-                  issues={complianceIssues}
-                  metrics={complianceMetrics}
-                  onFixIssue={handleFixComplianceIssue}
-                  onRefreshAnalysis={handleRefreshCompliance}
-                />
-              </TabsContent>
-            </Tabs>
+                {/* Content Preview */}
+                {generatedContent && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <FileText className="h-4 w-4" />
+                        Generated Preview
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
+                        <div 
+                          className="text-sm leading-relaxed prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ 
+                            __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
+                          }}
+                        />
+                      </div>
+                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{generatedContent.split(' ').length} words generated</span>
+                        <Button variant="ghost" size="sm" onClick={clearContent}>
+                          Clear & Restart
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </div>
+
           </div>
         </ScrollArea>
       </div>
