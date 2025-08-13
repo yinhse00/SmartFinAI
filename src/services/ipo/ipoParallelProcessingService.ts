@@ -426,6 +426,26 @@ Draft the section now, following the guidance first, then adapting tone from sam
   }
 
   /**
+   * Build a standard Revenue Breakdown table aligned to accountants' report segments
+   */
+  private buildRevenueBreakdownTable(segments: any[]): string {
+    const rows = (Array.isArray(segments) ? segments : []).filter(s => s && (s.is_material || (typeof s.revenue_percentage === 'number' && s.revenue_percentage > 0)));
+
+    let table = '## Revenue Breakdown by Segment\n\n';
+    table += 'The following table summarizes the Company\'s revenue by business segment, consistent with the segment reporting in the accountants\' report:\n\n';
+    table += '| Business Segment | Revenue % | Financial Statement Reference |\n';
+    table += '|------------------|-----------|------------------------------|\n';
+
+    rows.forEach((s: any) => {
+      const pct = typeof s.revenue_percentage === 'number' ? s.revenue_percentage : parseFloat(String(s.revenue_percentage || 0));
+      const ref = s.financial_segment_reference || 'Note X.X';
+      table += `| ${s.name} | ${isNaN(pct) ? '' : pct}% | ${ref} |\n`;
+    });
+
+    return table;
+  }
+
+  /**
    * Enhanced content analysis with parallel-gathered context
    */
   private async analyzeGeneratedContentEnhanced(content: string, dataResult: any) {
