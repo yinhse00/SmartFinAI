@@ -22,8 +22,8 @@ export const IPO_SECTIONS: IPOSectionDef[] = [
   { id: 'corporate-information', title: 'CORPORATE INFORMATION' },
   { id: 'industry-overview', title: 'INDUSTRY OVERVIEW' },
   { id: 'regulatory-overview', title: 'REGULATORY OVERVIEW' },
-  { id: 'history-development-and-corporate-structure', title: 'history, development and corporate structure' },
-  { id: 'business', title: 'Business' },
+  { id: 'history-development-and-corporate-structure', title: 'HISTORY, DEVELOPMENT AND CORPORATE STRUCTURE' },
+  { id: 'business', title: 'BUSINESS' },
   { id: 'directors-supervisors-and-senior-management', title: 'DIRECTORS, SUPERVISORS AND SENIOR MANAGEMENT' },
   { id: 'relationship-with-controlling-shareholders', title: 'RELATIONSHIP WITH OUR CONTROLLING SHAREHOLDERS' },
   { id: 'connected-transactions', title: 'CONNECTED TRANSACTIONS' },
@@ -44,6 +44,6 @@ export const IPO_SECTION_TITLE_MAP: Record<string, string> = IPO_SECTIONS.reduce
 
 export function getIPOSectionTitle(id: string, fallback = 'Prospectus Section'): string {
   // Backward compatibility for legacy combined section id
-  if (id === 'history-development-corporate-structure-business') return 'Business';
+  if (id === 'history-development-corporate-structure-business') return 'BUSINESS';
   return IPO_SECTION_TITLE_MAP[id] || fallback;
 }
