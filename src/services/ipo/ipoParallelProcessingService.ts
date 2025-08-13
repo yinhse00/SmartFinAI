@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { parallelContextService } from '../regulatory/context/parallelContextService';
 import { simpleAiClient } from './simpleAiClient';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection, SourceAttribution } from '@/types/ipo';
+import { segmentAlignmentService } from './segmentAlignmentService';
 
 /**
  * Enhanced parallel processing service for IPO prospectus drafting
@@ -94,6 +95,9 @@ export class IPOParallelProcessingService {
         Promise.resolve({ data: null, error: null })
       ];
 
+      // Start loading segment configuration in parallel
+      const segmentsPromise = segmentAlignmentService.loadSegmentConfiguration(projectId);
+
       // Wait for all parallel operations to complete
       const [
         projectResult,
@@ -103,6 +107,9 @@ export class IPOParallelProcessingService {
         existingContentResult,
         specificTemplateResult
       ] = await Promise.all(dataPromises);
+
+      // Resolve segments after other parallel operations (already started)
+      const segments = await segmentsPromise;
 
       const processingTime = Date.now() - startTime;
       console.log(`✅ Parallel data fetch completed in ${processingTime}ms`);
@@ -126,6 +133,7 @@ export class IPOParallelProcessingService {
         regulatoryRefs,
         existingContent,
         specificTemplate,
+        segments,
         processingTime,
         usedParallelProcessing: true
       };
@@ -205,7 +213,6 @@ export class IPOParallelProcessingService {
           parallelProcessing: true
         }
       });
-
       const aiProcessingTime = Date.now() - aiStartTime;
       console.log(`🤖 AI generation completed in ${aiProcessingTime}ms`);
 
@@ -213,11 +220,44 @@ export class IPOParallelProcessingService {
         throw new Error(aiResponse.error || 'Empty response from AI service');
       }
 
-      // Phase 3: Parallel content analysis and processing
+      // Business-specific alignment enforcement with accountants' report segments
+      const isBusiness = (request.section_type || '').toLowerCase() === 'business';
+      const segments = (dataResult as any).segments || [];
+      let generatedText = aiResponse.text as string;
+      let alignmentMissing: string[] = [];
+      let alignmentRecs: string[] = [];
+
+      if (isBusiness && Array.isArray(segments) && segments.length > 0) {
+        try {
+          const validation = await segmentAlignmentService.validateSegmentAlignment(
+            request.project_id,
+            segments,
+            generatedText
+          );
+
+          if (!validation.isValid || validation.score < 85 || !/Revenue Breakdown by Segment/i.test(generatedText)) {
+            // Append an aligned revenue breakdown table if missing or low score
+            if (!/Revenue Breakdown by Segment/i.test(generatedText)) {
+              generatedText += `\n\n${this.buildRevenueBreakdownTable(segments)}`;
+            }
+            // Capture issues for reporting
+            alignmentMissing = validation.issues.filter(i => i.severity === 'high').map(i => i.message);
+            alignmentRecs = validation.recommendations;
+          }
+        } catch (e) {
+          console.warn('Segment alignment validation failed:', e);
+        }
+      }
+
+      // Phase 3: Parallel content analysis and processing (post-adjustments)
       const [contentAnalysis, enhancedSources] = await Promise.all([
-        this.analyzeGeneratedContentEnhanced(aiResponse.text, dataResult),
-        this.createEnhancedSourceAttributions(aiResponse, dataResult, regulatoryContext)
+        this.analyzeGeneratedContentEnhanced(generatedText, dataResult),
+        this.createEnhancedSourceAttributions({ text: generatedText }, dataResult, regulatoryContext)
       ]);
+
+      // Merge alignment signals into analysis
+      const mergedMissing = [...(contentAnalysis.missingRequirements || []), ...alignmentMissing];
+      const mergedRecs = [...(contentAnalysis.recommendations || []), ...alignmentRecs];
 
       const totalProcessingTime = Date.now() - overallStartTime;
       console.log(`🎉 Parallel IPO content generation completed in ${totalProcessingTime}ms`);
@@ -228,8 +268,8 @@ export class IPOParallelProcessingService {
         confidence_score: contentAnalysis.confidence,
         regulatory_compliance: {
           requirements_met: contentAnalysis.requirementsMet,
-          missing_requirements: contentAnalysis.missingRequirements,
-          recommendations: contentAnalysis.recommendations
+          missing_requirements: mergedMissing,
+          recommendations: mergedRecs
         },
         quality_metrics: {
           completeness: contentAnalysis.completeness,
@@ -249,7 +289,7 @@ export class IPOParallelProcessingService {
     } catch (error) {
       const totalTime = Date.now() - overallStartTime;
       console.error('❌ Error in parallel content generation:', error);
-      throw new Error(`Parallel content generation failed: ${error.message}`);
+      throw new Error(`Parallel content generation failed: ${(error as any)?.message || String(error)}`);
     }
   }
 
@@ -314,59 +354,75 @@ export class IPOParallelProcessingService {
     regulatoryContext: any,
     request: IPOContentGenerationRequest
   ): string {
-    const { project, guidance, templates, regulatoryRefs, existingContent } = dataResult;
-    
+    const { project, guidance, templates, regulatoryRefs, existingContent, segments } = dataResult;
+    const isBusiness = (request.section_type || '').toLowerCase() === 'business';
+
+    const segmentsBlock = isBusiness && Array.isArray(segments) && segments.length > 0 ? `
+**ACCOUNTANTS' REPORT SEGMENTS (authoritative alignment data):**
+${JSON.stringify(
+  segments.map((s: any) => ({
+    name: s.name,
+    revenue_percentage: s.revenue_percentage,
+    is_material: s.is_material,
+    financial_segment_reference: s.financial_segment_reference,
+    description: s.description
+  })),
+  null,
+  2
+)}
+` : '';
+
+    const samplesBlock = `
+**SAMPLES (for tone and phrasing, not structure):**
+${guidance?.references ? `- Guidance References: ${guidance.references}` : ''}
+${templates?.length > 0 ? `- Template patterns:\n${templates.slice(0, 2).map((t: any) => `  • ${t['Company Name'] || 'Template'} — ${t.Overview || t['business Nature'] || 'Business overview'}`).join('\n')}` : ''}
+`;
+
     return `
-You are a senior Hong Kong investment banking professional specializing in IPO prospectus drafting for HKEX listings. Generate institutional-quality content for the \"${baseContext.sectionTitle}\" section.
+You are a senior Hong Kong investment banking professional specializing in IPO prospectus drafting for HKEX listings. Draft institutional-quality content for the "${baseContext.sectionTitle}" section.
 
 **COMPANY PROFILE:**
 - Company: ${project.company_name}
 - Industry: ${project.industry || 'General'}
 - Project: ${project.project_name}
 
-**REGULATORY FRAMEWORK:**
-${regulatoryContext.context ? `
-Enhanced Regulatory Context:
-${regulatoryContext.context.substring(0, 1500)}
-` : ''}
-
-${guidance ? `
-**SECTION-SPECIFIC GUIDANCE:**
+${guidance ? `**SECTION-SPECIFIC GUIDANCE (PRIMARY – MUST FOLLOW):**
 - Requirements: ${guidance.Guidance || guidance['contents requirements'] || 'Standard HKEX requirements'}
 - Content Framework: ${guidance.contents || 'Professional business disclosure'}
-- References: ${guidance.references || 'HKEX Listing Rules'}
 ` : ''}
 
-**BUSINESS TEMPLATES & PATTERNS:**
-${templates.length > 0 ? `
-Industry Best Practices:
-${templates.slice(0, 2).map(t => `- ${t['Company Name'] || 'Template'}: ${t.Overview || t['business Nature'] || 'Business overview'}`).join('\n')}
-` : ''}
+${samplesBlock}
+
+**STRICT DRAFTING ORDER:**
+1) First, strictly follow the Section-Specific Guidance for structure and mandatory content.
+2) Then, consult Samples for tone and examples only. Do not override guidance.
+
+${isBusiness ? segmentsBlock : ''}
+
+**REGULATORY FRAMEWORK (supporting):**
+${regulatoryContext.context ? `Enhanced Regulatory Context:\n${regulatoryContext.context.substring(0, 1500)}` : 'HKEX Main Board Listing Rules'}
 
 **REGULATORY CROSS-REFERENCES:**
-${regulatoryRefs.length > 0 ? `
-Applicable Rules:
-${regulatoryRefs.map(ref => `- ${ref.reference_No}: ${ref.particulars?.substring(0, 100) || 'Regulatory requirement'}`).join('\n')}
-` : ''}
+${regulatoryRefs.length > 0 ? regulatoryRefs.map((ref: any) => `- ${ref.reference_No}: ${ref.particulars?.substring(0, 100) || 'Regulatory requirement'}`).join('\n') : ''}
 
-${existingContent ? `
-**EXISTING CONTENT (for enhancement):**
-Current Version: ${existingContent.content?.substring(0, 500)}...
-` : ''}
+${existingContent ? `**EXISTING CONTENT (for enhancement):**\nCurrent Version: ${existingContent.content?.substring(0, 500)}...` : ''}
 
 **CONTENT GENERATION REQUIREMENTS:**
 1. Professional investment banking language and structure
-2. Comprehensive business analysis with specific details
-3. Full HKEX Main Board compliance (App1A requirements)
-4. Industry-specific insights and market positioning
-5. Quantitative details and performance metrics where applicable
-6. Risk factors and regulatory considerations
-7. Clear, structured presentation suitable for institutional investors
+2. Comprehensive, specific analysis with quantitative details where possible
+3. Full HKEX App1A compliance and accurate cross-references
+4. Clear, structured presentation suitable for institutional investors
+5. Use semantic headings and subsections
+${isBusiness ? `6. Business content MUST align with accountants' report segments:
+   - Use exact segment names and ensure narrative consistency
+   - Include a table titled "Revenue Breakdown by Segment" with columns: Business Segment | Revenue % | Financial Statement Reference
+   - Ensure percentages and segment names match the segment configuration above
+` : ''}
 
 **KEY ELEMENTS TO INCORPORATE:**
 ${JSON.stringify(baseContext.keyElements, null, 2)}
 
-Generate comprehensive, professional IPO prospectus content that exceeds Hong Kong market standards and provides institutional investors with clear, detailed business insights.`;
+Draft the section now, following the guidance first, then adapting tone from samples where appropriate.`;
   }
 
   /**
