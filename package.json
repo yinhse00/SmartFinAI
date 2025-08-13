@@ -51,6 +51,7 @@
     "framer-motion": "^12.9.4",
     "input-otp": "^1.2.4",
     "jodit-react": "^5.2.19",
+    "jspdf": "^2.5.2",
     "lucide-react": "^0.462.0",
     "mammoth": "^1.9.0",
     "mermaid": "^10.9.3",

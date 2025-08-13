@@ -145,7 +145,7 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
           break;
         case 'pdf':
           blob = await documentService.generatePdfDocument(generatedContent);
-          fileExtension = 'html';
+          fileExtension = 'pdf';
           break;
         case 'excel':
           blob = await documentService.generateExcelDocument(generatedContent);

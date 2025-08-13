@@ -8,6 +8,7 @@ import { toast } from '@/components/ui/use-toast';
 import { FileText, Loader2, Upload, FileUp, Download } from 'lucide-react';
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { grokService } from '@/services/grokService';
+import { documentService } from '@/services/documents/documentService';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const TranslationForm = () => {
@@ -157,8 +158,8 @@ const TranslationForm = () => {
         blob = await grokService.generateWordDocument(translatedContent);
         fileName += '.doc';
       } else {
-        blob = await grokService.generatePdfDocument(translatedContent);
-        fileName += '.html';
+        blob = await documentService.generatePdfDocument(translatedContent);
+        fileName += '.pdf';
       }
       
       // Create download link and trigger download
@@ -177,7 +178,7 @@ const TranslationForm = () => {
       
       toast({
         title: `${format.toUpperCase()} document generated`,
-        description: `Your translated content has been downloaded as a ${format === 'word' ? 'Word' : 'PDF-formatted HTML'} document.`,
+        description: `Your translated content has been downloaded as a ${format === 'word' ? 'Word' : 'PDF'} document.`,
       });
     } catch (error) {
       console.error("Download error:", error);

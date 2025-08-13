@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { toast } from '@/components/ui/use-toast';
 import { grokService } from '@/services/grokService';
+import { documentService } from '@/services/documents/documentService';
 
 export interface UseResponseFormReturn {
   responseType: string;
@@ -276,12 +277,12 @@ export function useResponseForm(): UseResponseFormReturn {
     setIsExporting(true);
     
     try {
-      const blob = await grokService.generatePdfDocument(generatedResponse);
+      const blob = await documentService.generatePdfDocument(generatedResponse);
       
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.html`;
+      a.download = `Regulatory_Response_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       
@@ -292,7 +293,7 @@ export function useResponseForm(): UseResponseFormReturn {
       
       toast({
         title: "PDF document generated",
-        description: "Your response has been downloaded as an HTML document formatted for printing.",
+        description: "Your response has been downloaded as a PDF document.",
       });
     } catch (error) {
       console.error("PDF download error:", error);

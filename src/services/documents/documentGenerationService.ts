@@ -98,87 +98,67 @@ export const documentGenerationService = {
   generatePdfDocument: async (content: string): Promise<Blob> => {
     try {
       console.log("Generating PDF document with content:", content);
-      
-      // Create a PDF-like HTML document that preserves rich formatting
-      const pdfHtml = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <title>Generated Document</title>
-          <style>
-            @page { 
-              margin: 1in; 
-              size: 8.5in 11in; 
-            }
-            body {
-              font-family: 'Times New Roman', serif;
-              font-size: 12pt;
-              line-height: 1.6;
-              margin: 40px;
-              color: #000;
-            }
-            .content {
-              max-width: 800px;
-              margin: 0 auto;
-            }
-            h1 { 
-              font-size: 18pt; 
-              font-weight: bold; 
-              margin: 24pt 0 12pt 0;
-              text-align: center;
-              color: #2c5282;
-            }
-            h2 { 
-              font-size: 16pt; 
-              font-weight: bold; 
-              margin: 18pt 0 6pt 0;
-            }
-            h3 { 
-              font-size: 14pt; 
-              font-weight: bold; 
-              margin: 12pt 0 6pt 0;
-            }
-            p { 
-              margin: 6pt 0; 
-              text-align: justify;
-            }
-            table { 
-              border-collapse: collapse; 
-              width: 100%; 
-              margin: 12pt 0;
-            }
-            table, th, td { 
-              border: 1px solid #000; 
-            }
-            th, td { 
-              padding: 6pt; 
-              text-align: left;
-            }
-            th { 
-              background-color: #f0f0f0; 
-              font-weight: bold;
-            }
-            ul, ol { 
-              margin: 6pt 0; 
-              padding-left: 24pt;
-            }
-            li { 
-              margin: 3pt 0;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="content">
-            <h1>Generated Document</h1>
-            ${content}
-          </div>
-        </body>
-        </html>
-      `;
-      
-      // Return as HTML that will be displayed properly when downloaded
-      return new Blob([pdfHtml], {type: 'text/html'});
+
+      // Use jsPDF to create a true PDF file
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 56; // ~0.78in
+      const maxWidth = pageWidth - margin * 2;
+      const lineHeight = 18;
+
+      // Convert basic HTML to plain text while preserving structure
+      const plain = content
+        .replace(/<br\s*\/?>(?=\n)?/gi, '\n')
+        .replace(/<p[^>]*>/gi, '')
+        .replace(/<\/p>/gi, '\n\n')
+        .replace(/<li[^>]*>/gi, '\u2022 ')
+        .replace(/<\/li>/gi, '\n')
+        .replace(/<ul[^>]*>|<\/ul>|<ol[^>]*>|<\/ol>/gi, '')
+        .replace(/<h1[^>]*>(.*?)<\/h1>/gis, (_m, t) => `\n\n${String(t).toUpperCase()}\n`)
+        .replace(/<h2[^>]*>(.*?)<\/h2>/gis, (_m, t) => `\n\n${String(t)}\n`)
+        .replace(/<h3[^>]*>(.*?)<\/h3>/gis, (_m, t) => `\n${String(t)}\n`)
+        .replace(/<table[\s\S]*?<\/table>/gi, '\n[Table omitted]\n') // Tables are noted but not rendered
+        .replace(/<[^>]+>/g, '')
+        .replace(/&nbsp;/g, ' ')
+        .replace(/&amp;/g, '&')
+        .replace(/&lt;/g, '<')
+        .replace(/&gt;/g, '>')
+        .replace(/&quot;/g, '"')
+        .trim();
+
+      const paragraphs = plain.split(/\n{2,}/).map(p => p.trim()).filter(Boolean);
+
+      let y = margin;
+      const addPageIfNeeded = (needed: number) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+
+      // Title
+      doc.setFont('Times', 'bold');
+      doc.setFontSize(16);
+      const title = 'Generated Document';
+      const titleWidth = doc.getTextWidth(title);
+      doc.text(title, (pageWidth - titleWidth) / 2, y);
+      y += lineHeight * 1.5;
+
+      // Body
+      doc.setFont('Times', 'normal');
+      doc.setFontSize(12);
+
+      for (const para of paragraphs) {
+        const lines = doc.splitTextToSize(para, maxWidth);
+        addPageIfNeeded(lines.length * lineHeight);
+        doc.text(lines, margin, y, { baseline: 'top' });
+        y += lines.length * lineHeight + lineHeight * 0.6;
+      }
+
+      return doc.output('blob');
     } catch (error) {
       console.error("Error generating PDF document:", error);
       throw new Error("Failed to generate PDF document.");
