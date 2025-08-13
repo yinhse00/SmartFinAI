@@ -3,17 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { 
-  FileText, 
-  Building, 
-  DollarSign, 
-  AlertTriangle, 
-  Users, 
-  Scale,
-  TrendingUp,
-  Shield,
-  Plus
-} from 'lucide-react';
+import { FileText, Plus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface IPOChapterNavigationProps {
@@ -22,66 +12,14 @@ interface IPOChapterNavigationProps {
   onSelectSection: (section: string) => void;
 }
 
+import { IPO_SECTIONS } from '@/constants/ipoSections';
+
 const PROSPECTUS_CHAPTERS = [
   {
-    id: 'business',
-    title: 'Business',
-    icon: Building,
-    sections: [
-      { id: 'overview', title: 'Business Overview', status: 'draft' },
-      { id: 'history', title: 'History & Development', status: 'pending' },
-      { id: 'products', title: 'Products & Services', status: 'pending' },
-      { id: 'strengths', title: 'Competitive Strengths', status: 'pending' },
-      { id: 'strategy', title: 'Business Strategy', status: 'pending' }
-    ]
-  },
-  {
-    id: 'financial',
-    title: 'Financial Information',
-    icon: DollarSign,
-    sections: [
-      { id: 'summary', title: 'Financial Summary', status: 'pending' },
-      { id: 'statements', title: 'Financial Statements', status: 'pending' },
-      { id: 'analysis', title: 'Management Analysis', status: 'pending' }
-    ]
-  },
-  {
-    id: 'risk_factors',
-    title: 'Risk Factors',
-    icon: AlertTriangle,
-    sections: [
-      { id: 'business_risks', title: 'Business Risks', status: 'pending' },
-      { id: 'financial_risks', title: 'Financial Risks', status: 'pending' },
-      { id: 'regulatory_risks', title: 'Regulatory Risks', status: 'pending' }
-    ]
-  },
-  {
-    id: 'directors',
-    title: 'Directors & Management',
-    icon: Users,
-    sections: [
-      { id: 'board', title: 'Board of Directors', status: 'pending' },
-      { id: 'management', title: 'Senior Management', status: 'pending' },
-      { id: 'governance', title: 'Corporate Governance', status: 'pending' }
-    ]
-  },
-  {
-    id: 'regulatory',
-    title: 'Regulatory Overview',
-    icon: Scale,
-    sections: [
-      { id: 'industry_regulation', title: 'Industry Regulation', status: 'pending' },
-      { id: 'compliance', title: 'Compliance Framework', status: 'pending' }
-    ]
-  },
-  {
-    id: 'future_plans',
-    title: 'Future Plans & Prospects',
-    icon: TrendingUp,
-    sections: [
-      { id: 'use_of_proceeds', title: 'Use of Proceeds', status: 'pending' },
-      { id: 'future_outlook', title: 'Future Outlook', status: 'pending' }
-    ]
+    id: 'prospectus_contents',
+    title: 'Prospectus Contents',
+    icon: FileText,
+    sections: IPO_SECTIONS.map((s) => ({ id: s.id, title: s.title, status: 'pending' }))
   }
 ];
 
@@ -110,7 +48,7 @@ export const IPOChapterNavigation: React.FC<IPOChapterNavigationProps> = ({
   selectedSection,
   onSelectSection
 }) => {
-  const [expandedChapters, setExpandedChapters] = useState<string[]>(['business']);
+  const [expandedChapters, setExpandedChapters] = useState<string[]>(['prospectus_contents']);
 
   const toggleChapter = (chapterId: string) => {
     setExpandedChapters(prev => 

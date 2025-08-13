@@ -13,32 +13,13 @@ interface SectionDropdownProps {
   onSelectSection: (section: string) => void;
 }
 
-const ALL_SECTIONS = [
-  { id: 'overview', title: 'Business Overview' },
-  { id: 'history', title: 'History & Development' },
-  { id: 'products', title: 'Products & Services' },
-  { id: 'strengths', title: 'Competitive Strengths' },
-  { id: 'strategy', title: 'Business Strategy' },
-  { id: 'summary', title: 'Financial Summary' },
-  { id: 'statements', title: 'Financial Statements' },
-  { id: 'analysis', title: 'Management Analysis' },
-  { id: 'business_risks', title: 'Business Risks' },
-  { id: 'financial_risks', title: 'Financial Risks' },
-  { id: 'regulatory_risks', title: 'Regulatory Risks' },
-  { id: 'board', title: 'Board of Directors' },
-  { id: 'management', title: 'Senior Management' },
-  { id: 'governance', title: 'Corporate Governance' },
-  { id: 'industry_regulation', title: 'Industry Regulation' },
-  { id: 'compliance', title: 'Compliance Framework' },
-  { id: 'use_of_proceeds', title: 'Use of Proceeds' },
-  { id: 'future_outlook', title: 'Future Outlook' }
-];
+import { IPO_SECTIONS } from '@/constants/ipoSections';
 
 export const SectionDropdown: React.FC<SectionDropdownProps> = ({
   selectedSection,
   onSelectSection
 }) => {
-  const currentSection = ALL_SECTIONS.find(s => s.id === selectedSection);
+  const currentSection = IPO_SECTIONS.find(s => s.id === selectedSection);
 
   return (
     <DropdownMenu>
@@ -49,7 +30,7 @@ export const SectionDropdown: React.FC<SectionDropdownProps> = ({
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-[250px] max-h-[400px] overflow-y-auto">
-        {ALL_SECTIONS.map((section) => (
+        {IPO_SECTIONS.map((section) => (
           <DropdownMenuItem
             key={section.id}
             onClick={() => onSelectSection(section.id)}

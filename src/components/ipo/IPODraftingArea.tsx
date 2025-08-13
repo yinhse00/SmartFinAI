@@ -9,6 +9,7 @@ import { TabNavigation } from './drafting/TabNavigation';
 import { InputGenerateTab } from './drafting/InputGenerateTab';
 import { LaTeXEditor } from './latex/LaTeXEditor';
 
+
 interface IPODraftingAreaProps {
   projectId: string;
   selectedSection: string;
@@ -96,19 +97,6 @@ export const IPODraftingArea: React.FC<IPODraftingAreaProps> = ({
     console.log('Upload DD documents');
   };
 
-  // Get section title for display
-  const getSectionTitle = (section: string) => {
-    const sectionMap = {
-      'overview': 'Business Overview',
-      'history': 'History & Development', 
-      'products': 'Products & Services',
-      'strengths': 'Competitive Strengths',
-      'strategy': 'Business Strategy',
-      'summary': 'Financial Summary',
-      'risk_factors': 'Risk Factors'
-    };
-    return sectionMap[section] || 'Business Section';
-  };
 
   if (layoutMode === 'drafting') {
     // Simplified drafting layout - full screen draft editor

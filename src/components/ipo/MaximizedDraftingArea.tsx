@@ -6,6 +6,7 @@ import { DraftContentArea } from './drafting/DraftContentArea';
 import { useToast } from '@/hooks/use-toast';
 import { documentService } from '@/services/documents/documentService';
 import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
+import { getIPOSectionTitle } from '@/constants/ipoSections';
 
 interface MaximizedDraftingAreaProps {
   projectId: string;
@@ -184,29 +185,8 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
   };
 
   // Get section title for display
-  const getSectionTitle = (section: string) => {
-    const sectionMap = {
-      'overview': 'Business Overview',
-      'history': 'History & Development', 
-      'products': 'Products & Services',
-      'strengths': 'Competitive Strengths',
-      'strategy': 'Business Strategy',
-      'summary': 'Financial Summary',
-      'statements': 'Financial Statements',
-      'analysis': 'Management Analysis',
-      'business_risks': 'Business Risks',
-      'financial_risks': 'Financial Risks',
-      'regulatory_risks': 'Regulatory Risks',
-      'board': 'Board of Directors',
-      'management': 'Senior Management',
-      'governance': 'Corporate Governance',
-      'industry_regulation': 'Industry Regulation',
-      'compliance': 'Compliance Framework',
-      'use_of_proceeds': 'Use of Proceeds',
-      'future_outlook': 'Future Outlook'
-    };
-    return sectionMap[section] || 'Business Section';
-  };
+  const getSectionTitle = (section: string) => getIPOSectionTitle(section);
+
 
   return (
     <div className="h-full flex flex-col">
