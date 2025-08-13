@@ -26,7 +26,7 @@ export class IPOParallelProcessingService {
    * Phase 1: Parallel Database Query Retrieval
    * Fetches all required data simultaneously for 40-60% faster database operations
    */
-  async fetchAllDataInParallel(projectId: string, sectionType: string, templateId?: string) {
+  async fetchAllDataInParallel(projectId: string, sectionType: string, templateId?: string, ddDocumentIds?: string[]) {
     console.log('🚀 Starting parallel data fetch for IPO content generation');
     const startTime = Date.now();
 
@@ -111,6 +111,17 @@ export class IPOParallelProcessingService {
       // Resolve segments after other parallel operations (already started)
       const segments = await segmentsPromise;
 
+      // Optionally load selected DD documents
+      let ddDocs: any[] = [];
+      if (ddDocumentIds && ddDocumentIds.length > 0) {
+        const { data: dd, error: ddErr } = await supabase
+          .from('ipo_dd_documents')
+          .select('id, document_name, document_type, extracted_content')
+          .eq('project_id', projectId)
+          .in('id', ddDocumentIds);
+        if (!ddErr && dd) ddDocs = dd;
+      }
+
       const processingTime = Date.now() - startTime;
       console.log(`✅ Parallel data fetch completed in ${processingTime}ms`);
 
@@ -134,6 +145,7 @@ export class IPOParallelProcessingService {
         existingContent,
         specificTemplate,
         segments,
+        ddDocs,
         processingTime,
         usedParallelProcessing: true
       };
@@ -169,7 +181,8 @@ export class IPOParallelProcessingService {
       const dataFetchPromise = this.fetchAllDataInParallel(
         request.project_id,
         request.section_type,
-        request.template_id
+        request.template_id,
+        request.dd_documents
       );
 
       // Phase 2: Parallel context preparation (starts immediately)
@@ -378,6 +391,12 @@ ${guidance?.references ? `- Guidance References: ${guidance.references}` : ''}
 ${templates?.length > 0 ? `- Template patterns:\n${templates.slice(0, 2).map((t: any) => `  • ${t['Company Name'] || 'Template'} — ${t.Overview || t['business Nature'] || 'Business overview'}`).join('\n')}` : ''}
 `;
 
+    const ddDocs = (dataResult as any).ddDocs || [];
+    const docsBlock = ddDocs.length > 0 ? `
+**SUPPORTING DOCUMENTS (use as factual context; prioritize guidance structure):**
+${ddDocs.slice(0, 5).map((d: any) => `- ${d.document_name} [${d.document_type}] — ${String(d.extracted_content || '').substring(0, 300)}...`).join('\n')}
+` : '';
+
     return `
 You are a senior Hong Kong investment banking professional specializing in IPO prospectus drafting for HKEX listings. Draft institutional-quality content for the "${baseContext.sectionTitle}" section.
 
@@ -406,6 +425,7 @@ ${regulatoryContext.context ? `Enhanced Regulatory Context:\n${regulatoryContext
 ${regulatoryRefs.length > 0 ? regulatoryRefs.map((ref: any) => `- ${ref.reference_No}: ${ref.particulars?.substring(0, 100) || 'Regulatory requirement'}`).join('\n') : ''}
 
 ${existingContent ? `**EXISTING CONTENT (for enhancement):**\nCurrent Version: ${existingContent.content?.substring(0, 500)}...` : ''}
+${docsBlock}
 
 **CONTENT GENERATION REQUIREMENTS:**
 1. Professional investment banking language and structure
