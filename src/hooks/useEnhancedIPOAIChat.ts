@@ -33,7 +33,7 @@ export const useEnhancedIPOAIChat = ({
     {
       id: '1',
       type: 'ai',
-      content: 'Welcome! I\'m your **Enhanced AI Drafting Assistant** for Hong Kong IPO prospectus content. I work like Lovable - analyzing your content proactively and providing intelligent suggestions.\n\n**🎯 HOW I HELP:**\n• **Automatic Analysis**: I continuously analyze your content for issues and opportunities\n• **Proactive Suggestions**: I spot problems before you ask and suggest specific fixes\n• **Targeted Improvements**: I provide precise edits you can apply with one click\n• **Business-Financial Alignment**: I ensure segment consistency between business and financial sections\n• **Materiality Compliance**: I verify products/services align with accountants\' report materiality\n\n**🚀 QUICK ACTIONS:**\n• "Analyze my content" - Get comprehensive analysis\n• "Fix compliance issues" - Auto-fix regulatory gaps\n• "Check segment alignment" - Validate business-financial consistency\n• "Apply improvements" - Enhance quality automatically\n• "Make this professional" - Improve language and tone\n\nJust tell me what you need, and I\'ll provide specific, actionable help with HKEX compliance!',
+      content: 'Hello! I\'m your AI assistant for IPO prospectus drafting. I can help analyze content, fix compliance issues, and suggest improvements. How can I assist you today?',
       timestamp: new Date(),
       responseType: 'GUIDANCE',
       confidence: 0.95

@@ -1,6 +1,7 @@
 
 import { ipoAIChatService } from './ipoAIChatService';
 import { contentAnalysisService } from './contentAnalysisService';
+import { sectionAnalysisService } from './sectionAnalysisService';
 import { grokService } from '@/services/grokService';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 
@@ -29,18 +30,31 @@ export class EnhancedIPOAIChatService {
     currentContent: string
   ): Promise<EnhancedChatResponse> {
     try {
-      console.log('🚀 Enhanced IPO Chat: Starting proactive analysis...');
+      console.log('🚀 Enhanced IPO Chat: Starting intelligent analysis...');
       
-      // Step 1: Always analyze content first (like Lovable analyzing code)
+      // Step 1: Check if this is an amendment request
+      const isAmendmentRequest = this.isAmendmentRequest(userMessage);
+      
+      // Step 2: If amendment, analyze cross-section impact
+      if (isAmendmentRequest) {
+        return await this.processAmendmentWithSectionReview(
+          userMessage,
+          projectId,
+          sectionType,
+          currentContent
+        );
+      }
+      
+      // Step 3: Regular content analysis
       const proactiveAnalysis = await contentAnalysisService.getProactiveSuggestions(
         currentContent,
         sectionType
       );
       
-      // Step 2: Determine response type based on user message and analysis
+      // Step 4: Determine response type based on user message and analysis
       const responseType = this.determineResponseType(userMessage, proactiveAnalysis);
       
-      // Step 3: Generate appropriate response
+      // Step 5: Generate appropriate response
       switch (responseType) {
         case 'PROACTIVE_ANALYSIS':
           return this.createProactiveAnalysisResponse(proactiveAnalysis);
@@ -204,6 +218,80 @@ UPDATED_CONTENT:
         success: false,
         message: 'Failed to apply improvement. Please try manual editing.'
       };
+    }
+  }
+
+  /**
+   * Check if user message is an amendment request
+   */
+  private isAmendmentRequest(userMessage: string): boolean {
+    const amendmentKeywords = [
+      'amend', 'change', 'update', 'modify', 'revise', 'edit', 'alter',
+      'add to', 'remove from', 'replace', 'rewrite', 'correct'
+    ];
+    
+    const message = userMessage.toLowerCase();
+    return amendmentKeywords.some(keyword => message.includes(keyword));
+  }
+
+  /**
+   * Process amendment with cross-section review
+   */
+  private async processAmendmentWithSectionReview(
+    userMessage: string,
+    projectId: string,
+    sectionType: string,
+    currentContent: string
+  ): Promise<EnhancedChatResponse> {
+    try {
+      // Analyze impact on related sections
+      const impactAnalysis = await sectionAnalysisService.analyzeAmendmentImpact(
+        projectId,
+        sectionType,
+        userMessage,
+        currentContent
+      );
+
+      // Fetch related section content for context
+      const relatedContent = await sectionAnalysisService.fetchRelatedContent(
+        projectId,
+        impactAnalysis.affectedSections
+      );
+
+      // Generate enhanced prompt with cross-section context
+      const enhancedPrompt = sectionAnalysisService.generateCrossSectionPrompt(
+        sectionType,
+        userMessage,
+        currentContent,
+        relatedContent
+      );
+
+      // Get AI response with full context
+      const response = await grokService.generateResponse({
+        prompt: enhancedPrompt,
+        metadata: { 
+          requestType: 'amendment_with_review',
+          affectedSections: impactAnalysis.affectedSections
+        }
+      });
+
+      const updatedContent = this.extractUpdatedContent(response.text);
+      
+      let message = response.text;
+      if (impactAnalysis.affectedSections.length > 0) {
+        message += `\n\n**📋 Cross-Section Review:**\nThis change may affect: ${impactAnalysis.affectedSections.join(', ')}\n\n**⚠️ Consistency Checks Needed:**\n${impactAnalysis.consistencyIssues.map(issue => `• ${issue}`).join('\n')}`;
+      }
+
+      return {
+        type: 'CONTENT_UPDATE',
+        message,
+        updatedContent,
+        confidence: 0.85
+      };
+
+    } catch (error) {
+      console.error('Amendment processing failed:', error);
+      return this.createErrorResponse(error);
     }
   }
 

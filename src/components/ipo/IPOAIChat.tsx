@@ -9,7 +9,8 @@ import { Separator } from '@/components/ui/separator';
 import { 
   X, Send, Bot, User, Loader2, 
   Brain, Target, CheckCircle,
-  Building, BookOpen, Edit, Lightbulb
+  Building, BookOpen, Edit, Lightbulb,
+  ChevronDown, ChevronUp, Minimize2
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { ProactiveSuggestions } from './ProactiveSuggestions';
@@ -47,6 +48,7 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   });
   
   const [inputValue, setInputValue] = useState('');
+  const [isCollapsed, setIsCollapsed] = useState(false);
 
   // Auto-analyze content when it changes
   useEffect(() => {
@@ -70,23 +72,36 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   };
 
   return (
-    <Card className="h-full rounded-none border-0 border-l">
+    <Card className={`${isCollapsed ? 'h-auto' : 'h-full'} rounded-none border-0 border-l transition-all duration-300`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base flex items-center gap-2">
             <Brain className="h-4 w-4" />
-            Enhanced AI Assistant
+            AI Assistant
           </CardTitle>
-          <Button variant="ghost" size="sm" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="h-7 w-7 p-0"
+            >
+              {isCollapsed ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onClose} className="h-7 w-7 p-0">
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Proactive analysis for {selectedSection} section
-        </p>
+        {!isCollapsed && (
+          <p className="text-xs text-muted-foreground">
+            {selectedSection} section
+          </p>
+        )}
       </CardHeader>
       
-      <CardContent className="flex flex-col h-[calc(100%-5rem)] p-0">
+      {!isCollapsed && (
+        <CardContent className="flex flex-col h-[calc(100vh-12rem)] p-0">
         {/* Proactive Suggestions Panel */}
         {currentAnalysis && currentAnalysis.hasIssues && (
           <div className="px-4 pb-4 border-b">
@@ -281,7 +296,8 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
             </Button>
           </div>
         </div>
-      </CardContent>
+        </CardContent>
+      )}
     </Card>
   );
 };
