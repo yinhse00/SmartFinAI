@@ -1,3 +1,6 @@
+
+import { supabase } from "@/integrations/supabase/client";
+
 export interface QuoteData {
   symbol: string;
   price: number | null;
@@ -8,20 +11,24 @@ export interface QuoteData {
 }
 
 export const marketDataService = {
-  // Placeholder implementation. Replace with real provider (e.g., Finnhub) via a Supabase Edge Function.
   async getQuote(symbol: string): Promise<QuoteData | null> {
-    // Simple demo for 0005.HK (HSBC)
-    if (symbol.toUpperCase() === "0005.HK") {
-      return {
-        symbol: "0005.HK",
-        price: 61.20,
-        pe: 6.8,
-        pb: 0.9,
-        currency: "HKD",
-        timestamp: Date.now(),
-      };
+    const cleaned = symbol.trim();
+    if (!cleaned) return null;
+
+    const { data, error } = await supabase.functions.invoke("market-data", {
+      body: { symbol: cleaned },
+    });
+
+    if (error) {
+      console.error("Edge function error:", error);
+      return null;
     }
-    // No data for other symbols until provider is integrated
-    return null;
+
+    if (!data?.success) {
+      console.warn("market-data returned failure:", data);
+      return null;
+    }
+
+    return data.data as QuoteData;
   },
 };

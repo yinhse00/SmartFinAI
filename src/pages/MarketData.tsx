@@ -12,6 +12,7 @@ const MarketDataPage: React.FC = () => {
   const [symbol, setSymbol] = useState("0005.HK");
   const [loading, setLoading] = useState(false);
   const [quote, setQuote] = useState<QuoteData | null>(null);
+  const [live, setLive] = useState(true);
 
   // Basic SEO tags for SPA
   useEffect(() => {
@@ -48,7 +49,7 @@ const MarketDataPage: React.FC = () => {
       if (!data) {
         toast({
           title: "No data found",
-          description: "Connect a data provider to enable live quotes.",
+          description: "Please check the symbol or your data provider connection.",
         });
       }
       setQuote(data);
@@ -58,6 +59,18 @@ const MarketDataPage: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // Auto-refresh when live
+  useEffect(() => {
+    if (!live) return;
+    // Fetch immediately, then every 5s
+    handleFetch();
+    const id = setInterval(() => {
+      handleFetch();
+    }, 5000);
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live, symbol]);
 
   const headerSubtitle = useMemo(
     () => "Lookup HK-listed company price, P/E, and P/B multiples.",
@@ -75,9 +88,25 @@ const MarketDataPage: React.FC = () => {
         <section aria-labelledby="lookup" className="grid gap-6 md:grid-cols-3">
           <Card className="md:col-span-3">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <LineChart className="h-5 w-5" />
-                Market Lookup
+              <CardTitle className="flex items-center justify-between gap-2">
+                <span className="flex items-center gap-2">
+                  <LineChart className="h-5 w-5" />
+                  Market Lookup
+                </span>
+                <label className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span
+                    className={`inline-block h-2.5 w-2.5 rounded-full ${live ? "bg-green-500" : "bg-gray-300"}`}
+                    aria-hidden="true"
+                  />
+                  Live updates
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 accent-primary"
+                    checked={live}
+                    onChange={(e) => setLive(e.target.checked)}
+                    aria-label="Toggle live updates"
+                  />
+                </label>
               </CardTitle>
               <CardDescription>
                 Enter HKEX ticker, e.g. 0005.HK or 1299.HK
@@ -104,8 +133,10 @@ const MarketDataPage: React.FC = () => {
                       <CardDescription>{quote.symbol} · {quote.currency}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-2xl font-semibold">{quote.price?.toFixed(2)}</div>
-                      <div className="text-xs text-muted-foreground mt-1">Updated: {new Date(quote.timestamp).toLocaleString()}</div>
+                      <div className="text-2xl font-semibold">{quote.price?.toFixed(2) ?? "-"}</div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        Updated: {new Date(quote.timestamp).toLocaleString()}
+                      </div>
                     </CardContent>
                   </Card>
                   <Card>
