@@ -79,30 +79,112 @@ Deno.serve(async (req) => {
     const m = metricsJson?.metric ?? {};
 
     // Heuristics for P/E and P/B
-    const pe =
+    let pe =
       extractNumber(m['peBasicExclExtraTTM']) ??
       extractNumber(m['peInclExtraTTM']) ??
       extractNumber(m['peTTM']) ??
       extractNumber(m['peAnnual']) ??
       null;
 
-    const pb =
+    let pb =
       extractNumber(m['pbAnnual']) ??
       extractNumber(m['pbQuarterly']) ??
       extractNumber(m['pbTTM']) ??
       null;
 
     const currencyRaw = (m['currency'] as string | undefined) ?? undefined;
-    const currency =
+    let currency =
       (currencyRaw && typeof currencyRaw === 'string' && currencyRaw.length <= 6 ? currencyRaw : undefined) ??
       (symbol.toUpperCase().endsWith('.HK') ? 'HKD' : 'USD');
 
     const nowMs = Date.now();
-    const tsMs = quoteJson?.t ? quoteJson.t * 1000 : nowMs;
+    let tsMs = quoteJson?.t ? quoteJson.t * 1000 : nowMs;
+
+    let price = extractNumber(quoteJson?.c) ?? null;
+
+    // ---- Fallback to Yahoo Finance via RapidAPI when data missing ----
+    if ((price === null || pe === null || pb === null) && Deno.env.get('RAPIDAPI_KEY')) {
+      const rapidKey = Deno.env.get('RAPIDAPI_KEY')!;
+      const region = symbol.toUpperCase().endsWith('.HK') ? 'HK' : 'US';
+      const yhUrl = new URL('https://yh-finance.p.rapidapi.com/stock/v2/get-summary');
+      yhUrl.searchParams.set('symbol', symbol);
+      yhUrl.searchParams.set('region', region);
+
+      try {
+        const yhRes = await fetch(yhUrl.toString(), {
+          headers: {
+            'x-rapidapi-key': rapidKey,
+            'x-rapidapi-host': 'yh-finance.p.rapidapi.com',
+          },
+        });
+
+        if (!yhRes.ok) {
+          const body = await yhRes.text().catch(() => '');
+          console.warn('Yahoo (RapidAPI) get-summary error', yhRes.status, body);
+        } else {
+          const yh: any = await yhRes.json().catch(() => ({}));
+
+          const toNum = (v: unknown): number | null =>
+            typeof v === 'number' && isFinite(v)
+              ? v
+              : typeof (v as any)?.raw === 'number' && isFinite((v as any).raw)
+              ? (v as any).raw
+              : null;
+
+          const yhPrice =
+            toNum(yh?.price?.regularMarketPrice) ??
+            toNum(yh?.financialData?.currentPrice) ??
+            null;
+
+          const yhPE =
+            toNum(yh?.defaultKeyStatistics?.trailingPE) ??
+            toNum(yh?.summaryDetail?.trailingPE) ??
+            null;
+
+          const yhPB =
+            toNum(yh?.defaultKeyStatistics?.priceToBook) ??
+            toNum(yh?.summaryDetail?.priceToBook) ??
+            null;
+
+          const yhCurrency =
+            typeof yh?.price?.currency === 'string' && yh?.price?.currency.length <= 6
+              ? yh.price.currency
+              : null;
+
+          const yhTimeRaw =
+            toNum(yh?.price?.regularMarketTime) ?? // sometimes number
+            toNum(yh?.price?.regularMarketTime?.raw); // sometimes { raw }
+          const yhTimeMs = yhTimeRaw ? yhTimeRaw * 1000 : null;
+
+          // Fill missing fields from Yahoo
+          if (price === null && yhPrice !== null) {
+            price = yhPrice;
+            if (yhTimeMs) tsMs = yhTimeMs;
+          }
+          if (pe === null && yhPE !== null) pe = yhPE;
+          if (pb === null && yhPB !== null) pb = yhPB;
+          if ((!currency || currency === 'USD') && yhCurrency) currency = yhCurrency;
+        }
+      } catch (e) {
+        console.warn('Yahoo (RapidAPI) fallback failed:', e);
+      }
+    }
+    // ---- end fallback ----
+
+    // If we still have nothing meaningful, return failure so the client can inform the user
+    if (price === null && pe === null && pb === null) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: 'No data available from providers (Finnhub/Yahoo). Check symbol or data access.',
+        }),
+        { headers: corsHeaders, status: 200 }
+      );
+    }
 
     const data = {
       symbol,
-      price: extractNumber(quoteJson?.c) ?? null,
+      price,
       pe,
       pb,
       currency,
