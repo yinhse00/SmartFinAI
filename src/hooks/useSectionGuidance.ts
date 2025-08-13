@@ -75,19 +75,22 @@ export function useSectionGuidance(sectionType: string) {
       try {
         const { data, error } = await (supabase as any)
           .from('ipo_prospectus_section_guidance')
-          .select('*')
-          .ilike('Section', `%${sectionType}%`)
-          .limit(1)
-          .maybeSingle();
+          .select('Guidance, Section, contents, "contents requirements", references')
+          .ilike('Section', `%${sectionType}%`);
         if (!active) return;
         if (error) {
           console.warn('Guidance fetch error:', error);
         }
+        const rows = Array.isArray(data) ? data : (data ? [data] : []);
+        const guidanceText = rows.map((r: any) => r?.Guidance).filter(Boolean).join('\n\n') || null;
+        const contentsReqText = rows.map((r: any) => r?.["contents requirements"]).filter(Boolean).join('\n') || null;
+        const contentsText = rows.map((r: any) => r?.contents).filter(Boolean).join('\n') || null;
+        const referencesText = rows.map((r: any) => r?.references).filter(Boolean).join('\n') || null;
         setData({
-          guidance: data?.Guidance ?? null,
-          contents: data?.contents ?? null,
-          contentsRequirements: (data && (data['contents requirements'] as any)) ?? null,
-          references: data?.references ?? null,
+          guidance: guidanceText,
+          contents: contentsText,
+          contentsRequirements: contentsReqText,
+          references: referencesText,
         });
       } catch (e: any) {
         if (!active) return;
@@ -102,8 +105,21 @@ export function useSectionGuidance(sectionType: string) {
 
   const fields = useMemo(() => {
     const parsedReq = parseRequirements(data?.contentsRequirements);
-    if (parsedReq.length > 0) return parsedReq;
-    return parseContents(data?.contents);
+    const base = parsedReq.length > 0 ? parsedReq : parseContents(data?.contents);
+    const map = new Map<string, GuidanceField>();
+    for (const f of base) {
+      const existing = map.get(f.id);
+      if (existing) {
+        map.set(f.id, {
+          ...existing,
+          required: existing.required || f.required,
+          type: existing.type === 'textarea' || f.type === 'textarea' ? 'textarea' : 'text',
+        });
+      } else {
+        map.set(f.id, f);
+      }
+    }
+    return Array.from(map.values());
   }, [data?.contentsRequirements, data?.contents]);
 
   return { data, fields, loading, error };

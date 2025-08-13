@@ -53,34 +53,45 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
               </div>
             ) : null}
 
-            {fields.map((f) => (
-              <div key={f.id}>
-                <label className="text-sm font-medium mb-2 block">
-                  {f.label} {f.required ? <span className="text-destructive">*</span> : null}
-                </label>
-                {f.type === 'textarea' ? (
-                  <Textarea
-                    placeholder={`Enter ${f.label.toLowerCase()}...`}
-                    value={keyElements[f.id] || ''}
-                    onChange={(e) => setKeyElements({
-                      ...keyElements,
-                      [f.id]: e.target.value
-                    })}
-                    rows={3}
-                  />
-                ) : (
-                  <input
-                    className="w-full rounded-md border bg-background px-3 py-2 text-sm"
-                    placeholder={`Enter ${f.label.toLowerCase()}...`}
-                    value={keyElements[f.id] || ''}
-                    onChange={(e) => setKeyElements({
-                      ...keyElements,
-                      [f.id]: e.target.value
-                    })}
-                  />
-                )}
+            {loading ? (
+              <div className="text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Loading section inputs...
               </div>
-            ))}
+            ) : fields.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No specific inputs found for this section. You can still proceed or upload supporting documents.
+              </div>
+            ) : (
+              fields.map((f) => (
+                <div key={f.id}>
+                  <label className="text-sm font-medium mb-2 block">
+                    {f.label} {f.required ? <span className="text-destructive">*</span> : null}
+                  </label>
+                  {f.type === 'textarea' ? (
+                    <Textarea
+                      placeholder={`Enter ${f.label.toLowerCase()}...`}
+                      value={keyElements[f.id] || ''}
+                      onChange={(e) => setKeyElements({
+                        ...keyElements,
+                        [f.id]: e.target.value
+                      })}
+                      rows={3}
+                    />
+                  ) : (
+                    <input
+                      className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                      placeholder={`Enter ${f.label.toLowerCase()}...`}
+                      value={keyElements[f.id] || ''}
+                      onChange={(e) => setKeyElements({
+                        ...keyElements,
+                        [f.id]: e.target.value
+                      })}
+                    />
+                  )}
+                </div>
+              ))
+            )}
 
             <Button 
               className="w-full" 
