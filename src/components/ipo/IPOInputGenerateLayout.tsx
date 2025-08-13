@@ -1,22 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
-  Sparkles, 
-  Loader2, 
-  FileText, 
   Building, 
   TrendingUp,
-  CheckCircle2,
-  ArrowRight
+  CheckCircle2
 } from 'lucide-react';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
-import { useToast } from '@/hooks/use-toast';
-import { SupportingDocumentsUploader } from './drafting/SupportingDocumentsUploader';
+
+import { InputGenerateTab } from './drafting/InputGenerateTab';
 
 interface IPOInputGenerateLayoutProps {
   projectId: string;
@@ -36,11 +30,7 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
   onSectionSelect,
   onContentGenerated
 }) => {
-  const [keyElements, setKeyElements] = useState({
-    company_description: '',
-    principal_activities: '',
-    business_model: ''
-  });
+  const [keyElements, setKeyElements] = useState<Record<string, any>>({});
 
 
   const {
@@ -50,7 +40,7 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     clearContent
   } = useIPOContentGeneration();
   
-  const { toast } = useToast();
+  
 
   // Auto-switch to drafting layout when content is generated
   useEffect(() => {
@@ -67,15 +57,6 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
     console.log('🎯 Selected section:', selectedSection);
     console.log('🏢 Project ID:', projectId);
 
-    // Validate inputs
-    if (!keyElements.company_description?.trim()) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide a company description before generating content.",
-        variant: "destructive"
-      });
-      return;
-    }
 
 
     const request: IPOContentGenerationRequest = {
@@ -142,157 +123,15 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
           <div className="max-w-6xl mx-auto p-6">
             {/* Streamlined layout without tabs */}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-              {/* Left Column: Input Configuration */}
-              <div className="space-y-6">
-                {/* Selected Section Info */}
-                <Card className="border-primary/20">
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <selectedSectionData.icon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{selectedSectionData.title}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{selectedSectionData.description}</p>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Company Description
-                        </label>
-                        <Textarea
-                          placeholder="Describe the company's core business, market position, and key value propositions..."
-                          value={keyElements.company_description}
-                          onChange={(e) => setKeyElements(prev => ({
-                            ...prev,
-                            company_description: e.target.value
-                          }))}
-                          rows={4}
-                          className="resize-none"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Principal Activities
-                        </label>
-                        <Textarea
-                          placeholder="List the main business activities, revenue streams, and operational focus areas..."
-                          value={keyElements.principal_activities}
-                          onChange={(e) => setKeyElements(prev => ({
-                            ...prev,
-                            principal_activities: e.target.value
-                          }))}
-                          rows={3}
-                          className="resize-none"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">
-                          Business Model
-                        </label>
-                        <Textarea
-                          placeholder="Explain how the company generates revenue, key competitive advantages, and market strategy..."
-                          value={keyElements.business_model}
-                          onChange={(e) => setKeyElements(prev => ({
-                            ...prev,
-                            business_model: e.target.value
-                          }))}
-                          rows={3}
-                          className="resize-none"
-                        />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Generation Controls */}
-                <Card>
-                  <CardContent className="pt-6">
-                    <Button 
-                      className="w-full h-12 text-base" 
-                      onClick={handleGenerateContent}
-                      disabled={isGenerating}
-                    >
-                      {isGenerating ? (
-                        <>
-                          <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Generating Content...
-                        </>
-                      ) : (
-                        <>
-                          <Sparkles className="h-5 w-5 mr-2" />
-                          Generate {selectedSectionData.title}
-                        </>
-                      )}
-                    </Button>
-                    
-                    {generatedContent && (
-                      <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
-                            <span className="text-sm font-medium text-green-800">Content Generated Successfully</span>
-                          </div>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={onContentGenerated}
-                            className="border-green-300 text-green-700 hover:bg-green-100"
-                          >
-                            Switch to Editor
-                            <ArrowRight className="h-3 w-3 ml-1" />
-                          </Button>
-                        </div>
-                        <p className="text-xs text-green-700 mt-1">
-                          Ready to edit and refine in the drafting workspace
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Right Column: Supporting Documents & Preview */}
-              <div className="space-y-6">
-                <SupportingDocumentsUploader
-                  projectId={projectId}
-                  sectionType={selectedSection}
-                />
-
-                {/* Content Preview */}
-                {generatedContent && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <FileText className="h-4 w-4" />
-                        Generated Preview
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="bg-muted/50 rounded-lg p-4 max-h-60 overflow-y-auto">
-                        <div 
-                          className="text-sm leading-relaxed prose prose-sm max-w-none"
-                          dangerouslySetInnerHTML={{ 
-                            __html: generatedContent.substring(0, 500) + (generatedContent.length > 500 ? '...' : '')
-                          }}
-                        />
-                      </div>
-                      <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
-                        <span>{generatedContent.split(' ').length} words generated</span>
-                        <Button variant="ghost" size="sm" onClick={clearContent}>
-                          Clear & Restart
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+            <div className="mt-6">
+              <InputGenerateTab
+                projectId={projectId}
+                sectionType={selectedSectionData.title}
+                keyElements={keyElements}
+                setKeyElements={setKeyElements}
+                isGenerating={isGenerating}
+                onGenerate={handleGenerateContent}
+              />
             </div>
 
           </div>
