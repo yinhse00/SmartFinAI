@@ -23,6 +23,7 @@ import UpdatePasswordPage from "./pages/UpdatePassword";
 import ExecutionPage from "./pages/Execution";
 import IPOProspectusPage from "./pages/IPOProspectus";
 import PresentationsPage from "./pages/Presentations";
+import MarketDataPage from "./pages/MarketData";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -90,6 +91,11 @@ const App = () => (
               <Route path="/ipo-prospectus" element={
                 <ProtectedRoute>
                   <IPOProspectusPage />
+                </ProtectedRoute>
+              } />
+              <Route path="/market-data" element={
+                <ProtectedRoute>
+                  <MarketDataPage />
                 </ProtectedRoute>
               } />
               <Route path="*" element={<NotFound />} />
