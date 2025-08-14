@@ -5,6 +5,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { FileText, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { useSectionGuidance } from '@/hooks/useSectionGuidance';
 import { SupportingDocumentsUploader } from './SupportingDocumentsUploader';
+import { BusinessCategorizedInput, BusinessCategoryData } from './BusinessCategorizedInput';
 
 interface KeyElements {
   [key: string]: any;
@@ -33,6 +34,35 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
 }) => {
   const { data: guidance, fields, loading } = useSectionGuidance(sectionType);
 
+  // Check if this is a business section that should use the categorized input
+  const isBusinessSection = sectionType.toLowerCase().includes('business') || 
+                           sectionType.toLowerCase().includes('3.1') ||
+                           sectionType.toLowerCase().includes('3.2') ||
+                           sectionType.toLowerCase().includes('3.3') ||
+                           sectionType.toLowerCase().includes('3.4') ||
+                           sectionType.toLowerCase().includes('3.5') ||
+                           sectionType.toLowerCase().includes('3.6');
+
+  if (isBusinessSection) {
+    // Convert keyElements to BusinessCategoryData format
+    const categoryData: BusinessCategoryData = keyElements as BusinessCategoryData;
+    
+    const setCategoryData = (data: BusinessCategoryData) => {
+      setKeyElements(data);
+    };
+
+    return (
+      <BusinessCategorizedInput
+        projectId={projectId}
+        categoryData={categoryData}
+        setCategoryData={setCategoryData}
+        isGenerating={isGenerating}
+        onGenerate={onGenerate}
+      />
+    );
+  }
+
+  // Default input for non-business sections
   return (
     <div className="h-full p-4">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
