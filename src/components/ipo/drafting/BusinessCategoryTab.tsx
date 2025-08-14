@@ -118,7 +118,7 @@ export const BusinessCategoryTab: React.FC<BusinessCategoryTabProps> = ({
             <Progress value={categoryCompletion} className="h-1" />
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px] pr-4">
+            <ScrollArea className="h-[calc(100vh-20rem)] pr-4">
               <div className="space-y-6">
                 {category.fields.map(renderField)}
               </div>
