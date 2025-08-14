@@ -120,7 +120,7 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
         <ScrollArea className="h-full">
-          <div className="max-w-6xl mx-auto p-6">
+          <div className="w-full p-4">
             {/* Streamlined layout without tabs */}
 
             <div className="mt-6">
