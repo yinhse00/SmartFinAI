@@ -67,15 +67,15 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
   return (
     <div className="h-full flex flex-col">
       {/* Progress Header */}
-      <div className="p-4 border-b bg-background">
-        <div className="flex items-center justify-between mb-3">
+      <div className="p-3 border-b bg-background">
+        <div className="flex items-center justify-between mb-2">
           <h2 className="text-lg font-semibold">Business Information</h2>
           <Badge variant="outline" className="font-medium">
             {Math.round(totalCompletion)}% Complete
           </Badge>
         </div>
         <Progress value={totalCompletion} className="h-2" />
-        <p className="text-sm text-muted-foreground mt-2">
+        <p className="text-sm text-muted-foreground mt-1">
           Complete each category to generate a comprehensive business section
         </p>
       </div>
@@ -83,7 +83,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
       {/* Category Tabs */}
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="h-full flex flex-col">
-          <div className="px-4 pt-4">
+          <div className="px-3 pt-3">
             <TabsList className="grid grid-cols-4 lg:grid-cols-8 gap-1 h-auto p-1">
               {categories.map((category) => {
                 const { status, icon: Icon, color } = getCategoryStatus(category.id);
@@ -104,12 +104,12 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-hidden px-4 pb-4">
+          <div className="flex-1 overflow-hidden px-3 pb-3">
             {categories.map((category) => (
               <TabsContent
                 key={category.id}
                 value={category.id}
-                className="h-full mt-4 data-[state=active]:flex data-[state=active]:flex-col"
+                className="h-full mt-3 data-[state=active]:flex data-[state=active]:flex-col"
               >
                 <BusinessCategoryTab
                   projectId={projectId}
@@ -124,7 +124,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
       </div>
 
       {/* Generation Footer */}
-      <div className="p-4 border-t bg-background">
+      <div className="p-3 border-t bg-background">
         <div className="flex items-center justify-between gap-4">
           <div className="text-sm text-muted-foreground">
             {totalCompletion < 30 && "Complete at least Company Overview to generate content"}

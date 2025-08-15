@@ -201,17 +201,19 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
         isSaving={isSaving}
       />
 
-      <DraftContentArea
-        generatedContent={generatedContent}
-        setGeneratedContent={setGeneratedContent}
-        isEditMode={true} // Always in edit mode
-        setIsEditMode={() => {}} // No toggle needed
-        isGenerating={isGenerating}
-        isLoading={isLoading}
-        onRegenerate={() => {}} // Remove regenerate functionality
-        layoutMode="drafting"
-        sectionType={selectedSection}
-      />
+      <div className="flex-1 overflow-hidden">
+        <DraftContentArea
+          generatedContent={generatedContent}
+          setGeneratedContent={setGeneratedContent}
+          isEditMode={true} // Always in edit mode
+          setIsEditMode={() => {}} // No toggle needed
+          isGenerating={isGenerating}
+          isLoading={isLoading}
+          onRegenerate={() => {}} // Remove regenerate functionality
+          layoutMode="drafting"
+          sectionType={selectedSection}
+        />
+      </div>
     </div>
   );
 };

@@ -76,14 +76,14 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
   const selectedSectionData = QUICK_SECTIONS.find(s => s.id === selectedSection) || QUICK_SECTIONS[0];
 
   return (
-    <div className="h-full bg-gradient-to-br from-background to-muted/20">
+    <div className="h-full bg-gradient-to-br from-background to-muted/20 flex flex-col">
       {/* Header */}
-      <div className="border-b bg-background/80 backdrop-blur-sm p-6">
+      <div className="border-b bg-background/80 backdrop-blur-sm p-4">
         <div className="max-w-6xl mx-auto">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-2xl font-bold">Content Generation</h2>
-              <p className="text-muted-foreground">
+              <h2 className="text-xl font-bold">Content Generation</h2>
+              <p className="text-sm text-muted-foreground">
                 Configure and generate IPO prospectus content with AI assistance
               </p>
             </div>
@@ -119,23 +119,16 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <ScrollArea className="h-full">
-          <div className="w-full p-4">
-            {/* Streamlined layout without tabs */}
-
-            <div className="mt-6">
-              <InputGenerateTab
-                projectId={projectId}
-                sectionType={selectedSectionData.title}
-                keyElements={keyElements}
-                setKeyElements={setKeyElements}
-                isGenerating={isGenerating}
-                onGenerate={handleGenerateContent}
-              />
-            </div>
-
-          </div>
-        </ScrollArea>
+        <div className="h-full p-4">
+          <InputGenerateTab
+            projectId={projectId}
+            sectionType={selectedSectionData.title}
+            keyElements={keyElements}
+            setKeyElements={setKeyElements}
+            isGenerating={isGenerating}
+            onGenerate={handleGenerateContent}
+          />
+        </div>
       </div>
     </div>
   );
