@@ -18,8 +18,8 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { BusinessCategoryTab } from './BusinessCategoryTab';
-import { useBusinessCategories } from '@/hooks/useBusinessCategories';
+import { ProfessionalBusinessCategoryTab } from './ProfessionalBusinessCategoryTab';
+import { useProfessionalBusinessCategories } from '@/hooks/useProfessionalBusinessCategories';
 
 export interface BusinessCategoryData {
   [categoryId: string]: {
@@ -42,8 +42,8 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
   isGenerating,
   onGenerate
 }) => {
-  const [activeCategory, setActiveCategory] = useState('overview');
-  const { categories, getCompletionPercentage, getTotalCompletion } = useBusinessCategories();
+  const [activeCategory, setActiveCategory] = useState('business-model');
+  const { categories, getCompletionPercentage, getTotalCompletion, loading } = useProfessionalBusinessCategories();
 
   const updateCategoryData = useCallback((categoryId: string, fieldId: string, value: any) => {
     setCategoryData({
@@ -64,29 +64,54 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
 
   const totalCompletion = getTotalCompletion(categoryData);
 
+  if (loading) {
+    return (
+      <div className="h-full flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+          <p className="text-sm text-muted-foreground">Loading professional guidance...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
-      {/* Progress Header */}
+      {/* Professional Progress Header */}
       <div className="p-4 border-b bg-background">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Business Information</h2>
-          <Badge variant="outline" className="font-medium">
-            {Math.round(totalCompletion)}% Complete
-          </Badge>
+          <div>
+            <h2 className="text-lg font-semibold">Professional Business Information</h2>
+            <p className="text-xs text-muted-foreground">HKEX Chapter 3.7 Compliant</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="text-xs">
+              {categories.length} HKEX Sections
+            </Badge>
+            <Badge variant="outline" className="font-medium">
+              {Math.round(totalCompletion)}% Complete
+            </Badge>
+          </div>
         </div>
         <Progress value={totalCompletion} className="h-2" />
-        <p className="text-sm text-muted-foreground mt-2">
-          Complete each category to generate a comprehensive business section
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-sm text-muted-foreground">
+            Professional HKEX-compliant business section guidance
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {Math.round(totalCompletion)}% Professional Standard
+          </p>
+        </div>
       </div>
 
       {/* Category Tabs */}
       <div className="flex-1 overflow-hidden">
         <Tabs value={activeCategory} onValueChange={setActiveCategory} className="h-full flex flex-col">
           <div className="px-4 pt-4">
-            <TabsList className="grid grid-cols-4 lg:grid-cols-8 gap-1 h-auto p-1">
+            <TabsList className="grid grid-cols-3 lg:grid-cols-6 xl:grid-cols-12 gap-1 h-auto p-1">
               {categories.map((category) => {
                 const { status, icon: Icon, color } = getCategoryStatus(category.id);
+                const completion = getCompletionPercentage(category.id, categoryData[category.id] || {});
                 return (
                   <TabsTrigger
                     key={category.id}
@@ -98,6 +123,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
                       <div className={`absolute -top-1 -right-1 w-2 h-2 rounded-full ${color}`} />
                     </div>
                     <span className="leading-tight text-center">{category.shortName}</span>
+                    <span className="text-xs opacity-60">{Math.round(completion)}%</span>
                   </TabsTrigger>
                 );
               })}
@@ -111,7 +137,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
                 value={category.id}
                 className="h-full mt-4 data-[state=active]:flex data-[state=active]:flex-col"
               >
-                <BusinessCategoryTab
+                <ProfessionalBusinessCategoryTab
                   projectId={projectId}
                   category={category}
                   data={categoryData[category.id] || {}}
@@ -123,17 +149,22 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
         </Tabs>
       </div>
 
-      {/* Generation Footer */}
+      {/* Professional Generation Footer */}
       <div className="p-4 border-t bg-background">
         <div className="flex items-center justify-between gap-4">
-          <div className="text-sm text-muted-foreground">
-            {totalCompletion < 30 && "Complete at least Company Overview to generate content"}
-            {totalCompletion >= 30 && totalCompletion < 70 && "Good progress! Add more details for better results"}
-            {totalCompletion >= 70 && "Excellent! Ready to generate comprehensive content"}
+          <div className="text-sm space-y-1">
+            <div className="text-muted-foreground">
+              {totalCompletion < 40 && "Complete core sections to meet HKEX professional standards"}
+              {totalCompletion >= 40 && totalCompletion < 70 && "Good progress! Meeting professional standards"}
+              {totalCompletion >= 70 && "Excellent! Ready for professional prospectus generation"}
+            </div>
+            <div className="text-xs text-muted-foreground">
+              Professional HKEX Chapter 3.7 compliance: {totalCompletion >= 70 ? 'Ready' : 'In Progress'}
+            </div>
           </div>
           <Button 
             onClick={onGenerate}
-            disabled={isGenerating || totalCompletion < 30}
+            disabled={isGenerating || totalCompletion < 40}
             size="lg"
           >
             {isGenerating ? (
@@ -141,7 +172,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
             ) : (
               <Sparkles className="h-4 w-4 mr-2" />
             )}
-            {isGenerating ? 'Generating...' : 'Generate Business Section'}
+            {isGenerating ? 'Generating Professional Content...' : 'Generate Professional Business Section'}
           </Button>
         </div>
       </div>
