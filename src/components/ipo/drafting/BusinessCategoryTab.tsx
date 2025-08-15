@@ -82,7 +82,7 @@ export const BusinessCategoryTab: React.FC<BusinessCategoryTabProps> = ({
               </p>}
             <Progress value={categoryCompletion} className="h-1" />
           </CardHeader>
-          <CardContent className="p-4 py-[80px]">
+          <CardContent className="p-4 py-[8px]">
             <ScrollArea className="h-[calc(100vh-16rem)] pr-4">
               <div className="space-y-4">
                 {category.fields.map(renderField)}
