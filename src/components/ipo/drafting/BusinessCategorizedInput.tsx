@@ -18,8 +18,8 @@ import {
   Sparkles,
   Loader2
 } from 'lucide-react';
-import { BusinessCategoryTab } from './BusinessCategoryTab';
-import { useBusinessCategories } from '@/hooks/useBusinessCategories';
+import { EnhancedBusinessCategoryTab } from './EnhancedBusinessCategoryTab';
+import { useEnhancedBusinessCategories } from '@/hooks/useEnhancedBusinessCategories';
 
 export interface BusinessCategoryData {
   [categoryId: string]: {
@@ -43,7 +43,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
   onGenerate
 }) => {
   const [activeCategory, setActiveCategory] = useState('overview');
-  const { categories, getCompletionPercentage, getTotalCompletion } = useBusinessCategories();
+  const { categories, getCompletionPercentage, getTotalCompletion } = useEnhancedBusinessCategories();
 
   const updateCategoryData = useCallback((categoryId: string, fieldId: string, value: any) => {
     setCategoryData({
@@ -111,7 +111,7 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
                 value={category.id}
                 className="h-full mt-4 data-[state=active]:flex data-[state=active]:flex-col"
               >
-                <BusinessCategoryTab
+                <EnhancedBusinessCategoryTab
                   projectId={projectId}
                   category={category}
                   data={categoryData[category.id] || {}}
