@@ -20,9 +20,6 @@ import {
 } from 'lucide-react';
 import { BusinessCategoryTab } from './BusinessCategoryTab';
 import { useBusinessCategories } from '@/hooks/useBusinessCategories';
-import AIModelSelector from '@/components/ui/AIModelSelector';
-import { AIProvider } from '@/types/aiProvider';
-import { getFeatureAIPreference, updateFeatureAIPreference } from '@/services/ai/aiPreferences';
 
 export interface BusinessCategoryData {
   [categoryId: string]: {
@@ -47,9 +44,6 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
 }) => {
   const [activeCategory, setActiveCategory] = useState('overview');
   const { categories, getCompletionPercentage, getTotalCompletion } = useBusinessCategories();
-  
-  // AI Model Selection State
-  const [aiPreference, setAiPreference] = useState(() => getFeatureAIPreference('ipo'));
 
   const updateCategoryData = useCallback((categoryId: string, fieldId: string, value: any) => {
     setCategoryData({
@@ -68,17 +62,6 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
     return { status: 'pending', icon: Clock, color: 'bg-gray-300' };
   };
 
-  const handleProviderChange = (provider: AIProvider) => {
-    const newPreference = { ...aiPreference, provider };
-    setAiPreference(newPreference);
-    updateFeatureAIPreference('ipo', provider, newPreference.model);
-  };
-
-  const handleModelChange = (model: string) => {
-    const newPreference = { ...aiPreference, model };
-    setAiPreference(newPreference);
-    updateFeatureAIPreference('ipo', newPreference.provider, model);
-  };
 
   const totalCompletion = getTotalCompletion(categoryData);
 
@@ -97,14 +80,6 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
           <p className="text-sm text-muted-foreground">
             Complete each category to generate a comprehensive business section
           </p>
-          <AIModelSelector
-            selectedProvider={aiPreference.provider}
-            selectedModel={aiPreference.model}
-            onProviderChange={handleProviderChange}
-            onModelChange={handleModelChange}
-            className="hidden lg:flex"
-            showStatus={false}
-          />
         </div>
       </div>
 

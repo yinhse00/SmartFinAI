@@ -1,6 +1,5 @@
 
 import React, { useState } from 'react';
-import APIKeyDialog from './APIKeyDialog';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
 import { useLanguageDetection } from './hooks/useLanguageDetection';
@@ -12,12 +11,7 @@ const ChatInterface: React.FC = () => {
     messages,
     setMessages,
     clearConversationMemory,
-    grokApiKeyInput,
-    setGrokApiKeyInput,
     isGrokApiKeySet,
-    apiKeyDialogOpen,
-    setApiKeyDialogOpen,
-    handleSaveApiKeys,
     input,
     setInput,
     lastQuery,
@@ -85,7 +79,7 @@ const ChatInterface: React.FC = () => {
             } : 
             handleKeyDown
           }
-          onOpenApiKeyDialog={() => setApiKeyDialogOpen(true)}
+          onOpenApiKeyDialog={() => window.location.href = '/profile'}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}
           isProcessingFiles={isProcessing}
@@ -98,14 +92,6 @@ const ChatInterface: React.FC = () => {
           stepProgress={stepProgress}
         />
       </div>
-      
-      <APIKeyDialog
-        open={apiKeyDialogOpen}
-        onOpenChange={setApiKeyDialogOpen}
-        grokApiKeyInput={grokApiKeyInput}
-        setGrokApiKeyInput={setGrokApiKeyInput}
-        handleSaveApiKeys={handleSaveApiKeys}
-      />
     </>
   );
 };

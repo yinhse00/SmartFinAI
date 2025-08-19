@@ -9,16 +9,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect } from 'react';
 import { hasGrokApiKey, hasGoogleApiKey, setGrokApiKey, setGoogleApiKey } from '@/services/apiKeyService';
-import { getAIPreferences, saveAIPreferences } from '@/services/ai/aiPreferences';
-import { AI_PROVIDERS, getAllModels } from '@/config/aiModels';
-import { AIProvider, UserAIPreferences } from '@/types/aiProvider';
-import AIModelSelector from '@/components/ui/AIModelSelector';
+import { AI_PROVIDERS } from '@/config/aiModels';
+import { AIProvider } from '@/types/aiProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Key, Brain, Bot } from 'lucide-react';
+import { Settings as SettingsIcon, Key } from 'lucide-react';
 
 const SettingsPage = () => {
   const { toast } = useToast();
-  const [preferences, setPreferences] = useState<UserAIPreferences>(getAIPreferences());
   const [apiKeys, setApiKeys] = useState({
     grok: '',
     google: ''
@@ -73,25 +70,6 @@ const SettingsPage = () => {
     }
   };
 
-  const handleDefaultProviderChange = (provider: AIProvider) => {
-    const newPreferences = { ...preferences, defaultProvider: provider };
-    setPreferences(newPreferences);
-    saveAIPreferences(newPreferences);
-    toast({
-      title: "Updated",
-      description: `Default AI provider set to ${provider === AIProvider.GROK ? 'Grok' : 'Google Gemini'}`,
-    });
-  };
-
-  const handleDefaultModelChange = (model: string) => {
-    const newPreferences = { ...preferences, defaultModel: model };
-    setPreferences(newPreferences);
-    saveAIPreferences(newPreferences);
-    toast({
-      title: "Updated", 
-      description: "Default AI model updated",
-    });
-  };
 
   return (
     <MainLayout>
@@ -99,15 +77,11 @@ const SettingsPage = () => {
         <div className="space-y-6">
           <div>
             <h1 className="text-3xl font-bold">Settings</h1>
-            <p className="text-muted-foreground">Manage your AI preferences and API keys</p>
+            <p className="text-muted-foreground">Technical settings and API key management</p>
           </div>
 
-          <Tabs defaultValue="ai-models" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="ai-models" className="flex items-center gap-2">
-                <Brain className="h-4 w-4" />
-                AI Models
-              </TabsTrigger>
+          <Tabs defaultValue="api-keys" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="api-keys" className="flex items-center gap-2">
                 <Key className="h-4 w-4" />
                 API Keys
@@ -118,58 +92,14 @@ const SettingsPage = () => {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="ai-models" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bot className="h-5 w-5" />
-                    Default AI Model
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Choose your default AI provider and model for new features
-                  </p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <AIModelSelector
-                      selectedProvider={preferences.defaultProvider}
-                      selectedModel={preferences.defaultModel}
-                      onProviderChange={handleDefaultProviderChange}
-                      onModelChange={handleDefaultModelChange}
-                    />
-                  </div>
-                  
-                  <Separator />
-                  
-                  <div>
-                    <h3 className="text-sm font-medium mb-3">Feature-Specific Preferences</h3>
-                    <div className="space-y-3">
-                      {(['chat', 'ipo', 'translation'] as const).map((feature) => {
-                        const featurePreference = preferences.perFeaturePreferences?.[feature];
-                        return (
-                          <div key={feature} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                              <p className="font-medium capitalize">{feature}</p>
-                              <p className="text-sm text-muted-foreground">
-                                {featurePreference ? 
-                                  `${featurePreference.provider === AIProvider.GROK ? 'Grok' : 'Google'} - ${featurePreference.model}` :
-                                  'Using default settings'
-                                }
-                              </p>
-                            </div>
-                            <Badge variant="secondary">
-                              {featurePreference?.provider === AIProvider.GROK ? 'Grok' : 'Google'}
-                            </Badge>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
 
-            <TabsContent value="api-keys" className="space-y-6">
+          <TabsContent value="api-keys" className="space-y-6">
+            <div className="mb-4 p-4 border rounded-lg bg-muted/50">
+              <p className="text-sm text-muted-foreground">
+                <strong>Note:</strong> AI model preferences have been moved to your <a href="/profile" className="text-primary hover:underline">User Profile</a>. 
+                Use this page only for technical API key configuration.
+              </p>
+            </div>
               {AI_PROVIDERS.map((provider) => (
                 <Card key={provider.provider}>
                   <CardHeader>
