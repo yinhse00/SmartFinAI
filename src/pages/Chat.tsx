@@ -3,26 +3,36 @@ import MainLayout from '@/components/layout/MainLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
-import { hasGrokApiKey, getGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
+import { hasGrokApiKey, getGrokApiKey, setGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
+import { AIProvider } from '@/types/aiProvider';
 
 const Chat = () => {
   const { toast } = useToast();
   const [demoMode, setDemoMode] = useState(false);
   
   useEffect(() => {
-    // Single API key check on mount (no automatic intervals)
+    // Check API key based on user's preferred provider
     const checkApiKey = () => {
       try {
-        const currentApiKey = getGrokApiKey();
-        const isValidKey = currentApiKey && 
-                          currentApiKey.startsWith('xai-') && 
-                          currentApiKey.length >= 20;
+        // Get user's AI preference for chat
+        const chatPreference = getFeatureAIPreference('chat');
         
-        if (isValidKey) {
-          console.log('Valid API key found');
+        let hasValidKey = false;
+        if (chatPreference.provider === AIProvider.GROK) {
+          const currentApiKey = getGrokApiKey();
+          hasValidKey = currentApiKey && 
+                       currentApiKey.startsWith('xai-') && 
+                       currentApiKey.length >= 20;
+        } else if (chatPreference.provider === AIProvider.GOOGLE) {
+          hasValidKey = hasGoogleApiKey();
+        }
+        
+        if (hasValidKey) {
+          console.log(`Valid ${chatPreference.provider} API key found`);
           setDemoMode(false);
         } else {
-          console.log('No valid API key available');
+          console.log(`No valid ${chatPreference.provider} API key available`);
           setDemoMode(true);
         }
       } catch (e) {
@@ -33,6 +43,14 @@ const Chat = () => {
     
     // Check once on mount
     checkApiKey();
+    
+    // Listen for storage changes to update when user changes API keys in profile
+    const handleStorageChange = () => {
+      checkApiKey();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   return (
