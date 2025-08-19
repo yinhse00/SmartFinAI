@@ -24,5 +24,8 @@ export {
 export {
   getPerplexityApiKey,
   setPerplexityApiKey,
-  hasPerplexityApiKey
+  hasPerplexityApiKey,
+  getGoogleApiKey,
+  setGoogleApiKey,
+  hasGoogleApiKey
 } from './apiKey/keyStorage';

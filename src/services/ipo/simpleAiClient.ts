@@ -1,9 +1,14 @@
 import { supabase } from '@/integrations/supabase/client';
 import { loadKeysFromStorage } from '@/services/apiKey/keyStorage';
+import { universalAiClient } from '@/services/ai/universalAiClient';
+import { AIProvider, AIRequest } from '@/types/aiProvider';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 
 interface SimpleAiRequest {
   prompt: string;
   metadata?: Record<string, any>;
+  provider?: AIProvider;
+  modelId?: string;
 }
 
 interface SimpleAiResponse {
@@ -19,67 +24,42 @@ interface SimpleAiResponse {
 export class SimpleAiClient {
   
   /**
-   * Generate content using direct Grok API call with fixed parameters
+   * Generate content using Universal AI client with provider selection
    */
   async generateContent(request: SimpleAiRequest): Promise<SimpleAiResponse> {
     try {
-      console.log('🤖 SimpleAiClient: Starting direct content generation');
+      console.log('🤖 SimpleAiClient: Starting content generation with provider selection');
       console.log('📝 Prompt length:', request.prompt.length);
 
-      // Get API key from storage
-      const apiKey = await this.getApiKey();
-      if (!apiKey) {
-        throw new Error('No API key available for content generation');
-      }
+      // Get AI preferences for IPO feature
+      const preference = getFeatureAIPreference('ipo');
+      
+      // Use provided provider/model or fall back to preferences
+      const provider = request.provider || preference.provider;
+      const modelId = request.modelId || preference.model;
 
-      console.log('🔑 API key found, making direct request to Grok');
+      console.log(`🎯 Using AI provider: ${provider}/${modelId}`);
 
-      // Make direct API call with fixed, simple parameters
-      const response = await fetch('https://api.x.ai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'grok-4-0709',
-          messages: [
-            {
-              role: 'user',
-              content: request.prompt
-            }
-          ],
-          // Fixed parameters - no dynamic sampling
-          temperature: 0.3,
-          max_tokens: 6000,
-          top_p: 0.9,
-          stream: false
-        })
-      });
+      // Create universal AI request
+      const aiRequest: AIRequest = {
+        prompt: request.prompt,
+        provider,
+        modelId,
+        metadata: request.metadata
+      };
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('❌ API request failed:', response.status, errorText);
-        throw new Error(`API request failed: ${response.status} ${errorText}`);
-      }
+      // Use universal AI client
+      const response = await universalAiClient.generateContent(aiRequest);
 
-      const data = await response.json();
-      console.log('✅ API response received');
+      console.log('✅ Universal AI response received');
+      console.log('📄 Generated content length:', response.text?.length || 0);
 
-      if (!data.choices || !data.choices[0] || !data.choices[0].message) {
-        console.error('❌ Invalid API response structure:', data);
-        throw new Error('Invalid API response structure');
-      }
-
-      const generatedText = data.choices[0].message.content;
-      console.log('📄 Generated content length:', generatedText?.length || 0);
-
-      if (!generatedText || generatedText.trim().length === 0) {
-        throw new Error('Empty response from API');
+      if (!response.success || !response.text || response.text.trim().length === 0) {
+        throw new Error(response.error || 'Empty response from AI service');
       }
 
       return {
-        text: generatedText,
+        text: response.text,
         success: true
       };
 
@@ -94,23 +74,18 @@ export class SimpleAiClient {
   }
 
   /**
-   * Get API key from secure storage
+   * Generate content with specific provider (for backward compatibility)
    */
-  private async getApiKey(): Promise<string | null> {
-    try {
-      // Use the existing key storage system
-      const keys = loadKeysFromStorage();
-      if (keys.length > 0) {
-        console.log('🔑 Using API key from key storage');
-        return keys[0];
-      }
-
-      console.log('❌ No API key found in storage');
-      return null;
-    } catch (error) {
-      console.error('❌ Error getting API key:', error);
-      return null;
-    }
+  async generateContentWithProvider(
+    request: SimpleAiRequest, 
+    provider: AIProvider, 
+    modelId: string
+  ): Promise<SimpleAiResponse> {
+    return this.generateContent({
+      ...request,
+      provider,
+      modelId
+    });
   }
 }
 

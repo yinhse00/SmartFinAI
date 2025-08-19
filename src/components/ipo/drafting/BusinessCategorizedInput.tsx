@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { BusinessCategoryTab } from './BusinessCategoryTab';
 import { useBusinessCategories } from '@/hooks/useBusinessCategories';
+import AIModelSelector from '@/components/ui/AIModelSelector';
+import { AIProvider } from '@/types/aiProvider';
+import { getFeatureAIPreference, updateFeatureAIPreference } from '@/services/ai/aiPreferences';
 
 export interface BusinessCategoryData {
   [categoryId: string]: {
@@ -44,6 +47,9 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
 }) => {
   const [activeCategory, setActiveCategory] = useState('overview');
   const { categories, getCompletionPercentage, getTotalCompletion } = useBusinessCategories();
+  
+  // AI Model Selection State
+  const [aiPreference, setAiPreference] = useState(() => getFeatureAIPreference('ipo'));
 
   const updateCategoryData = useCallback((categoryId: string, fieldId: string, value: any) => {
     setCategoryData({
@@ -62,22 +68,44 @@ export const BusinessCategorizedInput: React.FC<BusinessCategorizedInputProps> =
     return { status: 'pending', icon: Clock, color: 'bg-gray-300' };
   };
 
+  const handleProviderChange = (provider: AIProvider) => {
+    const newPreference = { ...aiPreference, provider };
+    setAiPreference(newPreference);
+    updateFeatureAIPreference('ipo', provider, newPreference.model);
+  };
+
+  const handleModelChange = (model: string) => {
+    const newPreference = { ...aiPreference, model };
+    setAiPreference(newPreference);
+    updateFeatureAIPreference('ipo', newPreference.provider, model);
+  };
+
   const totalCompletion = getTotalCompletion(categoryData);
 
   return (
     <div className="h-full flex flex-col">
       {/* Progress Header */}
-      <div className="p-3 border-b bg-background">
-        <div className="flex items-center justify-between mb-2">
+      <div className="p-3 border-b bg-background space-y-3">
+        <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Business Information</h2>
           <Badge variant="outline" className="font-medium">
             {Math.round(totalCompletion)}% Complete
           </Badge>
         </div>
         <Progress value={totalCompletion} className="h-2" />
-        <p className="text-sm text-muted-foreground mt-1">
-          Complete each category to generate a comprehensive business section
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Complete each category to generate a comprehensive business section
+          </p>
+          <AIModelSelector
+            selectedProvider={aiPreference.provider}
+            selectedModel={aiPreference.model}
+            onProviderChange={handleProviderChange}
+            onModelChange={handleModelChange}
+            className="hidden lg:flex"
+            showStatus={false}
+          />
+        </div>
       </div>
 
       {/* Category Tabs */}

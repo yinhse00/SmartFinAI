@@ -7,6 +7,7 @@ const BACKUP_KEYS_KEY = 'grokApiKeys';
 const LEGACY_SINGLE_KEY = 'GROK_API_KEY';
 const LEGACY_SINGLE_KEY_BACKUP = 'grokApiKey';
 const PERPLEXITY_KEY = 'PERPLEXITY_API_KEY';
+const GOOGLE_API_KEY = 'GOOGLE_API_KEY';
 
 // No hardcoded API keys for security - use empty array as default
 export const DEFAULT_DEPLOYMENT_KEYS: string[] = [];
@@ -83,4 +84,27 @@ export function setPerplexityApiKey(key: string): void {
 }
 export function hasPerplexityApiKey(): boolean {
   return !!getPerplexityApiKey();
+}
+
+// Google API key management
+export function getGoogleApiKey(): string {
+  return localStorage.getItem(GOOGLE_API_KEY) || '';
+}
+
+export function setGoogleApiKey(key: string): void {
+  if (typeof key !== 'string' || !key.startsWith('AIza') || key.length < 20) {
+    console.error('Invalid Google API key format, not saving');
+    return;
+  }
+  try {
+    localStorage.setItem(GOOGLE_API_KEY, key);
+    console.log('Google API key saved successfully');
+  } catch (e) {
+    console.warn('Failed to store Google API key:', e);
+  }
+}
+
+export function hasGoogleApiKey(): boolean {
+  const key = getGoogleApiKey();
+  return key.startsWith('AIza') && key.length >= 20;
 }
