@@ -36,15 +36,6 @@ export const GOOGLE_MODELS: AIModel[] = [
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
     defaultTemperature: 0.4,
     capabilities: ['text', 'reasoning', 'analysis', 'vision', 'multilingual']
-  },
-  {
-    provider: AIProvider.GOOGLE,
-    modelId: 'gemini-pro',
-    displayName: 'Gemini Pro (Stable)',
-    maxTokens: 30720,
-    apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
-    defaultTemperature: 0.4,
-    capabilities: ['text', 'reasoning', 'analysis']
   }
 ];
 
