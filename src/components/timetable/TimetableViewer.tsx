@@ -8,6 +8,8 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
+import { getCurrentDate } from '@/services/calendar/currentDateService';
+import { addBusinessDays } from '@/services/calendar/dateUtils';
 
 interface TimetableEntry {
   day: number;
@@ -116,8 +118,8 @@ const TimetableViewer: React.FC = () => {
 
   // Helper function to get default timetable entries with dynamic date calculation
   const getDefaultTimetableEntries = (): TimetableEntry[] => {
-    // Use current date (August 19, 2025) as reference
-    const startDate = new Date('2025-08-19');
+    // Use current date from calendar service as reference
+    const startDate = getCurrentDate();
     
     // Helper to format date with full day of week
     const formatDate = (date: Date): string => {
@@ -126,18 +128,7 @@ const TimetableViewer: React.FC = () => {
       return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     };
     
-    // Helper to add business days
-    const addBusinessDays = (date: Date, days: number): Date => {
-      const result = new Date(date);
-      let addedDays = 0;
-      while (addedDays < days) {
-        result.setDate(result.getDate() + 1);
-        if (result.getDay() !== 0 && result.getDay() !== 6) { // Skip weekends
-          addedDays++;
-        }
-      }
-      return result;
-    };
+    // Use the calendar system's business day calculation
 
     return [
       {

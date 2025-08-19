@@ -2,6 +2,7 @@ import { BusinessDayCalculator } from '../calendar/businessDayCalculator';
 import { HongKongHolidays } from '../calendar/hongKongHolidays';
 import { supabase } from '@/integrations/supabase/client';
 import { timetableParallelSearchService } from '../timetable/timetableParallelSearchService';
+import { getCurrentDate } from '../calendar/currentDateService';
 
 interface TimetableEvent {
   day: number;
@@ -879,8 +880,8 @@ export async function generateDynamicTimetable(transactionType: string): Promise
   try {
     const generator = new DynamicTimetableGenerator();
     
-    // Use August 19, 2025 as the current reference date
-    const startDate = new Date('2025-08-19');
+    // Use current date from calendar service as reference
+    const startDate = getCurrentDate();
     startDate.setHours(0, 0, 0, 0); // Normalize to start of day for consistent calculations
     
     const events = await generator.generateTimetable({
