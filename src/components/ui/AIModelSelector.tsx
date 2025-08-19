@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AIProvider } from '@/types/aiProvider';
 import { AI_PROVIDERS, getModelsForProvider, getDefaultModel } from '@/config/aiModels';
-import { hasGoogleApiKey } from '@/services/apiKey/keyStorage';
-import { hasGrokApiKey } from '@/services/apiKeyService';
+import { hasGoogleApiKey, hasGrokApiKey } from '@/services/apiKeyService';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, AlertCircle, Settings } from 'lucide-react';
@@ -100,7 +99,7 @@ const AIModelSelector: React.FC<AIModelSelectorProps> = ({
           disabled={!apiKeyStatus[selectedProvider]}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select Model" />
+            <SelectValue placeholder={!apiKeyStatus[selectedProvider] ? "Setup API key first" : "Select Model"} />
           </SelectTrigger>
           <SelectContent>
             {availableModels.map((model) => (
@@ -123,6 +122,13 @@ const AIModelSelector: React.FC<AIModelSelectorProps> = ({
             ))}
           </SelectContent>
         </Select>
+        
+        {/* API Key Setup Guidance */}
+        {!apiKeyStatus[selectedProvider] && (
+          <div className="text-xs text-muted-foreground">
+            → Go to API Keys tab to setup
+          </div>
+        )}
       </div>
 
       {/* API Key Status & Settings */}
