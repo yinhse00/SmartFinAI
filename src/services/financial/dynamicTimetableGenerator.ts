@@ -545,67 +545,77 @@ export class DynamicTimetableGenerator {
   }
   
   private addRightsIssueWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
-    // Day 2: Circular Preparation
+    // Day 1: Publication of Announcement
     events.push({
-      day: 2,
-      date: this.calculateBusinessDay(startDate, 2, adjustForHolidays),
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the rights issue',
+      isKeyEvent: true
+    });
+
+    // Phase 1: Circular process for shareholder approval
+    // Day 3: Circular Preparation
+    events.push({
+      day: 3,
+      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
       event: 'Circular Preparation',
       description: 'Drafting of circular with details of rights issue'
     });
     
-    // Day 7: Circular Vetting
+    // Day 8: Circular Vetting
     events.push({
-      day: 7,
-      date: this.calculateBusinessDay(startDate, 7, adjustForHolidays),
+      day: 8,
+      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
       event: 'Circular Vetting',
       description: 'Stock Exchange review of circular'
     });
     
-    // Day 22: Circular Dispatch
+    // Day 23: Circular Dispatch
     events.push({
-      day: 22,
-      date: this.calculateBusinessDay(startDate, 22, adjustForHolidays),
+      day: 23,
+      date: this.calculateBusinessDay(startDate, 23, adjustForHolidays),
       event: 'Circular Dispatch',
       description: 'Dispatch of circular to shareholders'
     });
     
-    // Day 43: EGM
+    // Day 44: EGM
     events.push({
-      day: 43,
-      date: this.calculateBusinessDay(startDate, 43, adjustForHolidays),
+      day: 44,
+      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
       event: 'EGM',
       description: 'Extraordinary General Meeting for shareholders approval',
       isKeyEvent: true
     });
     
-    // Day 44: Listing Documents Preparation (AFTER approval)
+    // Day 45: Listing Documents Preparation (AFTER approval)
     events.push({
-      day: 44,
-      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
+      day: 45,
+      date: this.calculateBusinessDay(startDate, 45, adjustForHolidays),
       event: 'Listing Documents Preparation',
       description: 'Preparation of listing documents (5 business days)'
     });
     
-    // Day 49: Stock Exchange Vetting
+    // Day 50: Stock Exchange Vetting
     events.push({
-      day: 49,
-      date: this.calculateBusinessDay(startDate, 49, adjustForHolidays),
+      day: 50,
+      date: this.calculateBusinessDay(startDate, 50, adjustForHolidays),
       event: 'Stock Exchange Vetting',
       description: 'Vetting by the Stock Exchange (10 business days)'
     });
     
-    // Day 59: Publication of Prospectus
+    // Day 60: Publication of Prospectus
     events.push({
-      day: 59,
-      date: this.calculateBusinessDay(startDate, 59, adjustForHolidays),
+      day: 60,
+      date: this.calculateBusinessDay(startDate, 60, adjustForHolidays),
       event: 'Publication of Prospectus',
       description: 'Publication of listing document/prospectus after vetting completion',
       isKeyEvent: true
     });
     
-    // Then add trading events starting from Day 60
-    const recordDate = this.calculateBusinessDay(startDate, 65, adjustForHolidays);
-    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, 60, adjustForHolidays), adjustForHolidays);
+    // Then add trading events starting from Day 61
+    const recordDate = this.calculateBusinessDay(startDate, 66, adjustForHolidays);
+    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays);
   }
   
   /**
@@ -719,12 +729,21 @@ export class DynamicTimetableGenerator {
   }
   
   private addOpenOfferWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
-    // Same approval sequence as rights issue
+    // Day 1: Publication of Announcement
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the open offer',
+      isKeyEvent: true
+    });
+
+    // Same approval sequence as rights issue (but starting from day 3)
     this.addRightsIssueWithApproval(events, startDate, adjustForHolidays);
     
     // Then add open offer trading events (without nil-paid rights)
-    const recordDate = this.calculateBusinessDay(startDate, 65, adjustForHolidays);
-    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 60, adjustForHolidays), adjustForHolidays);
+    const recordDate = this.calculateBusinessDay(startDate, 66, adjustForHolidays);
+    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays);
   }
   
   /**
