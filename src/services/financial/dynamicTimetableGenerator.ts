@@ -864,8 +864,8 @@ export class DynamicTimetableGenerator {
    * Format a date as a string
    */
   public formatDate(date: Date): string {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
@@ -879,8 +879,8 @@ export async function generateDynamicTimetable(transactionType: string): Promise
   try {
     const generator = new DynamicTimetableGenerator();
     
-    // Use current date as start date, normalized to start of day
-    const startDate = new Date();
+    // Use August 19, 2025 as the current reference date
+    const startDate = new Date('2025-08-19');
     startDate.setHours(0, 0, 0, 0); // Normalize to start of day for consistent calculations
     
     const events = await generator.generateTimetable({

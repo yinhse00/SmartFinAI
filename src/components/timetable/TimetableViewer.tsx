@@ -119,10 +119,10 @@ const TimetableViewer: React.FC = () => {
     // Use current date (August 19, 2025) as reference
     const startDate = new Date('2025-08-19');
     
-    // Helper to format date with day of week
+    // Helper to format date with full day of week
     const formatDate = (date: Date): string => {
-      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
       return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
     };
     
@@ -160,7 +160,7 @@ const TimetableViewer: React.FC = () => {
         day: 8,
         date: formatDate(addBusinessDays(startDate, 8)),
         event: "Circular Vetting by Stock Exchange",
-        description: "Stock Exchange reviews and provides comments on circular",
+        description: "Regulatory Vetting: Stock Exchange reviews and provides comments on circular",
         status: 'upcoming',
         vettingRequired: true,
         ruleReference: "Rule 14.60"
@@ -169,9 +169,18 @@ const TimetableViewer: React.FC = () => {
         day: 14,
         date: formatDate(addBusinessDays(startDate, 14)),
         event: "Expected Regulatory Feedback",
-        description: "First round of comments from HKEX expected",
+        description: "Regulatory Vetting: First round of comments from HKEX expected",
         status: 'upcoming',
-        vettingRequired: true
+        vettingRequired: true,
+        ruleReference: "Rule 7.19A"
+      },
+      {
+        day: 26,
+        date: formatDate(addBusinessDays(startDate, 26)),
+        event: "Listing Documents Preparation",
+        description: "Preparation of listing documents and prospectus materials",
+        status: 'upcoming',
+        ruleReference: "Rule 7.24"
       },
       {
         day: 28,
@@ -195,10 +204,18 @@ const TimetableViewer: React.FC = () => {
         status: 'upcoming'
       },
       {
+        day: 46,
+        date: formatDate(addBusinessDays(startDate, 46)),
+        event: "Publication of Prospectus",
+        description: "Publication of listing document/prospectus after vetting completion",
+        status: 'upcoming',
+        ruleReference: "Rule 7.24"
+      },
+      {
         day: 50,
         date: formatDate(addBusinessDays(startDate, 50)),
         event: "Stock Exchange Vetting Complete",
-        description: "Final vetting by the Stock Exchange (10 business days)",
+        description: "Regulatory Vetting: Final vetting by the Stock Exchange completed (10 business days)",
         status: 'upcoming',
         vettingRequired: true,
         ruleReference: "Listing Rules"
