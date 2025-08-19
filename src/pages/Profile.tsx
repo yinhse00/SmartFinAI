@@ -43,8 +43,8 @@ import { validateApiKey } from '@/config/aiModels';
 const ProfilePage = () => {
   const { user } = useAuth();
   const [aiPreferences, setAiPreferences] = useState(() => getAIPreferences());
-  const [grokApiKey, setGrokApiKey] = useState('');
-  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [grokApiKey, setGrokApiKeyInput] = useState('');
+  const [googleApiKey, setGoogleApiKeyInput] = useState('');
   const [apiKeyStatus, setApiKeyStatus] = useState({
     grok: false,
     google: false
@@ -74,8 +74,8 @@ const ProfilePage = () => {
     }
     
     setKeyErrors(prev => ({ ...prev, grok: '' }));
-    setGrokApiKey(grokApiKey);
-    setGrokApiKey('');
+    setGrokApiKey(grokApiKey);  // Service function to save to localStorage
+    setGrokApiKeyInput('');
   };
 
   const validateAndSaveGoogleKey = () => {
@@ -85,8 +85,8 @@ const ProfilePage = () => {
     }
     
     setKeyErrors(prev => ({ ...prev, google: '' }));
-    setGoogleApiKey(googleApiKey);
-    setGoogleApiKey('');
+    setGoogleApiKey(googleApiKey);  // Service function to save to localStorage
+    setGoogleApiKeyInput('');
   };
 
   const handleDefaultProviderChange = (provider: AIProvider) => {
@@ -263,7 +263,7 @@ const ProfilePage = () => {
                       placeholder="Enter your Grok API key (starts with xai-)"
                       value={grokApiKey}
                       onChange={(e) => {
-                        setGrokApiKey(e.target.value);
+                        setGrokApiKeyInput(e.target.value);
                         setKeyErrors(prev => ({ ...prev, grok: '' }));
                       }}
                       className={keyErrors.grok ? "border-red-500" : ""}
@@ -303,7 +303,7 @@ const ProfilePage = () => {
                       placeholder="Enter your Google API key (starts with AIza)"
                       value={googleApiKey}
                       onChange={(e) => {
-                        setGoogleApiKey(e.target.value);
+                        setGoogleApiKeyInput(e.target.value);
                         setKeyErrors(prev => ({ ...prev, google: '' }));
                       }}
                       className={keyErrors.google ? "border-red-500" : ""}
