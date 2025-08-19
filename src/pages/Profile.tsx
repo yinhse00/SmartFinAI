@@ -43,8 +43,8 @@ import { validateApiKey } from '@/config/aiModels';
 const ProfilePage = () => {
   const { user } = useAuth();
   const [aiPreferences, setAiPreferences] = useState(() => getAIPreferences());
-  const [grokApiKey, setGrokApiKeyInput] = useState('');
-  const [googleApiKey, setGoogleApiKeyInput] = useState('');
+  const [grokApiKey, setGrokApiKey] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
   const [apiKeyStatus, setApiKeyStatus] = useState({
     grok: false,
     google: false
@@ -75,7 +75,7 @@ const ProfilePage = () => {
     
     setKeyErrors(prev => ({ ...prev, grok: '' }));
     setGrokApiKey(grokApiKey);
-    setGrokApiKeyInput('');
+    setGrokApiKey('');
   };
 
   const validateAndSaveGoogleKey = () => {
@@ -86,7 +86,7 @@ const ProfilePage = () => {
     
     setKeyErrors(prev => ({ ...prev, google: '' }));
     setGoogleApiKey(googleApiKey);
-    setGoogleApiKeyInput('');
+    setGoogleApiKey('');
   };
 
   const handleDefaultProviderChange = (provider: AIProvider) => {
@@ -263,7 +263,7 @@ const ProfilePage = () => {
                       placeholder="Enter your Grok API key (starts with xai-)"
                       value={grokApiKey}
                       onChange={(e) => {
-                        setGrokApiKeyInput(e.target.value);
+                        setGrokApiKey(e.target.value);
                         setKeyErrors(prev => ({ ...prev, grok: '' }));
                       }}
                       className={keyErrors.grok ? "border-red-500" : ""}
@@ -303,7 +303,7 @@ const ProfilePage = () => {
                       placeholder="Enter your Google API key (starts with AIza)"
                       value={googleApiKey}
                       onChange={(e) => {
-                        setGoogleApiKeyInput(e.target.value);
+                        setGoogleApiKey(e.target.value);
                         setKeyErrors(prev => ({ ...prev, google: '' }));
                       }}
                       className={keyErrors.google ? "border-red-500" : ""}
