@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
 import { getCurrentDate } from '@/services/calendar/currentDateService';
 import { addBusinessDays } from '@/services/calendar/dateUtils';
+import { generateDynamicTimetable } from '@/services/financial/dynamicTimetableGenerator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TimetableEntry {
   day: number;
@@ -38,11 +40,17 @@ const TimetableViewer: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTransactionType, setSelectedTransactionType] = useState<string>('Major Transaction');
 
   // Fetch timetable from Supabase on component mount
   useEffect(() => {
     fetchTimetableDocument();
   }, []);
+
+  // Generate dynamic timetable when transaction type changes
+  useEffect(() => {
+    generateTimetableFromDynamic();
+  }, [selectedTransactionType]);
 
   const fetchTimetableDocument = async () => {
     setIsLoading(true);
@@ -62,12 +70,8 @@ const TimetableViewer: React.FC = () => {
       }
       
       if (!documents || documents.length === 0) {
-        setTimetableData({
-          title: "Financial Transaction Timetable (Aug 19, 2025)",
-          referenceDate: "2025-08-19",
-          entries: getDefaultTimetableEntries() // Fallback to default entries
-        });
-        setIsLoading(false);
+        // Use dynamic generator instead of hardcoded entries
+        generateTimetableFromDynamic();
         return;
       }
 
@@ -93,125 +97,100 @@ const TimetableViewer: React.FC = () => {
         if (parsedTimetable) {
           setTimetableData(parsedTimetable);
         } else {
-          // If parsing failed, use default data
-          setTimetableData({
-            title: timetableDoc.title || "Financial Transaction Timetable",
-            referenceDate: "2025-08-19",
-            entries: getDefaultTimetableEntries()
-          });
+          // If parsing failed, use dynamic generation
+          generateTimetableFromDynamic();
         }
       }
     } catch (err) {
       console.error("Error fetching timetable document:", err);
       setError("Could not load timetable data from database. Using default timetable.");
       
-      // Use default data if there's an error
-      setTimetableData({
-        title: "Financial Transaction Timetable (Aug 19, 2025)",
-        referenceDate: "2025-08-19",
-        entries: getDefaultTimetableEntries()
-      });
+      // Use dynamic generation if there's an error
+      generateTimetableFromDynamic();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Helper function to get default timetable entries with dynamic date calculation
-  const getDefaultTimetableEntries = (): TimetableEntry[] => {
-    // Use current date from calendar service as reference
-    const startDate = getCurrentDate();
+  // Generate timetable using the dynamic generator
+  const generateTimetableFromDynamic = async () => {
+    setIsLoading(true);
+    setError(null);
     
-    // Helper to format date with full day of week
-    const formatDate = (date: Date): string => {
-      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-      const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-      return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
-    };
-    
-    // Use the calendar system's business day calculation
-
-    return [
-      {
-        day: 0,
-        date: formatDate(startDate),
-        event: "Board Meeting and Announcement",
-        description: "Board approves the transaction and issues announcement",
-        status: 'completed'
-      },
-      {
-        day: 1,
-        date: formatDate(addBusinessDays(startDate, 1)),
-        event: "Submit Draft Circular to HKEX",
-        description: "First draft circular submitted for regulatory review",
-        status: 'upcoming',
-        vettingRequired: true,
-        ruleReference: "Rule 14.60"
-      },
-      {
-        day: 8,
-        date: formatDate(addBusinessDays(startDate, 8)),
-        event: "Circular Vetting by Stock Exchange",
-        description: "Regulatory Vetting: Stock Exchange reviews and provides comments on circular",
-        status: 'upcoming',
-        vettingRequired: true,
-        ruleReference: "Rule 14.60"
-      },
-      {
-        day: 14,
-        date: formatDate(addBusinessDays(startDate, 14)),
-        event: "Expected Regulatory Feedback",
-        description: "Regulatory Vetting: First round of comments from HKEX expected",
-        status: 'upcoming',
-        vettingRequired: true,
-        ruleReference: "Rule 7.19A"
-      },
-      {
-        day: 26,
-        date: formatDate(addBusinessDays(startDate, 26)),
-        event: "Listing Documents Preparation",
-        description: "Preparation of listing documents and prospectus materials",
-        status: 'upcoming',
-        ruleReference: "Rule 7.24"
-      },
-      {
-        day: 28,
-        date: formatDate(addBusinessDays(startDate, 28)),
-        event: "EGM Notice & Despatch Circular",
-        description: "Circular finalized and sent to shareholders",
-        status: 'upcoming'
-      },
-      {
-        day: 42,
-        date: formatDate(addBusinessDays(startDate, 42)),
-        event: "Extraordinary General Meeting",
-        description: "Shareholders vote on the proposed transaction",
-        status: 'upcoming'
-      },
-      {
-        day: 44,
-        date: formatDate(addBusinessDays(startDate, 44)),
-        event: "Results Announcement",
-        description: "Publication of EGM results and next steps",
-        status: 'upcoming'
-      },
-      {
-        day: 46,
-        date: formatDate(addBusinessDays(startDate, 46)),
-        event: "Publication of Prospectus",
-        description: "Publication of listing document/prospectus after vetting completion",
-        status: 'upcoming',
-        ruleReference: "Rule 7.24"
-      },
-      {
-        day: 50,
-        date: formatDate(addBusinessDays(startDate, 50)),
-        event: "Stock Exchange Vetting Complete",
-        description: "Regulatory Vetting: Final vetting by the Stock Exchange completed (10 business days)",
-        status: 'upcoming',
-        vettingRequired: true,
-        ruleReference: "Listing Rules"
+    try {
+      const currentDate = getCurrentDate();
+      const formattedDate = currentDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      // Generate the dynamic timetable
+      const markdownContent = await generateDynamicTimetable(selectedTransactionType);
+      
+      // Parse the markdown content into TimetableEntry format
+      const parsedData = parseMarkdownTimetable(markdownContent);
+      
+      if (parsedData) {
+        setTimetableData({
+          title: `${selectedTransactionType} Timetable (${formattedDate})`,
+          referenceDate: formattedDate,
+          entries: parsedData
+        });
+      } else {
+        throw new Error('Failed to parse dynamic timetable');
       }
-    ];
+    } catch (error) {
+      console.error('Error generating dynamic timetable:', error);
+      setError('Failed to generate timetable. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Parse markdown timetable content into TimetableEntry format
+  const parseMarkdownTimetable = (markdownContent: string): TimetableEntry[] => {
+    const lines = markdownContent.split('\n');
+    const entries: TimetableEntry[] = [];
+    
+    for (const line of lines) {
+      // Skip header lines and empty lines
+      if (line.startsWith('|') && !line.includes('Day') && !line.includes('---')) {
+        const columns = line.split('|').map(col => col.trim()).filter(col => col);
+        
+        if (columns.length >= 4) {
+          const dayMatch = columns[0].match(/\d+/);
+          const day = dayMatch ? parseInt(dayMatch[0]) : 0;
+          const date = columns[1];
+          const event = columns[2];
+          const description = columns[3];
+          
+          // Determine status based on current date
+          const eventDate = new Date(date);
+          const today = getCurrentDate();
+          let status: 'completed' | 'upcoming' | 'pending' = 'upcoming';
+          
+          if (eventDate < today) {
+            status = 'completed';
+          } else if (Math.abs(eventDate.getTime() - today.getTime()) < 24 * 3600 * 1000) {
+            status = 'pending';
+          }
+          
+          // Check for vetting requirements and rule references
+          const vettingRequired = description.toLowerCase().includes('vetting') || description.toLowerCase().includes('regulatory');
+          const ruleMatch = description.match(/Rule\s+[\d.A-Z]+/i);
+          const ruleReference = ruleMatch ? ruleMatch[0] : undefined;
+          
+          entries.push({
+            day,
+            date,
+            event,
+            description,
+            status,
+            vettingRequired,
+            ruleReference
+          });
+        }
+      }
+    }
+    
+    return entries;
   };
 
   // Parse timetable content from extracted document text
@@ -384,6 +363,19 @@ const TimetableViewer: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Select value={selectedTransactionType} onValueChange={setSelectedTransactionType}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select transaction type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Major Transaction">Major Transaction</SelectItem>
+              <SelectItem value="Rights Issue">Rights Issue</SelectItem>
+              <SelectItem value="Open Offer">Open Offer</SelectItem>
+              <SelectItem value="Very Substantial Acquisition">Very Substantial Acquisition</SelectItem>
+              <SelectItem value="Spin-off">Spin-off</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <Button 
             variant="outline" 
             size="icon"
