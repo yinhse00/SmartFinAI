@@ -5,6 +5,7 @@ import { databaseContentValidator } from './databaseContentValidator';
 import { boldFormatter } from './boldFormatter';
 import { htmlFormatter } from './htmlFormatter';
 import { responseMetadataBuilder } from './responseMetadataBuilder';
+import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
 
 /**
  * Service for formatting final responses with enhanced database accuracy preservation
@@ -49,6 +50,9 @@ export const responseFormatter = {
     
     // Start with the original text - database content takes precedence
     let formattedText = text;
+    
+    // Clean up any markdown code block markers as a safety measure
+    formattedText = codeBlockCleaner.cleanupCodeBlockMarkers(formattedText);
     
     // Apply clickable links to regulatory references
     console.log('Applying clickable links to regulatory references...');

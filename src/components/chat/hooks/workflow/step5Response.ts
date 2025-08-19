@@ -4,6 +4,7 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { universalAiClient } from '@/services/ai/universalAiClient';
 import { AIProvider } from '@/types/aiProvider';
+import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
 
 /**
  * Step 5: Enhanced Response Generation with quality-focused parameters
@@ -108,7 +109,7 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
     if (chatPreference.provider === AIProvider.GROK) {
       // Use existing Grok service for Grok requests
       response = await grokService.generateResponse(responseParams);
-      responseText = safelyExtractText(response);
+      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(safelyExtractText(response));
     } else {
       // Use universal AI client for other providers
       const aiResponse = await universalAiClient.generateContent({
@@ -126,7 +127,7 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
         throw new Error(aiResponse.error || 'Failed to generate response');
       }
       
-      responseText = aiResponse.text;
+      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(aiResponse.text);
       response = {
         text: responseText,
         metadata: {
