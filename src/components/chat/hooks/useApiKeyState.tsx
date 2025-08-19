@@ -28,6 +28,22 @@ export const useApiKeyState = () => {
   
   const { toast } = useToast();
 
+  /**
+   * Check if current provider has a valid API key
+   */
+  const checkCurrentProviderApiKey = (): boolean => {
+    const preference = getFeatureAIPreference('chat');
+    
+    switch (preference.provider) {
+      case AIProvider.GROK:
+        return hasGrokApiKey();
+      case AIProvider.GOOGLE:
+        return hasGoogleApiKey();
+      default:
+        return false;
+    }
+  };
+
   // Manual connection testing hook with API usage control
   const manualTestConnection = async () => {
     setKeyStatus(prev => ({ ...prev, isValidating: true }));
@@ -130,18 +146,11 @@ export const useApiKeyState = () => {
     }
   };
 
-  // Check API key on mount (one-time only, no automatic intervals)
+  // Check API key on mount and listen for preference changes
   useEffect(() => {
     const checkApiKey = () => {
-      // Get user's preferred AI provider for chat
-      const chatPreference = getFeatureAIPreference('chat');
-      
-      let hasValidApiKey = false;
-      if (chatPreference.provider === AIProvider.GROK) {
-        hasValidApiKey = hasGrokApiKey();
-      } else if (chatPreference.provider === AIProvider.GOOGLE) {
-        hasValidApiKey = hasGoogleApiKey();
-      }
+      const hasValidApiKey = checkCurrentProviderApiKey();
+      const preference = getFeatureAIPreference('chat');
       
       setIsGrokApiKeySet(hasValidApiKey); // Keep the same state variable for compatibility
       
@@ -149,14 +158,14 @@ export const useApiKeyState = () => {
         setKeyStatus({
           isValidating: false,
           isValid: null,
-          message: `No ${chatPreference.provider} API key configured`,
+          message: `No ${preference.provider} API key configured`,
           lastChecked: Date.now()
         });
       } else {
         setKeyStatus({
           isValidating: false,
           isValid: null,
-          message: `${chatPreference.provider} API key found - Click "Test Connection" to verify`,
+          message: `${preference.provider} API key found - Click "Test Connection" to verify`,
           lastChecked: Date.now()
         });
       }
@@ -164,6 +173,14 @@ export const useApiKeyState = () => {
     
     // Call once on mount
     checkApiKey();
+
+    // Listen for AI preference changes
+    const handleStorageChange = () => {
+      checkApiKey();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleSaveApiKeys = async () => {
@@ -248,12 +265,13 @@ export const useApiKeyState = () => {
   return {
     grokApiKeyInput,
     setGrokApiKeyInput,
-    isGrokApiKeySet,
+    isGrokApiKeySet: checkCurrentProviderApiKey(),
     setIsGrokApiKeySet,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
     keyStatus,
-    manualTestConnection
+    manualTestConnection,
+    checkCurrentProviderApiKey
   };
 };

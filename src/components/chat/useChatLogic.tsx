@@ -52,7 +52,6 @@ export const useChatLogic = () => {
     messages,
     setMessages,
     setLastQuery,
-    isGrokApiKeySet,
     setApiKeyDialogOpen
   });
 

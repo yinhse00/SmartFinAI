@@ -8,12 +8,13 @@ import { useCacheManager } from './workflow/useCacheManager';
 import { useStreamingHandler } from './workflow/useStreamingHandler';
 import { useWorkflowState } from './workflow/useWorkflowState';
 import { useQueryUtils } from './workflow/useQueryUtils';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
+import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 
 interface OptimizedWorkflowProps {
   messages: Message[];
   setMessages: React.Dispatch<React.SetStateAction<Message[]>>;
   setLastQuery: React.Dispatch<React.SetStateAction<string>>;
-  isGrokApiKeySet: boolean;
   setApiKeyDialogOpen: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
@@ -24,7 +25,6 @@ export const useOptimizedWorkflowProcessor = ({
   messages,
   setMessages,
   setLastQuery,
-  isGrokApiKeySet,
   setApiKeyDialogOpen
 }: OptimizedWorkflowProps) => {
   const { lastInputWasChinese } = useLanguageState();
@@ -43,10 +43,28 @@ export const useOptimizedWorkflowProcessor = ({
   const { isSimpleQuery } = useQueryUtils();
   
   /**
+   * Check if current provider has a valid API key
+   */
+  const checkCurrentProviderApiKey = () => {
+    const preference = getFeatureAIPreference('chat');
+    
+    switch (preference.provider) {
+      case 'grok':
+        return hasGrokApiKey();
+      case 'google':
+        return hasGoogleApiKey();
+      default:
+        return false;
+    }
+  };
+
+  /**
    * Enhanced workflow with improved caching and state management
    */
   const executeOptimizedWorkflow = async (query: string) => {
-    if (!isGrokApiKeySet) {
+    const hasValidApiKey = checkCurrentProviderApiKey();
+    
+    if (!hasValidApiKey) {
       setApiKeyDialogOpen(true);
       return;
     }
