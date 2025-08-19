@@ -112,6 +112,23 @@ const ProfilePage = () => {
     setAiPreferences(getAIPreferences());
   };
 
+  const handleFeatureProviderChange = (feature: 'chat' | 'ipo' | 'translation', provider: AIProvider) => {
+    // Get default model for the new provider
+    const defaultModel = getDefaultModel(provider);
+    if (defaultModel) {
+      // Update both provider and model together
+      updateFeatureAIPreference(feature, provider, defaultModel.modelId);
+      setAiPreferences(getAIPreferences());
+    }
+  };
+
+  const handleFeatureModelChange = (feature: 'chat' | 'ipo' | 'translation', model: string) => {
+    // Get current feature preferences to maintain the provider
+    const currentPreferences = getFeatureAIPreference(feature);
+    updateFeatureAIPreference(feature, currentPreferences.provider, model);
+    setAiPreferences(getAIPreferences());
+  };
+
   const getInitials = (name?: string | null): string => {
     if (!name) return 'U';
     const parts = name.split(' ');
@@ -225,8 +242,8 @@ const ProfilePage = () => {
                           <AIModelSelector
                             selectedProvider={preference.provider}
                             selectedModel={preference.model}
-                            onProviderChange={(provider) => updateFeatureAIPreference(feature as any, provider, preference.model)}
-                            onModelChange={(model) => updateFeatureAIPreference(feature as any, preference.provider, model)}
+                            onProviderChange={(provider) => handleFeatureProviderChange(feature as any, provider)}
+                            onModelChange={(model) => handleFeatureModelChange(feature as any, model)}
                             className="flex-shrink-0"
                             showStatus={false}
                           />
