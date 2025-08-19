@@ -30,7 +30,7 @@ const TimetableViewer: React.FC = () => {
   const { processFiles, isProcessing } = useFileProcessing();
   const [timetableData, setTimetableData] = useState<TimetableData>({
     title: "Financial Transaction Timetable (Processing...)",
-    referenceDate: "2025-05-07",
+    referenceDate: "2025-08-19",
     entries: []
   });
   
@@ -61,8 +61,8 @@ const TimetableViewer: React.FC = () => {
       
       if (!documents || documents.length === 0) {
         setTimetableData({
-          title: "Financial Transaction Timetable (May 7, 2025)",
-          referenceDate: "2025-05-07",
+          title: "Financial Transaction Timetable (Aug 19, 2025)",
+          referenceDate: "2025-08-19",
           entries: getDefaultTimetableEntries() // Fallback to default entries
         });
         setIsLoading(false);
@@ -94,7 +94,7 @@ const TimetableViewer: React.FC = () => {
           // If parsing failed, use default data
           setTimetableData({
             title: timetableDoc.title || "Financial Transaction Timetable",
-            referenceDate: "2025-05-07",
+            referenceDate: "2025-08-19",
             entries: getDefaultTimetableEntries()
           });
         }
@@ -105,8 +105,8 @@ const TimetableViewer: React.FC = () => {
       
       // Use default data if there's an error
       setTimetableData({
-        title: "Financial Transaction Timetable (May 7, 2025)",
-        referenceDate: "2025-05-07",
+        title: "Financial Transaction Timetable (Aug 19, 2025)",
+        referenceDate: "2025-08-19",
         entries: getDefaultTimetableEntries()
       });
     } finally {
@@ -114,50 +114,94 @@ const TimetableViewer: React.FC = () => {
     }
   };
 
-  // Helper function to get default timetable entries
+  // Helper function to get default timetable entries with dynamic date calculation
   const getDefaultTimetableEntries = (): TimetableEntry[] => {
+    // Use current date (August 19, 2025) as reference
+    const startDate = new Date('2025-08-19');
+    
+    // Helper to format date with day of week
+    const formatDate = (date: Date): string => {
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+    };
+    
+    // Helper to add business days
+    const addBusinessDays = (date: Date, days: number): Date => {
+      const result = new Date(date);
+      let addedDays = 0;
+      while (addedDays < days) {
+        result.setDate(result.getDate() + 1);
+        if (result.getDay() !== 0 && result.getDay() !== 6) { // Skip weekends
+          addedDays++;
+        }
+      }
+      return result;
+    };
+
     return [
       {
         day: 0,
-        date: "Wed, May 7, 2025",
+        date: formatDate(startDate),
         event: "Board Meeting and Announcement",
         description: "Board approves the transaction and issues announcement",
         status: 'completed'
       },
       {
         day: 1,
-        date: "Thu, May 8, 2025",
+        date: formatDate(addBusinessDays(startDate, 1)),
         event: "Submit Draft Circular to HKEX",
         description: "First draft circular submitted for regulatory review",
-        status: 'upcoming'
+        status: 'upcoming',
+        vettingRequired: true,
+        ruleReference: "Rule 14.60"
+      },
+      {
+        day: 8,
+        date: formatDate(addBusinessDays(startDate, 8)),
+        event: "Circular Vetting by Stock Exchange",
+        description: "Stock Exchange reviews and provides comments on circular",
+        status: 'upcoming',
+        vettingRequired: true,
+        ruleReference: "Rule 14.60"
       },
       {
         day: 14,
-        date: "Wed, May 21, 2025",
+        date: formatDate(addBusinessDays(startDate, 14)),
         event: "Expected Regulatory Feedback",
         description: "First round of comments from HKEX expected",
-        status: 'upcoming'
+        status: 'upcoming',
+        vettingRequired: true
       },
       {
         day: 28,
-        date: "Wed, June 4, 2025",
+        date: formatDate(addBusinessDays(startDate, 28)),
         event: "EGM Notice & Despatch Circular",
         description: "Circular finalized and sent to shareholders",
         status: 'upcoming'
       },
       {
         day: 42,
-        date: "Wed, June 18, 2025",
+        date: formatDate(addBusinessDays(startDate, 42)),
         event: "Extraordinary General Meeting",
         description: "Shareholders vote on the proposed transaction",
         status: 'upcoming'
       },
       {
         day: 44,
-        date: "Fri, June 20, 2025",
+        date: formatDate(addBusinessDays(startDate, 44)),
         event: "Results Announcement",
         description: "Publication of EGM results and next steps",
         status: 'upcoming'
+      },
+      {
+        day: 50,
+        date: formatDate(addBusinessDays(startDate, 50)),
+        event: "Stock Exchange Vetting Complete",
+        description: "Final vetting by the Stock Exchange (10 business days)",
+        status: 'upcoming',
+        vettingRequired: true,
+        ruleReference: "Listing Rules"
       }
     ];
   };
@@ -177,7 +221,7 @@ const TimetableViewer: React.FC = () => {
       }
       
       // Find reference date
-      let referenceDate = "2025-05-07";
+      let referenceDate = "2025-08-19";
       const refDateMatch = content.match(/(?:Reference|Start)\s+[Dd]ate:?\s+((?:\w{3}, )?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})/);
       if (refDateMatch && refDateMatch[1]) {
         referenceDate = refDateMatch[1].trim();
