@@ -633,10 +633,80 @@ export class DynamicTimetableGenerator {
       isKeyEvent: true
     });
     
-    // Then add trading events starting after prospectus publication
-    const tradingStartDay = prospectusPublicationDay + 1;
-    const recordDate = this.calculateBusinessDay(startDate, tradingStartDay + 5, adjustForHolidays);
-    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, tradingStartDay, adjustForHolidays), adjustForHolidays, vettingTimeframes);
+    // Phase 3: Trading Events (AFTER prospectus publication)
+    // Record Date (start trading events from prospectus publication + 3 days)
+    const recordDate = this.calculateBusinessDay(startDate, prospectusPublicationDay + 3, adjustForHolidays);
+    
+    // T-2: Last Cum-Rights Trading Day
+    events.push({
+      day: prospectusPublicationDay + 1,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Rights Trading Day',
+      description: 'Last day for trading in shares with rights',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Rights Date
+    events.push({
+      day: prospectusPublicationDay + 2,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Rights Date',
+      description: 'Shares trade ex-rights from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: prospectusPublicationDay + 3,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: PAL Dispatch
+    events.push({
+      day: prospectusPublicationDay + 8,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'PAL Dispatch',
+      description: 'Provisional Allotment Letters sent to shareholders'
+    });
+    
+    // T+6: Nil-Paid Rights Trading Start
+    events.push({
+      day: prospectusPublicationDay + 9,
+      date: this.calculateBusinessDay(recordDate, 6, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading Start',
+      description: 'First day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+16: Nil-Paid Rights Trading End
+    events.push({
+      day: prospectusPublicationDay + 19,
+      date: this.calculateBusinessDay(recordDate, 16, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading End',
+      description: 'Last day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+20: Latest Acceptance Date
+    events.push({
+      day: prospectusPublicationDay + 23,
+      date: this.calculateBusinessDay(recordDate, 20, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+27: New Shares Listing
+    events.push({
+      day: prospectusPublicationDay + 30,
+      date: this.calculateBusinessDay(recordDate, 27, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in fully-paid new shares commences',
+      isKeyEvent: true
+    });
   }
   
   /**
@@ -764,12 +834,131 @@ export class DynamicTimetableGenerator {
       isKeyEvent: true
     });
 
-    // Same approval sequence as rights issue (but starting from day 3)
-    this.addRightsIssueWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
+    // Phase 1: Circular process for shareholder approval
+    // Circular Preparation (starts after announcement)
+    const circularPrepStart = 1 + vettingTimeframes.announcementPreparation;
+    events.push({
+      day: circularPrepStart,
+      date: this.calculateBusinessDay(startDate, circularPrepStart, adjustForHolidays),
+      event: 'Circular Preparation',
+      description: `Drafting of circular with details of open offer (${vettingTimeframes.circularPreparation} business days) - Rule 14.60`
+    });
     
-    // Then add open offer trading events (without nil-paid rights)
-    const recordDate = this.calculateBusinessDay(startDate, 66, adjustForHolidays);
-    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays, vettingTimeframes);
+    // Circular Vetting (starts after preparation)
+    const circularVettingStart = circularPrepStart + vettingTimeframes.circularPreparation;
+    events.push({
+      day: circularVettingStart,
+      date: this.calculateBusinessDay(startDate, circularVettingStart, adjustForHolidays),
+      event: 'Circular Vetting',
+      description: `${vettingTimeframes.vettingAuthority} review of circular (${vettingTimeframes.circularVetting} business days) - Rule 14.60`
+    });
+    
+    // Circular Dispatch (after vetting completion)
+    const circularDispatchDay = circularVettingStart + vettingTimeframes.circularVetting;
+    events.push({
+      day: circularDispatchDay,
+      date: this.calculateBusinessDay(startDate, circularDispatchDay, adjustForHolidays),
+      event: 'Circular Dispatch',
+      description: 'Dispatch of circular to shareholders'
+    });
+    
+    // EGM (21 days after circular dispatch)
+    const egmDay = circularDispatchDay + 21;
+    events.push({
+      day: egmDay,
+      date: this.calculateBusinessDay(startDate, egmDay, adjustForHolidays),
+      event: 'EGM',
+      description: 'Extraordinary General Meeting for shareholders approval',
+      isKeyEvent: true
+    });
+    
+    // Phase 2: Listing Documents process (AFTER approval)
+    // Listing Documents Preparation (starts after EGM)
+    const listingDocPrepStart = egmDay + 1;
+    events.push({
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
+    events.push({
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
+    events.push({
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
+      isKeyEvent: true
+    });
+    
+    // Phase 3: Trading Events (AFTER prospectus publication) - NO nil-paid rights trading
+    // Record Date (start trading events from prospectus publication + 3 days)
+    const recordDate = this.calculateBusinessDay(startDate, prospectusPublicationDay + 3, adjustForHolidays);
+    
+    // T-2: Last Cum-Entitlement Trading Day
+    events.push({
+      day: prospectusPublicationDay + 1,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Entitlement Trading Day',
+      description: 'Last day for trading in shares with entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Entitlement Date
+    events.push({
+      day: prospectusPublicationDay + 2,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Entitlement Date',
+      description: 'Shares trade ex-entitlement from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: prospectusPublicationDay + 3,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: Application Form Dispatch
+    events.push({
+      day: prospectusPublicationDay + 8,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'Application Form Dispatch',
+      description: 'Application forms sent to qualifying shareholders'
+    });
+    
+    // T+19: Latest Acceptance Date
+    events.push({
+      day: prospectusPublicationDay + 22,
+      date: this.calculateBusinessDay(recordDate, 19, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+26: New Shares Listing
+    events.push({
+      day: prospectusPublicationDay + 29,
+      date: this.calculateBusinessDay(recordDate, 26, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in new shares commences',
+      isKeyEvent: true
+    });
   }
   
   /**
