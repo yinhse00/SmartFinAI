@@ -90,10 +90,10 @@ const ProfilePage = () => {
   };
 
   const handleDefaultProviderChange = (provider: AIProvider) => {
-    const defaultModel = getDefaultModel(provider);
-    const modelId = defaultModel?.modelId || aiPreferences.defaultModel;
-    updateDefaultAIPreference(provider, modelId);
-    setAiPreferences(getAIPreferences());
+    // Just update the provider - AIModelSelector will handle the model selection
+    const preferences = getAIPreferences();
+    preferences.defaultProvider = provider;
+    setAiPreferences(preferences);
   };
 
   const handleDefaultModelChange = (model: string) => {
