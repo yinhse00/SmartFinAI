@@ -72,6 +72,10 @@ export class DynamicTimetableGenerator {
           this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
         } else if (normalizedType.includes('reverse takeover') || normalizedType === 'rto') {
           this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('rights issue') || normalizedType === 'rights') {
+          this.addRightsIssueEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('open offer') || normalizedType === 'open') {
+          this.addOpenOfferEvents(events, startDate, adjustForHolidays);
         } else {
           this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
         }
@@ -376,6 +380,272 @@ export class DynamicTimetableGenerator {
       description: 'Trading of shares resumes after completion',
       isKeyEvent: true
     });
+  }
+  
+  /**
+   * Add events for Rights Issue
+   */
+  private addRightsIssueEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Rights Issue follows: Announcement → Circular (if needed) → EGM (if needed) → Listing Documents → Trading
+    
+    // Determine if aggregation threshold exceeded (simplified - assume no for basic case)
+    const requiresApproval = false; // In practice, this would check Rule 7.19A threshold
+    
+    if (requiresApproval) {
+      // Scenario B: Shareholder approval required
+      this.addRightsIssueWithApproval(events, startDate, adjustForHolidays);
+    } else {
+      // Scenario A: No shareholder approval required
+      this.addRightsIssueStandard(events, startDate, adjustForHolidays);
+    }
+  }
+  
+  private addRightsIssueStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Day 1: Listing Documents Preparation (after announcement already made)
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: 'Preparation of listing documents (5 business days)'
+    });
+    
+    // Day 6: Stock Exchange Vetting
+    events.push({
+      day: 6,
+      date: this.calculateBusinessDay(startDate, 6, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: 'Vetting by the Stock Exchange (10 business days)'
+    });
+    
+    // Trading Events (T-based)
+    const recordDate = this.calculateBusinessDay(startDate, 20, adjustForHolidays);
+    
+    // T-2: Last Cum-Rights Trading Day
+    events.push({
+      day: 18,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Rights Trading Day',
+      description: 'Last day for trading in shares with rights entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Rights Date
+    events.push({
+      day: 19,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Rights Date',
+      description: 'Shares begin trading ex-rights',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: 20,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: PAL Dispatch
+    events.push({
+      day: 25,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'PAL Dispatch',
+      description: 'Provisional Allotment Letters sent to shareholders'
+    });
+    
+    // T+6: Nil-Paid Rights Trading Start
+    events.push({
+      day: 26,
+      date: this.calculateBusinessDay(recordDate, 6, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading Start',
+      description: 'First day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+16: Nil-Paid Rights Trading End
+    events.push({
+      day: 36,
+      date: this.calculateBusinessDay(recordDate, 16, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading End',
+      description: 'Last day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+20: Latest Acceptance Date
+    events.push({
+      day: 40,
+      date: this.calculateBusinessDay(recordDate, 20, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+27: New Shares Listing
+    events.push({
+      day: 47,
+      date: this.calculateBusinessDay(recordDate, 27, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in fully-paid new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  private addRightsIssueWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Day 2: Circular Preparation
+    events.push({
+      day: 2,
+      date: this.calculateBusinessDay(startDate, 2, adjustForHolidays),
+      event: 'Circular Preparation',
+      description: 'Drafting of circular with details of rights issue'
+    });
+    
+    // Day 7: Circular Vetting
+    events.push({
+      day: 7,
+      date: this.calculateBusinessDay(startDate, 7, adjustForHolidays),
+      event: 'Circular Vetting',
+      description: 'Stock Exchange review of circular'
+    });
+    
+    // Day 22: Circular Dispatch
+    events.push({
+      day: 22,
+      date: this.calculateBusinessDay(startDate, 22, adjustForHolidays),
+      event: 'Circular Dispatch',
+      description: 'Dispatch of circular to shareholders'
+    });
+    
+    // Day 43: EGM
+    events.push({
+      day: 43,
+      date: this.calculateBusinessDay(startDate, 43, adjustForHolidays),
+      event: 'EGM',
+      description: 'Extraordinary General Meeting for shareholders approval',
+      isKeyEvent: true
+    });
+    
+    // Day 44: Listing Documents Preparation (AFTER approval)
+    events.push({
+      day: 44,
+      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: 'Preparation of listing documents (5 business days)'
+    });
+    
+    // Day 49: Stock Exchange Vetting
+    events.push({
+      day: 49,
+      date: this.calculateBusinessDay(startDate, 49, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: 'Vetting by the Stock Exchange (10 business days)'
+    });
+    
+    // Then add trading events starting from Day 60
+    const recordDate = this.calculateBusinessDay(startDate, 65, adjustForHolidays);
+    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, 60, adjustForHolidays), adjustForHolidays);
+  }
+  
+  /**
+   * Add events for Open Offer
+   */
+  private addOpenOfferEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Open Offer follows same sequence as Rights Issue but NO nil-paid rights trading
+    
+    // Determine if aggregation threshold exceeded (simplified - assume no for basic case)
+    const requiresApproval = false; // In practice, this would check Rule 7.24 threshold
+    
+    if (requiresApproval) {
+      // Scenario B: Shareholder approval required
+      this.addOpenOfferWithApproval(events, startDate, adjustForHolidays);
+    } else {
+      // Scenario A: No shareholder approval required
+      this.addOpenOfferStandard(events, startDate, adjustForHolidays);
+    }
+  }
+  
+  private addOpenOfferStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Day 1: Listing Documents Preparation (after announcement already made)
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: 'Preparation of listing documents (5 business days)'
+    });
+    
+    // Day 6: Stock Exchange Vetting
+    events.push({
+      day: 6,
+      date: this.calculateBusinessDay(startDate, 6, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: 'Vetting by the Stock Exchange (10 business days)'
+    });
+    
+    // Trading Events (T-based) - NO nil-paid rights trading
+    const recordDate = this.calculateBusinessDay(startDate, 20, adjustForHolidays);
+    
+    // T-2: Last Cum-Entitlement Trading Day
+    events.push({
+      day: 18,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Entitlement Trading Day',
+      description: 'Last day for trading in shares with entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Entitlement Date
+    events.push({
+      day: 19,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Entitlement Date',
+      description: 'Shares trade ex-entitlement from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: 20,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: Application Form Dispatch
+    events.push({
+      day: 25,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'Application Form Dispatch',
+      description: 'Application forms sent to qualifying shareholders'
+    });
+    
+    // T+19: Latest Acceptance Date
+    events.push({
+      day: 39,
+      date: this.calculateBusinessDay(recordDate, 19, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+26: New Shares Listing
+    events.push({
+      day: 46,
+      date: this.calculateBusinessDay(recordDate, 26, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  private addOpenOfferWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+    // Same approval sequence as rights issue
+    this.addRightsIssueWithApproval(events, startDate, adjustForHolidays);
+    
+    // Then add open offer trading events (without nil-paid rights)
+    const recordDate = this.calculateBusinessDay(startDate, 65, adjustForHolidays);
+    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 60, adjustForHolidays), adjustForHolidays);
   }
   
   /**
