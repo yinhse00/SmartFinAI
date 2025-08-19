@@ -1,6 +1,7 @@
 import { BusinessDayCalculator } from '../calendar/businessDayCalculator';
 import { HongKongHolidays } from '../calendar/hongKongHolidays';
 import { supabase } from '@/integrations/supabase/client';
+import { timetableParallelSearchService } from '../timetable/timetableParallelSearchService';
 
 interface TimetableEvent {
   day: number;
@@ -8,6 +9,8 @@ interface TimetableEvent {
   event: string;
   description?: string;
   isKeyEvent?: boolean;
+  vettingRequired?: boolean;
+  ruleReference?: string;
 }
 
 interface TimetableOptions {
@@ -48,15 +51,46 @@ export class DynamicTimetableGenerator {
       
       const events: TimetableEvent[] = [];
       const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
+
+      // Execute parallel search for timetable data, rules, and vetting requirements
+      const searchResults = await timetableParallelSearchService.searchTimetableDataParallel(transactionType);
+      const { timetableData, rulesData, vettingInfo } = searchResults;
     
-    // Add announcement day (Day 0)
+    // Add announcement day (Day 0) with vetting information
     events.push({
       day: 0,
       date: new Date(startDate),
       event: 'Board Meeting and Announcement',
-      description: 'Board approves the transaction and issues announcement',
-      isKeyEvent: true
+      description: vettingInfo.isRequired 
+        ? `Board approves the transaction and issues announcement (Vetting required: ${vettingInfo.vettingDays} business days)`
+        : 'Board approves the transaction and issues announcement (No vetting required)',
+      isKeyEvent: true,
+      vettingRequired: vettingInfo.isRequired,
+      ruleReference: vettingInfo.ruleReference
     });
+
+    // Add vetting-specific events if required
+    if (vettingInfo.isRequired && vettingInfo.vettingDays > 0) {
+      events.push({
+        day: -vettingInfo.vettingDays,
+        date: this.calculateBusinessDay(startDate, -vettingInfo.vettingDays, adjustForHolidays),
+        event: 'Submit Announcement for Pre-Vetting',
+        description: `Submit announcement to HKEX for pre-vetting (${vettingInfo.headlineCategory})`,
+        isKeyEvent: true,
+        vettingRequired: true,
+        ruleReference: vettingInfo.ruleReference
+      });
+      
+      events.push({
+        day: -1,
+        date: this.calculateBusinessDay(startDate, -1, adjustForHolidays),
+        event: 'Receive Vetting Clearance',
+        description: 'Receive HKEX vetting clearance for announcement',
+        isKeyEvent: true,
+        vettingRequired: true,
+        ruleReference: vettingInfo.ruleReference
+      });
+    }
     
       // Add standard events based on transaction type with better matching
       const normalizedType = transactionType.toLowerCase().trim();

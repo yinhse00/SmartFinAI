@@ -15,6 +15,8 @@ interface TimetableEntry {
   event: string;
   description?: string;
   status?: 'pending' | 'completed' | 'upcoming';
+  vettingRequired?: boolean;
+  ruleReference?: string;
 }
 
 interface TimetableData {
@@ -397,10 +399,24 @@ const TimetableViewer: React.FC = () => {
               <TableBody>
                 {timetableData.entries.map((entry, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">Day {entry.day}</TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell className="font-medium">{entry.event}</TableCell>
-                    <TableCell className="hidden md:table-cell">{entry.description || '-'}</TableCell>
+                     <TableCell className="font-medium">Day {entry.day}</TableCell>
+                     <TableCell>{entry.date}</TableCell>
+                     <TableCell className="font-medium">
+                       {entry.event}
+                       {entry.vettingRequired && (
+                         <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">
+                           Vetting Required
+                         </span>
+                       )}
+                     </TableCell>
+                     <TableCell className="hidden md:table-cell">
+                       {entry.description || '-'}
+                       {entry.ruleReference && (
+                         <div className="text-xs text-blue-600 mt-1">
+                           Ref: {entry.ruleReference}
+                         </div>
+                       )}
+                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(entry.status)}`}>
                         {entry.status || 'N/A'}
