@@ -3,6 +3,7 @@ import { HongKongHolidays } from '../calendar/hongKongHolidays';
 import { supabase } from '@/integrations/supabase/client';
 import { timetableParallelSearchService } from '../timetable/timetableParallelSearchService';
 import { getCurrentDate } from '../calendar/currentDateService';
+import { vettingCalculatorService, VettingTimeframes } from './vettingCalculatorService';
 
 interface TimetableEvent {
   day: number;
@@ -98,21 +99,29 @@ export class DynamicTimetableGenerator {
       
       try {
         if (normalizedType.includes('major transaction') || normalizedType === 'major') {
-          this.addMajorTransactionEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addMajorTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('very substantial acquisition') || normalizedType === 'vsa') {
-          this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('very substantial disposal') || normalizedType === 'vsd') {
-          this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('connected transaction') || normalizedType === 'connected') {
-          this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addConnectedTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('reverse takeover') || normalizedType === 'rto') {
-          this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addReverseTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('rights issue') || normalizedType === 'rights') {
-          this.addRightsIssueEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addRightsIssueEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('open offer') || normalizedType === 'open') {
-          this.addOpenOfferEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addOpenOfferEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else {
-          this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addGenericTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         }
       } catch (eventError) {
         this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
@@ -153,7 +162,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Major Transaction
    */
-  private addMajorTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addMajorTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Day 1: Submit draft circular
     events.push({
       day: 1,
@@ -200,7 +209,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Very Substantial Acquisition
    */
-  private addVerySubstantialAcquisitionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addVerySubstantialAcquisitionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // VSA follows similar timeline to Major Transaction but with longer review period
     
     // Day 1: Submit draft circular
@@ -258,9 +267,9 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Very Substantial Disposal
    */
-  private addVerySubstantialDisposalEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addVerySubstantialDisposalEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // VSD follows similar timeline to VSA
-    this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+    this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
     
     // Update the last event description
     const lastEvent = events[events.length - 1];
@@ -272,7 +281,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Connected Transaction
    */
-  private addConnectedTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addConnectedTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Connected transactions require independent shareholder approval
     
     // Day 1: Submit draft circular
@@ -337,7 +346,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Reverse Takeover
    */
-  private addReverseTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addReverseTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // RTO has a much longer timeline due to enhanced scrutiny
     
     // Day 1: Submit draft circular
@@ -420,7 +429,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for Rights Issue
    */
-  private addRightsIssueEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addRightsIssueEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
     // Rights Issue follows: Announcement → Circular (if needed) → EGM (if needed) → Listing Documents → Trading
     
     // Default to approval required scenario for comprehensive guidance
@@ -428,14 +437,14 @@ export class DynamicTimetableGenerator {
     
     if (requiresApproval) {
       // Scenario B: Shareholder approval required
-      this.addRightsIssueWithApproval(events, startDate, adjustForHolidays);
+      this.addRightsIssueWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
     } else {
       // Scenario A: No shareholder approval required
-      this.addRightsIssueStandard(events, startDate, adjustForHolidays);
+      this.addRightsIssueStandard(events, startDate, adjustForHolidays, vettingTimeframes);
     }
   }
   
-  private addRightsIssueStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addRightsIssueStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Day 1: Publication of Announcement
     events.push({
       day: 1,
@@ -545,7 +554,7 @@ export class DynamicTimetableGenerator {
     });
   }
   
-  private addRightsIssueWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addRightsIssueWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
     // Day 1: Publication of Announcement
     events.push({
       day: 1,
@@ -556,73 +565,84 @@ export class DynamicTimetableGenerator {
     });
 
     // Phase 1: Circular process for shareholder approval
-    // Day 3: Circular Preparation
+    // Circular Preparation (starts after announcement)
+    const circularPrepStart = 1 + vettingTimeframes.announcementPreparation;
     events.push({
-      day: 3,
-      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
+      day: circularPrepStart,
+      date: this.calculateBusinessDay(startDate, circularPrepStart, adjustForHolidays),
       event: 'Circular Preparation',
-      description: 'Drafting of circular with details of rights issue'
+      description: `Drafting of circular with details of rights issue (${vettingTimeframes.circularPreparation} business days) - Rule 14.60`
     });
     
-    // Day 8: Circular Vetting
+    // Circular Vetting (starts after preparation)
+    const circularVettingStart = circularPrepStart + vettingTimeframes.circularPreparation;
     events.push({
-      day: 8,
-      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
+      day: circularVettingStart,
+      date: this.calculateBusinessDay(startDate, circularVettingStart, adjustForHolidays),
       event: 'Circular Vetting',
-      description: 'Stock Exchange review of circular'
+      description: `${vettingTimeframes.vettingAuthority} review of circular (${vettingTimeframes.circularVetting} business days) - Rule 14.60`
     });
     
-    // Day 23: Circular Dispatch
+    // Circular Dispatch (after vetting completion)
+    const circularDispatchDay = circularVettingStart + vettingTimeframes.circularVetting;
     events.push({
-      day: 23,
-      date: this.calculateBusinessDay(startDate, 23, adjustForHolidays),
+      day: circularDispatchDay,
+      date: this.calculateBusinessDay(startDate, circularDispatchDay, adjustForHolidays),
       event: 'Circular Dispatch',
       description: 'Dispatch of circular to shareholders'
     });
     
-    // Day 44: EGM
+    // EGM (21 days after circular dispatch)
+    const egmDay = circularDispatchDay + 21;
     events.push({
-      day: 44,
-      date: this.calculateBusinessDay(startDate, 44, adjustForHolidays),
+      day: egmDay,
+      date: this.calculateBusinessDay(startDate, egmDay, adjustForHolidays),
       event: 'EGM',
       description: 'Extraordinary General Meeting for shareholders approval',
       isKeyEvent: true
     });
     
-    // Day 45: Listing Documents Preparation (AFTER approval)
+    // Phase 2: Listing Documents process (AFTER approval)
+    // Listing Documents Preparation (starts after EGM)
+    const listingDocPrepStart = egmDay + 1;
     events.push({
-      day: 45,
-      date: this.calculateBusinessDay(startDate, 45, adjustForHolidays),
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
       event: 'Listing Documents Preparation',
-      description: 'Preparation of listing documents (5 business days)'
-    });
-    
-    // Day 50: Stock Exchange Vetting
-    events.push({
-      day: 50,
-      date: this.calculateBusinessDay(startDate, 50, adjustForHolidays),
-      event: 'Stock Exchange Vetting',
-      description: 'Vetting by the Stock Exchange (10 business days)'
-    });
-    
-    // Day 60: Publication of Prospectus
-    events.push({
-      day: 60,
-      date: this.calculateBusinessDay(startDate, 60, adjustForHolidays),
-      event: 'Publication of Prospectus',
-      description: 'Publication of listing document/prospectus after vetting completion',
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
       isKeyEvent: true
     });
     
-    // Then add trading events starting from Day 61
-    const recordDate = this.calculateBusinessDay(startDate, 66, adjustForHolidays);
-    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays);
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
+    events.push({
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
+    events.push({
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
+      isKeyEvent: true
+    });
+    
+    // Then add trading events starting after prospectus publication
+    const tradingStartDay = prospectusPublicationDay + 1;
+    const recordDate = this.calculateBusinessDay(startDate, tradingStartDay + 5, adjustForHolidays);
+    this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, tradingStartDay, adjustForHolidays), adjustForHolidays, vettingTimeframes);
   }
   
   /**
    * Add events for Open Offer
    */
-  private addOpenOfferEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addOpenOfferEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
     // Open Offer follows same sequence as Rights Issue but NO nil-paid rights trading
     
     // Default to approval required scenario for comprehensive guidance
@@ -630,14 +650,14 @@ export class DynamicTimetableGenerator {
     
     if (requiresApproval) {
       // Scenario B: Shareholder approval required
-      this.addOpenOfferWithApproval(events, startDate, adjustForHolidays);
+      this.addOpenOfferWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
     } else {
       // Scenario A: No shareholder approval required
-      this.addOpenOfferStandard(events, startDate, adjustForHolidays);
+      this.addOpenOfferStandard(events, startDate, adjustForHolidays, vettingTimeframes);
     }
   }
   
-  private addOpenOfferStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addOpenOfferStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
     // Day 1: Publication of Announcement
     events.push({
       day: 1,
@@ -647,28 +667,33 @@ export class DynamicTimetableGenerator {
       isKeyEvent: true
     });
     
-    // Day 3: Listing Documents Preparation (after announcement publication)
+    // Listing Documents Preparation (after announcement publication)
+    const listingDocPrepStart = 1 + vettingTimeframes.announcementPreparation;
     events.push({
-      day: 3,
-      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
       event: 'Listing Documents Preparation',
-      description: 'Preparation of listing documents (5 business days)'
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
+      isKeyEvent: true
     });
     
-    // Day 8: Stock Exchange Vetting
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
     events.push({
-      day: 8,
-      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
       event: 'Stock Exchange Vetting',
-      description: 'Vetting by the Stock Exchange (10 business days)'
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
     });
     
-    // Day 18: Publication of Prospectus
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
     events.push({
-      day: 18,
-      date: this.calculateBusinessDay(startDate, 18, adjustForHolidays),
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
       event: 'Publication of Prospectus',
-      description: 'Publication of listing document/prospectus after vetting completion',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
       isKeyEvent: true
     });
     
@@ -729,7 +754,7 @@ export class DynamicTimetableGenerator {
     });
   }
   
-  private addOpenOfferWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addOpenOfferWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
     // Day 1: Publication of Announcement
     events.push({
       day: 1,
@@ -740,17 +765,17 @@ export class DynamicTimetableGenerator {
     });
 
     // Same approval sequence as rights issue (but starting from day 3)
-    this.addRightsIssueWithApproval(events, startDate, adjustForHolidays);
+    this.addRightsIssueWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
     
     // Then add open offer trading events (without nil-paid rights)
     const recordDate = this.calculateBusinessDay(startDate, 66, adjustForHolidays);
-    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays);
+    this.addOpenOfferStandard(events, this.calculateBusinessDay(startDate, 61, adjustForHolidays), adjustForHolidays, vettingTimeframes);
   }
   
   /**
    * Add generic transaction events
    */
-  private addGenericTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addGenericTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Generic timeline for unspecified transaction types
     
     // Day 7: Due diligence completion
