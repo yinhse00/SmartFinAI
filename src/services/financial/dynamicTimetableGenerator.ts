@@ -98,32 +98,45 @@ export class DynamicTimetableGenerator {
       const normalizedType = transactionType.toLowerCase().trim();
       
       try {
+        console.log('🔍 Normalized transaction type:', normalizedType);
+        console.log('🔍 Original transaction type:', transactionType);
+        
         if (normalizedType.includes('major transaction') || normalizedType === 'major') {
+          console.log('✅ Matched: Major Transaction');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addMajorTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('very substantial acquisition') || normalizedType === 'vsa') {
+          console.log('✅ Matched: Very Substantial Acquisition');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('very substantial disposal') || normalizedType === 'vsd') {
+          console.log('✅ Matched: Very Substantial Disposal');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('connected transaction') || normalizedType === 'connected') {
+          console.log('✅ Matched: Connected Transaction');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addConnectedTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('reverse takeover') || normalizedType === 'rto') {
+          console.log('✅ Matched: Reverse Takeover');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addReverseTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('rights issue') || normalizedType === 'rights') {
+          console.log('✅ Matched: Rights Issue');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          console.log('💾 Vetting timeframes for Rights Issue:', vettingTimeframes);
           this.addRightsIssueEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else if (normalizedType.includes('open offer') || normalizedType === 'open') {
+          console.log('✅ Matched: Open Offer');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addOpenOfferEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         } else {
+          console.log('⚠️ Using Generic Transaction');
           const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
           this.addGenericTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
         }
       } catch (eventError) {
+        console.error('❌ Error in event generation:', eventError);
         this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
       }
     
@@ -1092,11 +1105,15 @@ export class DynamicTimetableGenerator {
  */
 export async function generateDynamicTimetable(transactionType: string): Promise<string> {
   try {
+    console.log('🎯 generateDynamicTimetable called with:', transactionType);
+    
     const generator = new DynamicTimetableGenerator();
     
     // Use current date from calendar service as reference
     const startDate = getCurrentDate();
     startDate.setHours(0, 0, 0, 0); // Normalize to start of day for consistent calculations
+    
+    console.log('📅 Start date:', startDate);
     
     const events = await generator.generateTimetable({
       startDate,
@@ -1104,7 +1121,19 @@ export async function generateDynamicTimetable(transactionType: string): Promise
       adjustForHolidays: true
     });
     
+    console.log('📋 Generated events count:', events?.length || 0);
+    
+    // Log listing document related events specifically
+    const listingEvents = events?.filter(event => 
+      event.event.toLowerCase().includes('listing') || 
+      event.event.toLowerCase().includes('prospectus') ||
+      event.description?.toLowerCase().includes('listing') ||
+      event.description?.toLowerCase().includes('prospectus')
+    ) || [];
+    console.log('📑 Listing document events in generator:', listingEvents);
+    
     if (!events || events.length === 0) {
+      console.error('❌ No events generated for:', transactionType);
       return `# Error: No timetable events could be generated for "${transactionType}"`;
     }
   

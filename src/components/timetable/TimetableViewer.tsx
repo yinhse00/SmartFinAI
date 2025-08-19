@@ -40,7 +40,7 @@ const TimetableViewer: React.FC = () => {
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedTransactionType, setSelectedTransactionType] = useState<string>('Major Transaction');
+  const [selectedTransactionType, setSelectedTransactionType] = useState<string>('Rights Issue');
 
   // Fetch timetable from Supabase on component mount
   useEffect(() => {
@@ -121,11 +121,29 @@ const TimetableViewer: React.FC = () => {
       const currentDate = getCurrentDate();
       const formattedDate = currentDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
       
+      console.log('🚀 Generating timetable for transaction type:', selectedTransactionType);
+      
       // Generate the dynamic timetable
       const markdownContent = await generateDynamicTimetable(selectedTransactionType);
       
+      console.log('📄 Generated markdown content:');
+      console.log(markdownContent);
+      console.log('📏 Markdown length:', markdownContent.length);
+      
       // Parse the markdown content into TimetableEntry format
       const parsedData = parseMarkdownTimetable(markdownContent);
+      
+      console.log('📊 Parsed entries count:', parsedData.length);
+      console.log('📋 Parsed entries:', parsedData);
+      
+      // Log listing document related events specifically
+      const listingDocEvents = parsedData.filter(entry => 
+        entry.event.toLowerCase().includes('listing') || 
+        entry.event.toLowerCase().includes('prospectus') ||
+        entry.description?.toLowerCase().includes('listing') ||
+        entry.description?.toLowerCase().includes('prospectus')
+      );
+      console.log('📑 Listing document events found:', listingDocEvents);
       
       if (parsedData) {
         setTimetableData({
@@ -149,10 +167,18 @@ const TimetableViewer: React.FC = () => {
     const lines = markdownContent.split('\n');
     const entries: TimetableEntry[] = [];
     
+    console.log('🔍 Parsing markdown lines:', lines.length);
+    
+    let lineNumber = 0;
     for (const line of lines) {
+      lineNumber++;
+      
       // Skip header lines and empty lines
       if (line.startsWith('|') && !line.includes('Day') && !line.includes('---')) {
         const columns = line.split('|').map(col => col.trim()).filter(col => col);
+        
+        console.log(`📝 Line ${lineNumber}: "${line}"`);
+        console.log(`📝 Columns (${columns.length}):`, columns);
         
         if (columns.length >= 4) {
           const dayMatch = columns[0].match(/\d+/);
@@ -160,6 +186,14 @@ const TimetableViewer: React.FC = () => {
           const date = columns[1];
           const event = columns[2];
           const description = columns[3];
+          
+          // Log listing document related events specifically
+          if (event.toLowerCase().includes('listing') || 
+              event.toLowerCase().includes('prospectus') ||
+              description.toLowerCase().includes('listing') ||
+              description.toLowerCase().includes('prospectus')) {
+            console.log('📑 Found listing document event:', { day, date, event, description });
+          }
           
           // Determine status based on current date
           const eventDate = new Date(date);
@@ -186,10 +220,13 @@ const TimetableViewer: React.FC = () => {
             vettingRequired,
             ruleReference
           });
+        } else {
+          console.log(`⚠️ Line ${lineNumber} has insufficient columns (${columns.length}):`, line);
         }
       }
     }
     
+    console.log('✅ Total parsed entries:', entries.length);
     return entries;
   };
 
