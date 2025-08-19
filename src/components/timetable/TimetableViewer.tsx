@@ -174,15 +174,15 @@ const TimetableViewer: React.FC = () => {
       lineNumber++;
       
       // Skip header lines and empty lines
-      if (line.startsWith('|') && !line.includes('Day') && !line.includes('---')) {
+      if (line.startsWith('|') && !line.includes('Business Day') && !line.includes('---')) {
         const columns = line.split('|').map(col => col.trim()).filter(col => col);
         
         console.log(`📝 Line ${lineNumber}: "${line}"`);
         console.log(`📝 Columns (${columns.length}):`, columns);
         
         if (columns.length >= 4) {
-          const dayMatch = columns[0].match(/\d+/);
-          const day = dayMatch ? parseInt(dayMatch[0]) : 0;
+          const dayMatch = columns[0].match(/T\+(\d+)|(\d+)/);
+          const day = dayMatch ? parseInt(dayMatch[1] || dayMatch[2]) : 0;
           const date = columns[1];
           const event = columns[2];
           const description = columns[3];
