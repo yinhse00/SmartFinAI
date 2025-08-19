@@ -90,14 +90,25 @@ const ProfilePage = () => {
   };
 
   const handleDefaultProviderChange = (provider: AIProvider) => {
-    // Just update the provider - AIModelSelector will handle the model selection
+    // Get current preferences and update provider
     const preferences = getAIPreferences();
     preferences.defaultProvider = provider;
+    
+    // Get default model for the new provider
+    const defaultModel = getDefaultModel(provider);
+    if (defaultModel) {
+      preferences.defaultModel = defaultModel.modelId;
+    }
+    
+    // Save to localStorage and update local state
+    saveAIPreferences(preferences);
     setAiPreferences(preferences);
   };
 
   const handleDefaultModelChange = (model: string) => {
-    updateDefaultAIPreference(aiPreferences.defaultProvider, model);
+    // Get fresh preferences to ensure we have the latest provider
+    const freshPreferences = getAIPreferences();
+    updateDefaultAIPreference(freshPreferences.defaultProvider, model);
     setAiPreferences(getAIPreferences());
   };
 
