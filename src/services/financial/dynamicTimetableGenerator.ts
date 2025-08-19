@@ -37,10 +37,21 @@ export class DynamicTimetableGenerator {
    * Generate a timetable for a financial transaction
    */
   public async generateTimetable(options: TimetableOptions): Promise<TimetableEvent[]> {
-    console.log(`Generating timetable for ${options.transactionType} starting on ${options.startDate.toDateString()}`);
-    
-    const events: TimetableEvent[] = [];
-    const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
+    try {
+      if (!options.startDate || isNaN(options.startDate.getTime())) {
+        console.error('Invalid start date provided to generateTimetable:', options.startDate);
+        options.startDate = new Date(); // Fallback to current date
+      }
+      
+      if (!options.transactionType || options.transactionType.trim() === '') {
+        console.warn('Empty transaction type provided, using generic transaction');
+        options.transactionType = 'generic transaction';
+      }
+      
+      console.log(`Generating timetable for "${options.transactionType}" starting on ${options.startDate.toDateString()}`);
+      
+      const events: TimetableEvent[] = [];
+      const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
     
     // Add announcement day (Day 0)
     events.push({
@@ -51,29 +62,30 @@ export class DynamicTimetableGenerator {
       isKeyEvent: true
     });
     
-    // Add standard events based on transaction type
-    switch (transactionType.toLowerCase()) {
-      case 'major transaction':
-        this.addMajorTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'very substantial acquisition':
-      case 'vsa':
-        this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'very substantial disposal':
-      case 'vsd':
-        this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'connected transaction':
-        this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'reverse takeover':
-      case 'rto':
-        this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      default:
+      // Add standard events based on transaction type with better matching
+      const normalizedType = transactionType.toLowerCase().trim();
+      console.log(`Processing transaction type: "${normalizedType}"`);
+      
+      try {
+        if (normalizedType.includes('major transaction') || normalizedType === 'major') {
+          this.addMajorTransactionEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('very substantial acquisition') || normalizedType === 'vsa') {
+          this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('very substantial disposal') || normalizedType === 'vsd') {
+          this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('connected transaction') || normalizedType === 'connected') {
+          this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
+        } else if (normalizedType.includes('reverse takeover') || normalizedType === 'rto') {
+          this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
+        } else {
+          console.log(`Using generic transaction events for type: "${normalizedType}"`);
+          this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
+        }
+      } catch (eventError) {
+        console.error('Error adding transaction events:', eventError);
+        console.log('Falling back to generic transaction events');
         this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
-    }
+      }
     
     // Add custom events if provided
     if (options.customEvents && options.customEvents.length > 0) {
@@ -89,7 +101,32 @@ export class DynamicTimetableGenerator {
       console.log(`Found ${referenceTimetables.length} reference timetables that may be relevant`);
     }
     
-    return events;
+      // Validate that events have valid dates
+      const validEvents = events.filter(event => {
+        if (!event.date || isNaN(event.date.getTime())) {
+          console.warn('Removing event with invalid date:', event);
+          return false;
+        }
+        return true;
+      });
+      
+      if (validEvents.length !== events.length) {
+        console.warn(`Removed ${events.length - validEvents.length} events with invalid dates`);
+      }
+      
+      console.log(`Generated ${validEvents.length} valid events for timetable`);
+      return validEvents;
+    } catch (error) {
+      console.error('Error generating timetable:', error);
+      // Return minimal fallback timetable
+      return [{
+        day: 0,
+        date: new Date(options.startDate.getTime()),
+        event: 'Transaction Announcement',
+        description: 'Initial announcement of the transaction',
+        isKeyEvent: true
+      }];
+    }
   }
   
   /**
@@ -413,12 +450,33 @@ export class DynamicTimetableGenerator {
    * Calculate business day from a start date
    */
   private calculateBusinessDay(startDate: Date, days: number, adjustForHolidays: boolean): Date {
-    if (adjustForHolidays) {
-      return this.businessDayCalculator.addBusinessDays(startDate, days);
-    } else {
-      const result = new Date(startDate);
-      result.setDate(result.getDate() + days);
-      return result;
+    try {
+      if (!startDate || isNaN(startDate.getTime())) {
+        console.error('Invalid start date provided to calculateBusinessDay:', startDate);
+        return new Date(); // Fallback to current date
+      }
+      
+      if (days < 0) {
+        console.warn('Negative days provided to calculateBusinessDay:', days);
+        return new Date(startDate.getTime()); // Return copy of start date
+      }
+      
+      console.log(`Calculating ${adjustForHolidays ? 'business' : 'calendar'} day: ${startDate.toDateString()} + ${days} days`);
+      
+      if (adjustForHolidays) {
+        const result = this.businessDayCalculator.addBusinessDays(startDate, days);
+        console.log(`Business day calculation result: ${result.toDateString()}`);
+        return result;
+      } else {
+        // Create copy to avoid mutation and use proper date arithmetic
+        const result = new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+        console.log(`Calendar day calculation result: ${result.toDateString()}`);
+        return result;
+      }
+    } catch (error) {
+      console.error('Error in calculateBusinessDay:', error);
+      // Fallback: simple calendar day addition
+      return new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
     }
   }
   
@@ -482,16 +540,27 @@ export class DynamicTimetableGenerator {
  * This is the main export that other services use
  */
 export async function generateDynamicTimetable(transactionType: string): Promise<string> {
-  const generator = new DynamicTimetableGenerator();
-  
-  // Use current date as start date
-  const startDate = new Date();
-  
-  const events = await generator.generateTimetable({
-    startDate,
-    transactionType,
-    adjustForHolidays: true
-  });
+  try {
+    console.log(`Starting dynamic timetable generation for: "${transactionType}"`);
+    
+    const generator = new DynamicTimetableGenerator();
+    
+    // Use current date as start date, normalized to start of day
+    const startDate = new Date();
+    startDate.setHours(0, 0, 0, 0); // Normalize to start of day for consistent calculations
+    
+    console.log(`Using start date: ${startDate.toDateString()}`);
+    
+    const events = await generator.generateTimetable({
+      startDate,
+      transactionType: transactionType || 'generic transaction',
+      adjustForHolidays: true
+    });
+    
+    if (!events || events.length === 0) {
+      console.error('No events generated for timetable');
+      return `# Error: No timetable events could be generated for "${transactionType}"`;
+    }
   
   // Format events into a markdown table
   let timetable = `# ${transactionType.replace(/_/g, ' ').toUpperCase()} Execution Timetable\n\n`;
@@ -499,13 +568,26 @@ export async function generateDynamicTimetable(transactionType: string): Promise
   timetable += `| Business Day | Date | Event | Description |\n`;
   timetable += `|--------------|------|-------|-------------|\n`;
   
-  events.forEach(event => {
-    const dayLabel = event.day === 0 ? 'T+0' : `T+${event.day}`;
-    const isKeyEvent = event.isKeyEvent ? '**' : '';
-    timetable += `| ${dayLabel} | ${generator.formatDate(event.date)} | ${isKeyEvent}${event.event}${isKeyEvent} | ${event.description || '-'} |\n`;
-  });
-  
-  timetable += `\n**Note:** All dates calculated using Hong Kong business days (excludes weekends and public holidays)\n`;
-  
-  return timetable;
+    events.forEach(event => {
+      try {
+        const dayLabel = event.day === 0 ? 'T+0' : `T+${event.day}`;
+        const isKeyEvent = event.isKeyEvent ? '**' : '';
+        const formattedDate = generator.formatDate(event.date);
+        const description = event.description || '-';
+        
+        timetable += `| ${dayLabel} | ${formattedDate} | ${isKeyEvent}${event.event}${isKeyEvent} | ${description} |\n`;
+      } catch (formatError) {
+        console.warn('Error formatting event:', event, formatError);
+        // Skip malformed events
+      }
+    });
+    
+    timetable += `\n**Note:** All dates calculated using Hong Kong business days (excludes weekends and public holidays)\n`;
+    
+    console.log('Timetable generation completed successfully');
+    return timetable;
+  } catch (error) {
+    console.error('Error in generateDynamicTimetable:', error);
+    return `# Error: Failed to generate timetable for "${transactionType}"\n\nPlease check the transaction type and try again.`;
+  }
 }
