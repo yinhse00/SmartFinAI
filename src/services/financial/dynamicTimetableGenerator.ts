@@ -435,28 +435,46 @@ export class DynamicTimetableGenerator {
   }
   
   private addRightsIssueStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
-    // Day 1: Listing Documents Preparation (after announcement already made)
+    // Day 1: Publication of Announcement
     events.push({
       day: 1,
       date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the rights issue',
+      isKeyEvent: true
+    });
+    
+    // Day 3: Listing Documents Preparation (after announcement publication)
+    events.push({
+      day: 3,
+      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
       event: 'Listing Documents Preparation',
       description: 'Preparation of listing documents (5 business days)'
     });
     
-    // Day 6: Stock Exchange Vetting
+    // Day 8: Stock Exchange Vetting
     events.push({
-      day: 6,
-      date: this.calculateBusinessDay(startDate, 6, adjustForHolidays),
+      day: 8,
+      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
       event: 'Stock Exchange Vetting',
       description: 'Vetting by the Stock Exchange (10 business days)'
     });
     
+    // Day 18: Publication of Prospectus
+    events.push({
+      day: 18,
+      date: this.calculateBusinessDay(startDate, 18, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion',
+      isKeyEvent: true
+    });
+    
     // Trading Events (T-based)
-    const recordDate = this.calculateBusinessDay(startDate, 20, adjustForHolidays);
+    const recordDate = this.calculateBusinessDay(startDate, 22, adjustForHolidays);
     
     // T-2: Last Cum-Rights Trading Day
     events.push({
-      day: 18,
+      day: 20,
       date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
       event: 'Last Cum-Rights Trading Day',
       description: 'Last day for trading in shares with rights entitlement',
@@ -465,7 +483,7 @@ export class DynamicTimetableGenerator {
     
     // T-1: Ex-Rights Date
     events.push({
-      day: 19,
+      day: 21,
       date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
       event: 'Ex-Rights Date',
       description: 'Shares begin trading ex-rights',
@@ -474,7 +492,7 @@ export class DynamicTimetableGenerator {
     
     // T: Record Date
     events.push({
-      day: 20,
+      day: 22,
       date: recordDate,
       event: 'Record Date',
       description: 'Shareholder register closed to establish entitlements',
@@ -576,6 +594,15 @@ export class DynamicTimetableGenerator {
       description: 'Vetting by the Stock Exchange (10 business days)'
     });
     
+    // Day 59: Publication of Prospectus
+    events.push({
+      day: 59,
+      date: this.calculateBusinessDay(startDate, 59, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion',
+      isKeyEvent: true
+    });
+    
     // Then add trading events starting from Day 60
     const recordDate = this.calculateBusinessDay(startDate, 65, adjustForHolidays);
     this.addRightsIssueStandard(events, this.calculateBusinessDay(startDate, 60, adjustForHolidays), adjustForHolidays);
@@ -600,28 +627,46 @@ export class DynamicTimetableGenerator {
   }
   
   private addOpenOfferStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
-    // Day 1: Listing Documents Preparation (after announcement already made)
+    // Day 1: Publication of Announcement
     events.push({
       day: 1,
       date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the open offer',
+      isKeyEvent: true
+    });
+    
+    // Day 3: Listing Documents Preparation (after announcement publication)
+    events.push({
+      day: 3,
+      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
       event: 'Listing Documents Preparation',
       description: 'Preparation of listing documents (5 business days)'
     });
     
-    // Day 6: Stock Exchange Vetting
+    // Day 8: Stock Exchange Vetting
     events.push({
-      day: 6,
-      date: this.calculateBusinessDay(startDate, 6, adjustForHolidays),
+      day: 8,
+      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
       event: 'Stock Exchange Vetting',
       description: 'Vetting by the Stock Exchange (10 business days)'
     });
     
+    // Day 18: Publication of Prospectus
+    events.push({
+      day: 18,
+      date: this.calculateBusinessDay(startDate, 18, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion',
+      isKeyEvent: true
+    });
+    
     // Trading Events (T-based) - NO nil-paid rights trading
-    const recordDate = this.calculateBusinessDay(startDate, 20, adjustForHolidays);
+    const recordDate = this.calculateBusinessDay(startDate, 22, adjustForHolidays);
     
     // T-2: Last Cum-Entitlement Trading Day
     events.push({
-      day: 18,
+      day: 20,
       date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
       event: 'Last Cum-Entitlement Trading Day',
       description: 'Last day for trading in shares with entitlement',
@@ -630,7 +675,7 @@ export class DynamicTimetableGenerator {
     
     // T-1: Ex-Entitlement Date
     events.push({
-      day: 19,
+      day: 21,
       date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
       event: 'Ex-Entitlement Date',
       description: 'Shares trade ex-entitlement from this date',
@@ -639,7 +684,7 @@ export class DynamicTimetableGenerator {
     
     // T: Record Date
     events.push({
-      day: 20,
+      day: 22,
       date: recordDate,
       event: 'Record Date',
       description: 'Shareholder register closed to establish entitlements',
