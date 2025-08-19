@@ -38,7 +38,7 @@ import {
   hasGoogleApiKey 
 } from '@/services/apiKeyService';
 import { useAuth } from '@/components/auth/AuthProvider';
-import { validateApiKey } from '@/config/aiModels';
+import { validateApiKey, getDefaultModel } from '@/config/aiModels';
 
 const ProfilePage = () => {
   const { user } = useAuth();
@@ -90,7 +90,9 @@ const ProfilePage = () => {
   };
 
   const handleDefaultProviderChange = (provider: AIProvider) => {
-    updateDefaultAIPreference(provider, aiPreferences.defaultModel);
+    const defaultModel = getDefaultModel(provider);
+    const modelId = defaultModel?.modelId || aiPreferences.defaultModel;
+    updateDefaultAIPreference(provider, modelId);
     setAiPreferences(getAIPreferences());
   };
 
