@@ -145,14 +145,21 @@ const TimetableViewer: React.FC = () => {
       );
       console.log('📑 Listing document events found:', listingDocEvents);
       
-      if (parsedData) {
+      // Validate parsed data and ensure it's not empty or malformed
+      if (parsedData && parsedData.length > 0 && parsedData.every(entry => entry.date && entry.event)) {
         setTimetableData({
           title: `${selectedTransactionType} Timetable (${formattedDate})`,
           referenceDate: formattedDate,
           entries: parsedData
         });
       } else {
-        throw new Error('Failed to parse dynamic timetable');
+        // Set error state instead of displaying raw markdown
+        setError('Failed to parse timetable data properly. Please try refreshing or selecting a different transaction type.');
+        setTimetableData({
+          title: `${selectedTransactionType} Timetable (${formattedDate})`,
+          referenceDate: formattedDate,
+          entries: []
+        });
       }
     } catch (error) {
       console.error('Error generating dynamic timetable:', error);
