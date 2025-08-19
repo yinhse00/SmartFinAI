@@ -4,7 +4,6 @@ import { safelyExtractText } from '@/services/utils/responseUtils';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { universalAiClient } from '@/services/ai/universalAiClient';
 import { AIProvider } from '@/types/aiProvider';
-import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
 
 /**
  * Step 5: Enhanced Response Generation with quality-focused parameters
@@ -136,9 +135,6 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
         }
       };
     }
-    
-    // Clean up any markdown code block markers from AI response
-    responseText = codeBlockCleaner.cleanupCodeBlockMarkers(responseText);
     
     // If no response text was extracted, provide a fallback
     if (!responseText || responseText.trim() === '') {
