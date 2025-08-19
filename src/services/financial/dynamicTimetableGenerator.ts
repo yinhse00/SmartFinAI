@@ -422,8 +422,8 @@ export class DynamicTimetableGenerator {
   private addRightsIssueEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
     // Rights Issue follows: Announcement → Circular (if needed) → EGM (if needed) → Listing Documents → Trading
     
-    // Determine if aggregation threshold exceeded (simplified - assume no for basic case)
-    const requiresApproval = false; // In practice, this would check Rule 7.19A threshold
+    // Default to approval required scenario for comprehensive guidance
+    const requiresApproval = true; // Show approval process by default for complete guidance
     
     if (requiresApproval) {
       // Scenario B: Shareholder approval required
@@ -624,8 +624,8 @@ export class DynamicTimetableGenerator {
   private addOpenOfferEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
     // Open Offer follows same sequence as Rights Issue but NO nil-paid rights trading
     
-    // Determine if aggregation threshold exceeded (simplified - assume no for basic case)
-    const requiresApproval = false; // In practice, this would check Rule 7.24 threshold
+    // Default to approval required scenario for comprehensive guidance
+    const requiresApproval = true; // Show approval process by default for complete guidance
     
     if (requiresApproval) {
       // Scenario B: Shareholder approval required
