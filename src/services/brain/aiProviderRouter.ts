@@ -43,9 +43,15 @@ export class AIProviderRouter {
     } catch (error) {
       console.error(`Error with provider ${provider}:`, error);
       
-      // Try fallback provider
+      // Try fallback provider only if it has an API key
       const fallbackProvider = provider === AIProvider.GROK ? AIProvider.GOOGLE : AIProvider.GROK;
-      return await this.routeRequest(request, fallbackProvider, context);
+      
+      if (await this.hasValidApiKey(fallbackProvider)) {
+        console.log(`Falling back to ${fallbackProvider}`);
+        return await this.routeRequest(request, fallbackProvider, context);
+      }
+      
+      throw new Error(`Both ${provider} and ${fallbackProvider} are unavailable`);
     }
   }
 
@@ -65,9 +71,32 @@ export class AIProviderRouter {
       `Context:\n${context}\n\nQuery: ${request.content}` : 
       request.content;
 
-    // For now, use a basic Google API call - this would need to be enhanced
-    // with proper Google Gemini integration
-    throw new Error('Google API integration not yet implemented in brain service');
+    // Use Google Gemini API for text processing
+    const { getGoogleApiKey } = await import('../apiKeyService');
+    const apiKey = getGoogleApiKey();
+    
+    if (!apiKey) {
+      throw new Error('Google API key not available');
+    }
+
+    const googleRequest = {
+      model: 'gemini-1.5-flash',
+      contents: [{
+        parts: [{ text: enhancedPrompt }]
+      }],
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 4096
+      }
+    };
+
+    const response = await googleApiClient.callVisionAPI(googleRequest, apiKey);
+    
+    if (response.candidates && response.candidates[0]?.content?.parts?.[0]?.text) {
+      return response.candidates[0].content.parts[0].text;
+    }
+    
+    throw new Error('No response from Google API');
   }
 
   private static generateCacheKey(request: UniversalRequest, provider: AIProvider): string {
@@ -90,6 +119,19 @@ export class AIProviderRouter {
     const entries = Array.from(this.cache.entries());
     const toRemove = entries.slice(0, 50);
     toRemove.forEach(([key]) => this.cache.delete(key));
+  }
+
+  private static async hasValidApiKey(provider: AIProvider): Promise<boolean> {
+    const { hasGrokApiKey, hasGoogleApiKey } = await import('../apiKeyService');
+    
+    switch (provider) {
+      case AIProvider.GROK:
+        return hasGrokApiKey();
+      case AIProvider.GOOGLE:
+        return hasGoogleApiKey();
+      default:
+        return false;
+    }
   }
 
   static clearCache(): void {
