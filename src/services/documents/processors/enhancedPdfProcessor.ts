@@ -1,7 +1,5 @@
 import { enhancedOCRService } from '../ocr/enhancedOCRService';
 import { documentProcessor } from './documentProcessor';
-import { CentralBrainService } from '../../brain/centralBrainService';
-import { getFeatureAIPreference } from '../../ai/aiPreferences';
 
 interface ProcessedPdfResult {
   content: string;
@@ -75,38 +73,15 @@ export const enhancedPdfProcessor = {
   async performOCROnPdf(file: File): Promise<string> {
     // For PDF OCR, we would need to convert PDF to images first
     // This is a simplified approach - in production, you'd use pdf-poppler or similar
-    console.log('Performing OCR on PDF using centralized brain system');
+    console.log('Performing OCR on PDF (simplified approach)');
     
     try {
-      // Use centralized brain system for OCR processing
-      const preferences = getFeatureAIPreference('chat');
-      const response = await CentralBrainService.processFileAnalysis(
-        'Extract all text from this PDF document using OCR', 
-        [file], 
-        {
-          preferences,
-          feature: 'pdf_ocr',
-          extractionType: 'text'
-        }
-      );
-
-      if (response.success) {
-        return response.content;
-      } else {
-        // Fallback to original OCR service
-        const ocrResult = await enhancedOCRService.performHybridOCR(file);
-        return ocrResult.text;
-      }
+      // Try to use the file directly with OCR (some OCR engines can handle PDFs)
+      const ocrResult = await enhancedOCRService.performHybridOCR(file);
+      return ocrResult.text;
     } catch (error) {
-      console.error('Brain system PDF OCR failed, trying fallback:', error);
-      try {
-        // Fallback to original OCR service
-        const ocrResult = await enhancedOCRService.performHybridOCR(file);
-        return ocrResult.text;
-      } catch (fallbackError) {
-        console.error('Direct PDF OCR failed:', fallbackError);
-        throw new Error('PDF OCR processing failed');
-      }
+      console.error('Direct PDF OCR failed:', error);
+      throw new Error('PDF OCR processing failed');
     }
   },
 
