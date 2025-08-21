@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import detectAndFormatTables from '@/utils/tableFormatter';
 import TypingAnimation from '../TypingAnimation';
+import ChatTimetableRenderer from '../ChatTimetableRenderer';
 
 interface MessageContentProps {
   content: string;
@@ -28,6 +29,28 @@ export const MessageContent: React.FC<MessageContentProps> = ({
   onTypingProgress,
   getInitialVisibleChars
 }) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  
+  // Enhanced timetable rendering for chat messages
+  useEffect(() => {
+    if (contentRef.current && isBot && isTypingComplete) {
+      const timetableContainers = contentRef.current.querySelectorAll('.chat-timetable-container');
+      timetableContainers.forEach((container) => {
+        const encodedContent = container.getAttribute('data-table-content');
+        if (encodedContent) {
+          const tableContent = decodeURIComponent(encodedContent);
+          const timetableElement = document.createElement('div');
+          
+          // Use React to render the timetable component
+          import('react-dom/client').then(({ createRoot }) => {
+            const root = createRoot(timetableElement);
+            root.render(React.createElement(ChatTimetableRenderer, { tableContent }));
+            container.replaceWith(timetableElement);
+          });
+        }
+      });
+    }
+  }, [isBot, isTypingComplete, formattedContent]);
   // Bot message content with enhanced typing animation
   if (isBot && !isTypingComplete && !isTranslating && !translationInProgress) {
     return (
@@ -55,6 +78,7 @@ export const MessageContent: React.FC<MessageContentProps> = ({
           <div className="whitespace-pre-line">{formattedContent}</div>
         ) : (
           <div 
+            ref={contentRef}
             dangerouslySetInnerHTML={{ __html: formattedContent }}
             className="regulatory-content [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
           />

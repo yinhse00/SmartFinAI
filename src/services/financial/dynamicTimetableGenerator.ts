@@ -1,6 +1,9 @@
 import { BusinessDayCalculator } from '../calendar/businessDayCalculator';
 import { HongKongHolidays } from '../calendar/hongKongHolidays';
 import { supabase } from '@/integrations/supabase/client';
+import { timetableParallelSearchService } from '../timetable/timetableParallelSearchService';
+import { getCurrentDate } from '../calendar/currentDateService';
+import { vettingCalculatorService, VettingTimeframes } from './vettingCalculatorService';
 
 interface TimetableEvent {
   day: number;
@@ -8,6 +11,8 @@ interface TimetableEvent {
   event: string;
   description?: string;
   isKeyEvent?: boolean;
+  vettingRequired?: boolean;
+  ruleReference?: string;
 }
 
 interface TimetableOptions {
@@ -37,43 +42,103 @@ export class DynamicTimetableGenerator {
    * Generate a timetable for a financial transaction
    */
   public async generateTimetable(options: TimetableOptions): Promise<TimetableEvent[]> {
-    console.log(`Generating timetable for ${options.transactionType} starting on ${options.startDate.toDateString()}`);
+    try {
+      if (!options.startDate || isNaN(options.startDate.getTime())) {
+        options.startDate = new Date(); // Fallback to current date
+      }
+      
+      if (!options.transactionType || options.transactionType.trim() === '') {
+        options.transactionType = 'generic transaction';
+      }
+      
+      const events: TimetableEvent[] = [];
+      const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
+
+      // Execute parallel search for timetable data, rules, and vetting requirements
+      const searchResults = await timetableParallelSearchService.searchTimetableDataParallel(transactionType);
+      const { timetableData, rulesData, vettingInfo } = searchResults;
     
-    const events: TimetableEvent[] = [];
-    const { startDate, transactionType, includeWeekends = false, adjustForHolidays = true } = options;
-    
-    // Add announcement day (Day 0)
+    // Add announcement day (Day 0) with vetting information
     events.push({
       day: 0,
       date: new Date(startDate),
       event: 'Board Meeting and Announcement',
-      description: 'Board approves the transaction and issues announcement',
-      isKeyEvent: true
+      description: vettingInfo.isRequired 
+        ? `Board approves the transaction and issues announcement (Vetting required: ${vettingInfo.vettingDays} business days)`
+        : 'Board approves the transaction and issues announcement (No vetting required)',
+      isKeyEvent: true,
+      vettingRequired: vettingInfo.isRequired,
+      ruleReference: vettingInfo.ruleReference
     });
-    
-    // Add standard events based on transaction type
-    switch (transactionType.toLowerCase()) {
-      case 'major transaction':
-        this.addMajorTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'very substantial acquisition':
-      case 'vsa':
-        this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'very substantial disposal':
-      case 'vsd':
-        this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'connected transaction':
-        this.addConnectedTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      case 'reverse takeover':
-      case 'rto':
-        this.addReverseTransactionEvents(events, startDate, adjustForHolidays);
-        break;
-      default:
-        this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
+
+    // Add vetting-specific events if required
+    if (vettingInfo.isRequired && vettingInfo.vettingDays > 0) {
+      events.push({
+        day: -vettingInfo.vettingDays,
+        date: this.calculateBusinessDay(startDate, -vettingInfo.vettingDays, adjustForHolidays),
+        event: 'Submit Announcement for Pre-Vetting',
+        description: `Submit announcement to HKEX for pre-vetting (${vettingInfo.headlineCategory})`,
+        isKeyEvent: true,
+        vettingRequired: true,
+        ruleReference: vettingInfo.ruleReference
+      });
+      
+      events.push({
+        day: -1,
+        date: this.calculateBusinessDay(startDate, -1, adjustForHolidays),
+        event: 'Receive Vetting Clearance',
+        description: 'Receive HKEX vetting clearance for announcement',
+        isKeyEvent: true,
+        vettingRequired: true,
+        ruleReference: vettingInfo.ruleReference
+      });
     }
+    
+      // Add standard events based on transaction type with better matching
+      const normalizedType = transactionType.toLowerCase().trim();
+      
+      try {
+        console.log('🔍 Normalized transaction type:', normalizedType);
+        console.log('🔍 Original transaction type:', transactionType);
+        
+        if (normalizedType.includes('major transaction') || normalizedType === 'major') {
+          console.log('✅ Matched: Major Transaction');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addMajorTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('very substantial acquisition') || normalizedType === 'vsa') {
+          console.log('✅ Matched: Very Substantial Acquisition');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('very substantial disposal') || normalizedType === 'vsd') {
+          console.log('✅ Matched: Very Substantial Disposal');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addVerySubstantialDisposalEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('connected transaction') || normalizedType === 'connected') {
+          console.log('✅ Matched: Connected Transaction');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addConnectedTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('reverse takeover') || normalizedType === 'rto') {
+          console.log('✅ Matched: Reverse Takeover');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addReverseTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('rights issue') || normalizedType === 'rights') {
+          console.log('✅ Matched: Rights Issue');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          console.log('💾 Vetting timeframes for Rights Issue:', vettingTimeframes);
+          this.addRightsIssueEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else if (normalizedType.includes('open offer') || normalizedType === 'open') {
+          console.log('✅ Matched: Open Offer');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addOpenOfferEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        } else {
+          console.log('⚠️ Using Generic Transaction');
+          const vettingTimeframes = await vettingCalculatorService.getVettingTimeframes(transactionType);
+          this.addGenericTransactionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
+        }
+      } catch (eventError) {
+        console.error('❌ Error in event generation:', eventError);
+        this.addGenericTransactionEvents(events, startDate, adjustForHolidays);
+      }
     
     // Add custom events if provided
     if (options.customEvents && options.customEvents.length > 0) {
@@ -85,17 +150,32 @@ export class DynamicTimetableGenerator {
     
     // Try to find reference timetables for this transaction type
     const referenceTimetables = await this.searchReferenceTimetables(transactionType);
-    if (referenceTimetables.length > 0) {
-      console.log(`Found ${referenceTimetables.length} reference timetables that may be relevant`);
-    }
     
-    return events;
+      // Validate that events have valid dates
+      const validEvents = events.filter(event => {
+        if (!event.date || isNaN(event.date.getTime())) {
+          return false;
+        }
+        return true;
+      });
+      
+      return validEvents;
+    } catch (error) {
+      // Return minimal fallback timetable
+      return [{
+        day: 0,
+        date: new Date(options.startDate.getTime()),
+        event: 'Transaction Announcement',
+        description: 'Initial announcement of the transaction',
+        isKeyEvent: true
+      }];
+    }
   }
   
   /**
    * Add events for a Major Transaction
    */
-  private addMajorTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addMajorTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Day 1: Submit draft circular
     events.push({
       day: 1,
@@ -142,7 +222,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Very Substantial Acquisition
    */
-  private addVerySubstantialAcquisitionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addVerySubstantialAcquisitionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // VSA follows similar timeline to Major Transaction but with longer review period
     
     // Day 1: Submit draft circular
@@ -200,9 +280,9 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Very Substantial Disposal
    */
-  private addVerySubstantialDisposalEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addVerySubstantialDisposalEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // VSD follows similar timeline to VSA
-    this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays);
+    this.addVerySubstantialAcquisitionEvents(events, startDate, adjustForHolidays, vettingTimeframes);
     
     // Update the last event description
     const lastEvent = events[events.length - 1];
@@ -214,7 +294,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Connected Transaction
    */
-  private addConnectedTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addConnectedTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Connected transactions require independent shareholder approval
     
     // Day 1: Submit draft circular
@@ -279,7 +359,7 @@ export class DynamicTimetableGenerator {
   /**
    * Add events for a Reverse Takeover
    */
-  private addReverseTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addReverseTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // RTO has a much longer timeline due to enhanced scrutiny
     
     // Day 1: Submit draft circular
@@ -360,9 +440,544 @@ export class DynamicTimetableGenerator {
   }
   
   /**
+   * Add events for Rights Issue
+   */
+  private addRightsIssueEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
+    // Rights Issue follows: Announcement → Circular (if needed) → EGM (if needed) → Listing Documents → Trading
+    
+    // Default to approval required scenario for comprehensive guidance
+    const requiresApproval = true; // Show approval process by default for complete guidance
+    
+    if (requiresApproval) {
+      // Scenario B: Shareholder approval required
+      this.addRightsIssueWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
+    } else {
+      // Scenario A: No shareholder approval required
+      this.addRightsIssueStandard(events, startDate, adjustForHolidays, vettingTimeframes);
+    }
+  }
+  
+  private addRightsIssueStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
+    // Day 1: Publication of Announcement
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the rights issue',
+      isKeyEvent: true
+    });
+    
+    // Day 3: Listing Documents Preparation (after announcement publication)
+    events.push({
+      day: 3,
+      date: this.calculateBusinessDay(startDate, 3, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: 'Preparation of listing documents (5 business days)'
+    });
+    
+    // Day 8: Stock Exchange Vetting
+    events.push({
+      day: 8,
+      date: this.calculateBusinessDay(startDate, 8, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: 'Vetting by the Stock Exchange (10 business days)'
+    });
+    
+    // Day 18: Publication of Prospectus
+    events.push({
+      day: 18,
+      date: this.calculateBusinessDay(startDate, 18, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion',
+      isKeyEvent: true
+    });
+    
+    // Trading Events (T-based)
+    const recordDate = this.calculateBusinessDay(startDate, 22, adjustForHolidays);
+    
+    // T-2: Last Cum-Rights Trading Day
+    events.push({
+      day: 20,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Rights Trading Day',
+      description: 'Last day for trading in shares with rights entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Rights Date
+    events.push({
+      day: 21,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Rights Date',
+      description: 'Shares begin trading ex-rights',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: 22,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: PAL Dispatch
+    events.push({
+      day: 25,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'PAL Dispatch',
+      description: 'Provisional Allotment Letters sent to shareholders'
+    });
+    
+    // T+6: Nil-Paid Rights Trading Start
+    events.push({
+      day: 26,
+      date: this.calculateBusinessDay(recordDate, 6, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading Start',
+      description: 'First day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+16: Nil-Paid Rights Trading End
+    events.push({
+      day: 36,
+      date: this.calculateBusinessDay(recordDate, 16, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading End',
+      description: 'Last day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+20: Latest Acceptance Date
+    events.push({
+      day: 40,
+      date: this.calculateBusinessDay(recordDate, 20, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+27: New Shares Listing
+    events.push({
+      day: 47,
+      date: this.calculateBusinessDay(recordDate, 27, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in fully-paid new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  private addRightsIssueWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
+    // Day 1: Publication of Announcement
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the rights issue',
+      isKeyEvent: true
+    });
+
+    // Phase 1: Circular process for shareholder approval
+    // Circular Preparation (starts after announcement)
+    const circularPrepStart = 1 + vettingTimeframes.announcementPreparation;
+    events.push({
+      day: circularPrepStart,
+      date: this.calculateBusinessDay(startDate, circularPrepStart, adjustForHolidays),
+      event: 'Circular Preparation',
+      description: `Drafting of circular with details of rights issue (${vettingTimeframes.circularPreparation} business days) - Rule 14.60`
+    });
+    
+    // Circular Vetting (starts after preparation)
+    const circularVettingStart = circularPrepStart + vettingTimeframes.circularPreparation;
+    events.push({
+      day: circularVettingStart,
+      date: this.calculateBusinessDay(startDate, circularVettingStart, adjustForHolidays),
+      event: 'Circular Vetting',
+      description: `${vettingTimeframes.vettingAuthority} review of circular (${vettingTimeframes.circularVetting} business days) - Rule 14.60`
+    });
+    
+    // Circular Dispatch (after vetting completion)
+    const circularDispatchDay = circularVettingStart + vettingTimeframes.circularVetting;
+    events.push({
+      day: circularDispatchDay,
+      date: this.calculateBusinessDay(startDate, circularDispatchDay, adjustForHolidays),
+      event: 'Circular Dispatch',
+      description: 'Dispatch of circular to shareholders'
+    });
+    
+    // EGM (21 days after circular dispatch)
+    const egmDay = circularDispatchDay + 21;
+    events.push({
+      day: egmDay,
+      date: this.calculateBusinessDay(startDate, egmDay, adjustForHolidays),
+      event: 'EGM',
+      description: 'Extraordinary General Meeting for shareholders approval',
+      isKeyEvent: true
+    });
+    
+    // Phase 2: Listing Documents process (AFTER approval)
+    // Listing Documents Preparation (starts after EGM)
+    const listingDocPrepStart = egmDay + 1;
+    events.push({
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
+    events.push({
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
+    events.push({
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
+      isKeyEvent: true
+    });
+    
+    // Phase 3: Trading Events (AFTER prospectus publication)
+    // Record Date (start trading events from prospectus publication + 3 days)
+    const recordDate = this.calculateBusinessDay(startDate, prospectusPublicationDay + 3, adjustForHolidays);
+    
+    // T-2: Last Cum-Rights Trading Day
+    events.push({
+      day: prospectusPublicationDay + 1,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Rights Trading Day',
+      description: 'Last day for trading in shares with rights',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Rights Date
+    events.push({
+      day: prospectusPublicationDay + 2,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Rights Date',
+      description: 'Shares trade ex-rights from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: prospectusPublicationDay + 3,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: PAL Dispatch
+    events.push({
+      day: prospectusPublicationDay + 8,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'PAL Dispatch',
+      description: 'Provisional Allotment Letters sent to shareholders'
+    });
+    
+    // T+6: Nil-Paid Rights Trading Start
+    events.push({
+      day: prospectusPublicationDay + 9,
+      date: this.calculateBusinessDay(recordDate, 6, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading Start',
+      description: 'First day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+16: Nil-Paid Rights Trading End
+    events.push({
+      day: prospectusPublicationDay + 19,
+      date: this.calculateBusinessDay(recordDate, 16, adjustForHolidays),
+      event: 'Nil-Paid Rights Trading End',
+      description: 'Last day of dealing in nil-paid rights',
+      isKeyEvent: true
+    });
+    
+    // T+20: Latest Acceptance Date
+    events.push({
+      day: prospectusPublicationDay + 23,
+      date: this.calculateBusinessDay(recordDate, 20, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+27: New Shares Listing
+    events.push({
+      day: prospectusPublicationDay + 30,
+      date: this.calculateBusinessDay(recordDate, 27, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in fully-paid new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  /**
+   * Add events for Open Offer
+   */
+  private addOpenOfferEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
+    // Open Offer follows same sequence as Rights Issue but NO nil-paid rights trading
+    
+    // Default to approval required scenario for comprehensive guidance
+    const requiresApproval = true; // Show approval process by default for complete guidance
+    
+    if (requiresApproval) {
+      // Scenario B: Shareholder approval required
+      this.addOpenOfferWithApproval(events, startDate, adjustForHolidays, vettingTimeframes);
+    } else {
+      // Scenario A: No shareholder approval required
+      this.addOpenOfferStandard(events, startDate, adjustForHolidays, vettingTimeframes);
+    }
+  }
+  
+  private addOpenOfferStandard(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
+    // Day 1: Publication of Announcement
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the open offer',
+      isKeyEvent: true
+    });
+    
+    // Listing Documents Preparation (after announcement publication)
+    const listingDocPrepStart = 1 + vettingTimeframes.announcementPreparation;
+    events.push({
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
+    events.push({
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
+    events.push({
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
+      isKeyEvent: true
+    });
+    
+    // Trading Events (T-based) - NO nil-paid rights trading
+    const recordDate = this.calculateBusinessDay(startDate, 22, adjustForHolidays);
+    
+    // T-2: Last Cum-Entitlement Trading Day
+    events.push({
+      day: 20,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Entitlement Trading Day',
+      description: 'Last day for trading in shares with entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Entitlement Date
+    events.push({
+      day: 21,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Entitlement Date',
+      description: 'Shares trade ex-entitlement from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: 22,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: Application Form Dispatch
+    events.push({
+      day: 25,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'Application Form Dispatch',
+      description: 'Application forms sent to qualifying shareholders'
+    });
+    
+    // T+19: Latest Acceptance Date
+    events.push({
+      day: 39,
+      date: this.calculateBusinessDay(recordDate, 19, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+26: New Shares Listing
+    events.push({
+      day: 46,
+      date: this.calculateBusinessDay(recordDate, 26, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  private addOpenOfferWithApproval(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes: VettingTimeframes): void {
+    // Day 1: Publication of Announcement
+    events.push({
+      day: 1,
+      date: this.calculateBusinessDay(startDate, 1, adjustForHolidays),
+      event: 'Publication of Announcement',
+      description: 'Initial announcement of the open offer',
+      isKeyEvent: true
+    });
+
+    // Phase 1: Circular process for shareholder approval
+    // Circular Preparation (starts after announcement)
+    const circularPrepStart = 1 + vettingTimeframes.announcementPreparation;
+    events.push({
+      day: circularPrepStart,
+      date: this.calculateBusinessDay(startDate, circularPrepStart, adjustForHolidays),
+      event: 'Circular Preparation',
+      description: `Drafting of circular with details of open offer (${vettingTimeframes.circularPreparation} business days) - Rule 14.60`
+    });
+    
+    // Circular Vetting (starts after preparation)
+    const circularVettingStart = circularPrepStart + vettingTimeframes.circularPreparation;
+    events.push({
+      day: circularVettingStart,
+      date: this.calculateBusinessDay(startDate, circularVettingStart, adjustForHolidays),
+      event: 'Circular Vetting',
+      description: `${vettingTimeframes.vettingAuthority} review of circular (${vettingTimeframes.circularVetting} business days) - Rule 14.60`
+    });
+    
+    // Circular Dispatch (after vetting completion)
+    const circularDispatchDay = circularVettingStart + vettingTimeframes.circularVetting;
+    events.push({
+      day: circularDispatchDay,
+      date: this.calculateBusinessDay(startDate, circularDispatchDay, adjustForHolidays),
+      event: 'Circular Dispatch',
+      description: 'Dispatch of circular to shareholders'
+    });
+    
+    // EGM (21 days after circular dispatch)
+    const egmDay = circularDispatchDay + 21;
+    events.push({
+      day: egmDay,
+      date: this.calculateBusinessDay(startDate, egmDay, adjustForHolidays),
+      event: 'EGM',
+      description: 'Extraordinary General Meeting for shareholders approval',
+      isKeyEvent: true
+    });
+    
+    // Phase 2: Listing Documents process (AFTER approval)
+    // Listing Documents Preparation (starts after EGM)
+    const listingDocPrepStart = egmDay + 1;
+    events.push({
+      day: listingDocPrepStart,
+      date: this.calculateBusinessDay(startDate, listingDocPrepStart, adjustForHolidays),
+      event: 'Listing Documents Preparation',
+      description: `Preparation of listing documents (${vettingTimeframes.listingDocumentPreparation} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Stock Exchange Vetting (starts after preparation)
+    const listingDocVettingStart = listingDocPrepStart + vettingTimeframes.listingDocumentPreparation;
+    events.push({
+      day: listingDocVettingStart,
+      date: this.calculateBusinessDay(startDate, listingDocVettingStart, adjustForHolidays),
+      event: 'Stock Exchange Vetting',
+      description: `${vettingTimeframes.vettingAuthority} vetting of listing documents (${vettingTimeframes.listingDocumentVetting} business days) - Rule 7.19A`,
+      isKeyEvent: true
+    });
+    
+    // Publication of Prospectus (after vetting completion)
+    const prospectusPublicationDay = listingDocVettingStart + vettingTimeframes.listingDocumentVetting;
+    events.push({
+      day: prospectusPublicationDay,
+      date: this.calculateBusinessDay(startDate, prospectusPublicationDay, adjustForHolidays),
+      event: 'Publication of Prospectus',
+      description: 'Publication of listing document/prospectus after vetting completion - Rule 7.19A',
+      isKeyEvent: true
+    });
+    
+    // Phase 3: Trading Events (AFTER prospectus publication) - NO nil-paid rights trading
+    // Record Date (start trading events from prospectus publication + 3 days)
+    const recordDate = this.calculateBusinessDay(startDate, prospectusPublicationDay + 3, adjustForHolidays);
+    
+    // T-2: Last Cum-Entitlement Trading Day
+    events.push({
+      day: prospectusPublicationDay + 1,
+      date: this.calculateBusinessDay(recordDate, -2, adjustForHolidays),
+      event: 'Last Cum-Entitlement Trading Day',
+      description: 'Last day for trading in shares with entitlement',
+      isKeyEvent: true
+    });
+    
+    // T-1: Ex-Entitlement Date
+    events.push({
+      day: prospectusPublicationDay + 2,
+      date: this.calculateBusinessDay(recordDate, -1, adjustForHolidays),
+      event: 'Ex-Entitlement Date',
+      description: 'Shares trade ex-entitlement from this date',
+      isKeyEvent: true
+    });
+    
+    // T: Record Date
+    events.push({
+      day: prospectusPublicationDay + 3,
+      date: recordDate,
+      event: 'Record Date',
+      description: 'Shareholder register closed to establish entitlements',
+      isKeyEvent: true
+    });
+    
+    // T+5: Application Form Dispatch
+    events.push({
+      day: prospectusPublicationDay + 8,
+      date: this.calculateBusinessDay(recordDate, 5, adjustForHolidays),
+      event: 'Application Form Dispatch',
+      description: 'Application forms sent to qualifying shareholders'
+    });
+    
+    // T+19: Latest Acceptance Date
+    events.push({
+      day: prospectusPublicationDay + 22,
+      date: this.calculateBusinessDay(recordDate, 19, adjustForHolidays),
+      event: 'Latest Acceptance Date',
+      description: 'Final date for acceptance and payment',
+      isKeyEvent: true
+    });
+    
+    // T+26: New Shares Listing
+    events.push({
+      day: prospectusPublicationDay + 29,
+      date: this.calculateBusinessDay(recordDate, 26, adjustForHolidays),
+      event: 'New Shares Listing',
+      description: 'Dealing in new shares commences',
+      isKeyEvent: true
+    });
+  }
+  
+  /**
    * Add generic transaction events
    */
-  private addGenericTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean): void {
+  private addGenericTransactionEvents(events: TimetableEvent[], startDate: Date, adjustForHolidays: boolean, vettingTimeframes?: VettingTimeframes): void {
     // Generic timeline for unspecified transaction types
     
     // Day 7: Due diligence completion
@@ -413,12 +1028,24 @@ export class DynamicTimetableGenerator {
    * Calculate business day from a start date
    */
   private calculateBusinessDay(startDate: Date, days: number, adjustForHolidays: boolean): Date {
-    if (adjustForHolidays) {
-      return this.businessDayCalculator.addBusinessDays(startDate, days);
-    } else {
-      const result = new Date(startDate);
-      result.setDate(result.getDate() + days);
-      return result;
+    try {
+      if (!startDate || isNaN(startDate.getTime())) {
+        return new Date(); // Fallback to current date
+      }
+      
+      if (days < 0) {
+        return new Date(startDate.getTime()); // Return copy of start date
+      }
+      
+      if (adjustForHolidays) {
+        return this.businessDayCalculator.addBusinessDays(startDate, days);
+      } else {
+        // Create copy to avoid mutation and use proper date arithmetic
+        return new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+    } catch (error) {
+      // Fallback: simple calendar day addition
+      return new Date(startDate.getTime() + days * 24 * 60 * 60 * 1000);
     }
   }
   
@@ -426,8 +1053,6 @@ export class DynamicTimetableGenerator {
    * Search for reference timetables in the database
    */
   private async searchReferenceTimetables(transactionType: string): Promise<any[]> {
-    console.log(`Searching for reference timetables for ${transactionType}`);
-    
     try {
       // Search for timetable documents using the correct table name
       const { data, error } = await supabase
@@ -437,14 +1062,11 @@ export class DynamicTimetableGenerator {
         .order('created_at', { ascending: false });
         
       if (error) {
-        console.error('Error searching timetables:', error);
         return [];
       }
       
-      console.log(`Found ${data?.length || 0} potential timetable documents`);
       return data || [];
     } catch (err) {
-      console.error('Error in searchReferenceTimetables:', err);
       return [];
     }
   }
@@ -470,8 +1092,8 @@ export class DynamicTimetableGenerator {
    * Format a date as a string
    */
   public formatDate(date: Date): string {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     
     return `${days[date.getDay()]}, ${months[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
   }
@@ -482,16 +1104,38 @@ export class DynamicTimetableGenerator {
  * This is the main export that other services use
  */
 export async function generateDynamicTimetable(transactionType: string): Promise<string> {
-  const generator = new DynamicTimetableGenerator();
-  
-  // Use current date as start date
-  const startDate = new Date();
-  
-  const events = await generator.generateTimetable({
-    startDate,
-    transactionType,
-    adjustForHolidays: true
-  });
+  try {
+    console.log('🎯 generateDynamicTimetable called with:', transactionType);
+    
+    const generator = new DynamicTimetableGenerator();
+    
+    // Use current date from calendar service as reference
+    const startDate = getCurrentDate();
+    startDate.setHours(0, 0, 0, 0); // Normalize to start of day for consistent calculations
+    
+    console.log('📅 Start date:', startDate);
+    
+    const events = await generator.generateTimetable({
+      startDate,
+      transactionType: transactionType || 'generic transaction',
+      adjustForHolidays: true
+    });
+    
+    console.log('📋 Generated events count:', events?.length || 0);
+    
+    // Log listing document related events specifically
+    const listingEvents = events?.filter(event => 
+      event.event.toLowerCase().includes('listing') || 
+      event.event.toLowerCase().includes('prospectus') ||
+      event.description?.toLowerCase().includes('listing') ||
+      event.description?.toLowerCase().includes('prospectus')
+    ) || [];
+    console.log('📑 Listing document events in generator:', listingEvents);
+    
+    if (!events || events.length === 0) {
+      console.error('❌ No events generated for:', transactionType);
+      return `# Error: No timetable events could be generated for "${transactionType}"`;
+    }
   
   // Format events into a markdown table
   let timetable = `# ${transactionType.replace(/_/g, ' ').toUpperCase()} Execution Timetable\n\n`;
@@ -499,13 +1143,23 @@ export async function generateDynamicTimetable(transactionType: string): Promise
   timetable += `| Business Day | Date | Event | Description |\n`;
   timetable += `|--------------|------|-------|-------------|\n`;
   
-  events.forEach(event => {
-    const dayLabel = event.day === 0 ? 'T+0' : `T+${event.day}`;
-    const isKeyEvent = event.isKeyEvent ? '**' : '';
-    timetable += `| ${dayLabel} | ${generator.formatDate(event.date)} | ${isKeyEvent}${event.event}${isKeyEvent} | ${event.description || '-'} |\n`;
-  });
-  
-  timetable += `\n**Note:** All dates calculated using Hong Kong business days (excludes weekends and public holidays)\n`;
-  
-  return timetable;
+    events.forEach(event => {
+      try {
+        const dayLabel = event.day === 0 ? 'T+0' : `T+${event.day}`;
+        const isKeyEvent = event.isKeyEvent ? '**' : '';
+        const formattedDate = generator.formatDate(event.date);
+        const description = event.description || '-';
+        
+        timetable += `| ${dayLabel} | ${formattedDate} | ${isKeyEvent}${event.event}${isKeyEvent} | ${description} |\n`;
+      } catch (formatError) {
+        // Skip malformed events
+      }
+    });
+    
+    timetable += `\n**Note:** All dates calculated using Hong Kong business days (excludes weekends and public holidays)\n`;
+    
+    return timetable;
+  } catch (error) {
+    return `# Error: Failed to generate timetable for "${transactionType}"\n\nPlease check the transaction type and try again.`;
+  }
 }

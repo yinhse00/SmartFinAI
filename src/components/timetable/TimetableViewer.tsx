@@ -8,6 +8,10 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { useFileProcessing } from '@/hooks/useFileProcessing';
+import { getCurrentDate } from '@/services/calendar/currentDateService';
+import { addBusinessDays } from '@/services/calendar/dateUtils';
+import { generateDynamicTimetable } from '@/services/financial/dynamicTimetableGenerator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface TimetableEntry {
   day: number;
@@ -15,6 +19,8 @@ interface TimetableEntry {
   event: string;
   description?: string;
   status?: 'pending' | 'completed' | 'upcoming';
+  vettingRequired?: boolean;
+  ruleReference?: string;
 }
 
 interface TimetableData {
@@ -28,17 +34,23 @@ const TimetableViewer: React.FC = () => {
   const { processFiles, isProcessing } = useFileProcessing();
   const [timetableData, setTimetableData] = useState<TimetableData>({
     title: "Financial Transaction Timetable (Processing...)",
-    referenceDate: "2025-05-07",
+    referenceDate: "2025-08-19",
     entries: []
   });
   
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTransactionType, setSelectedTransactionType] = useState<string>('Rights Issue');
 
   // Fetch timetable from Supabase on component mount
   useEffect(() => {
     fetchTimetableDocument();
   }, []);
+
+  // Generate dynamic timetable when transaction type changes
+  useEffect(() => {
+    generateTimetableFromDynamic();
+  }, [selectedTransactionType]);
 
   const fetchTimetableDocument = async () => {
     setIsLoading(true);
@@ -58,12 +70,8 @@ const TimetableViewer: React.FC = () => {
       }
       
       if (!documents || documents.length === 0) {
-        setTimetableData({
-          title: "Financial Transaction Timetable (May 7, 2025)",
-          referenceDate: "2025-05-07",
-          entries: getDefaultTimetableEntries() // Fallback to default entries
-        });
-        setIsLoading(false);
+        // Use dynamic generator instead of hardcoded entries
+        generateTimetableFromDynamic();
         return;
       }
 
@@ -89,75 +97,144 @@ const TimetableViewer: React.FC = () => {
         if (parsedTimetable) {
           setTimetableData(parsedTimetable);
         } else {
-          // If parsing failed, use default data
-          setTimetableData({
-            title: timetableDoc.title || "Financial Transaction Timetable",
-            referenceDate: "2025-05-07",
-            entries: getDefaultTimetableEntries()
-          });
+          // If parsing failed, use dynamic generation
+          generateTimetableFromDynamic();
         }
       }
     } catch (err) {
       console.error("Error fetching timetable document:", err);
       setError("Could not load timetable data from database. Using default timetable.");
       
-      // Use default data if there's an error
-      setTimetableData({
-        title: "Financial Transaction Timetable (May 7, 2025)",
-        referenceDate: "2025-05-07",
-        entries: getDefaultTimetableEntries()
-      });
+      // Use dynamic generation if there's an error
+      generateTimetableFromDynamic();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Helper function to get default timetable entries
-  const getDefaultTimetableEntries = (): TimetableEntry[] => {
-    return [
-      {
-        day: 0,
-        date: "Wed, May 7, 2025",
-        event: "Board Meeting and Announcement",
-        description: "Board approves the transaction and issues announcement",
-        status: 'completed'
-      },
-      {
-        day: 1,
-        date: "Thu, May 8, 2025",
-        event: "Submit Draft Circular to HKEX",
-        description: "First draft circular submitted for regulatory review",
-        status: 'upcoming'
-      },
-      {
-        day: 14,
-        date: "Wed, May 21, 2025",
-        event: "Expected Regulatory Feedback",
-        description: "First round of comments from HKEX expected",
-        status: 'upcoming'
-      },
-      {
-        day: 28,
-        date: "Wed, June 4, 2025",
-        event: "EGM Notice & Despatch Circular",
-        description: "Circular finalized and sent to shareholders",
-        status: 'upcoming'
-      },
-      {
-        day: 42,
-        date: "Wed, June 18, 2025",
-        event: "Extraordinary General Meeting",
-        description: "Shareholders vote on the proposed transaction",
-        status: 'upcoming'
-      },
-      {
-        day: 44,
-        date: "Fri, June 20, 2025",
-        event: "Results Announcement",
-        description: "Publication of EGM results and next steps",
-        status: 'upcoming'
+  // Generate timetable using the dynamic generator
+  const generateTimetableFromDynamic = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      const currentDate = getCurrentDate();
+      const formattedDate = currentDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      console.log('🚀 Generating timetable for transaction type:', selectedTransactionType);
+      
+      // Generate the dynamic timetable
+      const markdownContent = await generateDynamicTimetable(selectedTransactionType);
+      
+      console.log('📄 Generated markdown content:');
+      console.log(markdownContent);
+      console.log('📏 Markdown length:', markdownContent.length);
+      
+      // Parse the markdown content into TimetableEntry format
+      const parsedData = parseMarkdownTimetable(markdownContent);
+      
+      console.log('📊 Parsed entries count:', parsedData.length);
+      console.log('📋 Parsed entries:', parsedData);
+      
+      // Log listing document related events specifically
+      const listingDocEvents = parsedData.filter(entry => 
+        entry.event.toLowerCase().includes('listing') || 
+        entry.event.toLowerCase().includes('prospectus') ||
+        entry.description?.toLowerCase().includes('listing') ||
+        entry.description?.toLowerCase().includes('prospectus')
+      );
+      console.log('📑 Listing document events found:', listingDocEvents);
+      
+      // Validate parsed data and ensure it's not empty or malformed
+      if (parsedData && parsedData.length > 0 && parsedData.every(entry => entry.date && entry.event)) {
+        setTimetableData({
+          title: `${selectedTransactionType} Timetable (${formattedDate})`,
+          referenceDate: formattedDate,
+          entries: parsedData
+        });
+      } else {
+        // Set error state instead of displaying raw markdown
+        setError('Failed to parse timetable data properly. Please try refreshing or selecting a different transaction type.');
+        setTimetableData({
+          title: `${selectedTransactionType} Timetable (${formattedDate})`,
+          referenceDate: formattedDate,
+          entries: []
+        });
       }
-    ];
+    } catch (error) {
+      console.error('Error generating dynamic timetable:', error);
+      setError('Failed to generate timetable. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Parse markdown timetable content into TimetableEntry format
+  const parseMarkdownTimetable = (markdownContent: string): TimetableEntry[] => {
+    const lines = markdownContent.split('\n');
+    const entries: TimetableEntry[] = [];
+    
+    console.log('🔍 Parsing markdown lines:', lines.length);
+    
+    let lineNumber = 0;
+    for (const line of lines) {
+      lineNumber++;
+      
+      // Skip header lines and empty lines
+      if (line.startsWith('|') && !line.includes('Business Day') && !line.includes('---')) {
+        const columns = line.split('|').map(col => col.trim()).filter(col => col);
+        
+        console.log(`📝 Line ${lineNumber}: "${line}"`);
+        console.log(`📝 Columns (${columns.length}):`, columns);
+        
+        if (columns.length >= 4) {
+          const dayMatch = columns[0].match(/T\+(\d+)|(\d+)/);
+          const day = dayMatch ? parseInt(dayMatch[1] || dayMatch[2]) : 0;
+          const date = columns[1];
+          const event = columns[2];
+          const description = columns[3];
+          
+          // Log listing document related events specifically
+          if (event.toLowerCase().includes('listing') || 
+              event.toLowerCase().includes('prospectus') ||
+              description.toLowerCase().includes('listing') ||
+              description.toLowerCase().includes('prospectus')) {
+            console.log('📑 Found listing document event:', { day, date, event, description });
+          }
+          
+          // Determine status based on current date
+          const eventDate = new Date(date);
+          const today = getCurrentDate();
+          let status: 'completed' | 'upcoming' | 'pending' = 'upcoming';
+          
+          if (eventDate < today) {
+            status = 'completed';
+          } else if (Math.abs(eventDate.getTime() - today.getTime()) < 24 * 3600 * 1000) {
+            status = 'pending';
+          }
+          
+          // Check for vetting requirements and rule references
+          const vettingRequired = description.toLowerCase().includes('vetting') || description.toLowerCase().includes('regulatory');
+          const ruleMatch = description.match(/Rule\s+[\d.A-Z]+/i);
+          const ruleReference = ruleMatch ? ruleMatch[0] : undefined;
+          
+          entries.push({
+            day,
+            date,
+            event,
+            description,
+            status,
+            vettingRequired,
+            ruleReference
+          });
+        } else {
+          console.log(`⚠️ Line ${lineNumber} has insufficient columns (${columns.length}):`, line);
+        }
+      }
+    }
+    
+    console.log('✅ Total parsed entries:', entries.length);
+    return entries;
   };
 
   // Parse timetable content from extracted document text
@@ -175,7 +252,7 @@ const TimetableViewer: React.FC = () => {
       }
       
       // Find reference date
-      let referenceDate = "2025-05-07";
+      let referenceDate = "2025-08-19";
       const refDateMatch = content.match(/(?:Reference|Start)\s+[Dd]ate:?\s+((?:\w{3}, )?(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},\s+\d{4})/);
       if (refDateMatch && refDateMatch[1]) {
         referenceDate = refDateMatch[1].trim();
@@ -330,6 +407,19 @@ const TimetableViewer: React.FC = () => {
         </div>
         
         <div className="flex items-center space-x-2">
+          <Select value={selectedTransactionType} onValueChange={setSelectedTransactionType}>
+            <SelectTrigger className="w-[200px]">
+              <SelectValue placeholder="Select transaction type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Major Transaction">Major Transaction</SelectItem>
+              <SelectItem value="Rights Issue">Rights Issue</SelectItem>
+              <SelectItem value="Open Offer">Open Offer</SelectItem>
+              <SelectItem value="Very Substantial Acquisition">Very Substantial Acquisition</SelectItem>
+              <SelectItem value="Spin-off">Spin-off</SelectItem>
+            </SelectContent>
+          </Select>
+          
           <Button 
             variant="outline" 
             size="icon"
@@ -397,10 +487,24 @@ const TimetableViewer: React.FC = () => {
               <TableBody>
                 {timetableData.entries.map((entry, index) => (
                   <TableRow key={index}>
-                    <TableCell className="font-medium">Day {entry.day}</TableCell>
-                    <TableCell>{entry.date}</TableCell>
-                    <TableCell className="font-medium">{entry.event}</TableCell>
-                    <TableCell className="hidden md:table-cell">{entry.description || '-'}</TableCell>
+                     <TableCell className="font-medium">Day {entry.day}</TableCell>
+                     <TableCell>{entry.date}</TableCell>
+                     <TableCell className="font-medium">
+                       {entry.event}
+                       {entry.vettingRequired && (
+                         <span className="ml-2 text-xs bg-yellow-100 text-yellow-800 px-1 py-0.5 rounded">
+                           Vetting Required
+                         </span>
+                       )}
+                     </TableCell>
+                     <TableCell className="hidden md:table-cell">
+                       {entry.description || '-'}
+                       {entry.ruleReference && (
+                         <div className="text-xs text-blue-600 mt-1">
+                           Ref: {entry.ruleReference}
+                         </div>
+                       )}
+                     </TableCell>
                     <TableCell>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusClass(entry.status)}`}>
                         {entry.status || 'N/A'}

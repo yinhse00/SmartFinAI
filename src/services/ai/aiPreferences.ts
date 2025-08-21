@@ -16,6 +16,19 @@ const DEFAULT_PREFERENCES: UserAIPreferences = {
 };
 
 /**
+ * Default preferences for Google provider
+ */
+const GOOGLE_DEFAULT_PREFERENCES: UserAIPreferences = {
+  defaultProvider: AIProvider.GOOGLE,
+  defaultModel: 'gemini-2.0-flash',
+  perFeaturePreferences: {
+    chat: { provider: AIProvider.GOOGLE, model: 'gemini-2.0-flash' },
+    ipo: { provider: AIProvider.GOOGLE, model: 'gemini-2.0-flash' },
+    translation: { provider: AIProvider.GOOGLE, model: 'gemini-2.0-flash' }
+  }
+};
+
+/**
  * Get user AI preferences from localStorage
  */
 export function getAIPreferences(): UserAIPreferences {
@@ -23,13 +36,22 @@ export function getAIPreferences(): UserAIPreferences {
     const stored = localStorage.getItem(AI_PREFERENCES_KEY);
     if (stored) {
       const parsed = JSON.parse(stored);
+      
+      // Migrate deprecated models
+      const migratedPreferences = migrateDeprecatedModels(parsed);
+      
+      // Choose base defaults based on provider
+      const baseDefaults = migratedPreferences.defaultProvider === AIProvider.GOOGLE 
+        ? GOOGLE_DEFAULT_PREFERENCES 
+        : DEFAULT_PREFERENCES;
+      
       // Merge with defaults to ensure all properties exist
       return {
-        ...DEFAULT_PREFERENCES,
-        ...parsed,
+        ...baseDefaults,
+        ...migratedPreferences,
         perFeaturePreferences: {
-          ...DEFAULT_PREFERENCES.perFeaturePreferences,
-          ...parsed.perFeaturePreferences
+          ...baseDefaults.perFeaturePreferences,
+          ...migratedPreferences.perFeaturePreferences
         }
       };
     }
@@ -38,6 +60,29 @@ export function getAIPreferences(): UserAIPreferences {
   }
   
   return DEFAULT_PREFERENCES;
+}
+
+/**
+ * Migrate deprecated models to current ones
+ */
+function migrateDeprecatedModels(preferences: any): UserAIPreferences {
+  const migrated = { ...preferences };
+  
+  // Migrate deprecated gemini-pro to gemini-2.0-flash
+  if (migrated.defaultModel === 'gemini-pro') {
+    migrated.defaultModel = 'gemini-2.0-flash';
+  }
+  
+  if (migrated.perFeaturePreferences) {
+    Object.keys(migrated.perFeaturePreferences).forEach(feature => {
+      const pref = migrated.perFeaturePreferences[feature];
+      if (pref && pref.model === 'gemini-pro') {
+        pref.model = 'gemini-2.0-flash';
+      }
+    });
+  }
+  
+  return migrated;
 }
 
 /**
