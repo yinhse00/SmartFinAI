@@ -1,10 +1,5 @@
 
-import { grokService } from '@/services/grokService';
-import { safelyExtractText } from '@/services/utils/responseUtils';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
-import { universalAiClient } from '@/services/ai/universalAiClient';
-import { AIProvider } from '@/types/aiProvider';
-import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
+// Unified response generation through CentralBrainService
 
 /**
  * Step 5: Enhanced Response Generation with quality-focused parameters
@@ -99,43 +94,27 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
       }
     };
     
-    // Get user's AI preference for chat
-    const chatPreference = getFeatureAIPreference('chat');
+    console.log('executeStep5: Using unified CentralBrainService for response generation');
+
+    // Use unified CentralBrainService - it automatically loads user preferences and handles provider routing
+    const { ChatAdapter } = await import('../../../../services/brain/adapters/chatAdapter');
     
-    // Generate response using user's preferred AI provider
-    let response;
-    let responseText;
-    
-    if (chatPreference.provider === AIProvider.GROK) {
-      // Use existing Grok service for Grok requests
-      response = await grokService.generateResponse(responseParams);
-      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(safelyExtractText(response));
-    } else {
-      // Use universal AI client for other providers
-      const aiResponse = await universalAiClient.generateContent({
-        prompt: responseParams.prompt,
-        provider: chatPreference.provider,
-        modelId: chatPreference.model,
-        metadata: {
-          regulatoryContext: responseParams.regulatoryContext,
-          maxTokens: responseParams.maxTokens,
-          temperature: responseParams.temperature
-        }
-      });
-      
-      if (!aiResponse.success) {
-        throw new Error(aiResponse.error || 'Failed to generate response');
+    const responseText = await ChatAdapter.processMessage(
+      responseParams.prompt,
+      [], // No conversation history in this context
+      {
+        feature: 'chat',
+        userId: params.userId,
+        // All preferences and provider selection handled automatically by CentralBrainService
       }
-      
-      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(aiResponse.text);
-      response = {
-        text: responseText,
-        metadata: {
-          provider: aiResponse.provider,
-          modelId: aiResponse.modelId
-        }
-      };
-    }
+    );
+
+    const response = {
+      text: responseText,
+      metadata: {
+        unified: true // Indicates this came through the unified system
+      }
+    };
     
     // If no response text was extracted, provide a fallback
     if (!responseText || responseText.trim() === '') {

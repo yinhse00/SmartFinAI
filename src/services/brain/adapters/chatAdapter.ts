@@ -1,6 +1,5 @@
 import { CentralBrainService } from '../centralBrainService';
 import { Message } from '@/components/chat/ChatMessage';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 
 export class ChatAdapter {
   static async processMessage(
@@ -13,16 +12,19 @@ export class ChatAdapter {
     } = {}
   ): Promise<string> {
     try {
-      // Get user preferences
-      const preferences = getFeatureAIPreference('chat');
-      
-      // Process through central brain
+      console.log('ChatAdapter: Processing message', { 
+        contentLength: content.length, 
+        hasFiles: !!metadata.files,
+        feature: metadata.feature 
+      });
+
+      // Process through unified CentralBrainService - it auto-loads user preferences
       const response = await CentralBrainService.processChat(content, {
-        preferences,
         files: metadata.files,
         feature: metadata.feature || 'chat',
         userId: metadata.userId,
         conversationHistory: messages.slice(-5) // Last 5 messages for context
+        // preferences will be auto-loaded by CentralBrainService
       });
 
       if (!response.success) {
@@ -45,14 +47,17 @@ export class ChatAdapter {
     } = {}
   ): Promise<string> {
     try {
-      // Get user preferences
-      const preferences = getFeatureAIPreference('chat');
-      
-      // Process through central brain
+      console.log('ChatAdapter: Processing files with message', { 
+        contentLength: content.length, 
+        fileCount: files.length,
+        feature: metadata.feature 
+      });
+
+      // Process through unified CentralBrainService - it auto-loads user preferences
       const response = await CentralBrainService.processFileAnalysis(content, files, {
-        preferences,
-        feature: metadata.feature || 'chat_file_processing',
+        feature: metadata.feature || 'file_processing',
         userId: metadata.userId
+        // preferences will be auto-loaded by CentralBrainService
       });
 
       if (!response.success) {
@@ -75,17 +80,20 @@ export class ChatAdapter {
     } = {}
   ): Promise<string> {
     try {
-      // Get user preferences
-      const preferences = getFeatureAIPreference('translation');
-      
-      // Process through central brain
+      console.log('ChatAdapter: Processing translation', { 
+        contentLength: content.length, 
+        targetLanguage,
+        feature: metadata.feature 
+      });
+
+      // Process through unified CentralBrainService - it auto-loads user preferences
       const response = await CentralBrainService.processTranslation(
         `Translate to ${targetLanguage}: ${content}`, 
         {
-          preferences,
-          feature: metadata.feature || 'chat_translation',
+          feature: metadata.feature || 'translation',
           userId: metadata.userId,
           language: targetLanguage
+          // preferences will be auto-loaded by CentralBrainService
         }
       );
 

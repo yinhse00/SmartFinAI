@@ -19,6 +19,18 @@ export class CentralBrainService {
     try {
       console.log('CentralBrain: Processing request', { type: request.type, feature: request.metadata.feature });
 
+      // Auto-load user preferences if not provided
+      if (!request.metadata.preferences) {
+        const { getFeatureAIPreference } = await import('../ai/aiPreferences');
+        const userPref = getFeatureAIPreference(request.metadata.feature as any);
+        request.metadata.preferences = {
+          defaultProvider: userPref.provider,
+          defaultModel: userPref.model,
+          perFeaturePreferences: {}
+        };
+        console.log('CentralBrain: Auto-loaded user preferences', userPref);
+      }
+
       // Step 1: Analyze the request
       const analysis = RequestAnalyzer.analyzeRequest(request);
       console.log('CentralBrain: Request analysis', analysis);
@@ -86,92 +98,72 @@ export class CentralBrainService {
   }
 
   // Utility methods for adapters
-  static async processChat(content: string, metadata: any): Promise<UniversalResponse> {
+  static async processChat(content: string, metadata: any = {}): Promise<UniversalResponse> {
     const request: UniversalRequest = {
       type: 'chat',
       content,
       metadata: {
         feature: 'chat',
-        preferences: {
-          defaultProvider: metadata.preferences.provider,
-          defaultModel: metadata.preferences.model,
-          perFeaturePreferences: {}
-        },
         ...metadata
+        // preferences will be auto-loaded in processRequest if not provided
       }
     };
 
     return this.processRequest(request);
   }
 
-  static async processFileAnalysis(content: string, files: File[], metadata: any): Promise<UniversalResponse> {
+  static async processFileAnalysis(content: string, files: File[], metadata: any = {}): Promise<UniversalResponse> {
     const request: UniversalRequest = {
       type: 'file_processing',
       content,
       metadata: {
         feature: 'file_processing',
         files,
-        preferences: {
-          defaultProvider: metadata.preferences.provider,
-          defaultModel: metadata.preferences.model,
-          perFeaturePreferences: {}
-        },
         ...metadata
+        // preferences will be auto-loaded in processRequest if not provided
       }
     };
 
     return this.processRequest(request);
   }
 
-  static async processTranslation(content: string, metadata: any): Promise<UniversalResponse> {
+  static async processTranslation(content: string, metadata: any = {}): Promise<UniversalResponse> {
     const request: UniversalRequest = {
       type: 'translation',
       content,
       metadata: {
         feature: 'translation',
-        preferences: {
-          defaultProvider: metadata.preferences.provider,
-          defaultModel: metadata.preferences.model,
-          perFeaturePreferences: {}
-        },
         ...metadata
+        // preferences will be auto-loaded in processRequest if not provided
       }
     };
 
     return this.processRequest(request);
   }
 
-  static async processDocumentGeneration(content: string, metadata: any): Promise<UniversalResponse> {
+  static async processDocumentGeneration(content: string, metadata: any = {}): Promise<UniversalResponse> {
     const request: UniversalRequest = {
       type: 'document_generation',
       content,
       metadata: {
         feature: 'document_generation',
-        preferences: {
-          defaultProvider: metadata.preferences.provider,
-          defaultModel: metadata.preferences.model,
-          perFeaturePreferences: {}
-        },
         outputFormat: 'markdown',
         ...metadata
+        // preferences will be auto-loaded in processRequest if not provided
       }
     };
 
     return this.processRequest(request);
   }
 
-  static async processDatabaseQuery(content: string, metadata: any): Promise<UniversalResponse> {
+  static async processDatabaseQuery(content: string, metadata: any = {}): Promise<UniversalResponse> {
     const request: UniversalRequest = {
       type: 'database_query',
       content,
       metadata: {
         feature: 'database',
-        preferences: {
-          defaultProvider: metadata.preferences.provider,
-          defaultModel: metadata.preferences.model,
-          perFeaturePreferences: {}
-        },
         ...metadata
+        // preferences will be auto-loaded in processRequest if not provided
       }
     };
 
