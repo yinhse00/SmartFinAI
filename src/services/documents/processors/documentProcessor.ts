@@ -4,6 +4,8 @@ import { getGrokApiKey } from '../../apiKeyService';
 import { fileConverter } from '../utils/fileConverter';
 import { checkApiAvailability } from '../../api/grok/modules/endpointManager';
 import { ChatCompletionMessage, ChatCompletionRequest } from '../../api/grok/types';
+import { CentralBrainService } from '../../brain/centralBrainService';
+import { getFeatureAIPreference } from '../../ai/aiPreferences';
 
 /**
  * Processor for extracting text from document files using client-side extraction first
@@ -16,18 +18,28 @@ export const documentProcessor = {
     try {
       console.log(`Processing PDF: ${file.name}`);
       
-      // Check if API is available
-      const apiKey = getGrokApiKey();
-      const isApiAvailable = apiKey ? await checkApiAvailability(apiKey) : false;
-      
-      if (isApiAvailable) {
-        // Use Grok Vision as a browser-compatible method for PDFs
-        return await documentProcessor.extractDocumentWithGrok(file, 'PDF');
-      } else {
-        // Fallback message when API is unavailable
-        console.warn("Grok API unavailable, using fallback for PDF");
+      // Use centralized brain system for PDF processing
+      const preferences = getFeatureAIPreference('chat');
+      const response = await CentralBrainService.processFileAnalysis(
+        'Extract all text from this PDF document', 
+        [file], 
+        {
+          preferences,
+          feature: 'pdf_processing',
+          extractionType: 'text'
+        }
+      );
+
+      if (response.success) {
         return {
-          content: `[Document Text Extraction Limited: The PDF '${file.name}' could not be fully processed because the Grok API is currently unreachable. Basic text has been extracted where possible, but formatting and some content may be missing.]`,
+          content: response.content,
+          source: file.name
+        };
+      } else {
+        // Fallback message when brain system fails
+        console.warn("Brain system unavailable, using fallback for PDF");
+        return {
+          content: `[Document Text Extraction Limited: The PDF '${file.name}' could not be fully processed because the AI service is currently unreachable. Basic text has been extracted where possible, but formatting and some content may be missing.]`,
           source: file.name
         };
       }
