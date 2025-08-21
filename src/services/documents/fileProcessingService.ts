@@ -5,7 +5,6 @@ import { enhancedImageProcessor } from './processors/enhancedImageProcessor';
 import { enhancedPdfProcessor } from './processors/enhancedPdfProcessor';
 import { documentProcessor } from './processors/documentProcessor';
 import { spreadsheetProcessor } from './processors/spreadsheetProcessor';
-import { FileAdapter } from '../brain/adapters/fileAdapter';
 
 /**
  * Check if required document libraries are loaded
@@ -53,24 +52,11 @@ export const fileProcessingService = {
       let result;
       switch (fileType) {
         case 'pdf':
-          // Use FileAdapter to route through centralized brain system
-          try {
-            const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-            result = { content, source: file.name };
-          } catch (error) {
-            // Fallback to original processor if brain system fails
-            result = await enhancedPdfProcessor.extractText(file);
-          }
+          // Use enhanced PDF processor with better OCR and structure analysis
+          result = await enhancedPdfProcessor.extractText(file);
           break;
         case 'word':
-          // Use FileAdapter to route through centralized brain system
-          try {
-            const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-            result = { content, source: file.name };
-          } catch (error) {
-            // Fallback to original processor if brain system fails
-            result = await documentProcessor.extractWordText(file, mammothAvailable);
-          }
+          result = await documentProcessor.extractWordText(file, mammothAvailable);
           break;
         case 'excel':
           result = await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
