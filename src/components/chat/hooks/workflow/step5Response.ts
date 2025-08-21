@@ -1,10 +1,6 @@
 
 import { grokService } from '@/services/grokService';
 import { safelyExtractText } from '@/services/utils/responseUtils';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
-import { universalAiClient } from '@/services/ai/universalAiClient';
-import { AIProvider } from '@/types/aiProvider';
-import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
 
 /**
  * Step 5: Enhanced Response Generation with quality-focused parameters
@@ -99,43 +95,9 @@ Ensure your response is complete, accurate, and addresses all aspects of the que
       }
     };
     
-    // Get user's AI preference for chat
-    const chatPreference = getFeatureAIPreference('chat');
-    
-    // Generate response using user's preferred AI provider
-    let response;
-    let responseText;
-    
-    if (chatPreference.provider === AIProvider.GROK) {
-      // Use existing Grok service for Grok requests
-      response = await grokService.generateResponse(responseParams);
-      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(safelyExtractText(response));
-    } else {
-      // Use universal AI client for other providers
-      const aiResponse = await universalAiClient.generateContent({
-        prompt: responseParams.prompt,
-        provider: chatPreference.provider,
-        modelId: chatPreference.model,
-        metadata: {
-          regulatoryContext: responseParams.regulatoryContext,
-          maxTokens: responseParams.maxTokens,
-          temperature: responseParams.temperature
-        }
-      });
-      
-      if (!aiResponse.success) {
-        throw new Error(aiResponse.error || 'Failed to generate response');
-      }
-      
-      responseText = codeBlockCleaner.cleanupCodeBlockMarkers(aiResponse.text);
-      response = {
-        text: responseText,
-        metadata: {
-          provider: aiResponse.provider,
-          modelId: aiResponse.modelId
-        }
-      };
-    }
+    // Generate response using Grok with quality-optimized parameters
+    const response = await grokService.generateResponse(responseParams);
+    const responseText = safelyExtractText(response);
     
     // If no response text was extracted, provide a fallback
     if (!responseText || responseText.trim() === '') {

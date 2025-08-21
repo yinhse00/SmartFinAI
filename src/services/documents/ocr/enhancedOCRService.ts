@@ -4,7 +4,7 @@ import { imageProcessor } from '../processors/imageProcessor';
 interface OCRResult {
   text: string;
   confidence: number;
-  source: 'tesseract' | 'grok' | 'ai-vision' | 'hybrid';
+  source: 'tesseract' | 'grok' | 'hybrid';
   language?: string;
 }
 
@@ -58,16 +58,16 @@ class EnhancedOCRService {
     }
   }
 
-  async performAIVisionOCR(file: File): Promise<OCRResult> {
+  async performGrokVisionOCR(file: File): Promise<OCRResult> {
     try {
       const result = await imageProcessor.extractText(file);
       return {
         text: result.content,
-        confidence: 85, // Estimated confidence for AI Vision
-        source: 'ai-vision'
+        confidence: 85, // Estimated confidence for Grok
+        source: 'grok'
       };
     } catch (error) {
-      console.error('AI Vision OCR failed:', error);
+      console.error('Grok Vision OCR failed:', error);
       throw error;
     }
   }
@@ -84,10 +84,10 @@ class EnhancedOCRService {
     }
 
     try {
-      const aiResult = await this.performAIVisionOCR(file);
-      results.push(aiResult);
+      const grokResult = await this.performGrokVisionOCR(file);
+      results.push(grokResult);
     } catch (error) {
-      console.warn('AI Vision OCR failed');
+      console.warn('Grok Vision OCR failed');
     }
 
     if (results.length === 0) {

@@ -2,10 +2,12 @@
 export const TRADING_ARRANGEMENTS = {
   RIGHTS_ISSUE: `# Enhanced Rights Issue Execution Timetable (Conditional Logic Applied)
 
-## Phase 1: Announcement (Always First Step)
+## Phase 1: Listing Documents Preparation and Vetting (As per Timetable20250520.docx)
 | Timeline | Step | Description |
 |----------|------|-------------|
-| Day 1 | Announcement | Rights issue announcement published through HKEXnews |
+| Day 1-5 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
+| Day 6-15 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
+| Day 16 | Announcement | Rights issue announcement published through HKEXnews |
 
 ## Phase 2: Implementation Assessment
 **CRITICAL:** Determine if shareholder approval is required based on aggregation rules.
@@ -30,32 +32,27 @@ export const TRADING_ARRANGEMENTS = {
 **Additional phases required:**
 | Timeline | Step | Description |
 |----------|------|-------------|
-| Day 2-6 | Circular Preparation | Drafting of circular with details of rights issue |
-| Day 7-21 | Circular Vetting | Stock Exchange review of circular |
-| Day 22 | Circular Dispatch | Dispatch of circular to shareholders |
-| Day 43 | EGM | Extraordinary General Meeting for shareholders' approval |
-| Day 43 | Results Announcement | Announcement of EGM results |
-
-## Phase 3: Listing Documents (After Approval)
-| Timeline | Step | Description |
-|----------|------|-------------|
-| Day 44-48 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
-| Day 49-58 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
+| Day 17-21 | Circular Preparation | Drafting of circular with details of rights issue |
+| Day 22-36 | Circular Vetting | Stock Exchange review of circular |
+| Day 37 | Circular Dispatch | Dispatch of circular to shareholders |
+| Day 58 | EGM | Extraordinary General Meeting for shareholders' approval |
+| Day 58 | Results Announcement | Announcement of EGM results |
 
 **Then proceed with trading phase as per Scenario A above.**
 
 Notes:
-- Announcement MUST come first in regulatory sequence
-- Listing documents preparation comes AFTER shareholder approval (if required)
+- Listing documents preparation and vetting are ALWAYS required (15 business days total)
 - Trading in nil-paid rights typically lasts for 10 trading days (HK Listing Rules 10.29)
 - Aggregation threshold per Rule 7.19A applies to cumulative issues within 12 months`,
 
   OPEN_OFFER: `# Enhanced Open Offer Execution Timetable (Conditional Logic Applied)
 
-## Phase 1: Announcement (Always First Step)
+## Phase 1: Listing Documents Preparation and Vetting (As per Timetable20250520.docx)
 | Timeline | Step | Description |
 |----------|------|-------------|
-| Day 1 | Announcement | Open offer announcement published through HKEXnews |
+| Day 1-5 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
+| Day 6-15 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
+| Day 16 | Announcement | Open offer announcement published through HKEXnews |
 
 ## Phase 2: Implementation Assessment
 **CRITICAL:** Determine if shareholder approval is required based on aggregation rules.
@@ -78,17 +75,11 @@ Notes:
 **Additional phases required:**
 | Timeline | Step | Description |
 |----------|------|-------------|
-| Day 2-6 | Circular Preparation | Drafting of circular with details of open offer |
-| Day 7-21 | Circular Vetting | Stock Exchange review of circular |
-| Day 22 | Circular Dispatch | Dispatch of circular to shareholders |
-| Day 43 | EGM | Extraordinary General Meeting for shareholders' approval |
-| Day 43 | Results Announcement | Announcement of EGM results |
-
-## Phase 3: Listing Documents (After Approval)
-| Timeline | Step | Description |
-|----------|------|-------------|
-| Day 44-48 | Listing Documents Preparation | Preparation of listing documents (5 business days) |
-| Day 49-58 | Stock Exchange Vetting | Vetting by the Stock Exchange (10 business days) |
+| Day 17-21 | Circular Preparation | Drafting of circular with details of open offer |
+| Day 22-36 | Circular Vetting | Stock Exchange review of circular |
+| Day 37 | Circular Dispatch | Dispatch of circular to shareholders |
+| Day 58 | EGM | Extraordinary General Meeting for shareholders' approval |
+| Day 58 | Results Announcement | Announcement of EGM results |
 
 **Then proceed with trading phase as per Scenario A above.**
 
@@ -96,9 +87,8 @@ Notes:
 - CRITICAL: Open offers are CORPORATE ACTIONS regulated under Listing Rules Chapter 7
 - NO trading in nil-paid rights for open offers (key difference from rights issues)
 - Only one market exists during the open offer period - existing shares (ex-entitlement)
-- Announcement MUST come first in regulatory sequence
-- Listing documents preparation comes AFTER shareholder approval (if required)
-- Aggregation threshold per Rule 7.24 applies to cumulative issues within 12 months`,
+- Aggregation threshold per Rule 7.24 applies to cumulative issues within 12 months
+- Listing documents preparation and vetting are ALWAYS required (15 business days total)`,
 
   GENERAL_OFFER: `# Complete Execution Timetable for Offer under Takeovers Code
 

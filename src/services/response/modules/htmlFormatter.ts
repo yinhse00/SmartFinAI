@@ -27,18 +27,9 @@ export const htmlFormatter = {
       
       formattedText = formattedText.replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li>$3</li>');
       
-      // Convert markdown tables to HTML with enhanced styling
+      // Convert markdown tables to HTML tables with proper styling
       const tableRegex = /\|(.+)\|\s*\n\|[-:\s|]+\|\s*\n(\|.+\|\s*\n)+/g;
       formattedText = formattedText.replace(tableRegex, (match) => {
-        // Check if this is a timetable by looking for common timetable headers
-        const isTimetable = /day|date|event|status/i.test(match);
-        
-        if (isTimetable) {
-          // Use enhanced timetable rendering component
-          return `<div class="chat-timetable-container" data-table-content="${encodeURIComponent(match)}"></div>`;
-        }
-        
-        // Standard table processing for non-timetables
         const rows = match.trim().split('\n');
         let htmlTable = '<table class="chat-table">\n<thead>\n<tr>';
         

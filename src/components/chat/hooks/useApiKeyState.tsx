@@ -1,11 +1,8 @@
 
 import { useState, useEffect } from 'react';
-import { hasGrokApiKey, setGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
+import { hasGrokApiKey, setGrokApiKey } from '@/services/apiKeyService';
 import { useToast } from '@/hooks/use-toast';
 import { connectionTester } from '@/services/api/grok/connectionTester';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
-import { AIProvider } from '@/types/aiProvider';
-import { universalAiClient } from '@/services/ai/universalAiClient';
 
 /**
  * Enhanced hook to manage API key state with advanced validation
@@ -28,94 +25,41 @@ export const useApiKeyState = () => {
   
   const { toast } = useToast();
 
-  /**
-   * Check if current provider has a valid API key
-   */
-  const checkCurrentProviderApiKey = (): boolean => {
-    const preference = getFeatureAIPreference('chat');
-    
-    switch (preference.provider) {
-      case AIProvider.GROK:
-        return hasGrokApiKey();
-      case AIProvider.GOOGLE:
-        return hasGoogleApiKey();
-      default:
-        return false;
-    }
-  };
-
   // Manual connection testing hook with API usage control
   const manualTestConnection = async () => {
     setKeyStatus(prev => ({ ...prev, isValidating: true }));
     
     try {
-      // Get user's preferred AI provider for chat
-      const chatPreference = getFeatureAIPreference('chat');
-      
-      let hasValidApiKey = false;
-      let connectionStatus;
-      
-      if (chatPreference.provider === AIProvider.GROK) {
-        const hasGrokKey = hasGrokApiKey();
-        if (!hasGrokKey) {
-          // Try to set default API key first
-          const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
-          setGrokApiKey(defaultApiKey);
+      const hasGrokKey = hasGrokApiKey();
+      if (!hasGrokKey) {
+        // Try to set default API key first
+        const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
+        setGrokApiKey(defaultApiKey);
+        
+        // Verify key was stored
+        setTimeout(() => {
+          const keyStored = hasGrokApiKey();
+          setIsGrokApiKeySet(keyStored);
           
-          // Verify key was stored
-          setTimeout(() => {
-            const keyStored = hasGrokApiKey();
-            setIsGrokApiKeySet(keyStored);
-            
-            if (!keyStored) {
-              setKeyStatus({
-                isValidating: false,
-                isValid: false,
-                message: 'Unable to store API key in browser storage. Private browsing mode may block storage.',
-                lastChecked: Date.now()
-              });
-              toast({
-                title: "API Key Storage Issue",
-                description: "Unable to store API key in browser storage. Private browsing mode may block storage.",
-                variant: "destructive"
-              });
-              return;
-            }
-          }, 500);
-        }
-        
-        // Test the Grok connection
-        connectionStatus = await connectionTester.testApiConnection();
-      } else if (chatPreference.provider === AIProvider.GOOGLE) {
-        hasValidApiKey = hasGoogleApiKey();
-        
-        if (!hasValidApiKey) {
-          setKeyStatus({
-            isValidating: false,
-            isValid: false,
-            message: 'No Google API key configured. Please set up your Google API key in the profile.',
-            lastChecked: Date.now()
-          });
-          toast({
-            title: "Google API Key Required",
-            description: "Please configure your Google API key in the profile section.",
-            variant: "destructive"
-          });
-          return;
-        }
-        
-        // Test Google API by making a simple request
-        try {
-          await universalAiClient.generateContent({
-            prompt: "Test connection",
-            provider: AIProvider.GOOGLE,
-            modelId: chatPreference.model
-          });
-          connectionStatus = { success: true, message: "Google API connection successful" };
-        } catch (error) {
-          connectionStatus = { success: false, message: `Google API connection failed: ${error.message}` };
-        }
+          if (!keyStored) {
+            setKeyStatus({
+              isValidating: false,
+              isValid: false,
+              message: 'Unable to store API key in browser storage. Private browsing mode may block storage.',
+              lastChecked: Date.now()
+            });
+            toast({
+              title: "API Key Storage Issue",
+              description: "Unable to store API key in browser storage. Private browsing mode may block storage.",
+              variant: "destructive"
+            });
+            return;
+          }
+        }, 500);
       }
+      
+      // Test the connection
+      const connectionStatus = await connectionTester.testApiConnection();
       
       setKeyStatus({
         isValidating: false,
@@ -146,26 +90,24 @@ export const useApiKeyState = () => {
     }
   };
 
-  // Check API key on mount and listen for preference changes
+  // Check API key on mount (one-time only, no automatic intervals)
   useEffect(() => {
     const checkApiKey = () => {
-      const hasValidApiKey = checkCurrentProviderApiKey();
-      const preference = getFeatureAIPreference('chat');
+      const hasGrokKey = hasGrokApiKey();
+      setIsGrokApiKeySet(hasGrokKey);
       
-      setIsGrokApiKeySet(hasValidApiKey); // Keep the same state variable for compatibility
-      
-      if (!hasValidApiKey) {
+      if (!hasGrokKey) {
         setKeyStatus({
           isValidating: false,
           isValid: null,
-          message: `No ${preference.provider} API key configured`,
+          message: 'No API key configured',
           lastChecked: Date.now()
         });
       } else {
         setKeyStatus({
           isValidating: false,
           isValid: null,
-          message: `${preference.provider} API key found - Click "Test Connection" to verify`,
+          message: 'API key found - Click "Test Connection" to verify',
           lastChecked: Date.now()
         });
       }
@@ -173,14 +115,6 @@ export const useApiKeyState = () => {
     
     // Call once on mount
     checkApiKey();
-
-    // Listen for AI preference changes
-    const handleStorageChange = () => {
-      checkApiKey();
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   const handleSaveApiKeys = async () => {
@@ -265,13 +199,12 @@ export const useApiKeyState = () => {
   return {
     grokApiKeyInput,
     setGrokApiKeyInput,
-    isGrokApiKeySet: checkCurrentProviderApiKey(),
+    isGrokApiKeySet,
     setIsGrokApiKeySet,
     apiKeyDialogOpen,
     setApiKeyDialogOpen,
     handleSaveApiKeys,
     keyStatus,
-    manualTestConnection,
-    checkCurrentProviderApiKey
+    manualTestConnection
   };
 };

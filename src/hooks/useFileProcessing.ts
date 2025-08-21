@@ -4,10 +4,8 @@ import { fileProcessingService } from '@/services/documents/fileProcessingServic
 import { enhancedOCRService } from '@/services/documents/ocr/enhancedOCRService';
 import { formatExtractedContent } from '@/utils/fileContentFormatter';
 import { checkApiAvailability } from '@/services/api/grok/modules/endpointManager';
-import { getGrokApiKey, hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
+import { getGrokApiKey } from '@/services/apiKeyService';
 import { forceResetAllCircuitBreakers } from '@/services/api/grok/modules/endpointManager';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
-import { AIProvider } from '@/types/aiProvider';
 
 export const useFileProcessing = () => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,58 +56,29 @@ export const useFileProcessing = () => {
     };
   }, []);
 
-  /**
-   * Check if current provider has a valid API key
-   */
-  const checkCurrentProviderApiKey = (): boolean => {
-    const preference = getFeatureAIPreference('chat');
-    
-    switch (preference.provider) {
-      case AIProvider.GROK:
-        return hasGrokApiKey();
-      case AIProvider.GOOGLE:
-        return hasGoogleApiKey();
-      default:
-        return false;
-    }
-  };
-
   // Periodically check API availability in the background
   useEffect(() => {
     const checkApiStatus = async () => {
-      const hasApiKey = checkCurrentProviderApiKey();
-      if (!hasApiKey) {
+      const apiKey = getGrokApiKey();
+      if (!apiKey) {
         setIsOfflineMode(true);
         return;
       }
       
-      // Only check Grok API availability for now (Google doesn't need circuit breakers)
-      const preference = getFeatureAIPreference('chat');
-      if (preference.provider === AIProvider.GROK) {
-        const apiKey = getGrokApiKey();
-        if (!apiKey) {
-          setIsOfflineMode(true);
-          return;
-        }
+      try {
+        const isAvailable = await checkApiAvailability(apiKey);
+        setIsOfflineMode(!isAvailable);
         
-        try {
-          const isAvailable = await checkApiAvailability(apiKey);
-          setIsOfflineMode(!isAvailable);
-          
-          if (isAvailable && isOfflineMode) {
-            // Only show toast when transitioning from offline to online
-            toast({
-              title: "API connection restored",
-              description: "SmartFinAI is now operating in online mode with full functionality.",
-            });
-          }
-        } catch (error) {
-          console.error("Error checking API status:", error);
-          setIsOfflineMode(true);
+        if (isAvailable && isOfflineMode) {
+          // Only show toast when transitioning from offline to online
+          toast({
+            title: "API connection restored",
+            description: "SmartFinAI is now operating in online mode with full functionality.",
+          });
         }
-      } else {
-        // For Google API, assume it's available if key exists
-        setIsOfflineMode(false);
+      } catch (error) {
+        console.error("Error checking API status:", error);
+        setIsOfflineMode(true);
       }
       
       setLastApiCheck(Date.now());
@@ -139,18 +108,15 @@ export const useFileProcessing = () => {
     
     try {
       // First check API availability to set offline mode
-      const hasApiKey = checkCurrentProviderApiKey();
-      const preference = getFeatureAIPreference('chat');
-      
-      if (hasApiKey && preference.provider === AIProvider.GROK) {
-        const apiKey = getGrokApiKey();
+      const apiKey = getGrokApiKey();
+      if (apiKey) {
         const isApiAvailable = await checkApiAvailability(apiKey).catch(() => false);
         setIsOfflineMode(!isApiAvailable);
         
         if (!isApiAvailable) {
           toast({
             title: "Operating in Offline Mode",
-            description: `The ${preference.provider} API is currently unreachable. Document processing will use local extraction methods.`,
+            description: "The Grok API is currently unreachable. Document processing will use local extraction methods.",
             variant: "destructive",
             duration: 6000,
           });
@@ -180,9 +146,6 @@ export const useFileProcessing = () => {
             });
           }
         }
-      } else {
-        // For Google API, assume it's available if key exists
-        setIsOfflineMode(!hasApiKey);
       }
       
       toast({
@@ -320,29 +283,15 @@ export const useFileProcessing = () => {
       // Wait briefly to allow reset to take effect
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const hasApiKey = checkCurrentProviderApiKey();
-      const preference = getFeatureAIPreference('chat');
-      
-      if (!hasApiKey) {
+      const apiKey = getGrokApiKey();
+      if (!apiKey) {
         toast({
           title: "API key required",
-          description: `Please set a valid ${preference.provider} API key in the settings.`,
+          description: "Please set a valid API key in the settings.",
           variant: "destructive"
         });
         return false;
       }
-      
-      // Only check availability for Grok (Google doesn't need circuit breakers)
-      if (preference.provider !== AIProvider.GROK) {
-        setIsOfflineMode(false);
-        toast({
-          title: "Connection restored",
-          description: "API connection is available. Full functionality restored.",
-        });
-        return true;
-      }
-      
-      const apiKey = getGrokApiKey();
       
       // Now check availability with fresh circuit breakers
       const isAvailable = await checkApiAvailability(apiKey);
