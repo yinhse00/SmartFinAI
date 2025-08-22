@@ -10,18 +10,12 @@ interface ReferenceUrlMapping {
 
 const URL_MAPPINGS: Record<string, ReferenceUrlMapping> = {
   'listing_rule': {
-    baseUrl: 'https://en-rules.hkex.com.hk/rulebook/',
-    urlPattern: (identifier: string) => {
-      // Convert "3.08" to "308-0", "14.06B" to "1406b"
-      const cleanId = identifier.replace(/\./g, '').toLowerCase();
-      // Add "-0" suffix for base rules if no letter suffix exists
-      const formattedId = /[a-z]$/.test(cleanId) ? cleanId : `${cleanId}-0`;
-      return `https://en-rules.hkex.com.hk/rulebook/${formattedId}`;
-    }
+    baseUrl: 'https://en-rules.hkex.com.hk/rulebook/listing-rules',
+    urlPattern: (identifier: string) => `https://en-rules.hkex.com.hk/rulebook/listing-rules#${identifier.replace(/\./g, '-')}`
   },
   'chapter': {
-    baseUrl: 'https://en-rules.hkex.com.hk/rulebook/',
-    urlPattern: (identifier: string) => `https://en-rules.hkex.com.hk/rulebook/chapter-${identifier}`
+    baseUrl: 'https://en-rules.hkex.com.hk/rulebook/listing-rules',
+    urlPattern: (identifier: string) => `https://en-rules.hkex.com.hk/rulebook/listing-rules/chapter-${identifier}`
   },
   'takeovers_code': {
     baseUrl: 'https://www.sfc.hk/en/regulatory-functions/takeovers/takeovers-code',
