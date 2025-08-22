@@ -10,6 +10,7 @@ import { useWorkflowState } from './workflow/useWorkflowState';
 import { useQueryUtils } from './workflow/useQueryUtils';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
+import { responseFormatter } from '@/services/response/modules/responseFormatter';
 
 interface OptimizedWorkflowProps {
   messages: Message[];
@@ -182,7 +183,20 @@ export const useOptimizedWorkflowProcessor = ({
       
       // Update with final response
       if (step5Result?.response) {
-        updateStreamingContent(streamingResponse, step5Result.response);
+        // Apply HTML formatting for consistent output across all features
+        const formattedResponse = responseFormatter.formatResponse(
+          step5Result.response,
+          'chat',
+          Boolean(contextResult.context),
+          0.8,
+          false,
+          false,
+          false,
+          false,
+          false,
+          contextResult.context
+        );
+        updateStreamingContent(streamingResponse, formattedResponse.text);
         
         // Enhanced cache storage with longer duration
         storeInCache(query, step5Result.response, step5Result.metadata);
