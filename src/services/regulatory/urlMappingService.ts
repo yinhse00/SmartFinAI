@@ -10,8 +10,8 @@ interface ReferenceUrlMapping {
 
 const URL_MAPPINGS: Record<string, ReferenceUrlMapping> = {
   'listing_rule': {
-    baseUrl: 'https://en-rules.hkex.com.hk/rulebook/listing-rules',
-    urlPattern: (identifier: string) => `https://en-rules.hkex.com.hk/rulebook/listing-rules#${identifier.replace(/\./g, '-')}`
+    baseUrl: 'https://en-rules.hkex.com.hk/rulebook',
+    urlPattern: (identifier: string) => `https://en-rules.hkex.com.hk/rulebook/${identifier.replace(/\./g, '').toLowerCase()}-0`
   },
   'chapter': {
     baseUrl: 'https://en-rules.hkex.com.hk/rulebook/listing-rules',
