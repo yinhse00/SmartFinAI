@@ -5,25 +5,29 @@
  */
 export const htmlFormatter = {
   /**
-   * Apply HTML formatting to text if no HTML is already present
+   * Apply HTML formatting to text and clean up any remaining markdown
    */
   applyHtmlFormatting: (text: string, skipBoldFormatting: boolean = false): string => {
-    // Only apply minimal formatting if no HTML is present
-    const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(text);
+    // Always clean up markdown symbols, regardless of existing HTML
+    let formattedText = text;
+    
+    // Convert markdown headers to HTML with black bold styling
+    formattedText = formattedText
+      .replace(/^###\s+(.*?)$/gm, '<h3 class="heading-black-bold">$1</h3>')
+      .replace(/^##\s+(.*?)$/gm, '<h2 class="heading-black-bold">$1</h2>')
+      .replace(/^#\s+(.*?)$/gm, '<h1 class="heading-black-bold">$1</h1>');
+    
+    // Clean up any remaining markdown formatting if not skipped
+    if (!skipBoldFormatting) {
+      formattedText = formattedText
+        .replace(/\*\*((?!<a\s).*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>');
+    }
+    
+    // Check if we need to apply additional formatting for new content
+    const hasHtmlFormatting = /<h[1-6]|<p|<strong|<em|<ul|<li|<table|<tr|<th|<td/.test(formattedText);
     
     if (!hasHtmlFormatting) {
-      // Convert markdown headers to HTML with black bold styling
-      let formattedText = text
-        .replace(/^###\s+(.*?)$/gm, '<h3 class="heading-black-bold">$1</h3>')
-        .replace(/^##\s+(.*?)$/gm, '<h2 class="heading-black-bold">$1</h2>')
-        .replace(/^#\s+(.*?)$/gm, '<h1 class="heading-black-bold">$1</h1>');
-      
-      // Only apply bold formatting if not skipped
-      if (!skipBoldFormatting) {
-        formattedText = formattedText
-          .replace(/\*\*((?!<a\s).*?)\*\*/g, '<strong>$1</strong>')
-          .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>');
-      }
       
       formattedText = formattedText.replace(/^(\s*)[•\-\*](\s+)(.+)$/gm, '<li>$3</li>');
       
