@@ -19,9 +19,15 @@ export const htmlFormatter = {
     
     // Clean up any remaining markdown formatting if not skipped
     if (!skipBoldFormatting) {
+      // Use [\s\S]*? to match across newlines and handle multiline content
       formattedText = formattedText
-        .replace(/\*\*((?!<a\s).*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*((?!<a\s).*?)\*/g, '<em>$1</em>');
+        .replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(?!\*)([\s\S]*?)\*/g, '<em>$1</em>');
+      
+      // Final cleanup: remove any remaining standalone ** or * symbols
+      formattedText = formattedText
+        .replace(/\*\*/g, '')
+        .replace(/(?<![*])\*(?![*])/g, '');
     }
     
     // Check if we need to apply additional formatting for new content
