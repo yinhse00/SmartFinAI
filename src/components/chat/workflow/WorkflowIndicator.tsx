@@ -2,6 +2,7 @@
 import { AlertCircle, Database, Zap, MessageSquare, CheckCircle2, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { WorkflowPhase, getWorkflowStep } from './workflowConfig';
+import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
 
 interface WorkflowIndicatorProps {
   currentStep: WorkflowPhase;
@@ -21,10 +22,15 @@ export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicat
   // Find current step index
   const currentStepIndex = allSteps.findIndex(step => step === currentStep);
   
+  const formattedStepProgress = htmlFormatter.applyHtmlFormatting(stepProgress);
+  
   return (
     <div className="mb-4 pt-2">
       <div className="flex items-center justify-center mb-1">
-        <span className="text-xs text-gray-500 dark:text-gray-400">{stepProgress}</span>
+        <span 
+          className="text-xs text-gray-500 dark:text-gray-400"
+          dangerouslySetInnerHTML={{ __html: formattedStepProgress }}
+        />
       </div>
       
       <div className="flex justify-between items-center max-w-lg mx-auto">
