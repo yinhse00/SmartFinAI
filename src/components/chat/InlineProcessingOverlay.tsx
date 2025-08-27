@@ -3,6 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { WorkflowStep } from './hooks/workflow/types';
 import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
+import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
 
 interface InlineProcessingOverlayProps {
   currentStep: WorkflowStep | 'preparing' | 'processing' | 'finalizing' | 'reviewing';
@@ -202,7 +203,10 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
               <div className="flex-1">
                 <p className="font-medium">{stepLabels[step]}</p>
                 {status === 'active' && stepProgress && (
-                  <p className="text-sm opacity-80">{stepProgress}</p>
+                  <p 
+                    className="text-sm opacity-80"
+                    dangerouslySetInnerHTML={{ __html: htmlFormatter.applyHtmlFormatting(stepProgress) }}
+                  />
                 )}
               </div>
               {status === 'active' && (

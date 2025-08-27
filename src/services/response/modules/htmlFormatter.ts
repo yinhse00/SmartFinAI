@@ -85,6 +85,6 @@ export const htmlFormatter = {
       return formattedText;
     }
     
-    return text;
+    return formattedText;
   }
 };
