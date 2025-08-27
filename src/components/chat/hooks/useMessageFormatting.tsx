@@ -1,5 +1,6 @@
 
 import { useState, useEffect } from 'react';
+import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
 // We don't import detectAndFormatTables here anymore because all formatting
 // is now handled by the responseFormatter service.
 
@@ -19,13 +20,11 @@ export const useMessageFormatting = ({ content, originalContent, isBot }: UseMes
     const safeContent = content || "";
     const displayContent = showOriginal && originalContent ? originalContent : safeContent;
     
-    // Bot message content is now fully pre-formatted by the responseFormatter service,
-    // which handles markdown-to-HTML conversion for headings, lists, tables, etc.
-    // The previous call to `detectAndFormatTables` was redundant and caused formatting issues
-    // by re-processing already formatted HTML.
+    // Apply HTML formatting to bot messages to ensure all markdown is converted
+    // This catches any remaining ** or * symbols from API responses
     if (isBot) {
-      console.log('Using pre-formatted bot content, skipping redundant client-side formatting.');
-      setFormattedContent(displayContent);
+      const htmlFormattedContent = htmlFormatter.applyHtmlFormatting(displayContent);
+      setFormattedContent(htmlFormattedContent);
     } else {
       // For user messages, no formatting needed
       setFormattedContent(displayContent);
