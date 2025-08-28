@@ -230,7 +230,7 @@ export class IPOContentGenerationService {
         
         // Return immediate response while save happens in background
         return {
-          id: crypto.randomUUID(),
+          id: `temp-${Date.now()}`,
           project_id: projectId,
           section_type: sectionType,
           title: this.getSectionTitle(sectionType),
@@ -364,7 +364,7 @@ Generate comprehensive, high-quality content that meets investment banking stand
       section_id: '', // Will be set when saving
       content_snippet: response.text.substring(0, 200) + '...',
       source_type: 'ai_generated',
-      source_reference: 'AI Generated - Hong Kong Financial Expert',
+      source_reference: 'Grok AI - Hong Kong Financial Expert',
       confidence_score: 0.85,
       created_at: new Date().toISOString()
     });

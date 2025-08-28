@@ -11,7 +11,7 @@ export const GROK_MODELS: AIModel[] = [
     maxTokens: 25000,
     apiEndpoint: 'https://api.x.ai/v1/chat/completions',
     defaultTemperature: 0.3,
-    capabilities: ['text', 'reasoning', 'analysis', 'creativity', 'ipo-generation']
+    capabilities: ['text', 'reasoning', 'analysis', 'creativity']
   },
   {
     provider: AIProvider.GROK,
@@ -35,7 +35,7 @@ export const GOOGLE_MODELS: AIModel[] = [
     maxTokens: 1048576,
     apiEndpoint: 'https://generativelanguage.googleapis.com/v1beta/models',
     defaultTemperature: 0.4,
-    capabilities: ['text', 'reasoning', 'analysis', 'vision', 'multilingual', 'ipo-generation']
+    capabilities: ['text', 'reasoning', 'analysis', 'vision', 'multilingual']
   }
 ];
 
