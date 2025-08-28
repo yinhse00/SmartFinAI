@@ -75,7 +75,7 @@ export class UniversalAiClient {
           }
         ],
         temperature: modelConfig.defaultTemperature,
-        max_tokens: Math.min(6000, modelConfig.maxTokens),
+        max_tokens: this.getOptimalTokenLimit(request, modelConfig),
         top_p: 0.9,
         stream: false
       })
@@ -132,7 +132,7 @@ export class UniversalAiClient {
         ],
         generationConfig: {
           temperature: modelConfig.defaultTemperature,
-          maxOutputTokens: Math.min(6000, modelConfig.maxTokens),
+          maxOutputTokens: this.getOptimalTokenLimit(request, modelConfig),
           topP: 0.9
         }
       })
@@ -163,6 +163,30 @@ export class UniversalAiClient {
       provider: AIProvider.GOOGLE,
       modelId: request.modelId
     };
+  }
+
+  /**
+   * Get optimal token limit based on context and model capabilities
+   */
+  private getOptimalTokenLimit(request: AIRequest, modelConfig: any): number {
+    const isIPOGeneration = request.metadata?.sectionType || request.metadata?.feature === 'ipo';
+    
+    if (isIPOGeneration) {
+      // IPO content needs much higher token limits for comprehensive prospectus sections
+      switch (request.provider) {
+        case AIProvider.GROK:
+          // Use 80% of model capacity for IPO content
+          return Math.floor(modelConfig.maxTokens * 0.8);
+        case AIProvider.GOOGLE:
+          // Use 30k tokens for Google (still well below 1M+ limit but sufficient for IPO)
+          return Math.min(30000, modelConfig.maxTokens);
+        default:
+          return Math.min(15000, modelConfig.maxTokens);
+      }
+    }
+    
+    // For non-IPO content, use reasonable defaults
+    return Math.min(8000, modelConfig.maxTokens);
   }
 
   /**
