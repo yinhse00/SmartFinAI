@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import ChatContainer from './ChatContainer';
 import { useChatLogic } from './useChatLogic';
@@ -60,6 +59,25 @@ const ChatInterface: React.FC = () => {
     lastUserMessageIsChinese
   });
 
+  // Custom key handler for when files are attached
+  const handleCustomKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    if (e.key === 'Enter') {
+      // For textarea, only send if Shift is not pressed
+      if (e.currentTarget.tagName.toLowerCase() === 'textarea') {
+        if (!e.shiftKey) {
+          e.preventDefault();
+          if (input.trim() || hasAttachedFiles) {
+            handleSendWithFiles();
+          }
+        }
+      } else {
+        // For regular input, always send on Enter
+        e.preventDefault();
+        handleSendWithFiles();
+      }
+    }
+  };
+
   return (
     <>
       <div className="w-full mx-auto py-6 relative">
@@ -70,15 +88,7 @@ const ChatInterface: React.FC = () => {
           input={input}
           setInput={setInput}
           handleSend={handleSendWithFiles}
-          handleKeyDown={hasAttachedFiles ? 
-            (e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault();
-                handleSendWithFiles();
-              }
-            } : 
-            handleKeyDown
-          }
+          handleKeyDown={hasAttachedFiles ? handleCustomKeyDown : handleKeyDown}
           onOpenApiKeyDialog={() => window.location.href = '/profile'}
           retryLastQuery={retryLastQuery}
           onFileSelect={handleFileSelect}

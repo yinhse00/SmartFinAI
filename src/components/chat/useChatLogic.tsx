@@ -62,10 +62,22 @@ export const useChatLogic = () => {
     setInput('');
   };
   
-  // Handle keyboard input
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Handle keyboard input - updated to support both input and textarea elements
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    // For textarea, only send on Enter without Shift (to allow multiline input)
     if (e.key === 'Enter') {
-      handleSend();
+      if (e.currentTarget.tagName.toLowerCase() === 'textarea') {
+        // For textarea, only send if Shift is not pressed (Shift+Enter creates a new line)
+        if (!e.shiftKey) {
+          e.preventDefault();
+          if (input.trim() && !isLoading) {
+            handleSend();
+          }
+        }
+      } else {
+        // For regular input, always send on Enter
+        handleSend();
+      }
     }
   };
   

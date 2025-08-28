@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import ChatHeader from './ChatHeader';
@@ -16,7 +15,7 @@ interface ChatContainerProps {
   input: string;
   setInput: (input: string) => void;
   handleSend: () => void;
-  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement>) => void;
+  handleKeyDown: (e: React.KeyboardEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
   onOpenApiKeyDialog: () => void;
   retryLastQuery?: () => void;
   translatingMessageIds?: string[];
