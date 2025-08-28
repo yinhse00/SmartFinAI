@@ -1,10 +1,11 @@
-import React, { KeyboardEvent } from 'react';
+
+import React from 'react';
+import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Send, Loader2, AlertTriangle, WifiOff } from 'lucide-react';
 import UnifiedUploadButton from './upload/UnifiedUploadButton';
 import AttachedFilesList from './upload/AttachedFilesList';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AutoResizeTextarea } from '@/components/ui/auto-resize-textarea';
 
 interface ChatInputProps {
   input: string;
@@ -37,18 +38,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const hasAttachedFiles = attachedFiles.length > 0;
   
-  // Modified key handler for textarea
-  const handleTextareaKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Send on Enter without Shift key
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      if (input.trim() && !isLoading && !isProcessingFiles) {
-        handleSend();
-      }
-    }
-    // Allow Shift+Enter for new lines
-  };
-  
   return (
     <div className="p-4 border-t">
       {isOfflineMode && hasAttachedFiles && (
@@ -70,7 +59,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           isOfflineMode={isOfflineMode}
         />
       )}
-      <div className="flex gap-2 items-start">
+      <div className="flex gap-2 items-center">
         {onFileSelect && (
           <UnifiedUploadButton 
             onFileSelect={onFileSelect} 
@@ -78,15 +67,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
             isOfflineMode={isOfflineMode}
           />
         )}
-        <AutoResizeTextarea
+        <Input
           className="flex-1 bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700"
           placeholder={hasAttachedFiles ? "Type your question about the attached files..." : placeholder}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleTextareaKeyDown}
+          onKeyDown={handleKeyDown}
           disabled={isLoading || isProcessingFiles}
-          minRows={1}
-          maxRows={5}
         />
         <Button 
           onClick={handleSend} 
