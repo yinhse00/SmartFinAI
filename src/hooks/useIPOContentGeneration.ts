@@ -2,7 +2,9 @@ import { useState, useCallback } from 'react';
 import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
-import { loadKeysFromStorage } from '@/services/apiKey/keyStorage';
+import { loadKeysFromStorage, getGoogleApiKey } from '@/services/apiKey/keyStorage';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
+import { AIProvider } from '@/types/aiProvider';
 
 export const useIPOContentGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -19,10 +21,23 @@ export const useIPOContentGeneration = () => {
     setProcessingProgress(0);
     
     try {
-      // Check if API key is available before attempting generation
-      const apiKeys = loadKeysFromStorage();
-      if (apiKeys.length === 0) {
-        throw new Error('No API key configured. Please set up your X.AI API key in the workspace settings.');
+      // Check if API key is available for the user's preferred provider
+      const preference = getFeatureAIPreference('ipo');
+      let hasValidKey = false;
+      let providerName = '';
+      
+      if (preference.provider === AIProvider.GROK) {
+        const grokKeys = loadKeysFromStorage();
+        hasValidKey = grokKeys.length > 0;
+        providerName = 'Grok (X.AI)';
+      } else if (preference.provider === AIProvider.GOOGLE) {
+        const googleKey = getGoogleApiKey();
+        hasValidKey = googleKey.length > 0;
+        providerName = 'Google';
+      }
+      
+      if (!hasValidKey) {
+        throw new Error(`No ${providerName} API key configured. Please set up your ${providerName} API key in the settings to use IPO content generation.`);
       }
       
       console.log('📋 Request being sent to parallel service:', request);
