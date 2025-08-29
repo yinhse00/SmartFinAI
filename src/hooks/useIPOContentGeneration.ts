@@ -79,7 +79,7 @@ export const useIPOContentGeneration = () => {
         request.project_id,
         request.section_type,
         response,
-        true // Use background save for better UX
+        false // Use synchronous save to prevent race conditions
       );
       
       setProcessingProgress(100);

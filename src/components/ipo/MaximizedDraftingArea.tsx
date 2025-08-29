@@ -79,7 +79,15 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
 
     setIsSaving(true);
     try {
-      console.log('💾 Saving content for section:', sectionType);
+      console.log('💾 Saving content for section:', sectionType, {
+        contentLength: generatedContent.length,
+        hasLastResponse: !!lastGeneratedResponse
+      });
+      
+      // Validate content before saving
+      if (generatedContent.length < 10) {
+        throw new Error('Content too short to save - may be corrupted');
+      }
       
       const response: IPOContentGenerationResponse = {
         content: generatedContent,
@@ -98,11 +106,16 @@ export const MaximizedDraftingArea: React.FC<MaximizedDraftingAreaProps> = ({
         }
       };
 
-      await ipoContentGenerationService.saveSectionContent(projectId, sectionType, response);
+      const savedSection = await ipoContentGenerationService.saveSectionContent(projectId, sectionType, response);
+      
+      console.log('✅ Content saved successfully:', {
+        sectionId: savedSection.id,
+        savedContentLength: savedSection.content?.length || 0
+      });
       
       toast({
         title: "Saved",
-        description: "Section content has been saved successfully.",
+        description: `Section content saved (${savedSection.content?.length || 0} characters)`,
       });
     } catch (error) {
       console.error('❌ Save error:', error);

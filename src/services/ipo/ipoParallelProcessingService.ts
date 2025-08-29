@@ -331,13 +331,26 @@ export class IPOParallelProcessingService {
     try {
       console.log('💾 Starting background save...');
       
-      // For now, skip database save due to table availability
-      // In production, this would save to ipo_prospectus_sections table
-      console.log('📝 Background save simulated - content would be saved to database');
+      // Import the content generation service
+      const { IPOContentGenerationService } = await import('./ipoContentGenerationService');
+      const contentService = new IPOContentGenerationService();
       
-      console.log('✅ Background save completed');
+      // Perform actual database save
+      const savedSection = await contentService.saveSectionContent(
+        projectId,
+        sectionType,
+        response,
+        false // Use synchronous save in background task
+      );
+      
+      console.log('✅ Background save completed:', {
+        sectionId: savedSection.id,
+        contentLength: savedSection.content?.length || 0
+      });
     } catch (error) {
       console.error('❌ Background save failed:', error);
+      // Could add retry logic here if needed
+      throw error;
     }
   }
 
