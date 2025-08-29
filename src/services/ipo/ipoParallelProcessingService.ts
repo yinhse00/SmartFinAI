@@ -42,12 +42,12 @@ export class IPOParallelProcessingService {
             .single()
         ),
 
-        // Section guidance from guidance table  
+        // Section guidance from guidance table with case-insensitive matching
         this.safeQuery(async () => 
           await (supabase as any)
             .from('ipo_prospectus_section_guidance')
-            .select('*')
-            .eq('Section', sectionType)
+            .select('Section, Guidance, contents, "contents requirements", references')
+            .ilike('Section', `%${sectionType}%`)
             .limit(1)
             .maybeSingle()
         ),
@@ -383,79 +383,157 @@ export class IPOParallelProcessingService {
     const { project, guidance, templates, regulatoryRefs, existingContent, segments } = dataResult;
     const isBusiness = (request.section_type || '').toLowerCase() === 'business';
 
+    // Extract detailed HKEX guidance requirements
+    const guidanceDetails = this.extractHKEXGuidanceRequirements(guidance);
+    
+    // Extract template depth and style requirements  
+    const templateDepthRequirements = this.extractTemplateDepthRequirements(templates);
+    
+    // Build user-provided key elements block
+    const keyElementsBlock = Object.keys(baseContext.keyElements).length > 0 ? `
+**USER-PROVIDED KEY ELEMENTS (PRIMARY DATA SOURCE - USE EXACTLY AS PROVIDED):**
+${Object.entries(baseContext.keyElements).map(([key, value]) => `• ${key}: ${value}`).join('\n')}
+` : `**NO USER KEY ELEMENTS PROVIDED** - Request specific company information if needed`;
+
     const segmentsBlock = isBusiness && Array.isArray(segments) && segments.length > 0 ? `
-**ACCOUNTANTS' REPORT SEGMENTS (authoritative alignment data):**
-${JSON.stringify(
-  segments.map((s: any) => ({
-    name: s.name,
-    revenue_percentage: s.revenue_percentage,
-    is_material: s.is_material,
-    financial_segment_reference: s.financial_segment_reference,
-    description: s.description
-  })),
-  null,
-  2
-)}
+**REVENUE SEGMENTS (from Accountants' Report - must align):**
+${segments.map((s: any) => `• ${s.name}: ${s.revenue_percentage}% (${s.is_material ? 'Material' : 'Non-material'})`).join('\n')}
 ` : '';
 
-    const samplesBlock = `
-**SAMPLES (for tone and phrasing, not structure):**
-${guidance?.references ? `- Guidance References: ${guidance.references}` : ''}
-${templates?.length > 0 ? `- Template patterns:\n${templates.slice(0, 2).map((t: any) => `  • ${t['Company Name'] || 'Template'} — ${t.Overview || t['business Nature'] || 'Business overview'}`).join('\n')}` : ''}
-`;
-
-    const ddDocs = (dataResult as any).ddDocs || [];
-    const docsBlock = ddDocs.length > 0 ? `
-**SUPPORTING DOCUMENTS (use as factual context; prioritize guidance structure):**
-${ddDocs.slice(0, 5).map((d: any) => `- ${d.document_name} [${d.document_type}] — ${String(d.extracted_content || '').substring(0, 300)}...`).join('\n')}
+    const ddDocsBlock = (dataResult as any).ddDocs?.length > 0 ? `
+**DUE DILIGENCE CONTEXT:**
+${(dataResult as any).ddDocs.slice(0, 3).map((d: any) => `• ${d.document_name}: ${String(d.extracted_content || '').substring(0, 200)}...`).join('\n')}
 ` : '';
 
     return `
-You are a senior Hong Kong investment banking professional specializing in IPO prospectus drafting for HKEX listings. Draft institutional-quality content for the "${baseContext.sectionTitle}" section.
+You are a Hong Kong investment banking expert specializing in HKEX Main Board IPO prospectuses. Generate COMPLETED, professional content for the "${baseContext.sectionTitle}" section.
 
-**COMPANY PROFILE:**
-- Company: ${project.company_name}
-- Industry: ${project.industry || 'General'}
-- Project: ${project.project_name}
+**CRITICAL INSTRUCTIONS:**
+1. Generate COMPLETED CONTENT - never use placeholders like [Company Name] or [Year]
+2. Use USER-PROVIDED KEY ELEMENTS as the primary data source
+3. Follow HKEX guidance requirements EXACTLY as specified
+4. Match the DEPTH and DETAIL level shown in template examples
+5. Write in professional investment banking language for institutional investors
 
-${guidance ? `**SECTION-SPECIFIC GUIDANCE (PRIMARY – MUST FOLLOW):**
-- Requirements: ${guidance.Guidance || guidance['contents requirements'] || 'Standard HKEX requirements'}
-- Content Framework: ${guidance.contents || 'Professional business disclosure'}
-` : ''}
+**COMPANY INFORMATION:**
+• Company: ${project.company_name}
+• Industry: ${project.industry || 'Not specified'}
+• Project: ${project.project_name}
 
-${samplesBlock}
+${keyElementsBlock}
 
-**STRICT DRAFTING ORDER:**
-1) First, strictly follow the Section-Specific Guidance for structure and mandatory content.
-2) Then, consult Samples for tone and examples only. Do not override guidance.
+**MANDATORY HKEX GUIDANCE REQUIREMENTS:**
+${guidanceDetails}
 
-${isBusiness ? segmentsBlock : ''}
+**TEMPLATE DEPTH AND DETAIL REQUIREMENTS:**
+${templateDepthRequirements}
 
-**REGULATORY FRAMEWORK (supporting):**
-${regulatoryContext.context ? `Enhanced Regulatory Context:\n${regulatoryContext.context.substring(0, 1500)}` : 'HKEX Main Board Listing Rules'}
+${segmentsBlock}
 
-**REGULATORY CROSS-REFERENCES:**
-${regulatoryRefs.length > 0 ? regulatoryRefs.map((ref: any) => `- ${ref.reference_No}: ${ref.particulars?.substring(0, 100) || 'Regulatory requirement'}`).join('\n') : ''}
+${ddDocsBlock}
 
-${existingContent ? `**EXISTING CONTENT (for enhancement):**\nCurrent Version: ${existingContent.content?.substring(0, 500)}...` : ''}
-${docsBlock}
+**REGULATORY COMPLIANCE:**
+• Must comply with HKEX Main Board Listing Rules
+• Follow App1A Part A requirements exactly
+• Include all mandatory disclosures as specified in guidance
+• Use professional investment banking language and structure
+• Ensure accuracy and completeness for institutional investors
 
-**CONTENT GENERATION REQUIREMENTS:**
-1. Professional investment banking language and structure
-2. Comprehensive, specific analysis with quantitative details where possible
-3. Full HKEX App1A compliance and accurate cross-references
-4. Clear, structured presentation suitable for institutional investors
-5. Use semantic headings and subsections
-${isBusiness ? `6. Business content MUST align with accountants' report segments:
-   - Use exact segment names and ensure narrative consistency
-   - Include a table titled "Revenue Breakdown by Segment" with columns: Business Segment | Revenue % | Financial Statement Reference
-   - Ensure percentages and segment names match the segment configuration above
-` : ''}
+**CONTENT VALIDATION CHECKLIST:**
+✓ All user-provided key elements incorporated exactly as provided
+✓ All HKEX guidance requirements addressed comprehensively  
+✓ Professional investment banking language and tone
+✓ No placeholder text or generic examples
+✓ Specific quantitative details and metrics included
+✓ Proper structure matching guidance requirements
+✓ Institutional investor quality and depth
 
-**KEY ELEMENTS TO INCORPORATE:**
-${JSON.stringify(baseContext.keyElements, null, 2)}
+**REGULATORY REFERENCES:**
+${regulatoryRefs.length > 0 ? regulatoryRefs.map((ref: any) => `• ${ref.reference_No}: ${ref.particulars?.substring(0, 150) || 'Regulatory requirement'}`).join('\n') : 'Standard HKEX Main Board requirements'}
 
-Draft the section now, following the guidance first, then adapting tone from samples where appropriate.`;
+Generate the complete ${baseContext.sectionTitle} section content now, ensuring all requirements are met:`;
+  }
+
+  /**
+   * Extract specific HKEX guidance requirements from database
+   */
+  private extractHKEXGuidanceRequirements(guidance: any): string {
+    if (!guidance) return 'Standard HKEX Main Board Listing Rule requirements apply.';
+    
+    let requirements = '';
+    
+    if (guidance.Guidance) {
+      requirements += `HKEX Regulatory Guidance:\n${guidance.Guidance}\n\n`;
+    }
+    
+    if (guidance['contents requirements']) {
+      requirements += `Mandatory Content Requirements:\n${guidance['contents requirements']}\n\n`;
+    }
+    
+    if (guidance.contents) {
+      requirements += `Required Content Elements:\n${guidance.contents}\n\n`;
+    }
+    
+    if (guidance.references) {
+      requirements += `Regulatory References: ${guidance.references}`;
+    }
+    
+    return requirements || 'Standard HKEX Main Board requirements apply.';
+  }
+
+  /**
+   * Extract depth and detail requirements from business templates
+   */
+  private extractTemplateDepthRequirements(templates: any[]): string {
+    if (!templates || templates.length === 0) {
+      return 'Use professional investment banking standard depth and comprehensive detail.';
+    }
+    
+    let depthGuide = 'Based on template analysis, provide this level of detail:\n\n';
+    
+    // Analyze the first relevant template
+    const template = templates[0];
+    const templateFields = Object.entries(template || {});
+    const detailedFields = templateFields.filter(([key, value]) => 
+      typeof value === 'string' && value.length > 100
+    );
+    
+    if (detailedFields.length > 0) {
+      const avgLength = detailedFields.reduce((sum, [_, value]) => 
+        sum + (value as string).length, 0) / detailedFields.length;
+      
+      const hasComprehensiveExamples = detailedFields.some(([_, value]) => 
+        (value as string).includes('table') || 
+        (value as string).includes('Year') || 
+        (value as string).includes('specific') ||
+        (value as string).includes('established') ||
+        (value as string).includes('%')
+      );
+      
+      depthGuide += `• Target detail level: ${avgLength > 800 ? 'Comprehensive and thorough' : avgLength > 400 ? 'Detailed and specific' : 'Focused and clear'}\n`;
+      depthGuide += `• Include quantitative data and specific examples: ${hasComprehensiveExamples ? 'Yes - include tables, dates, percentages, and specific metrics' : 'Focus on qualitative analysis'}\n`;
+      depthGuide += `• Expected content depth: ${Math.round(avgLength * 0.8)} to ${Math.round(avgLength * 1.2)} characters per major topic\n`;
+      
+      if (hasComprehensiveExamples) {
+        depthGuide += '• Include detailed tables, specific dates, quantitative metrics, and comprehensive explanations\n';
+        depthGuide += '• Provide comprehensive coverage similar to template examples\n';
+      }
+      
+      // Add specific examples from templates if available
+      const exampleField = detailedFields.find(([key, _]) => 
+        key.toLowerCase().includes('overview') || 
+        key.toLowerCase().includes('business')
+      );
+      
+      if (exampleField) {
+        const [fieldName, fieldValue] = exampleField;
+        const excerpt = (fieldValue as string).substring(0, 200);
+        depthGuide += `\nTemplate Example (${fieldName}):\n"${excerpt}..."\n`;
+        depthGuide += 'Match this level of comprehensive detail and professional presentation.\n';
+      }
+    }
+    
+    return depthGuide;
   }
 
   /**
