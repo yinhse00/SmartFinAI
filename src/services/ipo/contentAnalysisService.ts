@@ -160,48 +160,69 @@ Provide 1-5 targeted edits maximum.`;
    * Build comprehensive analysis prompt
    */
   private buildAnalysisPrompt(content: string, sectionType: string, requirements: any): string {
+    const { hkexGuidance = [], businessTemplate = null, sectionRequirements = [] } = requirements;
+    
     return `
-You are an expert IPO prospectus analyzer. Analyze this content comprehensively like a code analyzer.
+You are an expert Hong Kong IPO prospectus analyzer specialized in HKEX Main Board requirements. Analyze this content against actual HKEX standards and industry best practices.
 
 CONTENT TO ANALYZE (${sectionType} section):
 ${content}
 
-REGULATORY REQUIREMENTS:
-${JSON.stringify(requirements, null, 2)}
+HKEX SECTION GUIDANCE (Actual regulatory requirements):
+${hkexGuidance.map(g => `
+- Section: ${g.Section || 'General'}
+- Requirements: ${g['contents requirements'] || 'Standard disclosure requirements'}
+- Guidance: ${g.Guidance || 'Follow HKEX standards'}
+- References: ${g.references || 'HKEX Listing Rules'}
+`).join('\n')}
 
-Perform comprehensive analysis and return structured results:
+BUSINESS TEMPLATE DEPTH REQUIREMENTS:
+${businessTemplate ? `
+Based on HKEX business section template, ensure coverage of:
+- Overview: ${businessTemplate.Overview ? 'Required with comprehensive description' : 'Standard overview needed'}
+- Competitive Strengths: ${businessTemplate['Competitive Strengths'] ? 'Detailed analysis required' : 'Basic strengths sufficient'}  
+- Business Model: ${businessTemplate['Business Model'] ? 'Comprehensive model explanation required' : 'Basic model description'}
+- Future Plans: ${businessTemplate['Future Plan'] ? 'Detailed strategic roadmap required' : 'General plans sufficient'}
+- Risk Management: ${businessTemplate['Internal control and risk management'] ? 'Comprehensive framework required' : 'Basic controls sufficient'}
+` : 'Standard HKEX requirements apply'}
+
+SPECIFIC SECTION REQUIREMENTS:
+${sectionRequirements.map(req => `- ${req}`).join('\n')}
+
+Perform comprehensive HKEX-compliant analysis and return structured results:
 
 STRUCTURAL_ISSUES:
-- Missing required subsections
-- Logical flow problems  
-- Inconsistent formatting
-- Poor organization
+- Missing HKEX-required subsections
+- Non-compliance with listing rule structure
+- Inconsistent with HKEX format requirements
+- Poor logical flow for investor clarity
 
 COMPLIANCE_GAPS:
-- Missing HKEX requirements
-- Regulatory violations
-- Disclosure deficiencies
-- Risk factor omissions
+- Missing HKEX App1A Part A requirements  
+- Insufficient disclosure depth per HKEX standards
+- Missing regulatory citations and references
+- Non-compliance with specific listing rule provisions
 
 QUALITY_METRICS:
-- Professional language: [score/10]
-- Technical accuracy: [score/10]
-- Completeness: [score/10]
-- Investor clarity: [score/10]
+- HKEX compliance level: [score/10]
+- Investment banking standard: [score/10] 
+- Content completeness vs template: [score/10]
+- Professional disclosure quality: [score/10]
 
 IMPROVEMENT_OPPORTUNITIES:
-- Quick wins (easy + high impact)
-- Content enhancements needed
-- Examples to add
-- Language improvements
+- Quick HKEX compliance wins
+- Template alignment improvements
+- Regulatory citation additions
+- Industry-specific enhancements
 
 OVERALL_SCORE: [0-100]
 
 MISSING_ELEMENTS:
-- Required disclosures not present
-- Standard section content gaps
+- HKEX-required disclosures not present
+- Template-required content gaps
+- Regulatory compliance deficiencies
 
-Be specific and actionable in your analysis.`;
+Focus on HKEX Main Board compliance and investment banking standards. Be specific about listing rule requirements and provide actionable compliance guidance.`;
   }
 
   /**
@@ -414,18 +435,84 @@ Be specific and actionable in your analysis.`;
 
   private async getRegulatoryRequirements(sectionType: string) {
     try {
-      // Use business templates as fallback for now
-      const { data } = await supabase
+      console.log(`🔍 Fetching HKEX requirements for section: ${sectionType}`);
+      
+      // Get HKEX section guidance
+      const { data: guidance, error: guidanceError } = await supabase
+        .from('ipo_prospectus_section_guidance')
+        .select('*')
+        .ilike('Section', `%${this.mapSectionTypeToGuidance(sectionType)}%`)
+        .limit(3);
+
+      if (guidanceError) {
+        console.warn('Error fetching section guidance:', guidanceError);
+      }
+
+      // Get business templates for depth understanding
+      const { data: templates, error: templateError } = await supabase
         .from('ipo_section_business_templates')
         .select('*')
         .limit(1)
         .maybeSingle();
-      
-      return data || {};
+
+      if (templateError) {
+        console.warn('Error fetching business templates:', templateError);
+      }
+
+      console.log(`✅ Found ${guidance?.length || 0} guidance items and ${templates ? 1 : 0} templates`);
+
+      return {
+        hkexGuidance: guidance || [],
+        businessTemplate: templates,
+        sectionRequirements: this.extractSectionRequirements(guidance, templates, sectionType)
+      };
     } catch (error) {
-      console.error('Error fetching requirements:', error);
-      return {};
+      console.error('Error fetching HKEX requirements:', error);
+      return { hkexGuidance: [], businessTemplate: null, sectionRequirements: [] };
     }
+  }
+
+  private mapSectionTypeToGuidance(sectionType: string): string {
+    const mappings = {
+      'business': 'Business',
+      'financial': 'Financial Information',
+      'risk': 'Risk Factors',
+      'use_of_proceeds': 'Use of Proceeds',
+      'directors': 'Directors',
+      'shareholding': 'Shareholding Structure',
+      'regulatory': 'Regulatory Environment'
+    };
+    return mappings[sectionType] || sectionType;
+  }
+
+  private extractSectionRequirements(guidance: any[], template: any, sectionType: string): string[] {
+    const requirements = [];
+    
+    if (guidance && guidance.length > 0) {
+      guidance.forEach(g => {
+        if (g['contents requirements']) {
+          requirements.push(g['contents requirements']);
+        }
+        if (g['Guidance']) {
+          requirements.push(`Guidance: ${g['Guidance']}`);
+        }
+      });
+    }
+    
+    if (template && sectionType === 'business') {
+      // Extract specific requirements from business template structure
+      const businessAreas = [
+        'Overview', 'Competitive Strengths', 'Business Strategies', 
+        'Business Model', 'Customers', 'Competition', 'Risk Management'
+      ];
+      businessAreas.forEach(area => {
+        if (template[area]) {
+          requirements.push(`${area}: Required based on HKEX template structure`);
+        }
+      });
+    }
+    
+    return requirements;
   }
 
   private createFallbackAnalysis(): ContentAnalysis {

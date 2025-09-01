@@ -45,11 +45,17 @@ export class EnhancedIPOAIChatService {
         );
       }
       
-      // Step 3: Regular content analysis
-      const proactiveAnalysis = await contentAnalysisService.getProactiveSuggestions(
-        currentContent,
-        sectionType
-      );
+      // Step 3: Regular content analysis with offline fallback
+      let proactiveAnalysis;
+      try {
+        proactiveAnalysis = await contentAnalysisService.getProactiveSuggestions(
+          currentContent,
+          sectionType
+        );
+      } catch (error) {
+        console.warn('Content analysis failed, using offline mode:', error);
+        proactiveAnalysis = this.createOfflineAnalysis(currentContent);
+      }
       
       // Step 4: Determine response type based on user message and analysis
       const responseType = this.determineResponseType(userMessage, proactiveAnalysis);
@@ -415,12 +421,63 @@ What would you like me to help with?`;
   }
 
   /**
+   * Create offline analysis fallback
+   */
+  private createOfflineAnalysis(content: string): ProactiveAnalysisResult {
+    const hasContent = content && content.trim().length > 50;
+    const contentLength = content?.length || 0;
+    
+    if (!hasContent) {
+      return {
+        hasIssues: true,
+        urgentIssues: [{
+          id: 'no_content',
+          type: 'structural',
+          severity: 'high',
+          title: 'Missing Content',
+          description: 'This section needs content to meet HKEX requirements',
+          location: { section: 'general' },
+          autoFixable: false
+        }],
+        quickWins: [],
+        summary: "No content detected. This section requires substantial content to meet HKEX disclosure requirements.",
+        nextSteps: ["Add content covering HKEX requirements", "Use AI assistance when online", "Review HKEX guidance materials"]
+      };
+    }
+    
+    // Basic offline analysis
+    const quickWins = [];
+    if (contentLength < 500) {
+      quickWins.push({
+        id: 'expand_content',
+        title: 'Expand Content',
+        description: 'Content appears brief for HKEX standards',
+        impact: 'medium',
+        effort: 'moderate',
+        suggestedAction: 'Add more detailed information and examples'
+      });
+    }
+    
+    return {
+      hasIssues: contentLength < 200,
+      urgentIssues: [],
+      quickWins,
+      summary: `Operating in offline mode. Basic analysis shows ${contentLength} characters of content.`,
+      nextSteps: ["Connect to internet for detailed HKEX analysis", "Review content against HKEX requirements", "Add specific examples and citations"]
+    };
+  }
+
+  /**
    * Create error response
    */
   private createErrorResponse(error: any): EnhancedChatResponse {
+    const isOfflineError = error?.message?.includes('API key') || error?.message?.includes('network') || error?.message?.includes('fetch');
+    
     return {
       type: 'GUIDANCE',
-      message: 'I encountered an issue while analyzing your content. Please try again or rephrase your request.',
+      message: isOfflineError 
+        ? 'Operating in offline mode. I can provide basic guidance, but for detailed HKEX analysis and content generation, please configure your API key settings.'
+        : 'I encountered an issue while analyzing your content. Please try again or rephrase your request.',
       confidence: 0.1
     };
   }

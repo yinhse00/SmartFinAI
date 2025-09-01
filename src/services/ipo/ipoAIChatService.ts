@@ -73,8 +73,10 @@ export class IPOAIChatService {
       console.log('🟡 API key check result:', hasKey);
       
       if (!hasKey) {
-        console.warn('⚠️ IPO Chat: No Grok API key available');
-        return this.createFallbackResponse('Please configure your API key in the settings to use the AI chat feature.');
+        console.warn('⚠️ IPO Chat: No API key available, using offline assistant');
+        const { offlineIPOAssistant } = await import('./offlineIPOAssistant');
+        const offlineResponse = await offlineIPOAssistant.getOfflineAssistance(userMessage, sectionType, currentContent);
+        return this.convertOfflineResponse(offlineResponse);
       }
 
       // Generate cache key with better uniqueness
@@ -309,7 +311,20 @@ export class IPOAIChatService {
   }
 
   /**
-   * Build enhanced prompt with regulatory context and sources - DRAFT-FOCUSED
+   * Convert offline response to standard format
+   */
+  private convertOfflineResponse(offlineResponse: any): IPOChatResponse {
+    return {
+      type: 'GUIDANCE',
+      message: offlineResponse.message,
+      sources: [],
+      suggestions: offlineResponse.suggestions || [],
+      confidence: offlineResponse.confidence
+    };
+  }
+
+  /**
+   * Build enhanced prompt with regulatory context and sources - HKEX-FOCUSED
    */
   private buildEnhancedPrompt(
     userMessage: string,
@@ -390,14 +405,15 @@ Company: ${sectionGuidance.project?.company_name || 'Not specified'}
    Format: "STRUCTURE_GUIDANCE: [recommended structure with content outline]"
    Use when: User needs help organizing content
 
-**DRAFTING PRIORITIES:**
-✅ ALWAYS provide concrete, implementable suggestions
+**CRITICAL DRAFTING REQUIREMENTS:**
+✅ Use ACTUAL HKEX guidance from database (above) - NOT generic templates
+✅ Generate COMPLETED content with company-specific information
+✅ NO placeholder text like "[Company Name]" or "[Insert details]" 
+✅ Reference specific HKEX listing rules and guidance items
 ✅ Write in professional investment banking language
 ✅ Ensure HKEX Main Board compliance (App1A Part A)
-✅ Include specific regulatory references
-✅ Consider industry-specific requirements
-✅ Make content ready-to-use in prospectus
-✅ Focus on ACTIONABLE improvements user can apply immediately
+✅ Include regulatory citations from guidance sources
+✅ Focus on ACTIONABLE, completed content ready for prospectus
 
 **KEY COMPLIANCE AREAS:**
 - App1A Part A disclosure requirements
