@@ -2,7 +2,7 @@
 import { ipoAIChatService } from './ipoAIChatService';
 import { contentAnalysisService } from './contentAnalysisService';
 import { sectionAnalysisService } from './sectionAnalysisService';
-import { grokService } from '@/services/grokService';
+import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 
 interface EnhancedChatResponse {
@@ -132,7 +132,7 @@ UPDATED_CONTENT:
 [complete updated content here]
 `;
 
-      const response = await grokService.generateResponse({
+      const response = await simpleAiClient.generateContent({
         prompt: fixPrompt,
         metadata: { requestType: 'auto_fix' }
       });
@@ -198,7 +198,7 @@ UPDATED_CONTENT:
 [complete updated content with improvement applied]
 `;
 
-      const response = await grokService.generateResponse({
+      const response = await simpleAiClient.generateContent({
         prompt: improvementPrompt,
         metadata: { requestType: 'apply_improvement' }
       });
@@ -273,7 +273,7 @@ UPDATED_CONTENT:
       );
 
       // Get AI response with full context
-      const response = await grokService.generateResponse({
+      const response = await simpleAiClient.generateContent({
         prompt: enhancedPrompt,
         metadata: { 
           requestType: 'amendment_with_review',

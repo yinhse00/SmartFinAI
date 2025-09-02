@@ -1,8 +1,10 @@
 import { supabase } from '@/integrations/supabase/client';
-import { grokService } from '@/services/grokService';
+import { simpleAiClient } from './simpleAiClient';
 import { contextService } from '@/services/regulatory/contextService';
 import { ipoMessageFormatter } from './ipoMessageFormatter';
 import { commandProcessor, CommandAnalysis } from './commandProcessor';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
+import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 
 interface SourceReference {
   type: 'regulation' | 'template' | 'guidance' | 'faq';
@@ -67,9 +69,9 @@ export class IPOAIChatService {
 
       console.log('✅ Input validation passed');
       
-      // Check if Grok API key is available
+      // Check if AI API key is available through preferences
       console.log('🟡 Checking API key availability...');
-      const hasKey = grokService.hasApiKey();
+      const hasKey = await this.checkApiKeyAvailability();
       console.log('🟡 API key check result:', hasKey);
       
       if (!hasKey) {
@@ -113,9 +115,9 @@ export class IPOAIChatService {
         commandAnalysis
       );
 
-      console.log('IPO Chat: Generating response via Grok...');
-      // Generate response using Grok with enhanced error handling
-      const response = await grokService.generateResponse({
+      console.log('IPO Chat: Generating response via AI...');
+      // Generate response using SimpleAI client with enhanced error handling
+      const response = await simpleAiClient.generateContent({
         prompt,
         metadata: {
           projectId,
@@ -145,7 +147,7 @@ export class IPOAIChatService {
       console.error('Error message:', error?.message);
       console.error('Error stack:', error?.stack);
       console.error('Input params:', { userMessage, projectId, sectionType });
-      console.error('API key available:', !!grokService.hasApiKey());
+      console.error('API key available:', await this.checkApiKeyAvailability());
       
       // Log the exact step where it failed
       if (error?.message?.includes('Project ID')) {
@@ -161,13 +163,34 @@ export class IPOAIChatService {
       } else {
         console.error('❌ FAILURE: Unknown error - investigating service chain...');
         console.error('Available services check:');
-        console.error('- grokService available:', typeof grokService);
+        console.error('- simpleAiClient available:', typeof simpleAiClient);
         console.error('- contextService available:', typeof contextService);
         console.error('- supabase available:', typeof supabase);
       }
       
       // Return user-friendly error response with more specificity
       return this.createErrorResponse(error);
+    }
+  }
+
+  /**
+   * Check if API key is available for the preferred IPO provider
+   */
+  private async checkApiKeyAvailability(): Promise<boolean> {
+    try {
+      const preference = getFeatureAIPreference('ipo');
+      
+      if (preference.provider === 'grok') {
+        return hasGrokApiKey();
+      } else if (preference.provider === 'google') {
+        return hasGoogleApiKey();
+      }
+      
+      // Fallback: check if any provider has a key
+      return hasGrokApiKey() || hasGoogleApiKey();
+    } catch (error) {
+      console.error('Error checking API key availability:', error);
+      return false;
     }
   }
 
@@ -665,7 +688,7 @@ Respond with the most actionable assistance to improve their IPO prospectus draf
     
     let message = '';
     if (isApiKeyError) {
-      message = 'Please check your API key configuration. Go to settings to verify your Grok API key is correctly set up.';
+      message = '🔐 **API Key Configuration Required**\n\nTo use the IPO AI Assistant, please configure your API key:\n\n1. Go to **Profile → API Keys** section\n2. Add your Grok (X.AI) or Google AI API key\n3. In **Profile → AI Preferences**, set your preferred provider for IPO features\n\nOnce configured, the AI assistant will help convert your casual language into professional IPO prospectus content.';
     } else if (error?.message?.includes('timeout')) {
       message = 'The request timed out. Please try again with a shorter message or check your internet connection.';
     } else if (error?.message?.includes('network')) {

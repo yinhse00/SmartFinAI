@@ -10,11 +10,16 @@ import {
   X, Send, Bot, User, Loader2, 
   Brain, Target, CheckCircle,
   Building, BookOpen, Edit, Lightbulb,
-  ChevronDown, ChevronUp, Minimize2
+  ChevronDown, ChevronUp, Minimize2, 
+  AlertCircle, Settings
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { ProactiveSuggestions } from './ProactiveSuggestions';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
+import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
+import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
+import { useNavigate } from 'react-router-dom';
+import { AIProvider } from '@/types/aiProvider';
 
 interface IPOAIChatProps {
   projectId: string;
@@ -49,6 +54,8 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   
   const [inputValue, setInputValue] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [apiKeyStatus, setApiKeyStatus] = useState<{ hasKey: boolean; provider?: AIProvider }>({ hasKey: false });
+  const navigate = useNavigate();
 
   // Auto-analyze content when it changes
   useEffect(() => {
@@ -56,6 +63,36 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
       analyzeCurrentContent();
     }
   }, [currentContent, analyzeCurrentContent]);
+
+  // Check API key status
+  useEffect(() => {
+    const checkApiKeys = () => {
+      const preference = getFeatureAIPreference('ipo');
+      let hasKey = false;
+      let provider = preference.provider;
+      
+      if (preference.provider === AIProvider.GROK) {
+        hasKey = hasGrokApiKey();
+      } else if (preference.provider === AIProvider.GOOGLE) {
+        hasKey = hasGoogleApiKey();
+      }
+      
+      // Fallback: check if any provider has a key
+      if (!hasKey) {
+        if (hasGrokApiKey()) {
+          hasKey = true;
+          provider = AIProvider.GROK;
+        } else if (hasGoogleApiKey()) {
+          hasKey = true;
+          provider = AIProvider.GOOGLE;
+        }
+      }
+      
+      setApiKeyStatus({ hasKey, provider });
+    };
+    
+    checkApiKeys();
+  }, []);
 
   const handleSendMessage = () => {
     if (!inputValue.trim() || isProcessing) return;
@@ -78,6 +115,9 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
           <CardTitle className="text-base flex items-center gap-2">
             <Brain className="h-4 w-4" />
             AI Assistant
+            {!apiKeyStatus.hasKey && (
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+            )}
           </CardTitle>
           <div className="flex items-center gap-1">
             <Button 
@@ -94,9 +134,28 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
           </div>
         </div>
         {!isCollapsed && (
-          <p className="text-xs text-muted-foreground">
-            {selectedSection} section
-          </p>
+          <>
+            <p className="text-xs text-muted-foreground">
+              {selectedSection} section
+            </p>
+            {!apiKeyStatus.hasKey && (
+              <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md p-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <p className="text-xs text-amber-800">API key required for AI assistance</p>
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="h-6 text-xs"
+                  onClick={() => navigate('/profile')}
+                >
+                  <Settings className="h-3 w-3 mr-1" />
+                  Setup
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </CardHeader>
       
