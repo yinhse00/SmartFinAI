@@ -14,6 +14,12 @@ interface ChatMessage {
   proactiveAnalysis?: ProactiveAnalysisResult;
   targetedEdits?: TargetedEdit[];
   confidence?: number;
+  suggestedContent?: string;
+  isDraftable?: boolean;
+  changePreview?: {
+    before: string;
+    after: string;
+  };
 }
 
 interface UseEnhancedIPOAIChatProps {
@@ -95,7 +101,13 @@ export const useEnhancedIPOAIChat = ({
         responseType: response.type,
         proactiveAnalysis: response.proactiveAnalysis,
         targetedEdits: response.targetedEdits,
-        confidence: response.confidence
+        confidence: response.confidence,
+        suggestedContent: response.updatedContent,
+        isDraftable: !!response.updatedContent,
+        changePreview: response.updatedContent ? {
+          before: currentContent.substring(0, 200) + '...',
+          after: response.updatedContent.substring(0, 200) + '...'
+        } : undefined
       };
 
       setMessages(prev => [...prev, aiChatMessage]);
@@ -215,6 +227,34 @@ export const useEnhancedIPOAIChat = ({
     });
   }, [analyzeCurrentContent, toast]);
 
+  // Apply suggested content directly from AI message
+  const applyDirectSuggestion = useCallback(async (suggestedContent: string) => {
+    try {
+      if (onContentUpdate) {
+        onContentUpdate(suggestedContent);
+        
+        // Add confirmation message
+        const confirmationMessage: ChatMessage = {
+          id: `confirmation-${Date.now()}`,
+          type: 'ai',
+          content: '✅ Changes applied successfully! Your draft has been updated with the suggested content.',
+          timestamp: new Date(),
+          responseType: 'CONTENT_UPDATE',
+          confidence: 1.0
+        };
+        
+        setMessages(prev => [...prev, confirmationMessage]);
+        
+        // Refresh analysis after applying changes
+        setTimeout(() => {
+          analyzeCurrentContent();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error('Error applying suggestion:', error);
+    }
+  }, [onContentUpdate, analyzeCurrentContent]);
+
   return {
     messages,
     isProcessing,
@@ -222,6 +262,7 @@ export const useEnhancedIPOAIChat = ({
     processMessage,
     applyAutoFix,
     applyImprovement,
+    applyDirectSuggestion,
     refreshAnalysis,
     analyzeCurrentContent
   };

@@ -16,6 +16,15 @@ export interface Message {
   originalContent?: string;
   translationInProgress?: boolean;
   isTranslated?: boolean;
+  // IPO AI Features
+  suggestedContent?: string;
+  isDraftable?: boolean;
+  confidence?: number;
+  changePreview?: {
+    before: string;
+    after: string;
+    location?: string;
+  };
   metadata?: {
     financialQueryType?: string;
     reasoning?: string;

@@ -21,6 +21,66 @@ interface EnhancedChatResponse {
 export class EnhancedIPOAIChatService {
   
   /**
+   * Extract suggested content from AI response for direct application
+   */
+  private extractSuggestedContent(response: string): { content: string; confidence: number } | null {
+    // Look for content blocks marked for implementation
+    const contentMarkers = [
+      /```(?:suggested|updated|revised|improved)?\s*([\s\S]*?)```/gi,
+      /SUGGESTED_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
+      /UPDATED_TEXT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
+      /REVISED_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi
+    ];
+
+    for (const marker of contentMarkers) {
+      const matches = response.match(marker);
+      if (matches && matches.length > 0) {
+        const content = matches[0]
+          .replace(/```(?:suggested|updated|revised|improved)?/gi, '')
+          .replace(/```/g, '')
+          .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:/gi, '')
+          .trim();
+        
+        if (content.length > 50) { // Ensure meaningful content
+          const confidence = this.calculateContentConfidence(response, content);
+          return { content, confidence };
+        }
+      }
+    }
+
+    // Fallback: look for any substantial content block
+    const lines = response.split('\n');
+    const contentLines = lines.filter(line => 
+      line.trim().length > 30 && 
+      !line.includes('suggest') && 
+      !line.includes('recommend') &&
+      !line.match(/^(here|this|consider|you|i)/i)
+    );
+
+    if (contentLines.length >= 3) {
+      const content = contentLines.join('\n').trim();
+      return { content, confidence: 0.6 };
+    }
+
+    return null;
+  }
+
+  /**
+   * Calculate confidence score for suggested content
+   */
+  private calculateContentConfidence(response: string, content: string): number {
+    let confidence = 0.7; // Base confidence
+    
+    // Higher confidence for structured responses
+    if (response.includes('SUGGESTED_CONTENT') || response.includes('UPDATED_TEXT')) confidence += 0.2;
+    if (response.includes('regulatory') || response.includes('HKEX')) confidence += 0.1;
+    if (content.length > 200) confidence += 0.1;
+    if (content.includes('pursuant to') || content.includes('in accordance with')) confidence += 0.1;
+    
+    return Math.min(confidence, 1.0);
+  }
+
+  /**
    * Process message with proactive analysis (like Lovable's code analysis)
    */
   async processMessageWithAnalysis(
@@ -81,7 +141,17 @@ export class EnhancedIPOAIChatService {
             sectionType,
             currentContent
           );
-          return this.enhanceOriginalResponse(originalResponse, proactiveAnalysis);
+          
+          // Extract suggested content if present
+          const suggestedContent = this.extractSuggestedContent(originalResponse.message);
+          const enhancedResponse = this.enhanceOriginalResponse(originalResponse, proactiveAnalysis);
+          
+          if (suggestedContent) {
+            enhancedResponse.updatedContent = suggestedContent.content;
+            enhancedResponse.confidence = Math.max(enhancedResponse.confidence, suggestedContent.confidence);
+          }
+          
+          return enhancedResponse;
           
         default:
           return this.createGuidanceResponse(userMessage, proactiveAnalysis);

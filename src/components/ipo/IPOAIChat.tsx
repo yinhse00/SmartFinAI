@@ -36,13 +36,14 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
   onContentUpdate,
   onClose
 }) => {
-  const { 
-    messages, 
-    isProcessing, 
+  const {
+    messages,
+    isProcessing,
     currentAnalysis,
-    processMessage, 
+    processMessage,
     applyAutoFix,
     applyImprovement,
+    applyDirectSuggestion,
     refreshAnalysis,
     analyzeCurrentContent
   } = useEnhancedIPOAIChat({

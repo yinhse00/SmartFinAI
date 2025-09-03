@@ -4,6 +4,7 @@ import { Card } from '@/components/ui/card';
 import { MessageContent } from './message/MessageContent';
 import { MessageActions } from './message/MessageActions';
 import { MessageError } from './message/MessageError';
+import { ImplementButton } from './message/ImplementButton';
 import { useMessageFormatting } from './hooks/useMessageFormatting';
 import { getInitialVisibleChars, getCardClassName } from './utils/messageUtils';
 import { Message } from './ChatMessage';
@@ -13,13 +14,19 @@ interface ChatMessageProps {
   onRetry?: () => void;
   onTypingProgress?: (progress: number) => void;
   isTranslating?: boolean;
+  currentContent?: string;
+  onImplementSuggestion?: (content: string) => void;
+  isImplementing?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
   message,
   onRetry,
   onTypingProgress,
-  isTranslating = false
+  isTranslating = false,
+  currentContent = '',
+  onImplementSuggestion,
+  isImplementing = false
 }) => {
   // Use consistent property names - prefer 'isUser' over 'sender'
   const isUserMessage = message.isUser ?? (message.sender === 'user');
@@ -94,6 +101,16 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
             references={references}
             isTruncated={isTruncated}
           />
+
+          {/* Implement Button for AI suggestions */}
+          {isBot && onImplementSuggestion && (
+            <ImplementButton
+              message={message}
+              currentContent={currentContent}
+              onImplement={onImplementSuggestion}
+              isImplementing={isImplementing}
+            />
+          )}
         </Card>
       </div>
     </div>
