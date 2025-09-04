@@ -15,7 +15,8 @@ import {
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { ProactiveSuggestions } from './ProactiveSuggestions';
-import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
+import { ChatMessage } from '@/components/chat/ChatMessage';
+import { Message } from '@/components/chat/ChatMessage';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
@@ -178,93 +179,29 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
         {/* Messages */}
         <ScrollArea className="flex-1 px-4 min-h-0" type="always">
           <div className="space-y-4 pb-4 min-h-full">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex gap-3 ${
-                  message.type === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
-                {message.type === 'ai' && (
-                  <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center shrink-0 mt-1">
-                    <Bot className="h-3 w-3 text-primary-foreground" />
-                  </div>
-                )}
-                
-                <div
-                  className={`max-w-[80%] p-3 rounded-lg text-sm ${
-                    message.type === 'user'
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                  }`}
-                >
-                  {message.type === 'user' ? (
-                    <p className="leading-relaxed whitespace-pre-line">{message.content}</p>
-                  ) : (
-                    <div 
-                      dangerouslySetInnerHTML={{ 
-                        __html: ipoMessageFormatter.formatMessage(message.content) 
-                      }}
-                      className="regulatory-content"
-                    />
-                  )}
-                  
-                  {/* Enhanced Response Features */}
-                  {message.type === 'ai' && (
-                    <div className="mt-3 space-y-2">
-                      {/* Response Type Badge */}
-                      {message.responseType && (
-                        <div className="flex items-center gap-2">
-                          <Badge 
-                            variant={message.responseType.includes('UPDATE') ? 'default' : 'secondary'}
-                            className="text-xs"
-                          >
-                            {message.responseType === 'PROACTIVE_ANALYSIS' && <Brain className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'TARGETED_IMPROVEMENTS' && <Target className="h-3 w-3 mr-1" />}
-                            {message.responseType === 'CONTENT_UPDATE' && <Edit className="h-3 w-3 mr-1" />}
-                            {message.responseType.replace('_', ' ')}
-                          </Badge>
-                          {message.confidence && (
-                            <Badge variant="outline" className="text-xs">
-                              {Math.round(message.confidence * 100)}% confidence
-                            </Badge>
-                          )}
-                        </div>
-                      )}
+            {messages.map((message) => {
+              // Convert local ChatMessage to standard Message interface
+              const standardMessage: Message = {
+                id: message.id,
+                content: message.content,
+                isUser: message.isUser ?? (message.type === 'user'),
+                timestamp: message.timestamp,
+                confidence: message.confidence,
+                suggestedContent: message.suggestedContent,
+                isDraftable: message.isDraftable,
+                changePreview: message.changePreview
+              };
 
-                      {/* Targeted Edits Display */}
-                      {message.targetedEdits && message.targetedEdits.length > 0 && (
-                        <div className="space-y-2">
-                          <p className="text-xs font-medium">Targeted Improvements:</p>
-                          {message.targetedEdits.map((edit, index) => (
-                            <div key={edit.id} className="bg-blue-50 border border-blue-200 rounded p-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <div className="flex-1">
-                                  <p className="text-xs font-medium text-blue-800">{edit.title}</p>
-                                  <p className="text-xs text-blue-600 mt-1">{edit.description}</p>
-                                  <p className="text-xs text-blue-500 mt-1 font-mono bg-blue-100 p-1 rounded">
-                                    {edit.previewText}
-                                  </p>
-                                </div>
-                                <Badge variant="outline" className="text-xs">
-                                  {Math.round(edit.confidence * 100)}%
-                                </Badge>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-                
-                {message.type === 'user' && (
-                  <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center shrink-0 mt-1">
-                    <User className="h-3 w-3" />
-                  </div>
-                )}
-              </div>
-            ))}
+              return (
+                <ChatMessage
+                  key={message.id}
+                  message={standardMessage}
+                  currentContent={currentContent}
+                  onImplementSuggestion={applyDirectSuggestion}
+                  isImplementing={isProcessing}
+                />
+              );
+            })}
             
             {isProcessing && (
               <div className="flex justify-start">
