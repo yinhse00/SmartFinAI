@@ -8,6 +8,7 @@ import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 interface ChatMessage {
   id: string;
   type: 'user' | 'ai';
+  isUser?: boolean; // Add compatibility with standard Message interface
   content: string;
   timestamp: Date;
   responseType?: string;
@@ -39,6 +40,7 @@ export const useEnhancedIPOAIChat = ({
     {
       id: '1',
       type: 'ai',
+      isUser: false,
       content: 'Hello! I\'m your AI assistant for IPO prospectus drafting. I can help analyze content, fix compliance issues, and suggest improvements. How can I assist you today?',
       timestamp: new Date(),
       responseType: 'GUIDANCE',
@@ -74,6 +76,7 @@ export const useEnhancedIPOAIChat = ({
     const userChatMessage: ChatMessage = {
       id: Date.now().toString(),
       type: 'user',
+      isUser: true,
       content: userMessage,
       timestamp: new Date()
     };
@@ -96,6 +99,7 @@ export const useEnhancedIPOAIChat = ({
       const aiChatMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
+        isUser: false,
         content: response.message,
         timestamp: new Date(),
         responseType: response.type,
@@ -132,6 +136,7 @@ export const useEnhancedIPOAIChat = ({
       const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
+        isUser: false,
         content: 'I encountered an error processing your request. Please check your API key configuration and try again.',
         timestamp: new Date()
       };
@@ -237,6 +242,7 @@ export const useEnhancedIPOAIChat = ({
         const confirmationMessage: ChatMessage = {
           id: `confirmation-${Date.now()}`,
           type: 'ai',
+          isUser: false,
           content: '✅ Changes applied successfully! Your draft has been updated with the suggested content.',
           timestamp: new Date(),
           responseType: 'CONTENT_UPDATE',
