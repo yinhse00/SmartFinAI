@@ -21,45 +21,93 @@ interface EnhancedChatResponse {
 export class EnhancedIPOAIChatService {
   
   /**
-   * Extract suggested content from AI response for direct application
+   * Extract suggested content from AI response for direct application - Enhanced for proactive detection
    */
   private extractSuggestedContent(response: string): { content: string; confidence: number } | null {
-    // Look for content blocks marked for implementation
+    // Enhanced content markers for better detection
     const contentMarkers = [
-      /```(?:suggested|updated|revised|improved)?\s*([\s\S]*?)```/gi,
+      /```(?:suggested|updated|revised|improved|content|text)?\s*([\s\S]*?)```/gi,
       /SUGGESTED_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
       /UPDATED_TEXT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
-      /REVISED_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi
+      /REVISED_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
+      /IMPROVED_VERSION:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi,
+      /NEW_CONTENT:\s*([\s\S]*?)(?=\n\n|\nEND|$)/gi
     ];
 
     for (const marker of contentMarkers) {
       const matches = response.match(marker);
       if (matches && matches.length > 0) {
         const content = matches[0]
-          .replace(/```(?:suggested|updated|revised|improved)?/gi, '')
+          .replace(/```(?:suggested|updated|revised|improved|content|text)?/gi, '')
           .replace(/```/g, '')
-          .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:/gi, '')
+          .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:|IMPROVED_VERSION:|NEW_CONTENT:/gi, '')
           .trim();
         
-        if (content.length > 50) { // Ensure meaningful content
+        if (content.length > 50) {
           const confidence = this.calculateContentConfidence(response, content);
           return { content, confidence };
         }
       }
     }
 
-    // Fallback: look for any substantial content block
-    const lines = response.split('\n');
-    const contentLines = lines.filter(line => 
-      line.trim().length > 30 && 
-      !line.includes('suggest') && 
-      !line.includes('recommend') &&
-      !line.match(/^(here|this|consider|you|i)/i)
-    );
+    // Enhanced proactive detection: Look for improvement patterns
+    const improvementPatterns = [
+      /(?:here'?s?\s+(?:a\s+)?(?:better|improved|enhanced|revised)\s+version[:\s]*)([\s\S]*?)(?=\n\n|$)/gi,
+      /(?:try\s+this\s+instead[:\s]*)([\s\S]*?)(?=\n\n|$)/gi,
+      /(?:i\s+(?:suggest|recommend)\s+changing\s+(?:this\s+)?to[:\s]*)([\s\S]*?)(?=\n\n|$)/gi,
+      /(?:a\s+more\s+professional\s+version\s+would\s+be[:\s]*)([\s\S]*?)(?=\n\n|$)/gi
+    ];
 
-    if (contentLines.length >= 3) {
-      const content = contentLines.join('\n').trim();
-      return { content, confidence: 0.6 };
+    for (const pattern of improvementPatterns) {
+      const matches = response.match(pattern);
+      if (matches && matches.length > 0) {
+        const content = matches[0]
+          .replace(/here'?s?\s+(?:a\s+)?(?:better|improved|enhanced|revised)\s+version[:\s]*/gi, '')
+          .replace(/try\s+this\s+instead[:\s]*/gi, '')
+          .replace(/i\s+(?:suggest|recommend)\s+changing\s+(?:this\s+)?to[:\s]*/gi, '')
+          .replace(/a\s+more\s+professional\s+version\s+would\s+be[:\s]*/gi, '')
+          .trim();
+        
+        if (content.length > 50) {
+          const confidence = this.calculateContentConfidence(response, content);
+          return { content, confidence: confidence + 0.1 }; // Boost confidence for improvement patterns
+        }
+      }
+    }
+
+    // Proactive fallback: Look for substantial content blocks that could be implementations
+    const lines = response.split('\n').filter(line => line.trim().length > 0);
+    let potentialContent = [];
+    let inContentBlock = false;
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      
+      // Skip meta/instructional text
+      if (trimmed.match(/^(here|this|consider|you|i|to|for|the|it|that|this\s+would|this\s+could)/i) ||
+          trimmed.includes('suggest') || trimmed.includes('recommend') || 
+          trimmed.includes('should') || trimmed.includes('would') ||
+          trimmed.length < 20) {
+        if (inContentBlock && potentialContent.length > 0) break; // End of content block
+        continue;
+      }
+      
+      // Detect start of content block
+      if (!inContentBlock && trimmed.length > 30 && !trimmed.endsWith('?')) {
+        inContentBlock = true;
+      }
+      
+      if (inContentBlock) {
+        potentialContent.push(line);
+      }
+    }
+
+    // Check if we found substantial implementable content
+    if (potentialContent.length >= 2) {
+      const content = potentialContent.join('\n').trim();
+      if (content.length > 100) { // Ensure meaningful content
+        return { content, confidence: 0.7 };
+      }
     }
 
     return null;
@@ -134,7 +182,7 @@ export class EnhancedIPOAIChatService {
           return this.createTargetedImprovementsResponse(targetedEdits, userMessage);
           
         case 'CONTENT_UPDATE':
-          // Use existing service for content updates
+          // Enhanced content update with proactive suggestion generation
           const originalResponse = await ipoAIChatService.processMessage(
             userMessage,
             projectId,
@@ -143,8 +191,38 @@ export class EnhancedIPOAIChatService {
           );
           
           // Extract suggested content if present
-          const suggestedContent = this.extractSuggestedContent(originalResponse.message);
+          let suggestedContent = this.extractSuggestedContent(originalResponse.message);
           const enhancedResponse = this.enhanceOriginalResponse(originalResponse, proactiveAnalysis);
+          
+          // If no implementable content found, generate it proactively
+          if (!suggestedContent && (userMessage.toLowerCase().includes('improve') || 
+              userMessage.toLowerCase().includes('enhance') || 
+              userMessage.toLowerCase().includes('better'))) {
+            
+            const fallbackPrompt = `${userMessage}
+
+CURRENT CONTENT:
+${currentContent}
+
+Please provide the complete improved content ready for implementation. Format as:
+
+IMPROVED_VERSION:
+[complete updated content here]`;
+            
+            try {
+              const fallbackResponse = await simpleAiClient.generateContent({
+                prompt: fallbackPrompt,
+                metadata: { requestType: 'proactive_content_generation' }
+              });
+              
+              suggestedContent = this.extractSuggestedContent(fallbackResponse.text);
+              if (suggestedContent) {
+                enhancedResponse.message += `\n\n✨ **Ready to Implement**\nI've prepared an improved version of your content below.`;
+              }
+            } catch (error) {
+              console.warn('Fallback content generation failed:', error);
+            }
+          }
           
           if (suggestedContent) {
             enhancedResponse.updatedContent = suggestedContent.content;
@@ -372,23 +450,40 @@ UPDATED_CONTENT:
   }
 
   /**
-   * Determine response type based on user input and analysis
+   * Determine response type based on user input and analysis - Enhanced for proactive content updates
    */
   private determineResponseType(userMessage: string, analysis: ProactiveAnalysisResult): string {
     const message = userMessage.toLowerCase();
     
-    // If user asks for analysis or there are urgent issues
-    if (message.includes('analyze') || message.includes('check') || message.includes('review')) {
+    // Prioritize CONTENT_UPDATE for any actionable requests (like Lovable AI)
+    const contentUpdateKeywords = [
+      'improve', 'enhance', 'better', 'fix', 'optimize', 'refine',
+      'make', 'add', 'change', 'update', 'modify', 'edit',
+      'rewrite', 'revise', 'adjust', 'polish', 'professional',
+      'compliance', 'structure', 'examples', 'details', 'citations'
+    ];
+    
+    // Check if message contains any actionable keywords
+    const hasActionableContent = contentUpdateKeywords.some(keyword => message.includes(keyword));
+    
+    if (hasActionableContent) {
+      return 'CONTENT_UPDATE'; // Always generate implementable content for improvements
+    }
+    
+    // Analysis requests
+    if (message.includes('analyze') || message.includes('check') || message.includes('review') ||
+        message.includes('assess') || message.includes('evaluate')) {
       return 'PROACTIVE_ANALYSIS';
     }
     
-    // If user asks for specific improvements
-    if (message.includes('improve') || message.includes('enhance') || message.includes('fix')) {
-      return 'TARGETED_IMPROVEMENTS';
+    // Guidance requests
+    if (message.includes('guidance') || message.includes('help') || message.includes('how to') || 
+        message.includes('best practice') || message.includes('recommend') || message.includes('advice')) {
+      return 'GUIDANCE';
     }
     
-    // If user asks for content changes
-    if (message.includes('add') || message.includes('update') || message.includes('change') || message.includes('write')) {
+    // Default: if we have actionable analysis results, provide content updates
+    if (analysis.urgentIssues.length > 0 || analysis.quickWins.length > 0) {
       return 'CONTENT_UPDATE';
     }
     
