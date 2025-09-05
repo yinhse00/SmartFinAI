@@ -6,11 +6,13 @@ import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 
 interface EnhancedChatResponse {
-  type: 'PROACTIVE_ANALYSIS' | 'TARGETED_IMPROVEMENTS' | 'CONTENT_UPDATE' | 'GUIDANCE';
+  type: 'PROACTIVE_ANALYSIS' | 'TARGETED_IMPROVEMENTS' | 'CONTENT_UPDATE' | 'GUIDANCE' | 'TABULAR_CONTENT' | 'SECTION_STRUCTURE' | 'COMPLIANCE_ENHANCEMENT';
   message: string;
   proactiveAnalysis?: ProactiveAnalysisResult;
   targetedEdits?: TargetedEdit[];
   updatedContent?: string;
+  tabularData?: any;
+  sectionStructure?: any;
   confidence: number;
 }
 
@@ -182,17 +184,16 @@ export class EnhancedIPOAIChatService {
           return this.createTargetedImprovementsResponse(targetedEdits, userMessage);
           
         case 'CONTENT_UPDATE':
-          // Enhanced content update with proactive suggestion generation
-          const originalResponse = await ipoAIChatService.processMessage(
-            userMessage,
-            projectId,
-            sectionType,
-            currentContent
-          );
+          // Enhanced content update with HKIPO-compliant suggestion generation
+          const enhancedPrompt = this.buildHKIPOEnhancedPrompt(userMessage, sectionType, currentContent);
+          const originalResponse = await simpleAiClient.generateContent({
+            prompt: enhancedPrompt,
+            metadata: { requestType: 'hkipo_compliant_content_update' }
+          });
           
           // Extract suggested content if present
-          let suggestedContent = this.extractSuggestedContent(originalResponse.message);
-          const enhancedResponse = this.enhanceOriginalResponse(originalResponse, proactiveAnalysis);
+          let suggestedContent = this.extractSuggestedContent(originalResponse.text);
+          const enhancedResponse = this.enhanceOriginalResponseWithHKIPO(originalResponse, proactiveAnalysis);
           
           // If no implementable content found, generate it proactively
           if (!suggestedContent && (userMessage.toLowerCase().includes('improve') || 
@@ -211,8 +212,8 @@ IMPROVED_VERSION:
             
             try {
               const fallbackResponse = await simpleAiClient.generateContent({
-                prompt: fallbackPrompt,
-                metadata: { requestType: 'proactive_content_generation' }
+                prompt: this.buildHKIPOFallbackPrompt(fallbackPrompt, sectionType),
+                metadata: { requestType: 'hkipo_proactive_content_generation' }
               });
               
               suggestedContent = this.extractSuggestedContent(fallbackResponse.text);
@@ -230,6 +231,15 @@ IMPROVED_VERSION:
           }
           
           return enhancedResponse;
+
+        case 'TABULAR_CONTENT':
+          return await this.createTabularContentResponse(userMessage, sectionType, currentContent, proactiveAnalysis);
+          
+        case 'SECTION_STRUCTURE':
+          return await this.createSectionStructureResponse(userMessage, sectionType, currentContent, proactiveAnalysis);
+          
+        case 'COMPLIANCE_ENHANCEMENT':
+          return await this.createComplianceEnhancementResponse(userMessage, sectionType, currentContent, proactiveAnalysis);
           
         default:
           return this.createGuidanceResponse(userMessage, proactiveAnalysis);
@@ -450,17 +460,52 @@ UPDATED_CONTENT:
   }
 
   /**
-   * Determine response type based on user input and analysis - Enhanced for proactive content updates
+   * Determine response type based on user input and analysis - Enhanced for HKIPO proactive content updates
    */
   private determineResponseType(userMessage: string, analysis: ProactiveAnalysisResult): string {
     const message = userMessage.toLowerCase();
+    
+    // HKIPO-specific tabular content detection
+    const tabularKeywords = [
+      'table', 'customers', 'suppliers', 'licences', 'permits', 'awards',
+      'top five', 'major customers', 'major suppliers', 'track record',
+      'revenue breakdown', 'segment', 'breakdown'
+    ];
+    
+    const hasTabularRequest = tabularKeywords.some(keyword => message.includes(keyword));
+    if (hasTabularRequest) {
+      return 'TABULAR_CONTENT';
+    }
+    
+    // HKIPO section structure requests
+    const structureKeywords = [
+      'structure', 'organize', 'format', 'section', 'headings', 'outline',
+      'flow', 'layout', 'numbering', 'headers'
+    ];
+    
+    const hasStructureRequest = structureKeywords.some(keyword => message.includes(keyword));
+    if (hasStructureRequest) {
+      return 'SECTION_STRUCTURE';
+    }
+    
+    // HKIPO compliance enhancement requests
+    const complianceKeywords = [
+      'hkipo', 'hkex', 'compliance', 'regulatory', 'listing rules',
+      'disclosure', 'requirements', 'guidelines', 'standards',
+      'plain language', 'clear', 'specific', 'material'
+    ];
+    
+    const hasComplianceRequest = complianceKeywords.some(keyword => message.includes(keyword));
+    if (hasComplianceRequest) {
+      return 'COMPLIANCE_ENHANCEMENT';
+    }
     
     // Prioritize CONTENT_UPDATE for any actionable requests (like Lovable AI)
     const contentUpdateKeywords = [
       'improve', 'enhance', 'better', 'fix', 'optimize', 'refine',
       'make', 'add', 'change', 'update', 'modify', 'edit',
       'rewrite', 'revise', 'adjust', 'polish', 'professional',
-      'compliance', 'structure', 'examples', 'details', 'citations'
+      'examples', 'details', 'citations', 'expand', 'develop'
     ];
     
     // Check if message contains any actionable keywords
@@ -578,11 +623,361 @@ What would you like me to help with?`;
   }
 
   /**
+   * Build HKIPO-compliant enhanced prompt with comprehensive guidelines
+   */
+  private buildHKIPOEnhancedPrompt(userMessage: string, sectionType: string, currentContent: string): string {
+    const sectionTemplates = this.getHKIPOSectionTemplate(sectionType);
+    
+    return `You are an expert Hong Kong IPO prospectus drafting AI assistant specialized in HKIPO compliance.
+
+**HKIPO DRAFTING GUIDELINES:**
+A. CORE PRINCIPLES:
+   - Fairly present relevant, material and specific information
+   - Use plain language that is clear and easy to comprehend
+   - Be accurate and complete in all material respects and not misleading or deceptive
+
+B. DRAFTING REQUIREMENTS:
+   - Disclose relevant, material and specific information (avoid general information)
+   - Use everyday language and break up descriptions into shorter sentences
+   - Define technical terms consistently in "Definitions" section
+   - Use tables, bullets, diagrams and flow charts
+   - Organize disclosure logically with descriptive headers
+   - Avoid emotional expression and unsubstantiated descriptions
+   - Do not avoid disclosing unfavourable information
+
+**CURRENT SECTION: ${sectionType.toUpperCase()}**
+**SECTION REQUIREMENTS:**
+${sectionTemplates}
+
+**CURRENT CONTENT:**
+${currentContent || 'No content yet - ready to start drafting'}
+
+**USER REQUEST:**
+${userMessage}
+
+**RESPONSE FORMAT:**
+IMPROVED_VERSION:
+[Complete HKIPO-compliant content here with proper structure, tables where required, and regulatory citations]
+
+Focus on creating implementable content that follows HKIPO principles and includes specific, material information relevant to investors.`;
+  }
+
+  /**
+   * Build HKIPO fallback prompt for proactive content generation
+   */
+  private buildHKIPOFallbackPrompt(basePrompt: string, sectionType: string): string {
+    const sectionGuidance = this.getHKIPOSectionTemplate(sectionType);
+    
+    return `${basePrompt}
+
+**ADDITIONAL HKIPO COMPLIANCE REQUIREMENTS:**
+${sectionGuidance}
+
+**FORMATTING REQUIREMENTS:**
+- Use clear headers and sub-headers with appropriate numbering
+- Present information in tables where specified in templates
+- Include specific examples and concrete data
+- Use descriptive language that is clear and easy to comprehend
+- Ensure content is accurate and not misleading
+
+Generate content that meets HKIPO standards for investor clarity and regulatory compliance.`;
+  }
+
+  /**
+   * Get HKIPO section-specific templates and requirements
+   */
+  private getHKIPOSectionTemplate(sectionType: string): string {
+    const templates = {
+      overview: `
+**OVERVIEW SECTION REQUIREMENTS:**
+1. Corporate Profile & Background:
+   - Nature of business, year of establishment, corporate history
+   - Headquarters and principal operations
+2. Industry & Market Context:
+   - Key industry trends with third-party consultant data
+   - Market size, growth rates, and forecasts
+   - Competitive position and market share
+3. Business Model & Segments:
+   - Description of principal services and products
+   - Client types and sectors served
+4. Key Customers & Track Record:
+   - Major customers and length of relationship
+   - Examples of successful projects
+   - Number of projects completed during track record period
+5. Financial Highlights:
+   - Summary table of revenue contribution by business line across track record period`,
+
+      business: `
+**BUSINESS MODEL SECTION REQUIREMENTS:**
+1. Nature and major functions of each business segment, their scale and contribution
+2. Revenue model and product/service monetisation
+3. Where business model is complicated, describe different parties/intermediaries with flowcharts
+4. For any change in business focus, explain reasons and related changes in cost structure
+5. Product/service types, life cycle, seasonality, changes during track record period
+6. Pictures of products, price ranges by brands, reasons for material fluctuations`,
+
+      customers: `
+**MAJOR CUSTOMERS SECTION REQUIREMENTS:**
+Must include tabular format showing Top Five Customers for each Track Record Period:
+- Rank
+- Customer Background
+- Year business relationship commenced
+- Type(s) of services provided by Group
+- Credit term
+- Revenue derived from customer
+- Percentage of total revenue
+
+Additional requirements:
+- Identities and background of five largest customers
+- Detailed terms of long-term agreements
+- Concentration and counterparty risks
+- Third party payment arrangements (should be terminated before listing)`,
+
+      suppliers: `
+**MAJOR SUPPLIERS SECTION REQUIREMENTS:**
+Must include tabular format showing Top Five Suppliers for each Track Record Period:
+- Supplier background (industry, business scope, registered capital)
+- Year relationship commenced
+- Types of services provided
+- Credit/payment terms
+- Transaction amount and % of total purchases
+
+Additional requirements:
+- Sensitivity and breakeven analysis of cost changes
+- Measures to manage supply shortages and price fluctuations
+- Inventory control measures and provision policy`,
+
+      licences: `
+**LICENCES AND PERMITS SECTION REQUIREMENTS:**
+Must include tabulated list with:
+- Holder
+- Name of licence/permit
+- Issuing authority
+- Date of grant/filing
+- Date of expiry/validity period
+
+General statements required:
+- Confirmation all material licences obtained
+- Compliance status and renewal procedures
+- No material legal impediments to renewal`,
+
+      default: `
+**GENERAL HKIPO REQUIREMENTS:**
+- Present information in simple, clear manner
+- Use tables and bullet points for better readability
+- Include specific, material information relevant to investors
+- Avoid general statements that obscure important information
+- Ensure accuracy and completeness in all material respects`
+    };
+
+    return templates[sectionType] || templates.default;
+  }
+
+  /**
+   * Enhance original response with HKIPO compliance analysis
+   */
+  private enhanceOriginalResponseWithHKIPO(originalResponse: any, analysis: ProactiveAnalysisResult): EnhancedChatResponse {
+    return {
+      type: 'CONTENT_UPDATE',
+      message: originalResponse.text || originalResponse.message,
+      updatedContent: originalResponse.updatedContent,
+      proactiveAnalysis: analysis,
+      confidence: originalResponse.confidence || 0.8
+    };
+  }
+
+  /**
    * Extract updated content from AI response
    */
   private extractUpdatedContent(response: string): string {
     const match = response.match(/UPDATED_CONTENT:\s*([\s\S]*?)(?:\n\n|$)/);
     return match ? match[1].trim() : '';
+  }
+
+  /**
+   * Create tabular content response for HKIPO-specific tables
+   */
+  private async createTabularContentResponse(
+    userMessage: string, 
+    sectionType: string, 
+    currentContent: string, 
+    analysis: ProactiveAnalysisResult
+  ): Promise<EnhancedChatResponse> {
+    const tablePrompt = this.buildHKIPOTablePrompt(userMessage, sectionType, currentContent);
+    
+    try {
+      const response = await simpleAiClient.generateContent({
+        prompt: tablePrompt,
+        metadata: { requestType: 'hkipo_tabular_content' }
+      });
+      
+      const suggestedContent = this.extractSuggestedContent(response.text);
+      
+      return {
+        type: 'TABULAR_CONTENT',
+        message: '✨ **HKIPO-Compliant Table Generated**\n\nI\'ve created a structured table following HKIPO disclosure requirements.',
+        updatedContent: suggestedContent?.content || response.text,
+        tabularData: this.extractTableData(response.text),
+        confidence: suggestedContent?.confidence || 0.85
+      };
+    } catch (error) {
+      return this.createErrorResponse(error);
+    }
+  }
+
+  /**
+   * Create section structure response for HKIPO organization
+   */
+  private async createSectionStructureResponse(
+    userMessage: string,
+    sectionType: string,
+    currentContent: string,
+    analysis: ProactiveAnalysisResult
+  ): Promise<EnhancedChatResponse> {
+    const structurePrompt = this.buildHKIPOStructurePrompt(userMessage, sectionType, currentContent);
+    
+    try {
+      const response = await simpleAiClient.generateContent({
+        prompt: structurePrompt,
+        metadata: { requestType: 'hkipo_section_structure' }
+      });
+      
+      const suggestedContent = this.extractSuggestedContent(response.text);
+      
+      return {
+        type: 'SECTION_STRUCTURE',
+        message: '📋 **HKIPO-Compliant Structure Organized**\n\nI\'ve restructured your content following HKIPO organizational principles.',
+        updatedContent: suggestedContent?.content || response.text,
+        sectionStructure: this.extractStructureData(response.text),
+        confidence: suggestedContent?.confidence || 0.85
+      };
+    } catch (error) {
+      return this.createErrorResponse(error);
+    }
+  }
+
+  /**
+   * Create compliance enhancement response for HKIPO standards
+   */
+  private async createComplianceEnhancementResponse(
+    userMessage: string,
+    sectionType: string,
+    currentContent: string,
+    analysis: ProactiveAnalysisResult
+  ): Promise<EnhancedChatResponse> {
+    const compliancePrompt = this.buildHKIPOCompliancePrompt(userMessage, sectionType, currentContent);
+    
+    try {
+      const response = await simpleAiClient.generateContent({
+        prompt: compliancePrompt,
+        metadata: { requestType: 'hkipo_compliance_enhancement' }
+      });
+      
+      const suggestedContent = this.extractSuggestedContent(response.text);
+      
+      return {
+        type: 'COMPLIANCE_ENHANCEMENT',
+        message: '✅ **HKIPO Compliance Enhanced**\n\nI\'ve improved your content to meet HKIPO drafting principles and regulatory requirements.',
+        updatedContent: suggestedContent?.content || response.text,
+        confidence: suggestedContent?.confidence || 0.9
+      };
+    } catch (error) {
+      return this.createErrorResponse(error);
+    }
+  }
+
+  /**
+   * Build HKIPO table-specific prompt
+   */
+  private buildHKIPOTablePrompt(userMessage: string, sectionType: string, currentContent: string): string {
+    const tableTemplates = this.getHKIPOTableTemplate(sectionType);
+    
+    return `${this.buildHKIPOEnhancedPrompt(userMessage, sectionType, currentContent)}
+
+**SPECIFIC TABLE REQUIREMENTS:**
+${tableTemplates}
+
+Create properly formatted tables with all required columns and representative data that follows HKIPO standards.`;
+  }
+
+  /**
+   * Build HKIPO structure-specific prompt  
+   */
+  private buildHKIPOStructurePrompt(userMessage: string, sectionType: string, currentContent: string): string {
+    return `${this.buildHKIPOEnhancedPrompt(userMessage, sectionType, currentContent)}
+
+**STRUCTURE ORGANIZATION FOCUS:**
+- Use descriptive headers and sub-headers with logical numbering
+- Break content into digestible sections
+- Apply zoom-in approach (general to specific)
+- Group related information together
+- Use bullet points and numbered lists for clarity
+
+Reorganize the content with proper HKIPO-compliant structure and clear information hierarchy.`;
+  }
+
+  /**
+   * Build HKIPO compliance-specific prompt
+   */
+  private buildHKIPOCompliancePrompt(userMessage: string, sectionType: string, currentContent: string): string {
+    return `${this.buildHKIPOEnhancedPrompt(userMessage, sectionType, currentContent)}
+
+**COMPLIANCE ENHANCEMENT FOCUS:**
+- Replace general information with specific, material details
+- Convert complex language to plain, everyday language  
+- Break long sentences into shorter, clearer ones
+- Add regulatory citations where appropriate
+- Ensure balanced disclosure (include unfavorable information)
+- Remove emotional expressions and unsubstantiated claims
+
+Focus specifically on making the content more compliant with HKIPO drafting principles.`;
+  }
+
+  /**
+   * Get HKIPO table templates by section type
+   */
+  private getHKIPOTableTemplate(sectionType: string): string {
+    const tableTemplates = {
+      customers: `
+**CUSTOMERS TABLE FORMAT:**
+| Rank | Customer Background | Year Commenced | Services Provided | Credit Terms | Revenue (Period 1) | % of Revenue | Revenue (Period 2) | % of Revenue | Revenue (Period 3) | % of Revenue |`,
+      
+      suppliers: `
+**SUPPLIERS TABLE FORMAT:**
+| Rank | Supplier Background | Year Commenced | Services/Products | Credit Terms | Purchases (Period 1) | % of Total | Purchases (Period 2) | % of Total | Purchases (Period 3) | % of Total |`,
+      
+      licences: `
+**LICENCES TABLE FORMAT:**
+| Holder | Licence/Permit Name | Issuing Authority | Grant Date | Expiry Date | Status |`,
+      
+      awards: `
+**AWARDS TABLE FORMAT:**
+| Award Name | Awarding Authority | Year Received | Category | Description |`,
+      
+      default: `
+**GENERAL TABLE FORMAT:**
+Use appropriate column headers and ensure all data is specific and material to investors.`
+    };
+    
+    return tableTemplates[sectionType] || tableTemplates.default;
+  }
+
+  /**
+   * Extract table data from response
+   */
+  private extractTableData(response: string): any {
+    // Extract table structure and data for potential future use
+    const tableMatch = response.match(/\|.*\|/g);
+    return tableMatch ? { tables: tableMatch } : null;
+  }
+
+  /**
+   * Extract structure data from response
+   */
+  private extractStructureData(response: string): any {
+    // Extract heading structure for potential future use
+    const headings = response.match(/^#+\s+.*/gm);
+    return headings ? { headings } : null;
   }
 
   /**
