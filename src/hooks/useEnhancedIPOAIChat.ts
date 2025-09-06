@@ -109,8 +109,8 @@ export const useEnhancedIPOAIChat = ({
         suggestedContent: response.updatedContent,
         isDraftable: !!response.updatedContent,
         changePreview: response.updatedContent ? {
-          before: currentContent.substring(0, 200) + '...',
-          after: response.updatedContent.substring(0, 200) + '...'
+          before: currentContent,
+          after: response.updatedContent
         } : undefined
       };
 

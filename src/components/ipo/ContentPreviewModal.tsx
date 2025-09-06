@@ -33,9 +33,28 @@ export const ContentPreviewModal: React.FC<ContentPreviewModalProps> = ({
   };
 
   const renderDiff = () => {
-    // Simple diff visualization - highlight changes
     const beforeLines = beforeContent.split('\n');
     const afterLines = afterContent.split('\n');
+    
+    // Simple diff algorithm to identify actual changes
+    const maxLines = Math.max(beforeLines.length, afterLines.length);
+    const diffLines = [];
+    
+    for (let i = 0; i < maxLines; i++) {
+      const beforeLine = beforeLines[i] || '';
+      const afterLine = afterLines[i] || '';
+      
+      if (beforeLine === afterLine) {
+        diffLines.push({ type: 'unchanged', content: beforeLine, index: i });
+      } else {
+        if (beforeLine) {
+          diffLines.push({ type: 'removed', content: beforeLine, index: i });
+        }
+        if (afterLine) {
+          diffLines.push({ type: 'added', content: afterLine, index: i });
+        }
+      }
+    }
     
     return (
       <div className="grid grid-cols-2 gap-4">
@@ -44,12 +63,21 @@ export const ContentPreviewModal: React.FC<ContentPreviewModalProps> = ({
             <FileText className="h-4 w-4" />
             Current Content
           </h4>
-          <ScrollArea className="h-64 border rounded-md p-3 bg-red-50">
+          <ScrollArea className="h-64 border rounded-md p-3 bg-muted/50">
             <div className="space-y-1">
-              {beforeLines.map((line, index) => (
-                <div key={index} className="text-sm">
-                  <span className="text-red-600 mr-2">-</span>
-                  <span className="line-through text-red-800">{line}</span>
+              {diffLines.filter(line => line.type !== 'added').map((line, index) => (
+                <div key={`before-${index}`} className="text-sm">
+                  {line.type === 'removed' ? (
+                    <>
+                      <span className="text-destructive mr-2">-</span>
+                      <span className="line-through text-destructive/80">{line.content}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-muted-foreground mr-2"> </span>
+                      <span className="text-muted-foreground">{line.content}</span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
@@ -61,12 +89,21 @@ export const ContentPreviewModal: React.FC<ContentPreviewModalProps> = ({
             <Zap className="h-4 w-4" />
             Suggested Content
           </h4>
-          <ScrollArea className="h-64 border rounded-md p-3 bg-green-50">
+          <ScrollArea className="h-64 border rounded-md p-3 bg-muted/50">
             <div className="space-y-1">
-              {afterLines.map((line, index) => (
-                <div key={index} className="text-sm">
-                  <span className="text-green-600 mr-2">+</span>
-                  <span className="text-green-800">{line}</span>
+              {diffLines.filter(line => line.type !== 'removed').map((line, index) => (
+                <div key={`after-${index}`} className="text-sm">
+                  {line.type === 'added' ? (
+                    <>
+                      <span className="text-green-600 mr-2">+</span>
+                      <span className="text-green-800 font-medium">{line.content}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-muted-foreground mr-2"> </span>
+                      <span className="text-muted-foreground">{line.content}</span>
+                    </>
+                  )}
                 </div>
               ))}
             </div>

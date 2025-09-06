@@ -39,11 +39,14 @@ export class EnhancedIPOAIChatService {
     for (const marker of contentMarkers) {
       const matches = response.match(marker);
       if (matches && matches.length > 0) {
-        const content = matches[0]
+        let content = matches[0]
           .replace(/```(?:suggested|updated|revised|improved|content|text)?/gi, '')
           .replace(/```/g, '')
           .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:|IMPROVED_VERSION:|NEW_CONTENT:/gi, '')
           .trim();
+        
+        // Clean HTML tags and symbols
+        content = this.cleanContentForPreview(content);
         
         if (content.length > 50) {
           const confidence = this.calculateContentConfidence(response, content);
@@ -63,12 +66,15 @@ export class EnhancedIPOAIChatService {
     for (const pattern of improvementPatterns) {
       const matches = response.match(pattern);
       if (matches && matches.length > 0) {
-        const content = matches[0]
+        let content = matches[0]
           .replace(/here'?s?\s+(?:a\s+)?(?:better|improved|enhanced|revised)\s+version[:\s]*/gi, '')
           .replace(/try\s+this\s+instead[:\s]*/gi, '')
           .replace(/i\s+(?:suggest|recommend)\s+changing\s+(?:this\s+)?to[:\s]*/gi, '')
           .replace(/a\s+more\s+professional\s+version\s+would\s+be[:\s]*/gi, '')
           .trim();
+        
+        // Clean HTML tags and symbols
+        content = this.cleanContentForPreview(content);
         
         if (content.length > 50) {
           const confidence = this.calculateContentConfidence(response, content);
@@ -1025,6 +1031,21 @@ Use appropriate column headers and ensure all data is specific and material to i
       summary: `Operating in offline mode. Basic analysis shows ${contentLength} characters of content.`,
       nextSteps: ["Connect to internet for detailed HKEX analysis", "Review content against HKEX requirements", "Add specific examples and citations"]
     };
+  }
+
+  /**
+   * Clean content for preview display
+   */
+  private cleanContentForPreview(content: string): string {
+    return content
+      // Remove HTML tags
+      .replace(/<[^>]*>/g, '')
+      // Remove markdown formatting
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      // Remove extra whitespace
+      .replace(/\s+/g, ' ')
+      .trim();
   }
 
   /**
