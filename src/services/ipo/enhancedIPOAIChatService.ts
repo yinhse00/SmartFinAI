@@ -45,7 +45,7 @@ export class EnhancedIPOAIChatService {
           .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:|IMPROVED_VERSION:|NEW_CONTENT:/gi, '')
           .trim();
         
-        // Clean HTML tags and symbols
+        // Preserve paragraph structure during cleaning
         content = this.cleanContentForPreview(content);
         
         if (content.length > 50) {
@@ -83,37 +83,35 @@ export class EnhancedIPOAIChatService {
       }
     }
 
-    // Proactive fallback: Look for substantial content blocks that could be implementations
-    const lines = response.split('\n').filter(line => line.trim().length > 0);
+    // Proactive paragraph-aware detection: Look for substantial content blocks
+    const paragraphs = response.split(/\n\s*\n/).filter(para => para.trim().length > 0);
     let potentialContent = [];
-    let inContentBlock = false;
     
-    for (const line of lines) {
-      const trimmed = line.trim();
+    for (const paragraph of paragraphs) {
+      const trimmed = paragraph.trim();
       
-      // Skip meta/instructional text
+      // Skip meta/instructional paragraphs
       if (trimmed.match(/^(here|this|consider|you|i|to|for|the|it|that|this\s+would|this\s+could)/i) ||
           trimmed.includes('suggest') || trimmed.includes('recommend') || 
           trimmed.includes('should') || trimmed.includes('would') ||
-          trimmed.length < 20) {
-        if (inContentBlock && potentialContent.length > 0) break; // End of content block
+          trimmed.length < 50) {
         continue;
       }
       
-      // Detect start of content block
-      if (!inContentBlock && trimmed.length > 30 && !trimmed.endsWith('?')) {
-        inContentBlock = true;
-      }
+      // Look for business content indicators in paragraph
+      const businessContentPattern = /\b(we|our|the company|management|operations?|business|services?|products?|during|period|year|month)\b/i;
+      const hasBusinessContent = businessContentPattern.test(trimmed);
+      const isSubstantial = trimmed.length > 80;
       
-      if (inContentBlock) {
-        potentialContent.push(line);
+      if (hasBusinessContent && isSubstantial) {
+        potentialContent.push(paragraph);
       }
     }
 
-    // Check if we found substantial implementable content
+    // Check if we found substantial implementable content with proper paragraph structure
     if (potentialContent.length >= 2) {
-      const content = potentialContent.join('\n').trim();
-      if (content.length > 100) { // Ensure meaningful content
+      const content = potentialContent.join('\n\n').trim();
+      if (content.length > 150) { // Ensure meaningful structured content
         return { content, confidence: 0.7 };
       }
     }
@@ -663,9 +661,15 @@ ${userMessage}
 
 **RESPONSE FORMAT:**
 IMPROVED_VERSION:
-[Complete HKIPO-compliant content here with proper structure, tables where required, and regulatory citations]
+[Complete HKIPO-compliant content here organized in well-structured paragraphs:
+- Each major point should start a new paragraph
+- Use clear topic sentences and logical transitions
+- Maintain professional business language throughout
+- Structure information from general to specific details
+- Include proper tables where required and regulatory citations
+- Ensure each paragraph focuses on a single main idea]
 
-Focus on creating implementable content that follows HKIPO principles and includes specific, material information relevant to investors.`;
+Focus on creating implementable content that follows HKIPO principles with professional paragraph organization and specific, material information relevant to investors.`;
   }
 
   /**
@@ -1040,11 +1044,14 @@ Use appropriate column headers and ensure all data is specific and material to i
     return content
       // Remove HTML tags
       .replace(/<[^>]*>/g, '')
-      // Remove markdown formatting
+      // Remove markdown formatting but preserve structure
       .replace(/\*\*(.*?)\*\*/g, '$1')
       .replace(/\*(.*?)\*/g, '$1')
-      // Remove extra whitespace
-      .replace(/\s+/g, ' ')
+      // Preserve paragraph breaks while cleaning extra whitespace
+      .split(/\n\s*\n/)
+      .map(paragraph => paragraph.replace(/\s+/g, ' ').trim())
+      .filter(paragraph => paragraph.length > 0)
+      .join('\n\n')
       .trim();
   }
 
