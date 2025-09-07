@@ -45,8 +45,8 @@ export class EnhancedIPOAIChatService {
           .replace(/SUGGESTED_CONTENT:|UPDATED_TEXT:|REVISED_CONTENT:|IMPROVED_VERSION:|NEW_CONTENT:/gi, '')
           .trim();
         
-        // Preserve paragraph structure during cleaning
-        content = this.cleanContentForPreview(content);
+        // Preserve formatting for editor display
+        content = this.extractFormattedContent(content);
         
         if (content.length > 50) {
           const confidence = this.calculateContentConfidence(response, content);
@@ -1035,6 +1035,22 @@ Use appropriate column headers and ensure all data is specific and material to i
       summary: `Operating in offline mode. Basic analysis shows ${contentLength} characters of content.`,
       nextSteps: ["Connect to internet for detailed HKEX analysis", "Review content against HKEX requirements", "Add specific examples and citations"]
     };
+  }
+
+  /**
+   * Extract formatted content preserving HTML and markdown for editor display
+   */
+  private extractFormattedContent(content: string): string {
+    return content
+      // Remove only metadata markers and instructional text
+      .replace(/^(here|this|consider|note:|important:|remember:)/gmi, '')
+      // Preserve HTML tags and markdown formatting
+      // Clean up excessive whitespace while preserving paragraph structure
+      .split(/\n\s*\n/)
+      .map(paragraph => paragraph.trim())
+      .filter(paragraph => paragraph.length > 0)
+      .join('\n\n')
+      .trim();
   }
 
   /**
