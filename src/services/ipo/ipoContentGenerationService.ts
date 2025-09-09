@@ -2,6 +2,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { simpleAiClient } from './simpleAiClient';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection, SourceAttribution } from '@/types/ipo';
 import { ipoParallelProcessingService } from './ipoParallelProcessingService';
+import { getSectionTitle, buildSectionSpecificPrompt } from './enhancedSectionTemplates';
 
 /**
  * Service for generating high-quality IPO prospectus content using AI
@@ -85,8 +86,8 @@ export class IPOContentGenerationService {
 
       console.log('📋 Template found:', template?.template_name || 'No template');
 
-      // Build comprehensive prompt for content generation
-      const prompt = this.buildContentGenerationPrompt(
+      // Build comprehensive prompt using enhanced section templates
+      const prompt = this.buildEnhancedContentGenerationPrompt(
         project,
         request,
         template,
@@ -285,7 +286,43 @@ export class IPOContentGenerationService {
   }
 
   /**
-   * Build comprehensive prompt for content generation
+   * Build enhanced prompt using detailed section templates
+   */
+  private buildEnhancedContentGenerationPrompt(
+    project: any,
+    request: IPOContentGenerationRequest,
+    template: any,
+    keyElements?: Record<string, any>
+  ): string {
+    // Use enhanced section-specific prompt
+    const enhancedPrompt = buildSectionSpecificPrompt(
+      request.section_type,
+      `Generate comprehensive content for this section`,
+      '',
+      {
+        company_name: project.company_name,
+        industry: project.industry,
+        project_name: project.project_name,
+        key_elements: keyElements
+      }
+    );
+    
+    return `${enhancedPrompt}
+
+**ADDITIONAL CONTEXT:**
+- Project: ${project.project_name}
+- Template Used: ${template?.template_name || 'Standard HKEX Template'}
+
+**GENERATION INSTRUCTIONS:**
+1. Generate complete, professional content ready for prospectus inclusion
+2. Include all required tabular elements where specified
+3. Ensure HKEX Main Board compliance throughout
+4. Use specific company information rather than placeholders
+5. Maintain professional investment banking language and tone`;
+  }
+
+  /**
+   * Original comprehensive prompt for fallback
    */
   private buildContentGenerationPrompt(
     project: any,
@@ -293,7 +330,7 @@ export class IPOContentGenerationService {
     template: any,
     keyElements?: Record<string, any>
   ): string {
-    const sectionTitle = this.getSectionTitle(request.section_type);
+    const sectionTitle = getSectionTitle(request.section_type);
     
     return `
 You are an expert Hong Kong investment banking professional specializing in IPO prospectus drafting. Generate high-quality, professional content for the "${sectionTitle}" section of an IPO prospectus.
@@ -386,19 +423,10 @@ Generate comprehensive, high-quality content that meets investment banking stand
   }
 
   /**
-   * Get section title based on section type
+   * Get section title based on section type - using enhanced templates
    */
   private getSectionTitle(sectionType: string): string {
-    const titles = {
-      'overview': 'Business Overview',
-      'history': 'History & Development',
-      'products': 'Products & Services',
-      'strengths': 'Competitive Strengths',
-      'strategy': 'Business Strategy',
-      'financial_summary': 'Financial Summary',
-      'risk_factors': 'Risk Factors'
-    };
-    return titles[sectionType] || 'Business Section';
+    return getSectionTitle(sectionType);
   }
 }
 

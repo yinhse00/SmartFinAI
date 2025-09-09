@@ -4,6 +4,7 @@ import { contentAnalysisService } from './contentAnalysisService';
 import { sectionAnalysisService } from './sectionAnalysisService';
 import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
+import { getEnhancedSectionTemplate, buildSectionSpecificPrompt } from './enhancedSectionTemplates';
 
 interface EnhancedChatResponse {
   type: 'PROACTIVE_ANALYSIS' | 'TARGETED_IMPROVEMENTS' | 'CONTENT_UPDATE' | 'GUIDANCE' | 'TABULAR_CONTENT' | 'SECTION_STRUCTURE' | 'COMPLIANCE_ENHANCEMENT';

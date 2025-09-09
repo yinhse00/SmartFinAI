@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { WordLikeEditor } from './WordLikeEditor';
-import { DocumentToolbar } from './DocumentToolbar';
+import { EnhancedDocumentToolbar } from './EnhancedDocumentToolbar';
 import { WordLikeAIPanel } from './WordLikeAIPanel';
 import { CommentsSidebar } from './CommentsSidebar';
 import { VersionHistory } from './VersionHistory';
@@ -35,7 +35,7 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
   return (
     <div className="h-full flex flex-col">
       {/* Document Toolbar */}
-      <DocumentToolbar
+      <EnhancedDocumentToolbar
         selectedSection={selectedSection}
         onSectionSelect={onSectionSelect}
         onSave={onSave}
