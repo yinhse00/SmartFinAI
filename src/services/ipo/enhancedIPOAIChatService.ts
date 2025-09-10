@@ -5,6 +5,7 @@ import { sectionAnalysisService } from './sectionAnalysisService';
 import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 import { getEnhancedSectionTemplate, buildSectionSpecificPrompt } from './enhancedSectionTemplates';
+import { guidanceAssessmentService } from './guidanceAssessmentService';
 
 interface EnhancedChatResponse {
   type: 'PROACTIVE_ANALYSIS' | 'TARGETED_IMPROVEMENTS' | 'CONTENT_UPDATE' | 'GUIDANCE' | 'TABULAR_CONTENT' | 'SECTION_STRUCTURE' | 'COMPLIANCE_ENHANCEMENT';
@@ -189,11 +190,15 @@ export class EnhancedIPOAIChatService {
           return this.createTargetedImprovementsResponse(targetedEdits, userMessage);
           
         case 'CONTENT_UPDATE':
-          // Enhanced content update with HKIPO-compliant suggestion generation
-          const enhancedPrompt = this.buildHKIPOEnhancedPrompt(userMessage, sectionType, currentContent);
+          // Enhanced content update with guidance assessment
+          const assessmentEnhancedPrompt = await guidanceAssessmentService.enhancePromptWithAssessment(
+            userMessage,
+            sectionType,
+            currentContent
+          );
           const originalResponse = await simpleAiClient.generateContent({
-            prompt: enhancedPrompt,
-            metadata: { requestType: 'hkipo_compliant_content_update' }
+            prompt: assessmentEnhancedPrompt,
+            metadata: { requestType: 'guidance_assessed_content_update' }
           });
           
           // Extract suggested content if present
@@ -216,9 +221,14 @@ IMPROVED_VERSION:
 [complete updated content here]`;
             
             try {
+              const assessedFallbackPrompt = await guidanceAssessmentService.enhancePromptWithAssessment(
+                fallbackPrompt,
+                sectionType,
+                currentContent
+              );
               const fallbackResponse = await simpleAiClient.generateContent({
-                prompt: this.buildHKIPOFallbackPrompt(fallbackPrompt, sectionType),
-                metadata: { requestType: 'hkipo_proactive_content_generation' }
+                prompt: assessedFallbackPrompt,
+                metadata: { requestType: 'guidance_assessed_proactive_generation' }
               });
               
               suggestedContent = this.extractSuggestedContent(fallbackResponse.text);

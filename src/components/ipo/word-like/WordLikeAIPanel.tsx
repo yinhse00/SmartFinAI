@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
+import { complianceValidator } from '@/services/ipo/complianceValidator';
 
 interface WordLikeAIPanelProps {
   projectId: string;
@@ -37,6 +38,7 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
   onClose
 }) => {
   const [inputMessage, setInputMessage] = useState('');
+  const [complianceData, setComplianceData] = useState<any>(null);
   
   const {
     messages,
@@ -70,6 +72,15 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
     isEnabled: true,
     debounceMs: 2000
   });
+
+  // Enhanced compliance monitoring
+  useEffect(() => {
+    if (currentContent.length > 100) {
+      complianceValidator.getComplianceScore(currentContent, selectedSection)
+        .then(setComplianceData)
+        .catch(console.error);
+    }
+  }, [currentContent, selectedSection]);
 
   const handleSendMessage = () => {
     if (inputMessage.trim() && !isProcessing) {
@@ -113,10 +124,10 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
         {/* Document metrics */}
         <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
           <span>{wordCount} words</span>
-          {complianceScore !== undefined && (
+          {(complianceScore !== undefined || complianceData) && (
             <div className="flex items-center gap-1">
               <FileCheck className="h-3 w-3" />
-              <span>Compliance: {complianceScore.overall}%</span>
+              <span>Compliance: {complianceData?.overall || complianceScore?.overall || 0}%</span>
             </div>
           )}
           {totalSuggestions > 0 && (
@@ -277,10 +288,10 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
               variant="outline" 
               size="sm" 
               className="h-7 text-xs"
-              onClick={() => setInputMessage('Check for compliance issues')}
+              onClick={() => setInputMessage('Check content against HKEX regulatory requirements and industry templates')}
             >
               <FileCheck className="h-3 w-3 mr-1" />
-              Check Compliance
+              Full Assessment
             </Button>
             <Button 
               variant="outline" 

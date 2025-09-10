@@ -4,6 +4,7 @@ import { EnhancedDocumentToolbar } from './EnhancedDocumentToolbar';
 import { WordLikeAIPanel } from './WordLikeAIPanel';
 import { CommentsSidebar } from './CommentsSidebar';
 import { VersionHistory } from './VersionHistory';
+import { GuidanceAssessmentPanel } from './GuidanceAssessmentPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 interface WordLikeWorkspaceProps {
@@ -26,11 +27,25 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
   onExport
 }) => {
   const [isAIPanelOpen, setIsAIPanelOpen] = useState(true);
+  const [isGuidancePanelOpen, setIsGuidancePanelOpen] = useState(true);
   const [isCommentsSidebarOpen, setIsCommentsSidebarOpen] = useState(false);
   const [isVersionHistoryOpen, setIsVersionHistoryOpen] = useState(false);
   const [showTrackChanges, setShowTrackChanges] = useState(false);
   const [documentZoom, setDocumentZoom] = useState(100);
   const [viewMode, setViewMode] = useState<'print' | 'web' | 'outline'>('print');
+
+  const getMainPanelSize = () => {
+    let totalPanels = 1; // Main document
+    if (isAIPanelOpen) totalPanels++;
+    if (isGuidancePanelOpen) totalPanels++;
+    if (isCommentsSidebarOpen) totalPanels++;
+    
+    // Calculate proportional sizes
+    if (totalPanels === 1) return 100;
+    if (totalPanels === 2) return 70;
+    if (totalPanels === 3) return 50;
+    return 40;
+  };
 
   return (
     <div className="h-full flex flex-col">
@@ -52,6 +67,8 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
         onToggleCommentsSidebar={() => setIsCommentsSidebarOpen(!isCommentsSidebarOpen)}
         isVersionHistoryOpen={isVersionHistoryOpen}
         onToggleVersionHistory={() => setIsVersionHistoryOpen(!isVersionHistoryOpen)}
+        isGuidancePanelOpen={isGuidancePanelOpen}
+        onToggleGuidancePanel={() => setIsGuidancePanelOpen(!isGuidancePanelOpen)}
       />
 
       {/* Main workspace */}
@@ -59,7 +76,7 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
         <ResizablePanelGroup direction="horizontal" className="h-full">
           {/* Main document area */}
           <ResizablePanel 
-            defaultSize={isAIPanelOpen ? (isCommentsSidebarOpen ? 50 : 70) : (isCommentsSidebarOpen ? 75 : 100)} 
+            defaultSize={getMainPanelSize()} 
             minSize={40}
           >
             <ResizablePanelGroup direction="horizontal" className="h-full">
@@ -89,6 +106,20 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
               )}
             </ResizablePanelGroup>
           </ResizablePanel>
+
+          {/* Guidance Assessment Panel */}
+          {isGuidancePanelOpen && (
+            <>
+              <ResizableHandle />
+              <ResizablePanel defaultSize={25} minSize={20} maxSize={35}>
+                <GuidanceAssessmentPanel
+                  content={content}
+                  sectionType={selectedSection}
+                  isVisible={isGuidancePanelOpen}
+                />
+              </ResizablePanel>
+            </>
+          )}
 
           {/* AI Panel */}
           {isAIPanelOpen && (

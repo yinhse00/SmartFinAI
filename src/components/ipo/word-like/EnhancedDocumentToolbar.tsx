@@ -97,6 +97,8 @@ interface EnhancedDocumentToolbarProps {
   onToggleCommentsSidebar: () => void;
   isVersionHistoryOpen: boolean;
   onToggleVersionHistory: () => void;
+  isGuidancePanelOpen: boolean;
+  onToggleGuidancePanel: () => void;
   isExporting?: boolean;
   isSaving?: boolean;
 }
@@ -118,6 +120,8 @@ export const EnhancedDocumentToolbar: React.FC<EnhancedDocumentToolbarProps> = (
   onToggleCommentsSidebar,
   isVersionHistoryOpen,
   onToggleVersionHistory,
+  isGuidancePanelOpen,
+  onToggleGuidancePanel,
   isExporting = false,
   isSaving = false
 }) => {
@@ -324,6 +328,15 @@ export const EnhancedDocumentToolbar: React.FC<EnhancedDocumentToolbarProps> = (
             >
               <MessageSquare className="h-4 w-4 mr-2" />
               Comments
+            </Button>
+
+            <Button 
+              variant={isGuidancePanelOpen ? "default" : "outline"} 
+              size="sm"
+              onClick={onToggleGuidancePanel}
+            >
+              <FileCheck className="h-4 w-4 mr-2" />
+              Guidance
             </Button>
 
             <Button 
