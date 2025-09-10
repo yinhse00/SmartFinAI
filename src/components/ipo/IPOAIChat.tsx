@@ -119,9 +119,7 @@ export const IPOAIChat: React.FC<IPOAIChatProps> = ({
           </div>
         </div>
         {!isCollapsed && <>
-            <p className="text-xs text-muted-foreground">
-              {selectedSection} section
-            </p>
+            
             {!apiKeyStatus.hasKey && <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md p-2 mt-2">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
