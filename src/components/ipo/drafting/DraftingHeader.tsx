@@ -38,11 +38,7 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
         
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={onSave} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
+            {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
           
@@ -69,10 +65,7 @@ export const DraftingHeader: React.FC<DraftingHeaderProps> = ({
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Button variant="outline" size="sm">
-            <BarChart3 className="h-4 w-4 mr-2" />
-            Analysis
-          </Button>
+          
           
           <Button variant="outline" size="sm" onClick={onToggleChat}>
             <MessageSquare className="h-4 w-4 mr-2" />
