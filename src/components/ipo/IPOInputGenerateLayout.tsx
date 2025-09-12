@@ -10,7 +10,7 @@ import {
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
 
-import { InputGenerateTab } from './drafting/InputGenerateTab';
+import { WordLikeInputArea } from './drafting/WordLikeInputArea';
 
 interface IPOInputGenerateLayoutProps {
   projectId: string;
@@ -119,16 +119,14 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full p-4">
-          <InputGenerateTab
-            projectId={projectId}
-            sectionType={selectedSectionData.title}
-            keyElements={keyElements}
-            setKeyElements={setKeyElements}
-            isGenerating={isGenerating}
-            onGenerate={handleGenerateContent}
-          />
-        </div>
+        <WordLikeInputArea
+          projectId={projectId}
+          sectionType={selectedSectionData.title}
+          keyElements={keyElements}
+          setKeyElements={setKeyElements}
+          isGenerating={isGenerating}
+          onGenerate={handleGenerateContent}
+        />
       </div>
     </div>
   );
