@@ -1,137 +1,39 @@
 import React, { useState } from 'react';
-import { WordLikeWorkspace } from './word-like/WordLikeWorkspace';
-import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
+import { MaximizedDraftingArea } from './MaximizedDraftingArea';
+import { IPOAIChat } from './IPOAIChat';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Edit3, FileText } from 'lucide-react';
+import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { IPOInputGenerateLayout } from './IPOInputGenerateLayout';
-import { useToast } from '@/hooks/use-toast';
-import { documentService } from '@/services/documents/documentService';
-import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
-import { getIPOSectionTitle } from '@/constants/ipoSections';
-
 interface IPOProspectusWorkspaceProps {
   project: IPOProject;
   onSwitchProject: () => void;
 }
-
 type LayoutMode = 'input-generate' | 'drafting';
-
 export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   project,
   onSwitchProject
 }) => {
   const [selectedSection, setSelectedSection] = useState<string>('business');
+  const [isChatPanelOpen, setIsChatPanelOpen] = useState(true);
+  const [chatContent, setChatContent] = useState<string>('');
+  const [chatContentUpdater, setChatContentUpdater] = useState<((content: string) => void) | null>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('input-generate');
-  const { toast } = useToast();
-
-  const {
-    generatedContent,
-    lastGeneratedResponse,
-    setGeneratedContent,
-  } = useIPOContentGeneration();
-
+  const handlePassContentToChat = (content: string, onUpdate: (newContent: string) => void) => {
+    setChatContent(content);
+    setChatContentUpdater(() => onUpdate);
+  };
+  const handleChatContentUpdate = (newContent: string) => {
+    if (chatContentUpdater) {
+      chatContentUpdater(newContent);
+    }
+  };
   const handleContentGenerated = () => {
+    // Auto-switch to drafting layout when content is generated
     setLayoutMode('drafting');
   };
-
-  const handleSave = async () => {
-    if (!generatedContent.trim() || !project.id || !selectedSection) return;
-
-    try {
-      const response = {
-        content: generatedContent,
-        sources: lastGeneratedResponse?.sources || [],
-        confidence_score: lastGeneratedResponse?.confidence_score || 0.8,
-        regulatory_compliance: lastGeneratedResponse?.regulatory_compliance || {
-          requirements_met: [],
-          missing_requirements: [],
-          recommendations: []
-        },
-        quality_metrics: lastGeneratedResponse?.quality_metrics || {
-          completeness: 0.8,
-          accuracy: 0.8,
-          regulatory_alignment: 0.8,
-          professional_language: 0.8
-        }
-      };
-
-      await ipoContentGenerationService.saveSectionContent(project.id, selectedSection, response);
-      toast({
-        title: "Saved",
-        description: "Content saved successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Save Failed",
-        description: "Failed to save content",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleExport = async (format: 'word' | 'pdf' | 'excel' | 'powerpoint') => {
-    if (!generatedContent?.trim()) {
-      toast({
-        title: "No Content",
-        description: "Please generate content before exporting.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    try {
-      const sectionTitle = getIPOSectionTitle(selectedSection);
-      const filename = `${sectionTitle.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}`;
-      
-      let blob: Blob;
-      let fileExtension: string;
-
-      switch (format) {
-        case 'word':
-          blob = await documentService.generateWordDocument(generatedContent, sectionTitle);
-          fileExtension = 'doc';
-          break;
-        case 'pdf':
-          blob = await documentService.generatePdfDocument(generatedContent, sectionTitle);
-          fileExtension = 'pdf';
-          break;
-        case 'excel':
-          blob = await documentService.generateExcelDocument(generatedContent, sectionTitle);
-          fileExtension = 'csv';
-          break;
-        case 'powerpoint':
-          blob = await documentService.generatePowerPointDocument(generatedContent, sectionTitle);
-          fileExtension = 'pptx';
-          break;
-        default:
-          throw new Error('Unsupported export format');
-      }
-
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${filename}.${fileExtension}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast({
-        title: "Export Successful",
-        description: `${sectionTitle} exported as ${format.toUpperCase()}`,
-      });
-    } catch (error) {
-      toast({
-        title: "Export Failed",
-        description: "Failed to export document",
-        variant: "destructive",
-      });
-    }
-  };
-
-  return (
-    <div className="h-full flex flex-col overflow-hidden">
+  return <div className="h-full flex flex-col overflow-hidden">
       {/* Header */}
       <div className="border-b bg-background px-6 py-4">
         <div className="flex items-center justify-between">
@@ -148,50 +50,43 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
           <div className="flex items-center gap-3">
             {/* Layout Switcher */}
             <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
-              <Button 
-                variant={layoutMode === 'input-generate' ? 'default' : 'ghost'} 
-                size="sm" 
-                onClick={() => setLayoutMode('input-generate')} 
-                className="h-7 px-3"
-              >
+              <Button variant={layoutMode === 'input-generate' ? 'default' : 'ghost'} size="sm" onClick={() => setLayoutMode('input-generate')} className="h-7 px-3">
                 <Edit3 className="h-3 w-3 mr-1" />
                 Input & Generate
               </Button>
-              <Button 
-                variant={layoutMode === 'drafting' ? 'default' : 'ghost'} 
-                size="sm" 
-                onClick={() => setLayoutMode('drafting')} 
-                className="h-7 px-3"
-              >
+              <Button variant={layoutMode === 'drafting' ? 'default' : 'ghost'} size="sm" onClick={() => setLayoutMode('drafting')} className="h-7 px-3">
                 <FileText className="h-3 w-3 mr-1" />
                 Draft & Edit
               </Button>
             </div>
+            
+            
+            
           </div>
         </div>
       </div>
 
       {/* Main workspace */}
       <div className="flex-1 overflow-hidden">
-        {layoutMode === 'input-generate' ? (
-          <IPOInputGenerateLayout 
-            projectId={project.id} 
-            selectedSection={selectedSection} 
-            onSectionSelect={setSelectedSection} 
-            onContentGenerated={handleContentGenerated} 
-          />
-        ) : (
-          <WordLikeWorkspace
-            projectId={project.id}
-            selectedSection={selectedSection}
-            onSectionSelect={setSelectedSection}
-            content={generatedContent}
-            onContentChange={setGeneratedContent}
-            onSave={handleSave}
-            onExport={handleExport}
-          />
-        )}
+        {layoutMode === 'input-generate' ?
+      // Layout 1: Input & Generate Mode
+      <IPOInputGenerateLayout projectId={project.id} selectedSection={selectedSection} onSectionSelect={setSelectedSection} onContentGenerated={handleContentGenerated} /> :
+      // Layout 2: Drafting Mode - Maximized with optional AI Chat
+      <ResizablePanelGroup direction="horizontal" className="h-full">
+            {/* Main Drafting Screen - Takes full width when chat is closed */}
+            <ResizablePanel defaultSize={isChatPanelOpen ? 70 : 100} minSize={60}>
+              <MaximizedDraftingArea projectId={project.id} selectedSection={selectedSection} onSelectSection={setSelectedSection} onToggleChat={() => setIsChatPanelOpen(!isChatPanelOpen)} isChatOpen={isChatPanelOpen} onPassContentToChat={handlePassContentToChat} />
+            </ResizablePanel>
+
+            {/* AI Chat Panel */}
+            {isChatPanelOpen && <>
+                <ResizableHandle />
+                <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
+                  <IPOAIChat projectId={project.id} selectedSection={selectedSection} currentContent={chatContent} onContentUpdate={handleChatContentUpdate} onClose={() => setIsChatPanelOpen(false)} />
+                </ResizablePanel>
+              </>}
+          </ResizablePanelGroup>}
       </div>
-    </div>
-  );
+
+    </div>;
 };
