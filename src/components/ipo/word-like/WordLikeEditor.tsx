@@ -211,16 +211,18 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
 
   return (
     <div className={cn(
-      "w-full h-screen fixed inset-0 bg-background overflow-hidden",
+      "h-full w-full",
+      viewMode === 'print' ? "bg-gray-100" : "bg-white",
       className
     )}>
-      <RichTextEditor
-        value={content}
-        onChange={onChange}
-        height={window.innerHeight}
-        className="w-full h-full border-0"
-        placeholder={editorConfig.placeholder}
-      />
+      <div className="h-full w-full">
+        <RichTextEditor
+          value={content}
+          onChange={onChange}
+          className="h-full w-full"
+          placeholder={editorConfig.placeholder}
+        />
+      </div>
     </div>
   );
 };
