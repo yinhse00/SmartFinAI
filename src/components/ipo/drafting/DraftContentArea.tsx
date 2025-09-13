@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { RichTextEditor } from '@/components/ui/rich-text-editor';
+import { WordLikeEditor } from '@/components/ipo/word-like/WordLikeEditor';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { PanelGroup, Panel, PanelResizeHandle } from 'react-resizable-panels';
 import { Badge } from '@/components/ui/badge';
@@ -79,12 +79,14 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
             <Panel defaultSize={70} minSize={50}>
               <div className="h-full pr-2">
                 {isEditMode ? <div className={`w-full h-full ${borderClass} rounded-md overflow-hidden`}>
-                    <RichTextEditor
-                      value={generatedContent}
+                    <WordLikeEditor
+                      content={generatedContent}
                       onChange={setGeneratedContent}
-                      placeholder="Your generated content will appear here. Use the AI chat to request improvements, compliance checks, or refinements..."
-                      height={400}
-                      className="w-full"
+                      showTrackChanges={true}
+                      zoom={100}
+                      viewMode={layoutMode === 'drafting' ? 'print' : 'web'}
+                      sectionType={sectionType}
+                      className="w-full h-full"
                     />
                   </div> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
                     <div className={`${paddingClass} min-h-full w-full`}>
@@ -125,12 +127,14 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
           </PanelGroup> : (/* Single Panel Layout */
       <div className={`flex-1 ${getContentHeight()} relative`}>
             {isEditMode ? <div className={`w-full h-full ${borderClass} rounded-md overflow-hidden`}>
-                <RichTextEditor
-                  value={generatedContent}
+                <WordLikeEditor
+                  content={generatedContent}
                   onChange={setGeneratedContent}
-                  placeholder="Generated content will appear here..."
-                  height={500}
-                  className="w-full"
+                  showTrackChanges={true}
+                  zoom={100}
+                  viewMode={layoutMode === 'drafting' ? 'print' : 'web'}
+                  sectionType={sectionType}
+                  className="w-full h-full"
                 />
               </div> : <ScrollArea className={`w-full h-full ${borderClass} rounded-md`} type="always">
                 <div className={`${paddingClass} min-h-full w-full`}>
