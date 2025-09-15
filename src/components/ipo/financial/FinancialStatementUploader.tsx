@@ -7,8 +7,7 @@ import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { financialDataExtractor, FinancialData } from '@/services/financial/financialDataExtractor';
 import { supabase } from '@/integrations/supabase/client';
-import { hasGrokApiKey } from '@/services/apiKeyService';
-import { ApiKeyConfiguration } from './ApiKeyConfiguration';
+import { useGlobalApiKeyState } from '@/hooks/useGlobalApiKeyState';
 
 interface FinancialStatementUploaderProps {
   projectId: string;
@@ -30,13 +29,9 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
 }) => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const [hasApiKey, setHasApiKey] = useState(false);
+  const { hasApiKey } = useGlobalApiKeyState();
   const { validateFiles } = useFileUpload();
   const { toast } = useToast();
-
-  useEffect(() => {
-    setHasApiKey(hasGrokApiKey());
-  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -45,7 +40,7 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
     if (!validateFiles(files)) return;
 
     // Check if API key is configured for enhanced processing
-    if (!hasGrokApiKey()) {
+    if (!hasApiKey) {
       toast({
         title: "API Key Required",
         description: "Configure X.AI API key for AI-powered financial table recognition",
@@ -170,11 +165,27 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
     }
   };
 
+  if (!hasApiKey) {
+    return (
+      <Card className="p-6">
+        <div className="text-center space-y-4">
+          <div className="text-xl font-semibold">API Key Required</div>
+          <p className="text-muted-foreground">
+            Please configure your X.AI API key in Settings to enable AI-powered financial analysis.
+          </p>
+          <Button 
+            onClick={() => window.open('/settings', '_blank')}
+            variant="default"
+          >
+            Configure API Key in Settings
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
-      {!hasApiKey && (
-        <ApiKeyConfiguration onKeyConfigured={() => setHasApiKey(true)} />
-      )}
       
       <Card>
         <CardHeader>
