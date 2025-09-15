@@ -44,7 +44,7 @@ class FinancialDataExtractorService {
         };
       }
 
-      console.log(`Starting financial data extraction for ${file.name} (${fileType})`);
+      console.log(`🤖 Starting AI-first financial data extraction for ${file.name} (${fileType})`);
       
       const processed = await fileProcessingService.processFile(file);
       
@@ -58,11 +58,32 @@ class FinancialDataExtractorService {
       
       console.log(`Extracted ${processed.content.length} characters from ${file.name}`);
       
+      // AI-FIRST APPROACH: Try AI table detection first
+      try {
+        const { aiTableDetector } = await import('./aiTableDetector');
+        const tableAnalysis = await aiTableDetector.analyzeDocument(file, processed.content);
+        
+        if (tableAnalysis.documentQuality === 'high' && 
+            (tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable)) {
+          console.log('✅ AI table detection successful, using structured approach');
+          const extractedData = await this.parseWithAITables(tableAnalysis, processed.content);
+          
+          return {
+            success: true,
+            data: extractedData
+          };
+        } else {
+          console.log('⚠️ AI table detection quality insufficient, falling back to traditional parsing');
+        }
+      } catch (aiError) {
+        console.warn('AI table detection failed, using fallback:', aiError);
+      }
+      
+      // FALLBACK: Traditional parsing
       const extractedData = await this.parseFinancialContent(processed.content, file.name);
       
       if (extractedData.lineItems.length === 0) {
         console.warn('No line items extracted from financial statement');
-        // Still return success but with warning
         return {
           success: true,
           data: extractedData,
@@ -83,6 +104,57 @@ class FinancialDataExtractorService {
         error: error instanceof Error ? error.message : 'Unknown extraction error'
       };
     }
+  }
+
+  private async parseWithAITables(tableAnalysis: any, content: string): Promise<FinancialData> {
+    const { aiTableAnalyzer } = await import('./aiTableAnalyzer');
+    
+    // Use the primary table (P&L or Balance Sheet)
+    const primaryTable = tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable;
+    const structuredData = await aiTableAnalyzer.analyzeTableStructure(primaryTable, content);
+    
+    // Convert to FinancialData format
+    return {
+      statementType: structuredData.statementType,
+      totalRevenue: structuredData.keyTotals.totalRevenue?.[structuredData.periods[structuredData.periods.length - 1]],
+      totalAssets: structuredData.keyTotals.totalAssets?.[structuredData.periods[structuredData.periods.length - 1]],
+      totalLiabilities: structuredData.keyTotals.totalLiabilities?.[structuredData.periods[structuredData.periods.length - 1]],
+      lineItems: structuredData.lineItems.map(item => ({
+        name: item.name,
+        amount: Object.values(item.amounts)[Object.values(item.amounts).length - 1] || 0,
+        category: item.category
+      })),
+      comparativeData: structuredData.periods.length > 1 ? {
+        periods: structuredData.periods,
+        comparativeItems: structuredData.lineItems.map(item => ({
+          name: item.name,
+          category: item.category,
+          values: Object.entries(item.amounts).map(([period, amount]) => ({ period, amount })),
+          yearOverYearChanges: this.calculateYearOverYearChanges(item.amounts, structuredData.periods)
+        }))
+      } : undefined
+    };
+  }
+
+  private calculateYearOverYearChanges(amounts: Record<string, number>, periods: string[]): any[] {
+    const changes = [];
+    const sortedPeriods = periods.sort();
+    
+    for (let i = 1; i < sortedPeriods.length; i++) {
+      const fromPeriod = sortedPeriods[i - 1];
+      const toPeriod = sortedPeriods[i];
+      const fromAmount = amounts[fromPeriod] || 0;
+      const toAmount = amounts[toPeriod] || 0;
+      
+      changes.push({
+        fromPeriod,
+        toPeriod,
+        changeAmount: toAmount - fromAmount,
+        changePercentage: fromAmount !== 0 ? ((toAmount - fromAmount) / Math.abs(fromAmount)) * 100 : 0
+      });
+    }
+    
+    return changes;
   }
 
   private async parseFinancialContent(content: string, fileName: string): Promise<FinancialData> {

@@ -68,7 +68,7 @@ class MaterialityAnalyzerService {
 
     if (extractedData.lineItems) {
       for (const lineItem of extractedData.lineItems) {
-        const materialityItem = this.calculateMateriality(
+        const materialityItem = await this.calculateMateriality(
           lineItem,
           statement,
           threshold,
@@ -108,68 +108,88 @@ class MaterialityAnalyzerService {
     return analysis;
   }
 
-  private calculateMateriality(
+  private async calculateMateriality(
     lineItem: any,
     statement: any,
     threshold: number,
     businessContext?: BusinessContext
-  ): MaterialityItem {
+  ): Promise<MaterialityItem> {
+    const statementType = statement.extracted_data?.statementType || statement.statement_type;
     let baseAmount = 0;
-    let percentage = 0;
     
     // CORRECTED MATERIALITY LOGIC:
-    // P&L items (profit_loss statement) → compared against Total Revenue
-    // Balance Sheet items (balance_sheet statement) → compared against Total Assets
-    
-    const statementType = statement.extracted_data?.statementType || statement.statement_type;
-    
     if (statementType === 'profit_loss') {
-      // ALL P&L items use Total Revenue as base
       baseAmount = statement.total_revenue || statement.extracted_data?.totalRevenue || 1;
-      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
     } else if (statementType === 'balance_sheet') {
-      // ALL Balance Sheet items use Total Assets as base
       baseAmount = statement.total_assets || statement.extracted_data?.totalAssets || 1;
-      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
     } else {
-      // Fallback for legacy data using old logic
-      switch (lineItem.category) {
-        case 'revenue_item':
-          baseAmount = statement.total_revenue || 1;
-          break;
-        case 'asset_item':
-        case 'liability_item':
-          baseAmount = statement.total_assets || 1;
-          break;
-      }
-      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
+      // Fallback logic
+      baseAmount = lineItem.category === 'revenue_item' ? 
+        (statement.total_revenue || 1) : (statement.total_assets || 1);
     }
 
-    const isMaterial = percentage >= threshold;
-    const aiReasoning = this.generateAIReasoning(
-      lineItem, 
-      percentage, 
-      threshold, 
-      businessContext, 
-      statementType
-    );
+    const percentage = Math.abs((lineItem.amount / baseAmount) * 100);
+    const quantitativeMateriality = percentage >= threshold;
 
-    return {
-      itemName: lineItem.name,
-      itemType: lineItem.category,
-      amount: lineItem.amount,
-      baseAmount,
-      percentage,
-      materialityThreshold: threshold,
-      isMaterial,
-      aiSuggested: isMaterial,
-      userConfirmed: false,
-      aiReasoning,
-      businessContext: businessContext ? {
-        hasBusinessAlignment: this.checkBusinessAlignment(lineItem.name, businessContext),
-        relatedSegments: this.findRelatedSegments(lineItem.name, businessContext)
-      } : undefined
-    };
+    // TRY AI-ENHANCED MATERIALITY ASSESSMENT
+    try {
+      const { aiMaterialityReasoner } = await import('./aiMaterialityReasoner');
+      const aiResult = await aiMaterialityReasoner.assessMateriality(
+        lineItem.name,
+        lineItem.amount,
+        baseAmount,
+        statementType as 'profit_loss' | 'balance_sheet',
+        businessContext,
+        undefined, // comparativeData
+        threshold
+      );
+
+      return {
+        itemName: lineItem.name,
+        itemType: lineItem.category,
+        amount: lineItem.amount,
+        baseAmount,
+        percentage,
+        materialityThreshold: threshold,
+        isMaterial: aiResult.aiAssessment.isMaterial,
+        aiSuggested: aiResult.aiAssessment.isMaterial,
+        userConfirmed: false,
+        aiReasoning: aiResult.aiAssessment.reasoning.quantitativeAnalysis + ' ' + 
+                    aiResult.aiAssessment.reasoning.businessContext,
+        businessContext: businessContext ? {
+          hasBusinessAlignment: this.checkBusinessAlignment(lineItem.name, businessContext),
+          relatedSegments: this.findRelatedSegments(lineItem.name, businessContext)
+        } : undefined
+      };
+    } catch (aiError) {
+      console.warn('AI materiality assessment failed, using traditional method:', aiError);
+      
+      // FALLBACK: Traditional materiality calculation
+      const aiReasoning = this.generateAIReasoning(
+        lineItem, 
+        percentage, 
+        threshold, 
+        businessContext, 
+        statementType
+      );
+
+      return {
+        itemName: lineItem.name,
+        itemType: lineItem.category,
+        amount: lineItem.amount,
+        baseAmount,
+        percentage,
+        materialityThreshold: threshold,
+        isMaterial: quantitativeMateriality,
+        aiSuggested: quantitativeMateriality,
+        userConfirmed: false,
+        aiReasoning,
+        businessContext: businessContext ? {
+          hasBusinessAlignment: this.checkBusinessAlignment(lineItem.name, businessContext),
+          relatedSegments: this.findRelatedSegments(lineItem.name, businessContext)
+        } : undefined
+      };
+    }
   }
 
   private generateAIReasoning(
