@@ -654,55 +654,46 @@ class FinancialDataExtractorService {
   }
 
   private categorizeItem(itemName: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): 'revenue_item' | 'asset_item' | 'liability_item' {
-    const name = itemName.toLowerCase();
+    // CORRECTED CATEGORIZATION FOR MATERIALITY ANALYSIS:
+    // ALL P&L items → revenue_item (compared against Total Revenue)
+    // ALL Balance Sheet items → asset_item or liability_item (compared against Total Assets)
     
-    // Enhanced categorization with more keywords
-    const revenueKeywords = [
-      'revenue', 'sales', 'income', 'turnover', 'fees', 'commission', 'interest received',
-      'dividend income', 'other income', 'operating income', 'gross profit', 'net profit',
-      'earnings', 'gain on', 'service income', 'rental income'
-    ];
-    
-    const assetKeywords = [
-      'asset', 'cash', 'bank', 'inventory', 'stock', 'receivable', 'debtors',
-      'investment', 'property', 'equipment', 'plant', 'machinery', 'goodwill',
-      'intangible', 'prepaid', 'deposits', 'land', 'building', 'vehicle'
-    ];
-    
-    const liabilityKeywords = [
-      'liability', 'payable', 'creditors', 'debt', 'loan', 'borrowing',
-      'provision', 'accrued', 'deferred', 'tax payable', 'interest payable',
-      'share capital', 'retained earnings', 'equity', 'reserves', 'surplus'
-    ];
-    
-    // Check for revenue indicators
-    if (revenueKeywords.some(keyword => name.includes(keyword))) {
-      return 'revenue_item';
-    }
-    
-    // Check for asset indicators
-    if (assetKeywords.some(keyword => name.includes(keyword))) {
+    if (statementType === 'profit_loss') {
+      return 'revenue_item'; // All P&L items use revenue as base for materiality
+    } else if (statementType === 'balance_sheet') {
+      const name = itemName.toLowerCase();
+      
+      // Enhanced asset/liability classification for balance sheet
+      const assetKeywords = [
+        'asset', 'cash', 'bank', 'inventory', 'stock', 'receivable', 'debtors',
+        'investment', 'property', 'equipment', 'plant', 'machinery', 'goodwill',
+        'intangible', 'prepaid', 'deposits', 'land', 'building', 'vehicle',
+        'right-of-use', 'deferred tax asset'
+      ];
+      
+      const liabilityKeywords = [
+        'liability', 'payable', 'creditors', 'debt', 'loan', 'borrowing',
+        'provision', 'accrued', 'deferred', 'tax payable', 'interest payable',
+        'share capital', 'retained earnings', 'equity', 'reserves', 'surplus',
+        'share premium', 'capital', 'obligation', 'lease liability'
+      ];
+      
+      // Check for asset indicators
+      if (assetKeywords.some(keyword => name.includes(keyword))) {
+        return 'asset_item';
+      }
+      
+      // Check for liability indicators  
+      if (liabilityKeywords.some(keyword => name.includes(keyword))) {
+        return 'liability_item';
+      }
+      
+      // Default to asset for uncategorized balance sheet items
       return 'asset_item';
     }
     
-    // Check for liability indicators
-    if (liabilityKeywords.some(keyword => name.includes(keyword))) {
-      return 'liability_item';
-    }
-    
-    // Enhanced default logic based on statement type and context
-    switch (statementType) {
-      case 'profit_loss':
-        // In P&L, expenses are typically negative revenue items
-        return 'revenue_item';
-      case 'balance_sheet':
-        // In balance sheet, first half typically assets, second half liabilities
-        return name.includes('total') && name.includes('asset') ? 'asset_item' : 'liability_item';
-      case 'cash_flow':
-        return 'revenue_item';
-      default:
-        return 'revenue_item';
-    }
+    // Default fallback
+    return 'revenue_item';
   }
 }
 

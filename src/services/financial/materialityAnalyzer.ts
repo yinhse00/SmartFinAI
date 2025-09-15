@@ -115,22 +115,44 @@ class MaterialityAnalyzerService {
     businessContext?: BusinessContext
   ): MaterialityItem {
     let baseAmount = 0;
+    let percentage = 0;
     
-    switch (lineItem.category) {
-      case 'revenue_item':
-        baseAmount = statement.total_revenue || 1;
-        break;
-      case 'asset_item':
-        baseAmount = statement.total_assets || 1;
-        break;
-      case 'liability_item':
-        baseAmount = statement.total_liabilities || 1;
-        break;
+    // CORRECTED MATERIALITY LOGIC:
+    // P&L items (profit_loss statement) → compared against Total Revenue
+    // Balance Sheet items (balance_sheet statement) → compared against Total Assets
+    
+    const statementType = statement.extracted_data?.statementType || statement.statement_type;
+    
+    if (statementType === 'profit_loss') {
+      // ALL P&L items use Total Revenue as base
+      baseAmount = statement.total_revenue || statement.extracted_data?.totalRevenue || 1;
+      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
+    } else if (statementType === 'balance_sheet') {
+      // ALL Balance Sheet items use Total Assets as base
+      baseAmount = statement.total_assets || statement.extracted_data?.totalAssets || 1;
+      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
+    } else {
+      // Fallback for legacy data using old logic
+      switch (lineItem.category) {
+        case 'revenue_item':
+          baseAmount = statement.total_revenue || 1;
+          break;
+        case 'asset_item':
+        case 'liability_item':
+          baseAmount = statement.total_assets || 1;
+          break;
+      }
+      percentage = Math.abs((lineItem.amount / baseAmount) * 100);
     }
 
-    const percentage = (lineItem.amount / baseAmount) * 100;
     const isMaterial = percentage >= threshold;
-    const aiReasoning = this.generateAIReasoning(lineItem, percentage, threshold, businessContext);
+    const aiReasoning = this.generateAIReasoning(
+      lineItem, 
+      percentage, 
+      threshold, 
+      businessContext, 
+      statementType
+    );
 
     return {
       itemName: lineItem.name,
@@ -154,21 +176,37 @@ class MaterialityAnalyzerService {
     lineItem: any,
     percentage: number,
     threshold: number,
-    businessContext?: BusinessContext
+    businessContext?: BusinessContext,
+    statementType?: string
   ): string {
-    let reasoning = `${lineItem.name} represents ${percentage.toFixed(1)}% of the base amount. `;
+    // Determine correct base description
+    let baseDescription = 'the base amount';
+    if (statementType === 'profit_loss') {
+      baseDescription = 'total revenue';
+    } else if (statementType === 'balance_sheet') {
+      baseDescription = 'total assets';
+    }
+    
+    let reasoning = `${lineItem.name} represents ${percentage.toFixed(1)}% of ${baseDescription}. `;
     
     if (percentage >= threshold) {
-      reasoning += `This exceeds the materiality threshold of ${threshold}% and should be disclosed separately. `;
+      reasoning += `This exceeds the materiality threshold of ${threshold}% and requires separate disclosure in the IPO prospectus. `;
+      
+      // Add statement-specific guidance
+      if (statementType === 'profit_loss') {
+        reasoning += `As a material P&L item, this significantly impacts operational performance and profit margins. `;
+      } else if (statementType === 'balance_sheet') {
+        reasoning += `As a material balance sheet item, this represents a significant component of the company's financial position. `;
+      }
       
       if (businessContext) {
         const alignment = this.checkBusinessAlignment(lineItem.name, businessContext);
         if (alignment) {
-          reasoning += `This item aligns with business operations described in the business section. `;
+          reasoning += `This item aligns with core business operations in technology-driven marketing services. `;
         }
       }
     } else {
-      reasoning += `This is below the materiality threshold of ${threshold}% and may be aggregated with similar items. `;
+      reasoning += `This is below the materiality threshold of ${threshold}% and may be aggregated with similar items unless business significance warrants separate disclosure. `;
     }
 
     return reasoning;
