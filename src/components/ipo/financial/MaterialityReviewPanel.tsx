@@ -199,14 +199,21 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
         </CardContent>
       </Card>
 
-      {/* Items Review */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Item Review</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {currentAnalysis.items.map((item, index) => (
+      {/* Separated P&L and Balance Sheet Items Review */}
+      <div className="space-y-6">
+        {/* Profit & Loss Items */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Profit & Loss Items (vs Total Revenue)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {currentAnalysis.items
+                .filter(item => item.itemType === 'revenue_item')
+                .map((item, index) => (
               <div
                 key={`${item.itemName}-${index}`}
                 className={`p-4 border rounded-lg ${
@@ -233,8 +240,8 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-2">
-                      <div>Amount: {item.amount.toLocaleString()}</div>
-                      <div>Percentage: {item.percentage.toFixed(1)}%</div>
+                      <div>Amount: {item.amount?.toLocaleString() || 'N/A'}</div>
+                      <div>% of Total Revenue: {item.percentage?.toFixed(1) || 'N/A'}%</div>
                     </div>
 
                     {item.aiReasoning && (
@@ -264,17 +271,112 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                 </div>
               </div>
             ))}
+            {currentAnalysis.items.filter(item => item.itemType === 'revenue_item').length === 0 && (
+              <p className="text-muted-foreground text-center py-4">No P&L items identified</p>
+            )}
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="mt-6 flex justify-end">
+      {/* Balance Sheet Items */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="w-5 h-5" />
+            Balance Sheet Items (vs Total Assets)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {currentAnalysis.items
+              .filter(item => item.itemType === 'asset_item' || item.itemType === 'liability_item')
+              .map((item, index) => (
+              <div
+                key={`bs-${item.itemName}-${index}`}
+                className={`p-4 border rounded-lg ${
+                  item.userConfirmed 
+                    ? item.isMaterial 
+                      ? 'border-success bg-success/5' 
+                      : 'border-muted bg-muted/5'
+                    : item.aiSuggested 
+                      ? 'border-orange-300 bg-orange-50' 
+                      : 'border-muted'
+                }`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      {getItemTypeIcon(item.itemType)}
+                      <h4 className="font-medium">{item.itemName}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {getItemTypeLabel(item.itemType)}
+                      </Badge>
+                      {item.userConfirmed && (
+                        <CheckCircle className="w-4 h-4 text-success" />
+                      )}
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-2">
+                      <div>Amount: {item.amount?.toLocaleString() || 'N/A'}</div>
+                      <div>% of Total Assets: {item.percentage?.toFixed(1) || 'N/A'}%</div>
+                    </div>
+
+                    {item.aiReasoning && (
+                      <p className="text-sm text-muted-foreground italic mb-2">
+                        AI: {item.aiReasoning}
+                      </p>
+                    )}
+
+                    {item.businessContext?.relatedSegments?.length > 0 && (
+                      <div className="flex gap-1 mb-2">
+                        {item.businessContext.relatedSegments.map((segment: string) => (
+                          <Badge key={segment} variant="secondary" className="text-xs">
+                            {segment}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium">Material</span>
+                    <Switch
+                      checked={item.isMaterial}
+                      onCheckedChange={(checked) => {
+                        const allItems = currentAnalysis.items;
+                        const actualIndex = allItems.findIndex(allItem => 
+                          allItem.itemName === item.itemName && allItem.itemType === item.itemType
+                        );
+                        handleItemToggle(actualIndex, checked);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+            {currentAnalysis.items.filter(item => 
+              item.itemType === 'asset_item' || item.itemType === 'liability_item'
+            ).length === 0 && (
+              <p className="text-muted-foreground text-center py-4">No Balance Sheet items identified</p>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      </div>
+
+      {/* Final Generation Button */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex justify-end">
             <Button 
               onClick={onConfirmAll}
               disabled={confirmedItems < totalItems}
               className="min-w-32"
+              size="lg"
             >
               {confirmedItems < totalItems 
-                ? `Confirm ${confirmedItems}/${totalItems}` 
-                : 'Generate Financial Information'
+                ? `Confirm ${confirmedItems}/${totalItems} Items` 
+                : 'Generate Financial Content'
               }
             </Button>
           </div>

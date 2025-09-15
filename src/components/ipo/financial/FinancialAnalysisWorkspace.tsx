@@ -117,12 +117,18 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     try {
       const businessData = await getBusinessData();
       
+      // Map MD&A section type to financial information for guidance reference
+      const actualSectionType = sectionType === 'management-discussion-analysis' 
+        ? 'financial-information' 
+        : sectionType;
+      
       const request: IPOContentGenerationRequest = {
         project_id: projectId,
-        section_type: sectionType,
+        section_type: actualSectionType,
         key_elements: {
           materialityAnalyses,
-          businessContext: businessData
+          businessContext: businessData,
+          isMDASection: sectionType === 'management-discussion-analysis'
         }
       };
 
@@ -135,16 +141,23 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
           onContentGenerated(result.content || '');
         }
 
+        const contentType = sectionType === 'management-discussion-analysis' 
+          ? 'Management Discussion & Analysis' 
+          : 'Financial information';
+
         toast({
           title: "Content generated",
-          description: "Financial information section has been generated and saved successfully."
+          description: `${contentType} section has been generated and saved successfully.`
         });
       }
     } catch (error) {
       console.error('Error generating content:', error);
+      const contentType = sectionType === 'management-discussion-analysis' 
+        ? 'MD&A' 
+        : 'financial information';
       toast({
         title: "Generation failed",
-        description: "Failed to generate financial information content.",
+        description: `Failed to generate ${contentType} content.`,
         variant: "destructive"
       });
     }

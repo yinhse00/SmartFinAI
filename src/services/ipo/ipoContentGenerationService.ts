@@ -294,8 +294,9 @@ export class IPOContentGenerationService {
     template: any,
     keyElements?: Record<string, any>
   ): string {
-    // Handle financial section specifically
-    if (request.section_type === 'financial_information' && keyElements?.materialityAnalyses) {
+    // Handle financial section and MD&A specifically
+    if ((request.section_type === 'financial_information' || request.section_type === 'financial-information') 
+        && keyElements?.materialityAnalyses) {
       return this.buildFinancialSpecificPrompt(project, keyElements);
     }
     
@@ -329,43 +330,68 @@ export class IPOContentGenerationService {
   private buildFinancialSpecificPrompt(project: any, keyElements: any): string {
     const materialityAnalyses = keyElements.materialityAnalyses || [];
     const businessContext = keyElements.businessContext || {};
+    const isMDASection = keyElements.isMDASection || false;
     
-    return `You are an expert Hong Kong investment banking professional specializing in IPO prospectus financial information sections.
+    // Separate P&L and Balance Sheet items
+    const profitLossItems = materialityAnalyses.flatMap((analysis: any) => 
+      (analysis.items || []).filter((item: any) => item.itemType === 'revenue_item')
+    );
+    
+    const balanceSheetItems = materialityAnalyses.flatMap((analysis: any) => 
+      (analysis.items || []).filter((item: any) => 
+        item.itemType === 'asset_item' || item.itemType === 'liability_item'
+      )
+    );
+
+    const sectionTitle = isMDASection ? 'Management Discussion & Analysis' : 'Financial Information';
+    const contentFocus = isMDASection 
+      ? 'Focus on explaining material changes and their business implications'
+      : 'Present comprehensive financial information with material item disclosures';
+
+    return `You are an expert Hong Kong investment banking professional specializing in IPO prospectus ${sectionTitle.toLowerCase()} sections.
 
 **COMPANY INFORMATION:**
 - Company: ${project.company_name}
 - Industry: ${project.industry || 'Not specified'}
 - Project: ${project.project_name}
 
-**MATERIALITY ANALYSIS DATA:**
-${materialityAnalyses.map((analysis: any) => `
-Financial Statement Analysis:
-${analysis.items?.map((item: any) => `
-- ${item.itemName}: ${item.amount} (${item.percentage}% of base)
+**MATERIAL PROFIT & LOSS ITEMS:**
+${profitLossItems.map((item: any) => `
+- ${item.itemName}: ${item.amount?.toLocaleString() || 'N/A'} (${item.percentage?.toFixed(1) || 'N/A'}% of Total Revenue)
   Material: ${item.isMaterial ? 'Yes' : 'No'}
-  AI Reasoning: ${item.aiReasoning || 'Not provided'}
-  User Confirmed: ${item.userConfirmed ? 'Yes' : 'No'}
-`).join('') || 'No items'}
-`).join('')}
+  AI Analysis: ${item.aiReasoning || 'Not provided'}
+  User Decision: ${item.userConfirmed ? 'Confirmed' : 'Pending'}
+`).join('') || 'No P&L items identified'}
+
+**MATERIAL BALANCE SHEET ITEMS:**
+${balanceSheetItems.map((item: any) => `
+- ${item.itemName}: ${item.amount?.toLocaleString() || 'N/A'} (${item.percentage?.toFixed(1) || 'N/A'}% of Total Assets)
+  Type: ${item.itemType === 'asset_item' ? 'Asset' : 'Liability'}
+  Material: ${item.isMaterial ? 'Yes' : 'No'}
+  AI Analysis: ${item.aiReasoning || 'Not provided'}
+  User Decision: ${item.userConfirmed ? 'Confirmed' : 'Pending'}
+`).join('') || 'No Balance Sheet items identified'}
 
 **BUSINESS CONTEXT:**
 ${businessContext.businessContent || 'Business context not provided'}
 
-**REGULATORY REQUIREMENTS:**
+**HKEX LISTING REQUIREMENTS:**
 - Must comply with HKEX Main Board Listing Rules
 - Follow App1A Part A requirements for financial information
-- Include material items identified in the analysis
-- Provide clear financial disclosures and explanations
+- Reference ipo_prospectus_section_guidance for ${isMDASection ? 'Financial Information' : 'Financial Information'} requirements
+- Include material items with proper explanations
+- Focus on period-over-period changes for material items
 
-**CONTENT REQUIREMENTS:**
-1. Create a comprehensive Financial Information section
-2. Address all material items identified in the analysis
-3. Explain financial performance and position clearly
-4. Include regulatory-compliant disclosures
-5. Use professional investment banking language
-6. Ensure consistency with materiality assessments
+**${sectionTitle.toUpperCase()} REQUIREMENTS:**
+1. ${contentFocus}
+2. Separate treatment of P&L items (vs Total Revenue base) and Balance Sheet items (vs Total Assets base)
+3. ${isMDASection ? 'Explain material changes and their business impact' : 'Present complete financial disclosures'}
+4. Include regulatory-compliant language and structure
+5. Use professional investment banking terminology
+6. Address each confirmed material item with appropriate detail
+7. ${isMDASection ? 'Provide management perspective on financial performance' : 'Ensure comprehensive financial transparency'}
 
-Generate professional financial information content that incorporates the materiality analysis results and meets HKEX prospectus standards.`;
+Generate professional ${sectionTitle.toLowerCase()} content that meets HKEX prospectus standards and addresses all material items by statement type.`;
   }
 
   /**
