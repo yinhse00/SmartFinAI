@@ -149,27 +149,62 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
 
   const saveFinancialContent = async (content: string) => {
     try {
-      const { error } = await supabase
+      console.log('💾 Saving financial content for project:', projectId);
+      
+      // First, check if a record already exists
+      const { data: existingData, error: selectError } = await supabase
         .from('ipo_prospectus_sections')
-        .upsert({
-          project_id: projectId,
-          section_type: 'financial_information',
-          title: 'Financial Information',
-          content: content,
-          status: 'draft',
-          confidence_score: 0.85
-        }, {
-          onConflict: 'project_id,section_type'
-        });
+        .select('id')
+        .eq('project_id', projectId)
+        .eq('section_type', 'financial_information')
+        .single();
 
-      if (error) {
-        console.error('Error saving financial content:', error);
-        throw error;
+      if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows returned
+        console.error('Error checking existing content:', selectError);
+        throw selectError;
+      }
+
+      let result;
+      if (existingData) {
+        console.log('Updating existing financial section');
+        // Update existing record
+        result = await supabase
+          .from('ipo_prospectus_sections')
+          .update({
+            title: 'Financial Information',
+            content: content,
+            status: 'draft',
+            confidence_score: 0.85,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', existingData.id)
+          .select()
+          .single();
+      } else {
+        console.log('Creating new financial section');
+        // Insert new record
+        result = await supabase
+          .from('ipo_prospectus_sections')
+          .insert({
+            project_id: projectId,
+            section_type: 'financial_information',
+            title: 'Financial Information',
+            content: content,
+            status: 'draft',
+            confidence_score: 0.85
+          })
+          .select()
+          .single();
+      }
+
+      if (result.error) {
+        console.error('❌ Error saving financial content:', result.error);
+        throw result.error;
       }
       
-      console.log('Financial content saved to ipo_prospectus_sections');
+      console.log('✅ Financial content saved successfully');
     } catch (error) {
-      console.error('Failed to save financial content:', error);
+      console.error('❌ Failed to save financial content:', error);
       throw error;
     }
   };

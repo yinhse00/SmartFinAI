@@ -15,10 +15,11 @@ export const spreadsheetProcessor = {
     try {
       console.log(`Processing Excel file: ${file.name}, XLSX available: ${xlsxAvailable}`);
       
-      // Enhanced detection for specific mapping files
+      // Enhanced detection for specific file types
       const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');
       const isListedIssuerGuidance = file.name.toLowerCase().includes('guidance materials for listed issuers');
       const isRegulatoryMapping = isListingGuidance || isListedIssuerGuidance;
+      const isFinancialSpreadsheet = spreadsheetProcessor.isFinancialSpreadsheet(file.name);
       
       // First check if SheetJS is available for client-side extraction
       if (xlsxAvailable) {
@@ -28,10 +29,15 @@ export const spreadsheetProcessor = {
           const extractedText = await fileConverter.getExcelText(file);
           
           if (extractedText && extractedText.trim() !== '' && !extractedText.includes('[Excel')) {
-            // Format the extracted content with enhanced structure for regulatory mapping files
-            const formattedText = isRegulatoryMapping ? 
-              spreadsheetProcessor.formatRegulatoryMappingContent(extractedText, file.name) :
-              spreadsheetProcessor.formatExcelContent(extractedText, file.name);
+            // Format the extracted content based on file type
+            let formattedText;
+            if (isRegulatoryMapping) {
+              formattedText = spreadsheetProcessor.formatRegulatoryMappingContent(extractedText, file.name);
+            } else if (isFinancialSpreadsheet) {
+              formattedText = spreadsheetProcessor.formatFinancialSpreadsheetLegacy(extractedText, file.name);
+            } else {
+              formattedText = spreadsheetProcessor.formatExcelContent(extractedText, file.name);
+            }
             
             console.log(`Successfully extracted text from Excel file ${file.name} using SheetJS`);
             
@@ -473,5 +479,71 @@ export const spreadsheetProcessor = {
         }
       };
     }
+  },
+
+  /**
+   * Check if a filename indicates it's a financial spreadsheet
+   */
+  isFinancialSpreadsheet(fileName: string): boolean {
+    const lowerName = fileName.toLowerCase();
+    const financialKeywords = [
+      'financial', 'statement', 'balance', 'income', 'profit', 'loss',
+      'cash flow', 'p&l', 'trial balance', 'ledger', 'accounting', 'budget',
+      'revenue', 'expense', 'asset', 'liability', 'equity', 'financial data'
+    ];
+    return financialKeywords.some(keyword => lowerName.includes(keyword));
+  },
+
+  /**
+   * Format legacy financial spreadsheet content (fallback method)
+   */
+  formatFinancialSpreadsheetLegacy(content: string, fileName: string): string {
+    console.log(`Formatting financial spreadsheet content for: ${fileName}`);
+    
+    let formatted = `**Financial Spreadsheet: ${fileName}**\n\n`;
+    
+    const lines = content.split('\n');
+    let currentSection = '';
+    
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      
+      // Check if line looks like a section header
+      if (spreadsheetProcessor.isSpreadsheetHeader(trimmed)) {
+        currentSection = trimmed;
+        formatted += `\n## ${currentSection}\n`;
+      } else if (spreadsheetProcessor.lineHasFinancialData(trimmed)) {
+        // Format financial data lines
+        formatted += `${trimmed}\n`;
+      } else if (trimmed.length > 3) {
+        // Regular content lines
+        formatted += `${trimmed}\n`;
+      }
+    }
+    
+    return formatted;
+  },
+
+  /**
+   * Check if a line is a spreadsheet header
+   */
+  isSpreadsheetHeader(line: string): boolean {
+    const headerPatterns = [
+      /^(income|revenue|sales|expenses?|costs?|assets?|liabilities|equity|cash)/i,
+      /statement/i,
+      /balance.*sheet/i,
+      /profit.*loss/i,
+      /cash.*flow/i
+    ];
+    return headerPatterns.some(pattern => pattern.test(line));
+  },
+
+  /**
+   * Check if a line contains financial data
+   */
+  lineHasFinancialData(line: string): boolean {
+    // Look for numbers that could be financial amounts
+    return /\$?[0-9,]+\.?[0-9]*/.test(line) && line.length > 5;
   }
 };

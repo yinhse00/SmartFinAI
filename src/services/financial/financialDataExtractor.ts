@@ -262,47 +262,82 @@ class FinancialDataExtractorService {
     if (!line || line.length === 0) return null;
     
     try {
-      // Enhanced regex for various number formats including currencies and negatives
+      console.log('Extracting amount from line:', line.substring(0, 150));
+      
+      // Enhanced regex patterns for comprehensive financial number detection
       const patterns = [
-        // Currency with parentheses for negatives: $(1,234.56)
-        /[\$\£\€\¥]\s*\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/g,
-        // Currency with minus: $-1,234.56
-        /[\$\£\€\¥]\s*-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
+        // Currency with parentheses for negatives: $(1,234.56) or $-1,234.56 in ()
+        /[\$\£\€\¥]\s*\(([0-9,]+(?:\.[0-9]{1,2})?)\)/g,
+        /\([\$\£\€\¥]\s*([0-9,]+(?:\.[0-9]{1,2})?)\)/g,
+        // Currency with explicit minus: $-1,234.56
+        /[\$\£\€\¥]\s*-\s*([0-9,]+(?:\.[0-9]{1,2})?)/g,
         // Currency positive: $1,234.56
-        /[\$\£\€\¥]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
-        // Number with parentheses: (1,234.56)
-        /\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/g,
-        // Number with minus: -1,234.56
-        /-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
-        // Numbers with pipes (table data): | 1,234.56 |
-        /\|\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*\|/g,
-        // Simple number at end of line: 1,234.56 or 1234.56
-        /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*$/g,
-        // Number without decimals: 1,234 or 1234
-        /(\d{1,3}(?:,\d{3})*)/g
+        /[\$\£\€\¥]\s*([0-9,]+(?:\.[0-9]{1,2})?)/g,
+        // Number with parentheses (negative): (1,234.56)
+        /\(([0-9,]+(?:\.[0-9]{1,2})?)\)/g,
+        // Number with explicit minus: -1,234.56
+        /-\s*([0-9,]+(?:\.[0-9]{1,2})?)/g,
+        // Numbers with 'k', 'm', 'b' suffixes: 123.4k, 45.6m, 1.2b
+        /([0-9,]+(?:\.[0-9]{1,2})?)\s*[kmb]/gi,
+        // Numbers marked as 'thousand': 1,234 thousand
+        /([0-9,]+)\s*thousand/gi,
+        // Table format with pipes: | 1,234.56 |
+        /\|\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*\|/g,
+        // Tab-separated values
+        /\t\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*(?:\t|$)/g,
+        // Numbers with at least 3 digits and commas: 1,234.56
+        /([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?)/g,
+        // Simple decimals with at least 2 decimal places: 1234.56
+        /([0-9]+\.[0-9]{2})/g,
+        // Whole numbers (minimum 3 digits to avoid ratios): 1234
+        /([0-9]{3,})/g
       ];
       
       let bestMatch: number | null = null;
-      let highestValue = 0;
+      let highestConfidence = 0;
       let isNegative = false;
 
       // Check for negative indicators
-      if (line.includes('(') && line.includes(')')) {
-        isNegative = true;
-      } else if (line.includes('-') && !line.includes('--')) {
-        isNegative = true;
-      }
+      const hasParentheses = line.includes('(') && line.includes(')') && !/\([^0-9]*\)/.test(line);
+      const hasMinusSign = line.includes('-') && !line.includes('--') && !line.includes('e-');
       
-      for (const pattern of patterns) {
+      for (let patternIndex = 0; patternIndex < patterns.length; patternIndex++) {
+        const pattern = patterns[patternIndex];
         let match;
+        
         while ((match = pattern.exec(line)) !== null) {
-          const numStr = match[1].replace(/,/g, '');
-          const amount = parseFloat(numStr);
+          let numStr = match[1].replace(/,/g, '');
+          let amount = parseFloat(numStr);
           
-          if (!isNaN(amount) && amount >= 1) { // Very low threshold for detection
-            // Prefer larger numbers but exclude unrealistic values
-            if (amount > highestValue && amount < 999999999999) {
-              highestValue = amount;
+          if (!isNaN(amount) && amount >= 1) {
+            // Handle suffixes
+            const originalMatch = match[0].toLowerCase();
+            if (originalMatch.includes('k')) amount *= 1000;
+            if (originalMatch.includes('m')) amount *= 1000000;
+            if (originalMatch.includes('b')) amount *= 1000000000;
+            if (originalMatch.includes('thousand')) amount *= 1000;
+            
+            // Calculate confidence based on pattern specificity and context
+            let confidence = patterns.length - patternIndex; // Earlier patterns are more specific
+            
+            // Boost confidence for currency symbols
+            if (originalMatch.includes('$') || originalMatch.includes('£') || originalMatch.includes('€')) {
+              confidence += 5;
+            }
+            
+            // Boost confidence for proper decimal formatting
+            if (numStr.includes('.') && numStr.split('.')[1].length === 2) {
+              confidence += 3;
+            }
+            
+            // Boost confidence for larger amounts (more likely to be significant)
+            if (amount >= 1000) confidence += 2;
+            if (amount >= 100000) confidence += 2;
+            
+            // Exclude unrealistic values
+            if (amount < 999999999999 && confidence > highestConfidence) {
+              highestConfidence = confidence;
+              isNegative = hasParentheses || (hasMinusSign && originalMatch.includes('-'));
               bestMatch = isNegative ? -amount : amount;
             }
           }
@@ -311,7 +346,9 @@ class FinancialDataExtractorService {
       }
       
       if (bestMatch !== null) {
-        console.log('Extracted amount:', bestMatch, 'from line:', line.substring(0, 100));
+        console.log('✅ Extracted amount:', bestMatch, 'from line:', line.substring(0, 100));
+      } else {
+        console.log('❌ No amount found in line:', line.substring(0, 100));
       }
       
       return bestMatch;

@@ -52,23 +52,17 @@ export const fileProcessingService = {
     try {
       let result;
       
-      // Check if this is a financial statement - use direct processors for reliability
-      const isFinancialStatement = file.name.toLowerCase().includes('financial') || 
-                                  file.name.toLowerCase().includes('statement') ||
-                                  file.name.toLowerCase().includes('balance') ||
-                                  file.name.toLowerCase().includes('income') ||
-                                  file.name.toLowerCase().includes('cash flow') ||
-                                  file.name.toLowerCase().includes('profit') ||
-                                  file.name.toLowerCase().includes('loss');
+      // Enhanced financial statement detection - use direct processors for reliability
+      const isFinancialStatement = fileProcessingService.isFinancialStatement(file.name);
       
       switch (fileType) {
         case 'pdf':
-          // For financial statements, always use direct processor to avoid API dependency
+          // For financial statements, ALWAYS use direct processor to ensure data extraction
           if (isFinancialStatement) {
-            console.log(`Processing financial statement PDF directly: ${file.name}`);
+            console.log(`🔧 Processing financial statement PDF directly (bypassing API): ${file.name}`);
             result = await enhancedPdfProcessor.extractText(file);
           } else {
-            // Use FileAdapter for non-financial documents
+            // Use FileAdapter for non-financial documents only
             try {
               const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
               result = { content, source: file.name };
@@ -130,5 +124,20 @@ export const fileProcessingService = {
         source: file.name 
       };
     }
+  },
+
+  /**
+   * Check if a filename indicates it's a financial statement
+   */
+  isFinancialStatement: (fileName: string): boolean => {
+    const lowerName = fileName.toLowerCase();
+    const financialKeywords = [
+      'financial', 'statement', 'balance', 'income', 'profit', 'loss',
+      'cash flow', 'p&l', 'p l', 'balance sheet', 'income statement',
+      'trial balance', 'general ledger', 'chart of accounts', 'accounting',
+      'revenue', 'expense', 'asset', 'liability', 'equity', 'cashflow',
+      'pnl', 'bs', 'cfs', 'financial position', 'comprehensive income'
+    ];
+    return financialKeywords.some(keyword => lowerName.includes(keyword));
   }
 };
