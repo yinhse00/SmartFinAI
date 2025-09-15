@@ -26,10 +26,28 @@ export interface FinancialLineItem {
   category: 'revenue_item' | 'asset_item' | 'liability_item';
 }
 
+export interface LineItem {
+  name: string;
+  amount: number;
+  category: string;
+  subcategory?: string;
+  materialityAssessment?: {
+    isMaterial: boolean;
+    threshold: number;
+    percentage: number;
+    reasoning: string;
+  };
+}
+
 export interface ExtractionResult {
   success: boolean;
   data?: FinancialData;
   error?: string;
+  metadata?: {
+    processingMethod?: string;
+    detectedTables?: number;
+    extractedLineItems?: number;
+  };
 }
 
 class FinancialDataExtractorService {
@@ -46,6 +64,7 @@ class FinancialDataExtractorService {
 
       console.log(`🤖 Starting AI-first financial data extraction for ${file.name} (${fileType})`);
       
+      // Process the file with AI-first approach
       const processed = await fileProcessingService.processFile(file);
       
       if (!processed.content || processed.content.trim().length === 0) {
@@ -58,28 +77,52 @@ class FinancialDataExtractorService {
       
       console.log(`Extracted ${processed.content.length} characters from ${file.name}`);
       
-      // AI-FIRST APPROACH: Try AI table detection first
-      try {
-        const { aiTableDetector } = await import('./aiTableDetector');
-        const tableAnalysis = await aiTableDetector.analyzeDocument(file, processed.content);
-        
-        if (tableAnalysis.documentQuality === 'high' && 
-            (tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable)) {
-          console.log('✅ AI table detection successful, using structured approach');
-          const extractedData = await this.parseWithAITables(tableAnalysis, processed.content);
-          
+      // Use AI table analysis if available from file processing
+      if (processed.metadata?.aiTableAnalysis && processed.metadata.aiTableAnalysis.detectedTables.length > 0) {
+        console.log(`✅ Using AI table analysis with ${processed.metadata.aiTableAnalysis.detectedTables.length} detected tables`);
+        try {
+          const extractedData = await this.parseWithAITables(processed.metadata.aiTableAnalysis, processed.content);
           return {
             success: true,
-            data: extractedData
+            data: extractedData,
+            metadata: {
+              processingMethod: 'ai_first',
+              detectedTables: processed.metadata.aiTableAnalysis.detectedTables.length
+            }
           };
-        } else {
-          console.log('⚠️ AI table detection quality insufficient, falling back to traditional parsing');
+        } catch (aiError) {
+          console.warn('❌ AI parsing failed, falling back to traditional parsing:', aiError);
         }
-      } catch (aiError) {
-        console.warn('AI table detection failed, using fallback:', aiError);
+      } else if (processed.metadata?.processingMethod !== 'fallback_regex') {
+        // If no AI analysis was done during file processing, try it now
+        console.log('🤖 Running AI table detection for financial data extraction...');
+        try {
+          const { aiTableDetector } = await import('./aiTableDetector');
+          const tableAnalysis = await aiTableDetector.analyzeDocument(file, processed.content);
+          
+          if (tableAnalysis.documentQuality === 'high' && 
+              (tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable)) {
+            console.log('✅ AI table detection successful, using structured approach');
+            const extractedData = await this.parseWithAITables(tableAnalysis, processed.content);
+            
+            return {
+              success: true,
+              data: extractedData,
+              metadata: {
+                processingMethod: 'ai_first',
+                detectedTables: tableAnalysis.detectedTables.length
+              }
+            };
+          } else {
+            console.log('⚠️ AI table detection quality insufficient, falling back to traditional parsing');
+          }
+        } catch (aiError) {
+          console.warn('AI table detection failed, using fallback:', aiError);
+        }
       }
       
       // FALLBACK: Traditional parsing
+      console.log('📋 Using traditional regex-based financial data extraction');
       const extractedData = await this.parseFinancialContent(processed.content, file.name);
       
       if (extractedData.lineItems.length === 0) {
@@ -87,15 +130,23 @@ class FinancialDataExtractorService {
         return {
           success: true,
           data: extractedData,
-          error: 'Warning: No financial line items could be automatically extracted. The file may need manual review.'
+          error: 'Warning: No financial line items could be automatically extracted. The file may need manual review.',
+          metadata: {
+            processingMethod: 'traditional_regex',
+            detectedTables: 0
+          }
         };
       }
       
-      console.log(`Successfully extracted ${extractedData.lineItems.length} line items`);
+      console.log(`Successfully extracted ${extractedData.lineItems.length} line items using traditional parsing`);
       
       return {
         success: true,
-        data: extractedData
+        data: extractedData,
+        metadata: {
+          processingMethod: 'traditional_regex',
+          extractedLineItems: extractedData.lineItems.length
+        }
       };
     } catch (error) {
       console.error('Financial data extraction failed:', error);
@@ -107,33 +158,14 @@ class FinancialDataExtractorService {
   }
 
   private async parseWithAITables(tableAnalysis: any, content: string): Promise<FinancialData> {
-    const { aiTableAnalyzer } = await import('./aiTableAnalyzer');
+    const { extractFromAITables } = await import('./extractFromAITables');
     
-    // Use the primary table (P&L or Balance Sheet)
-    const primaryTable = tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable;
-    const structuredData = await aiTableAnalyzer.analyzeTableStructure(primaryTable, content);
+    // Determine statement type from analysis
+    const statementType = tableAnalysis.primaryProfitLossTable ? 'profit_loss' : 
+                         tableAnalysis.primaryBalanceSheetTable ? 'balance_sheet' : 'cash_flow';
     
-    // Convert to FinancialData format
-    return {
-      statementType: structuredData.statementType,
-      totalRevenue: structuredData.keyTotals.totalRevenue?.[structuredData.periods[structuredData.periods.length - 1]],
-      totalAssets: structuredData.keyTotals.totalAssets?.[structuredData.periods[structuredData.periods.length - 1]],
-      totalLiabilities: structuredData.keyTotals.totalLiabilities?.[structuredData.periods[structuredData.periods.length - 1]],
-      lineItems: structuredData.lineItems.map(item => ({
-        name: item.name,
-        amount: Object.values(item.amounts)[Object.values(item.amounts).length - 1] || 0,
-        category: item.category
-      })),
-      comparativeData: structuredData.periods.length > 1 ? {
-        periods: structuredData.periods,
-        comparativeItems: structuredData.lineItems.map(item => ({
-          name: item.name,
-          category: item.category,
-          values: Object.entries(item.amounts).map(([period, amount]) => ({ period, amount })),
-          yearOverYearChanges: this.calculateYearOverYearChanges(item.amounts, structuredData.periods)
-        }))
-      } : undefined
-    };
+    // Use dedicated extraction function
+    return await extractFromAITables(tableAnalysis, statementType, content);
   }
 
   private calculateYearOverYearChanges(amounts: Record<string, number>, periods: string[]): any[] {

@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, File, X, CheckCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { financialDataExtractor, FinancialData } from '@/services/financial/financialDataExtractor';
 import { supabase } from '@/integrations/supabase/client';
+import { hasGrokApiKey } from '@/services/apiKeyService';
+import { ApiKeyConfiguration } from './ApiKeyConfiguration';
 
 interface FinancialStatementUploaderProps {
   projectId: string;
@@ -28,14 +30,29 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
 }) => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
   const { validateFiles } = useFileUpload();
   const { toast } = useToast();
+
+  useEffect(() => {
+    setHasApiKey(hasGrokApiKey());
+  }, []);
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (!files || files.length === 0) return;
 
     if (!validateFiles(files)) return;
+
+    // Check if API key is configured for enhanced processing
+    if (!hasGrokApiKey()) {
+      toast({
+        title: "API Key Required",
+        description: "Configure X.AI API key for AI-powered financial table recognition",
+        variant: "destructive"
+      });
+      return;
+    }
 
     setIsUploading(true);
 
@@ -154,14 +171,20 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Upload className="w-5 h-5" />
-          Financial Statement Upload
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="space-y-4">
+      {!hasApiKey && (
+        <ApiKeyConfiguration onKeyConfigured={() => setHasApiKey(true)} />
+      )}
+      
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Upload className="w-5 h-5" />
+            Financial Statement Upload
+            {hasApiKey && <CheckCircle className="w-4 h-4 text-success ml-auto" />}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
         <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
           <Upload className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
           <p className="text-sm text-muted-foreground mb-4">
@@ -222,8 +245,12 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
         <div className="text-xs text-muted-foreground">
           <p>Supported formats: PDF, Word (.doc, .docx), Excel (.xls, .xlsx)</p>
           <p>Maximum file size: 20MB per file</p>
+          {hasApiKey && (
+            <p className="text-success">✅ AI-powered table recognition enabled</p>
+          )}
         </div>
       </CardContent>
     </Card>
+    </div>
   );
 };
