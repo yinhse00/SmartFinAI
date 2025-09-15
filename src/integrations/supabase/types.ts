@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.3 (519615d)"
@@ -454,6 +454,53 @@ export type Database = {
           },
         ]
       }
+      financial_statements: {
+        Row: {
+          created_at: string
+          extracted_data: Json | null
+          file_name: string
+          id: string
+          project_id: string
+          statement_type: string
+          total_assets: number | null
+          total_liabilities: number | null
+          total_revenue: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          extracted_data?: Json | null
+          file_name: string
+          id?: string
+          project_id: string
+          statement_type: string
+          total_assets?: number | null
+          total_liabilities?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          extracted_data?: Json | null
+          file_name?: string
+          id?: string
+          project_id?: string
+          statement_type?: string
+          total_assets?: number | null
+          total_liabilities?: number | null
+          total_revenue?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_statements_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ipo_prospectus_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ipo_dd_documents: {
         Row: {
           created_at: string
@@ -894,7 +941,6 @@ export type Database = {
       }
       listingrules_listed_timetable: {
         Row: {
-          created_at: string
           id: string
           "no of day for preparing circular": string | null
           "no of day for preparing listing document or prospectus or offer":
@@ -907,11 +953,10 @@ export type Database = {
             | null
           "no of days of vetting the annoucement": string | null
           particulars: string | null
-          "relevant guidances": string
+          "Relevant guideline": string | null
           "vetting authority": string | null
         }
         Insert: {
-          created_at?: string
           id?: string
           "no of day for preparing circular"?: string | null
           "no of day for preparing listing document or prospectus or offer"?:
@@ -924,11 +969,10 @@ export type Database = {
             | null
           "no of days of vetting the annoucement"?: string | null
           particulars?: string | null
-          "relevant guidances": string
+          "Relevant guideline"?: string | null
           "vetting authority"?: string | null
         }
         Update: {
-          created_at?: string
           id?: string
           "no of day for preparing circular"?: string | null
           "no of day for preparing listing document or prospectus or offer"?:
@@ -941,10 +985,82 @@ export type Database = {
             | null
           "no of days of vetting the annoucement"?: string | null
           particulars?: string | null
-          "relevant guidances"?: string
+          "Relevant guideline"?: string | null
           "vetting authority"?: string | null
         }
         Relationships: []
+      }
+      materiality_analysis: {
+        Row: {
+          ai_reasoning: string | null
+          ai_suggested: boolean | null
+          amount: number
+          base_amount: number
+          business_context: Json | null
+          created_at: string
+          financial_statement_id: string | null
+          id: string
+          is_material: boolean | null
+          item_name: string
+          item_type: string
+          materiality_threshold: number | null
+          percentage: number
+          project_id: string
+          updated_at: string
+          user_confirmed: boolean | null
+        }
+        Insert: {
+          ai_reasoning?: string | null
+          ai_suggested?: boolean | null
+          amount: number
+          base_amount: number
+          business_context?: Json | null
+          created_at?: string
+          financial_statement_id?: string | null
+          id?: string
+          is_material?: boolean | null
+          item_name: string
+          item_type: string
+          materiality_threshold?: number | null
+          percentage: number
+          project_id: string
+          updated_at?: string
+          user_confirmed?: boolean | null
+        }
+        Update: {
+          ai_reasoning?: string | null
+          ai_suggested?: boolean | null
+          amount?: number
+          base_amount?: number
+          business_context?: Json | null
+          created_at?: string
+          financial_statement_id?: string | null
+          id?: string
+          is_material?: boolean | null
+          item_name?: string
+          item_type?: string
+          materiality_threshold?: number | null
+          percentage?: number
+          project_id?: string
+          updated_at?: string
+          user_confirmed?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "materiality_analysis_financial_statement_id_fkey"
+            columns: ["financial_statement_id"]
+            isOneToOne: false
+            referencedRelation: "financial_statements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "materiality_analysis_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ipo_prospectus_projects"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       mb_listingrule_documents: {
         Row: {

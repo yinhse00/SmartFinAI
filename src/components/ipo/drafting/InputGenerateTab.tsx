@@ -6,6 +6,7 @@ import { FileText, Upload, Sparkles, Loader2 } from 'lucide-react';
 import { useSectionGuidance } from '@/hooks/useSectionGuidance';
 import { SupportingDocumentsUploader } from './SupportingDocumentsUploader';
 import { BusinessCategorizedInput, BusinessCategoryData } from './BusinessCategorizedInput';
+import { FinancialAnalysisWorkspace } from '../financial/FinancialAnalysisWorkspace';
 
 interface KeyElements {
   [key: string]: any;
@@ -43,6 +44,14 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
                            sectionType.toLowerCase().includes('3.5') ||
                            sectionType.toLowerCase().includes('3.6');
 
+  // Check if this is a financial section that should use the financial analysis workspace
+  const isFinancialSection = sectionType.toLowerCase().includes('financial') ||
+                            sectionType.toLowerCase().includes('4.') ||
+                            sectionType.toLowerCase().includes('profit') ||
+                            sectionType.toLowerCase().includes('loss') ||
+                            sectionType.toLowerCase().includes('balance sheet') ||
+                            sectionType.toLowerCase().includes('cash flow');
+
   if (isBusinessSection) {
     // Convert keyElements to BusinessCategoryData format
     const categoryData: BusinessCategoryData = keyElements as BusinessCategoryData;
@@ -58,6 +67,29 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
         setCategoryData={setCategoryData}
         isGenerating={isGenerating}
         onGenerate={onGenerate}
+      />
+    );
+  }
+
+  if (isFinancialSection) {
+    const businessContext = {
+      businessContent: keyElements.businessContent,
+      userInputs: keyElements
+    };
+
+    const handleContentGenerated = (content: string) => {
+      setKeyElements({
+        ...keyElements,
+        generatedContent: content
+      });
+      onGenerate();
+    };
+
+    return (
+      <FinancialAnalysisWorkspace
+        projectId={projectId}
+        businessContext={businessContext}
+        onContentGenerated={handleContentGenerated}
       />
     );
   }
