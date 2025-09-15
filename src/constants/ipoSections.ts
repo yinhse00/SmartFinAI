@@ -31,6 +31,7 @@ export const IPO_SECTIONS: IPOSectionDef[] = [
   { id: 'share-capital', title: 'SHARE CAPITAL' },
   { id: 'cornerstone-investors', title: 'CORNERSTONE INVESTORS' },
   { id: 'financial-information', title: 'FINANCIAL INFORMATION' },
+  { id: 'management-discussion-analysis', title: 'MANAGEMENT DISCUSSION & ANALYSIS' },
   { id: 'future-plans-and-use-of-proceeds', title: 'FUTURE PLANS AND USE OF PROCEEDS' },
   { id: 'underwriting', title: 'UNDERWRITING' },
   { id: 'structure-of-global-offering', title: 'STRUCTURE OF THE GLOBAL OFFERING' },

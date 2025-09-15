@@ -21,7 +21,8 @@ interface IPOInputGenerateLayoutProps {
 
 const QUICK_SECTIONS = [
   { id: 'business', title: 'Business', icon: Building, description: 'Company description and core business' },
-  { id: 'financial', title: 'Financial Information', icon: TrendingUp, description: 'Key financials and performance' }
+  { id: 'financial', title: 'Financial Information', icon: TrendingUp, description: 'Key financials and performance' },
+  { id: 'management-discussion-analysis', title: 'Management Discussion & Analysis', icon: TrendingUp, description: 'MD&A from financial statements' }
 ];
 
 export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({

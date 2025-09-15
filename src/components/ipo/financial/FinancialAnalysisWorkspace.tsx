@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface FinancialAnalysisWorkspaceProps {
   projectId: string;
+  sectionType?: string;
   businessContext?: {
     businessContent?: string;
     userInputs?: any;
@@ -26,6 +27,7 @@ interface FinancialAnalysisWorkspaceProps {
 
 export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProps> = ({
   projectId,
+  sectionType = 'financial_information',
   businessContext,
   onContentGenerated
 }) => {
@@ -117,7 +119,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
       
       const request: IPOContentGenerationRequest = {
         project_id: projectId,
-        section_type: 'financial_information',
+        section_type: sectionType,
         key_elements: {
           materialityAnalyses,
           businessContext: businessData
@@ -159,7 +161,11 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Financial Information Analysis</CardTitle>
+          <CardTitle>
+            {sectionType === 'management-discussion-analysis' 
+              ? 'Management Discussion & Analysis Generation' 
+              : 'Financial Information Analysis'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
@@ -215,7 +221,11 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
             <TabsContent value="generate" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Generated Financial Information</CardTitle>
+                  <CardTitle>
+                    {sectionType === 'management-discussion-analysis' 
+                      ? 'Generated Management Discussion & Analysis' 
+                      : 'Generated Financial Information'}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {ipoGeneratedContent ? (
@@ -242,7 +252,10 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
                         disabled={isGenerating || !allItemsConfirmed}
                         size="lg"
                       >
-                        {isGenerating ? 'Generating...' : 'Generate Financial Information'}
+                        {isGenerating ? 'Generating...' : 
+                          sectionType === 'management-discussion-analysis' 
+                            ? 'Generate MD&A' 
+                            : 'Generate Financial Information'}
                       </Button>
                       {!allItemsConfirmed && (
                         <p className="text-sm text-muted-foreground mt-2">
