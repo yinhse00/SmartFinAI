@@ -7,6 +7,17 @@ export interface FinancialData {
   totalAssets?: number;
   totalLiabilities?: number;
   lineItems: FinancialLineItem[];
+  comparativeData?: {
+    periods: string[];
+    comparativeItems: ComparativeFinancialItem[];
+  };
+}
+
+export interface ComparativeFinancialItem {
+  name: string;
+  category: 'revenue_item' | 'asset_item' | 'liability_item';
+  values: { period: string; amount: number }[];
+  yearOverYearChanges: { fromPeriod: string; toPeriod: string; changeAmount: number; changePercentage: number }[];
 }
 
 export interface FinancialLineItem {
@@ -75,29 +86,148 @@ class FinancialDataExtractorService {
   }
 
   private async parseFinancialContent(content: string, fileName: string): Promise<FinancialData> {
-    const statementType = this.detectStatementType(content, fileName);
-    const lineItems = this.extractLineItems(content, statementType);
+    console.log('🎯 Starting enhanced financial content parsing...');
     
-    const totals = this.extractTotals(content, statementType);
+    // First, identify specific financial statement sections
+    const identifiedSections = this.identifyFinancialStatementSections(content);
+    console.log('📊 Identified financial statement sections:', identifiedSections.map(s => s.title));
+    
+    // If we found specific sections, process them; otherwise fall back to full content
+    const contentToProcess = identifiedSections.length > 0 
+      ? identifiedSections.map(s => s.content).join('\n\n')
+      : content;
+    
+    const statementType = this.detectStatementType(contentToProcess, fileName);
+    console.log('📈 Detected statement type:', statementType);
+    
+    // Extract line items with enhanced table-focused extraction
+    const lineItems = this.extractLineItems(contentToProcess, statementType);
+    
+    // Extract comparative data for multi-year analysis
+    const comparativeData = this.extractComparativeData(contentToProcess, statementType);
+    
+    const totals = this.extractTotals(contentToProcess, statementType);
     
     return {
       statementType,
       ...totals,
-      lineItems
+      lineItems,
+      comparativeData
     };
+  }
+
+  private identifyFinancialStatementSections(content: string): Array<{ title: string; content: string }> {
+    const sections: Array<{ title: string; content: string }> = [];
+    const lines = content.split('\n');
+    
+    console.log('🔍 Identifying specific financial statement sections...');
+    
+    // Patterns for the two critical financial statements
+    const profitLossPatterns = [
+      /combined\s+statements?\s+of\s+profit\s+or\s+loss\s+and\s+other\s+comprehensive\s+income/i,
+      /statements?\s+of\s+profit\s+or\s+loss\s+and\s+other\s+comprehensive\s+income/i,
+      /consolidated\s+statements?\s+of\s+profit\s+or\s+loss/i,
+      /income\s+statements?\s+and\s+comprehensive\s+income/i
+    ];
+    
+    const financialPositionPatterns = [
+      /combined\s+statements?\s+of\s+financial\s+position/i,
+      /statements?\s+of\s+financial\s+position/i,
+      /consolidated\s+statements?\s+of\s+financial\s+position/i,
+      /balance\s+sheets?/i
+    ];
+    
+    let currentSection: { title: string; startIndex: number } | null = null;
+    let currentContent: string[] = [];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      
+      // Check if this line matches any of our target statement patterns
+      const isProfitLoss = profitLossPatterns.some(pattern => pattern.test(line));
+      const isFinancialPosition = financialPositionPatterns.some(pattern => pattern.test(line));
+      
+      if (isProfitLoss || isFinancialPosition) {
+        // Save previous section if exists
+        if (currentSection) {
+          sections.push({
+            title: currentSection.title,
+            content: currentContent.join('\n')
+          });
+          console.log(`✅ Found section: ${currentSection.title} (${currentContent.length} lines)`);
+        }
+        
+        // Start new section
+        currentSection = {
+          title: line,
+          startIndex: i
+        };
+        currentContent = [line];
+      } else if (currentSection) {
+        // We're inside a section, add content
+        currentContent.push(line);
+        
+        // Stop collecting if we hit another major section or end
+        if (this.isNewMajorSection(line) && currentContent.length > 10) {
+          sections.push({
+            title: currentSection.title,
+            content: currentContent.slice(0, -1).join('\n') // Exclude the new section header
+          });
+          console.log(`✅ Completed section: ${currentSection.title} (${currentContent.length - 1} lines)`);
+          currentSection = null;
+          currentContent = [];
+        }
+      }
+    }
+    
+    // Add final section if exists
+    if (currentSection && currentContent.length > 5) {
+      sections.push({
+        title: currentSection.title,
+        content: currentContent.join('\n')
+      });
+      console.log(`✅ Final section: ${currentSection.title} (${currentContent.length} lines)`);
+    }
+    
+    return sections;
+  }
+  
+  private isNewMajorSection(line: string): boolean {
+    const majorSectionPatterns = [
+      /^notes?\s+to\s+the\s+financial\s+statements/i,
+      /^directors?\s+report/i,
+      /^auditors?\s+report/i,
+      /^management\s+discussion/i,
+      /^cash\s+flow\s+statements?/i,
+      /^statements?\s+of\s+changes\s+in\s+equity/i
+    ];
+    
+    return majorSectionPatterns.some(pattern => pattern.test(line.trim()));
   }
 
   private detectStatementType(content: string, fileName: string): 'profit_loss' | 'balance_sheet' | 'cash_flow' {
     const lowerContent = content.toLowerCase();
     const lowerFileName = fileName.toLowerCase();
     
+    // Enhanced detection based on content analysis
+    if (lowerContent.includes('profit or loss and other comprehensive income') ||
+        lowerContent.includes('combined statements of profit or loss')) {
+      console.log('🎯 Detected: Profit or Loss and Other Comprehensive Income');
+      return 'profit_loss';
+    }
+    
+    if (lowerContent.includes('statements of financial position') ||
+        lowerContent.includes('combined statements of financial position')) {
+      console.log('🎯 Detected: Statements of Financial Position');
+      return 'balance_sheet';
+    }
+    
     if (lowerContent.includes('cash flow') || lowerFileName.includes('cash_flow') || 
         lowerContent.includes('statement of cash flows')) {
       return 'cash_flow';
     }
     
-    if (lowerContent.includes('balance sheet') || lowerFileName.includes('balance_sheet') ||
-        lowerContent.includes('statement of financial position')) {
+    if (lowerContent.includes('balance sheet') || lowerFileName.includes('balance_sheet')) {
       return 'balance_sheet';
     }
     
@@ -164,6 +294,150 @@ class FinancialDataExtractorService {
     }
     
     return items;
+  }
+  
+  private extractComparativeData(content: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): { periods: string[]; comparativeItems: ComparativeFinancialItem[] } | undefined {
+    console.log('📊 Extracting comparative multi-year data...');
+    
+    const lines = content.split('\n');
+    const periods: string[] = [];
+    const comparativeItems: ComparativeFinancialItem[] = [];
+    
+    // Find period headers (FY2022, FY2023, FY2024, 6M2024, 6M2025, etc.)
+    const periodPatterns = [
+      /FY\d{4}/g,
+      /\d{1,2}M\d{4}/g,
+      /20\d{2}/g,
+      /Year\s+ended\s+\d{4}/gi
+    ];
+    
+    // Extract periods from headers
+    for (const line of lines.slice(0, 20)) { // Check first 20 lines for headers
+      for (const pattern of periodPatterns) {
+        const matches = line.match(pattern);
+        if (matches) {
+          for (const match of matches) {
+            if (!periods.includes(match)) {
+              periods.push(match);
+              console.log(`📅 Found period: ${match}`);
+            }
+          }
+        }
+      }
+    }
+    
+    if (periods.length < 2) {
+      console.log('⚠️ Not enough periods found for comparative analysis');
+      return undefined;
+    }
+    
+    // Extract line items with values for each period
+    const itemMap = new Map<string, { name: string; category: 'revenue_item' | 'asset_item' | 'liability_item'; values: Map<string, number> }>();
+    
+    for (const line of lines) {
+      if (this.isHeaderLine(line) || this.isPageInfo(line)) continue;
+      
+      const itemName = this.extractItemName(line);
+      if (!itemName || itemName.length < 3) continue;
+      
+      // Extract all amounts from the line
+      const amounts = this.extractMultipleAmounts(line);
+      if (amounts.length >= Math.min(periods.length, 2)) {
+        const category = this.categorizeItem(itemName, statementType);
+        
+        if (!itemMap.has(itemName)) {
+          itemMap.set(itemName, {
+            name: itemName,
+            category,
+            values: new Map()
+          });
+        }
+        
+        const item = itemMap.get(itemName)!;
+        
+        // Match amounts to periods (typically right-to-left, most recent first)
+        for (let i = 0; i < Math.min(amounts.length, periods.length); i++) {
+          const periodIndex = periods.length - 1 - i; // Start from most recent period
+          const period = periods[periodIndex];
+          const amount = amounts[i];
+          
+          if (amount !== null && Math.abs(amount) >= 1) {
+            item.values.set(period, amount);
+            console.log(`💰 ${itemName} - ${period}: ${amount.toLocaleString()}`);
+          }
+        }
+      }
+    }
+    
+    // Convert to comparative items with year-over-year changes
+    for (const [, item] of itemMap) {
+      if (item.values.size >= 2) {
+        const values = Array.from(item.values.entries())
+          .map(([period, amount]) => ({ period, amount }))
+          .sort((a, b) => a.period.localeCompare(b.period));
+        
+        const yearOverYearChanges = [];
+        for (let i = 1; i < values.length; i++) {
+          const fromValue = values[i - 1];
+          const toValue = values[i];
+          const changeAmount = toValue.amount - fromValue.amount;
+          const changePercentage = fromValue.amount !== 0 ? (changeAmount / Math.abs(fromValue.amount)) * 100 : 0;
+          
+          yearOverYearChanges.push({
+            fromPeriod: fromValue.period,
+            toPeriod: toValue.period,
+            changeAmount,
+            changePercentage
+          });
+          
+          console.log(`📈 ${item.name}: ${fromValue.period} to ${toValue.period} = ${changePercentage.toFixed(1)}% change`);
+        }
+        
+        comparativeItems.push({
+          name: item.name,
+          category: item.category,
+          values,
+          yearOverYearChanges
+        });
+      }
+    }
+    
+    console.log(`✅ Extracted ${comparativeItems.length} comparative items across ${periods.length} periods`);
+    
+    return {
+      periods: periods.sort(),
+      comparativeItems
+    };
+  }
+  
+  private extractMultipleAmounts(line: string): (number | null)[] {
+    const amounts: (number | null)[] = [];
+    
+    // Enhanced regex for multiple amounts in a single line
+    const multiAmountPatterns = [
+      // Table format with multiple amounts: | item | 1,234 | 2,345 | 3,456 |
+      /\|\s*([0-9,]+(?:\.[0-9]{1,2})?)\s*\|/g,
+      // Tab or space separated: 1,234    2,345    3,456
+      /([0-9]{1,3}(?:,[0-9]{3})+(?:\.[0-9]{1,2})?)/g,
+      // Parentheses for negatives in tables: (1,234)  2,345  (3,456)
+      /\(([0-9,]+(?:\.[0-9]{1,2})?)\)|([0-9,]+(?:\.[0-9]{1,2})?)/g
+    ];
+    
+    for (const pattern of multiAmountPatterns) {
+      let match;
+      while ((match = pattern.exec(line)) !== null) {
+        const numStr = (match[1] || match[2] || match[0]).replace(/[^0-9.-]/g, '');
+        const amount = parseFloat(numStr);
+        
+        if (!isNaN(amount) && amount >= 1) {
+          const isNegative = match[0].includes('(');
+          amounts.push(isNegative ? -amount : amount);
+        }
+      }
+      pattern.lastIndex = 0; // Reset regex
+    }
+    
+    return amounts;
   }
 
   private isHeaderLine(line: string): boolean {
