@@ -100,17 +100,31 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
   };
 
   const handleGenerateContent = async () => {
+    if (!allItemsConfirmed) {
+      toast({
+        title: "Confirmation required",
+        description: "Please confirm all materiality items before generating content",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setIsGenerating(true);
-
+      const businessData = await getBusinessData();
+      
       const request: FinancialContentRequest = {
         projectId,
         materialityAnalyses,
-        businessContext
+        businessContext: businessData
       };
 
       const result = await financialContentGenerator.generateFinancialInformation(request);
       setGeneratedContent(result.content);
+      
+      // Save the generated content to ipo_prospectus_sections
+      await saveFinancialContent(result.content);
+      
       setActiveTab('generate');
 
       if (onContentGenerated) {
@@ -119,9 +133,10 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
 
       toast({
         title: "Content generated",
-        description: "Financial information section has been generated successfully."
+        description: "Financial information section has been generated and saved successfully."
       });
     } catch (error) {
+      console.error('Error generating content:', error);
       toast({
         title: "Generation failed",
         description: "Failed to generate financial information content.",
@@ -129,6 +144,33 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
       });
     } finally {
       setIsGenerating(false);
+    }
+  };
+
+  const saveFinancialContent = async (content: string) => {
+    try {
+      const { error } = await supabase
+        .from('ipo_prospectus_sections')
+        .upsert({
+          project_id: projectId,
+          section_type: 'financial_information',
+          title: 'Financial Information',
+          content: content,
+          status: 'draft',
+          confidence_score: 0.85
+        }, {
+          onConflict: 'project_id,section_type'
+        });
+
+      if (error) {
+        console.error('Error saving financial content:', error);
+        throw error;
+      }
+      
+      console.log('Financial content saved to ipo_prospectus_sections');
+    } catch (error) {
+      console.error('Failed to save financial content:', error);
+      throw error;
     }
   };
 

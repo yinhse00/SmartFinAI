@@ -80,16 +80,70 @@ class FinancialDataExtractorService {
   }
 
   private extractLineItems(content: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): FinancialLineItem[] {
+    console.log('Extracting line items for statement type:', statementType);
+    console.log('Content preview:', content.substring(0, 500));
+    
     const lines = content.split('\n');
     const items: FinancialLineItem[] = [];
     
-    for (const line of lines) {
+    // Enhanced line detection - look for structured data patterns
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line.length === 0) continue;
+      
+      // Skip headers and obvious non-data lines
+      if (this.isHeaderLine(line) || this.isPageInfo(line)) continue;
+      
       const amount = this.extractAmount(line);
-      if (amount && amount > 0) {
-        const name = this.extractItemName(line);
-        if (name) {
-          const category = this.categorizeItem(name, statementType);
-          items.push({ name, amount, category });
+      const name = this.extractItemName(line);
+      
+      if (amount !== null && name) {
+        const category = this.categorizeItem(name, statementType);
+        items.push({ name, amount, category });
+        console.log('Added line item:', { name, amount, category });
+      }
+      
+      // Also check if this line contains tabular data
+      const tabulatedItems = this.extractFromTabularLine(line, statementType);
+      items.push(...tabulatedItems);
+    }
+    
+    console.log('Total line items extracted:', items.length);
+    return items;
+  }
+
+  private isHeaderLine(line: string): boolean {
+    const headerPatterns = [
+      /^(income|profit|loss|balance|cash|flow|statement|year|period|ended|assets|liabilities|equity)/i,
+      /^\s*(note|page|\d+\s*$)/i,
+      /^(consolidated|company|group|financial)/i
+    ];
+    return headerPatterns.some(pattern => pattern.test(line));
+  }
+
+  private isPageInfo(line: string): boolean {
+    return /^\s*page\s+\d+|^\s*\d+\s*$|^[-=\s]+$/.test(line);
+  }
+
+  private extractFromTabularLine(line: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): FinancialLineItem[] {
+    const items: FinancialLineItem[] = [];
+    
+    // Split by tabs or multiple spaces to identify columns
+    const columns = line.split(/\t+|\s{3,}/).filter(col => col.trim().length > 0);
+    
+    if (columns.length >= 2) {
+      const lastColumn = columns[columns.length - 1];
+      const amount = this.extractAmount(lastColumn);
+      
+      if (amount !== null) {
+        const itemName = columns.slice(0, -1).join(' ').trim();
+        if (itemName && !this.isHeaderLine(itemName)) {
+          const category = this.categorizeItem(itemName, statementType);
+          items.push({
+            name: itemName,
+            amount,
+            category
+          });
         }
       }
     }
@@ -128,48 +182,114 @@ class FinancialDataExtractorService {
   }
 
   private extractAmount(line: string): number | null {
-    const amountPattern = /[\d,]+\.?\d*/g;
-    const matches = line.match(amountPattern);
+    console.log('Extracting amount from line:', line);
     
-    if (matches) {
-      for (const match of matches) {
-        const cleaned = match.replace(/,/g, '');
-        const num = parseFloat(cleaned);
-        if (!isNaN(num) && num > 1000) {
-          return num;
+    // Enhanced regex for various number formats including currencies and negatives
+    const patterns = [
+      // Currency with parentheses for negatives: $(1,234.56)
+      /[\$\£\€\¥]\s*\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/,
+      // Currency with minus: $-1,234.56
+      /[\$\£\€\¥]\s*-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+      // Currency positive: $1,234.56
+      /[\$\£\€\¥]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+      // Number with parentheses: (1,234.56)
+      /\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/,
+      // Number with minus: -1,234.56
+      /-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+      // Simple number: 1,234.56 or 1234.56
+      /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
+      // Number without decimals: 1,234 or 1234
+      /(\d{1,3}(?:,\d{3})*)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = line.match(pattern);
+      if (match) {
+        const amount = parseFloat(match[1].replace(/,/g, ''));
+        if (!isNaN(amount) && amount > 100) { // Lower threshold for detection
+          const isNegative = line.includes('(') || line.includes('-');
+          const result = isNegative ? -amount : amount;
+          console.log('Extracted amount:', result, 'from line:', line);
+          return result;
         }
       }
     }
     
+    console.log('No amount found in line:', line);
     return null;
   }
 
   private extractItemName(line: string): string | null {
-    const amountPattern = /[\d,]+\.?\d*/g;
-    let name = line.replace(amountPattern, '').trim();
-    name = name.replace(/[()$£€¥]/g, '').trim();
+    // Remove amounts and common prefixes/suffixes
+    let name = line.replace(/[\$\£\€\¥]?\s*\(?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)?/g, '').trim();
     
-    if (name.length < 3 || name.length > 100) {
+    // Remove common prefixes and line numbers
+    name = name.replace(/^(note\s+\d+|note\s+|notes?\s+|\d+\.?\s+)/i, '').trim();
+    
+    // Remove trailing punctuation
+    name = name.replace(/[:.;,\-\s]+$/, '').trim();
+    
+    // Remove leading punctuation and spaces
+    name = name.replace(/^[:.;,\-\s]+/, '').trim();
+    
+    // Filter out obvious non-item names
+    if (name.length < 3 || /^\d+$/.test(name) || /^page\s+\d+$/i.test(name)) {
       return null;
     }
     
-    return name;
+    return name.length > 0 ? name : null;
   }
 
   private categorizeItem(itemName: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): 'revenue_item' | 'asset_item' | 'liability_item' {
-    const lowerName = itemName.toLowerCase();
+    const name = itemName.toLowerCase();
     
-    if (statementType === 'profit_loss') {
+    // Enhanced categorization with more keywords
+    const revenueKeywords = [
+      'revenue', 'sales', 'income', 'turnover', 'fees', 'commission', 'interest received',
+      'dividend income', 'other income', 'operating income', 'gross profit', 'net profit',
+      'earnings', 'gain on', 'service income', 'rental income'
+    ];
+    
+    const assetKeywords = [
+      'asset', 'cash', 'bank', 'inventory', 'stock', 'receivable', 'debtors',
+      'investment', 'property', 'equipment', 'plant', 'machinery', 'goodwill',
+      'intangible', 'prepaid', 'deposits', 'land', 'building', 'vehicle'
+    ];
+    
+    const liabilityKeywords = [
+      'liability', 'payable', 'creditors', 'debt', 'loan', 'borrowing',
+      'provision', 'accrued', 'deferred', 'tax payable', 'interest payable',
+      'share capital', 'retained earnings', 'equity', 'reserves', 'surplus'
+    ];
+    
+    // Check for revenue indicators
+    if (revenueKeywords.some(keyword => name.includes(keyword))) {
       return 'revenue_item';
-    } else if (statementType === 'balance_sheet') {
-      if (lowerName.includes('liability') || lowerName.includes('debt') || 
-          lowerName.includes('payable') || lowerName.includes('loan')) {
-        return 'liability_item';
-      }
+    }
+    
+    // Check for asset indicators
+    if (assetKeywords.some(keyword => name.includes(keyword))) {
       return 'asset_item';
     }
     
-    return 'revenue_item';
+    // Check for liability indicators
+    if (liabilityKeywords.some(keyword => name.includes(keyword))) {
+      return 'liability_item';
+    }
+    
+    // Enhanced default logic based on statement type and context
+    switch (statementType) {
+      case 'profit_loss':
+        // In P&L, expenses are typically negative revenue items
+        return 'revenue_item';
+      case 'balance_sheet':
+        // In balance sheet, first half typically assets, second half liabilities
+        return name.includes('total') && name.includes('asset') ? 'asset_item' : 'liability_item';
+      case 'cash_flow':
+        return 'revenue_item';
+      default:
+        return 'revenue_item';
+    }
   }
 }
 
