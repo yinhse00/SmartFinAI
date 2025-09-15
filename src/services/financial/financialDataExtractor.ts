@@ -33,8 +33,33 @@ class FinancialDataExtractorService {
         };
       }
 
+      console.log(`Starting financial data extraction for ${file.name} (${fileType})`);
+      
       const processed = await fileProcessingService.processFile(file);
+      
+      if (!processed.content || processed.content.trim().length === 0) {
+        console.error('No content extracted from file:', file.name);
+        return {
+          success: false,
+          error: 'No readable content could be extracted from the file. Please ensure the file is not corrupted or password-protected.'
+        };
+      }
+      
+      console.log(`Extracted ${processed.content.length} characters from ${file.name}`);
+      
       const extractedData = await this.parseFinancialContent(processed.content, file.name);
+      
+      if (extractedData.lineItems.length === 0) {
+        console.warn('No line items extracted from financial statement');
+        // Still return success but with warning
+        return {
+          success: true,
+          data: extractedData,
+          error: 'Warning: No financial line items could be automatically extracted. The file may need manual review.'
+        };
+      }
+      
+      console.log(`Successfully extracted ${extractedData.lineItems.length} line items`);
       
       return {
         success: true,
@@ -81,12 +106,14 @@ class FinancialDataExtractorService {
 
   private extractLineItems(content: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): FinancialLineItem[] {
     console.log('Extracting line items for statement type:', statementType);
-    console.log('Content preview:', content.substring(0, 500));
+    console.log('Content length:', content.length, 'characters');
     
     const lines = content.split('\n');
     const items: FinancialLineItem[] = [];
     
-    // Enhanced line detection - look for structured data patterns
+    console.log('Processing', lines.length, 'lines');
+    
+    // Enhanced line detection with multiple strategies
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
       if (line.length === 0) continue;
@@ -94,21 +121,48 @@ class FinancialDataExtractorService {
       // Skip headers and obvious non-data lines
       if (this.isHeaderLine(line) || this.isPageInfo(line)) continue;
       
+      // Strategy 1: Look for table data with pipes or consistent spacing
+      if (line.includes('|') || /\s{3,}/.test(line)) {
+        const tabulatedItems = this.extractFromTabularLine(line, statementType);
+        for (const item of tabulatedItems) {
+          // Check for duplicates
+          if (!items.find(existing => existing.name === item.name && existing.amount === item.amount)) {
+            items.push(item);
+            console.log('Added tabular item:', item);
+          }
+        }
+      }
+      
+      // Strategy 2: Regular line parsing
       const amount = this.extractAmount(line);
       const name = this.extractItemName(line);
       
-      if (amount !== null && name) {
+      if (amount !== null && name && Math.abs(amount) >= 1) {
         const category = this.categorizeItem(name, statementType);
-        items.push({ name, amount, category });
-        console.log('Added line item:', { name, amount, category });
+        const newItem = { name, amount, category };
+        
+        // Check for duplicates
+        if (!items.find(existing => existing.name === newItem.name && existing.amount === newItem.amount)) {
+          items.push(newItem);
+          console.log('Added line item:', newItem);
+        }
       }
-      
-      // Also check if this line contains tabular data
-      const tabulatedItems = this.extractFromTabularLine(line, statementType);
-      items.push(...tabulatedItems);
     }
     
     console.log('Total line items extracted:', items.length);
+    
+    // If we didn't find many items, log some sample lines for debugging
+    if (items.length < 3) {
+      console.log('Few items found. Sample lines for debugging:');
+      const sampleLines = lines.filter(line => line.trim().length > 10).slice(0, 10);
+      sampleLines.forEach((line, index) => {
+        console.log(`Sample ${index + 1}: "${line}"`);
+        const amount = this.extractAmount(line);
+        const name = this.extractItemName(line);
+        console.log(`  -> Amount: ${amount}, Name: ${name}`);
+      });
+    }
+    
     return items;
   }
 
@@ -128,24 +182,47 @@ class FinancialDataExtractorService {
   private extractFromTabularLine(line: string, statementType: 'profit_loss' | 'balance_sheet' | 'cash_flow'): FinancialLineItem[] {
     const items: FinancialLineItem[] = [];
     
-    // Split by tabs or multiple spaces to identify columns
-    const columns = line.split(/\t+|\s{3,}/).filter(col => col.trim().length > 0);
-    
-    if (columns.length >= 2) {
-      const lastColumn = columns[columns.length - 1];
-      const amount = this.extractAmount(lastColumn);
+    try {
+      // Multiple strategies for tabular data extraction
+      let columns: string[] = [];
       
-      if (amount !== null) {
-        const itemName = columns.slice(0, -1).join(' ').trim();
-        if (itemName && !this.isHeaderLine(itemName)) {
-          const category = this.categorizeItem(itemName, statementType);
-          items.push({
-            name: itemName,
-            amount,
-            category
-          });
+      // Strategy 1: Split by pipes (markdown table format)
+      if (line.includes('|')) {
+        columns = line.split('|').map(col => col.trim()).filter(col => col.length > 0);
+      } 
+      // Strategy 2: Split by tabs
+      else if (line.includes('\t')) {
+        columns = line.split('\t').map(col => col.trim()).filter(col => col.length > 0);
+      }
+      // Strategy 3: Split by multiple spaces (minimum 3)
+      else if (/\s{3,}/.test(line)) {
+        columns = line.split(/\s{3,}/).map(col => col.trim()).filter(col => col.length > 0);
+      }
+      
+      if (columns.length >= 2) {
+        // Try each column as potential amount (rightmost first)
+        for (let i = columns.length - 1; i >= 1; i--) {
+          const potentialAmount = this.extractAmount(columns[i]);
+          
+          if (potentialAmount !== null && Math.abs(potentialAmount) >= 1) {
+            // Use all previous columns as the item name
+            const itemName = columns.slice(0, i).join(' ').trim();
+            const cleanedName = this.extractItemName(itemName);
+            
+            if (cleanedName && !this.isHeaderLine(cleanedName) && cleanedName.length > 2) {
+              const category = this.categorizeItem(cleanedName, statementType);
+              items.push({
+                name: cleanedName,
+                amount: potentialAmount,
+                category
+              });
+              break; // Found a valid item, move to next line
+            }
+          }
         }
       }
+    } catch (error) {
+      console.warn('Error extracting from tabular line:', line, error);
     }
     
     return items;
@@ -182,41 +259,66 @@ class FinancialDataExtractorService {
   }
 
   private extractAmount(line: string): number | null {
-    console.log('Extracting amount from line:', line);
+    if (!line || line.length === 0) return null;
     
-    // Enhanced regex for various number formats including currencies and negatives
-    const patterns = [
-      // Currency with parentheses for negatives: $(1,234.56)
-      /[\$\£\€\¥]\s*\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/,
-      // Currency with minus: $-1,234.56
-      /[\$\£\€\¥]\s*-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-      // Currency positive: $1,234.56
-      /[\$\£\€\¥]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-      // Number with parentheses: (1,234.56)
-      /\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/,
-      // Number with minus: -1,234.56
-      /-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-      // Simple number: 1,234.56 or 1234.56
-      /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/,
-      // Number without decimals: 1,234 or 1234
-      /(\d{1,3}(?:,\d{3})*)/
-    ];
-    
-    for (const pattern of patterns) {
-      const match = line.match(pattern);
-      if (match) {
-        const amount = parseFloat(match[1].replace(/,/g, ''));
-        if (!isNaN(amount) && amount > 100) { // Lower threshold for detection
-          const isNegative = line.includes('(') || line.includes('-');
-          const result = isNegative ? -amount : amount;
-          console.log('Extracted amount:', result, 'from line:', line);
-          return result;
-        }
+    try {
+      // Enhanced regex for various number formats including currencies and negatives
+      const patterns = [
+        // Currency with parentheses for negatives: $(1,234.56)
+        /[\$\£\€\¥]\s*\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/g,
+        // Currency with minus: $-1,234.56
+        /[\$\£\€\¥]\s*-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
+        // Currency positive: $1,234.56
+        /[\$\£\€\¥]\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
+        // Number with parentheses: (1,234.56)
+        /\((\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\)/g,
+        // Number with minus: -1,234.56
+        /-\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g,
+        // Numbers with pipes (table data): | 1,234.56 |
+        /\|\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*\|/g,
+        // Simple number at end of line: 1,234.56 or 1234.56
+        /(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)\s*$/g,
+        // Number without decimals: 1,234 or 1234
+        /(\d{1,3}(?:,\d{3})*)/g
+      ];
+      
+      let bestMatch: number | null = null;
+      let highestValue = 0;
+      let isNegative = false;
+
+      // Check for negative indicators
+      if (line.includes('(') && line.includes(')')) {
+        isNegative = true;
+      } else if (line.includes('-') && !line.includes('--')) {
+        isNegative = true;
       }
+      
+      for (const pattern of patterns) {
+        let match;
+        while ((match = pattern.exec(line)) !== null) {
+          const numStr = match[1].replace(/,/g, '');
+          const amount = parseFloat(numStr);
+          
+          if (!isNaN(amount) && amount >= 1) { // Very low threshold for detection
+            // Prefer larger numbers but exclude unrealistic values
+            if (amount > highestValue && amount < 999999999999) {
+              highestValue = amount;
+              bestMatch = isNegative ? -amount : amount;
+            }
+          }
+        }
+        pattern.lastIndex = 0; // Reset regex
+      }
+      
+      if (bestMatch !== null) {
+        console.log('Extracted amount:', bestMatch, 'from line:', line.substring(0, 100));
+      }
+      
+      return bestMatch;
+    } catch (error) {
+      console.warn('Error extracting amount from line:', line, error);
+      return null;
     }
-    
-    console.log('No amount found in line:', line);
-    return null;
   }
 
   private extractItemName(line: string): string | null {

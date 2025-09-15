@@ -61,7 +61,48 @@ export const spreadsheetProcessor = {
         console.log("SheetJS is not available for client-side Excel extraction");
       }
       
-      // API fallback - if client-side extraction failed or is unavailable
+      // For financial statements, always prioritize basic extraction without API dependency
+      const isFinancialStatement = file.name.toLowerCase().includes('financial') || 
+                                  file.name.toLowerCase().includes('statement') ||
+                                  file.name.toLowerCase().includes('balance') ||
+                                  file.name.toLowerCase().includes('income') ||
+                                  file.name.toLowerCase().includes('cash flow') ||
+                                  file.name.toLowerCase().includes('profit') ||
+                                  file.name.toLowerCase().includes('loss');
+      
+      if (isFinancialStatement) {
+        console.log(`Processing financial statement Excel directly without API: ${file.name}`);
+        
+        // Try to get basic extraction content
+        let basicExtraction = "";
+        try {
+          basicExtraction = await fileConverter.getExcelText(file);
+        } catch (extractionError) {
+          console.warn("Could not extract basic Excel content:", extractionError);
+          return {
+            content: `Error extracting content from financial statement ${file.name}. Please ensure the file is not corrupted and try again.`,
+            source: file.name
+          };
+        }
+        
+        if (basicExtraction && basicExtraction.trim() !== '' && !basicExtraction.includes('[Excel')) {
+          const formattedText = spreadsheetProcessor.formatExcelContent(basicExtraction, file.name);
+          console.log(`Successfully extracted financial statement content from ${file.name}`);
+          
+          return {
+            content: formattedText,
+            source: file.name,
+            metadata: { isFinancialStatement: true }
+          };
+        } else {
+          return {
+            content: `Unable to extract readable content from financial statement ${file.name}. The file may be empty or contain only formatting.`,
+            source: file.name
+          };
+        }
+      }
+      
+      // API fallback for non-financial documents only
       const apiKey = getGrokApiKey();
       const isApiAvailable = apiKey ? await checkApiAvailability(apiKey) : false;
       

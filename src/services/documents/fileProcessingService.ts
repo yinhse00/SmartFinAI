@@ -51,28 +51,52 @@ export const fileProcessingService = {
     
     try {
       let result;
+      
+      // Check if this is a financial statement - use direct processors for reliability
+      const isFinancialStatement = file.name.toLowerCase().includes('financial') || 
+                                  file.name.toLowerCase().includes('statement') ||
+                                  file.name.toLowerCase().includes('balance') ||
+                                  file.name.toLowerCase().includes('income') ||
+                                  file.name.toLowerCase().includes('cash flow') ||
+                                  file.name.toLowerCase().includes('profit') ||
+                                  file.name.toLowerCase().includes('loss');
+      
       switch (fileType) {
         case 'pdf':
-          // Use FileAdapter to route through centralized brain system
-          try {
-            const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-            result = { content, source: file.name };
-          } catch (error) {
-            // Fallback to original processor if brain system fails
+          // For financial statements, always use direct processor to avoid API dependency
+          if (isFinancialStatement) {
+            console.log(`Processing financial statement PDF directly: ${file.name}`);
             result = await enhancedPdfProcessor.extractText(file);
+          } else {
+            // Use FileAdapter for non-financial documents
+            try {
+              const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
+              result = { content, source: file.name };
+            } catch (error) {
+              console.log(`FileAdapter failed for ${file.name}, using direct processor`);
+              result = await enhancedPdfProcessor.extractText(file);
+            }
           }
           break;
         case 'word':
-          // Use FileAdapter to route through centralized brain system
-          try {
-            const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-            result = { content, source: file.name };
-          } catch (error) {
-            // Fallback to original processor if brain system fails
+          // For financial statements, always use direct processor to avoid API dependency
+          if (isFinancialStatement) {
+            console.log(`Processing financial statement Word doc directly: ${file.name}`);
             result = await documentProcessor.extractWordText(file, mammothAvailable);
+          } else {
+            // Use FileAdapter for non-financial documents
+            try {
+              const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
+              result = { content, source: file.name };
+            } catch (error) {
+              console.log(`FileAdapter failed for ${file.name}, using direct processor`);
+              result = await documentProcessor.extractWordText(file, mammothAvailable);
+            }
           }
           break;
         case 'excel':
+          // Excel files always use direct processor (more reliable for financial data)
+          console.log(`Processing Excel file directly: ${file.name}`);
           result = await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
           
           // Add specific metadata for regulatory Excel files
