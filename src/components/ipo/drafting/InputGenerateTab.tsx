@@ -46,8 +46,6 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
 
   // Check if this is a financial section that should use the financial analysis workspace
   const isFinancialSection = sectionType.toLowerCase().includes('financial') ||
-                            sectionType.toLowerCase().includes('management discussion') ||
-                            sectionType.toLowerCase().includes('md&a') ||
                             sectionType.toLowerCase().includes('4.') ||
                             sectionType.toLowerCase().includes('profit') ||
                             sectionType.toLowerCase().includes('loss') ||
@@ -87,16 +85,9 @@ export const InputGenerateTab: React.FC<InputGenerateTabProps> = ({
       onGenerate();
     };
 
-    // Determine section type for financial workspace
-    const financialSectionType = sectionType.toLowerCase().includes('management discussion') ||
-                                 sectionType.toLowerCase().includes('md&a') 
-                                 ? 'management-discussion-analysis' 
-                                 : 'financial_information';
-
     return (
       <FinancialAnalysisWorkspace
         projectId={projectId}
-        sectionType={financialSectionType}
         businessContext={businessContext}
         onContentGenerated={handleContentGenerated}
       />

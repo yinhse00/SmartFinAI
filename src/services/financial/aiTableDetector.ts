@@ -31,46 +31,21 @@ class AITableDetectorService {
    * Analyze document for financial statement tables using AI vision
    */
   async analyzeDocument(file: File, content: string): Promise<DocumentTableAnalysis> {
-    console.log('🔍 [AI-FIRST DEBUG] Starting AI table detection for:', file.name);
-    console.log('📄 [AI-FIRST DEBUG] Content length:', content.length, 'characters');
-    
-    // CRITICAL DEBUG: Check API key availability first
-    const hasApiKey = grokService.hasApiKey();
-    console.log('🔑 [AI-FIRST DEBUG] Grok API key available:', hasApiKey);
-    
-    if (!hasApiKey) {
-      console.warn('❌ [AI-FIRST DEBUG] No Grok API key - AI table detection will fail!');
-      console.warn('💡 [AI-FIRST DEBUG] Go to Settings to configure X.AI/Grok API key');
-      return this.createFallbackAnalysis();
-    }
+    console.log('🔍 Starting AI table detection for:', file.name);
     
     try {
-      console.log('🚀 [AI-FIRST DEBUG] Proceeding with AI table detection...');
       const tableAnalysis = await this.detectTablesWithAI(content, file.name);
-      console.log('📊 [AI-FIRST DEBUG] AI detected', tableAnalysis.length, 'tables');
-      
       const validatedTables = await this.validateDetectedTables(tableAnalysis);
-      console.log('✅ [AI-FIRST DEBUG] Validated', validatedTables.length, 'tables');
-      
-      const profitLossTable = validatedTables.find(t => t.tableType === 'profit_loss' && t.confidence > 0.8);
-      const balanceSheetTable = validatedTables.find(t => t.tableType === 'balance_sheet' && t.confidence > 0.8);
-      
-      console.log('🎯 [AI-FIRST DEBUG] Found P&L table:', !!profitLossTable, profitLossTable?.confidence);
-      console.log('🎯 [AI-FIRST DEBUG] Found Balance Sheet table:', !!balanceSheetTable, balanceSheetTable?.confidence);
-      
-      const documentQuality = this.assessDocumentQuality(validatedTables);
-      console.log('📈 [AI-FIRST DEBUG] Document quality assessed as:', documentQuality);
       
       return {
         tables: validatedTables,
-        primaryProfitLossTable: profitLossTable,
-        primaryBalanceSheetTable: balanceSheetTable,
-        documentQuality,
+        primaryProfitLossTable: validatedTables.find(t => t.tableType === 'profit_loss' && t.confidence > 0.8),
+        primaryBalanceSheetTable: validatedTables.find(t => t.tableType === 'balance_sheet' && t.confidence > 0.8),
+        documentQuality: this.assessDocumentQuality(validatedTables),
         processingRecommendation: this.generateProcessingRecommendation(validatedTables)
       };
     } catch (error) {
-      console.error('❌ [AI-FIRST DEBUG] AI table detection failed:', error);
-      console.error('🔧 [AI-FIRST DEBUG] Error details:', error instanceof Error ? error.message : String(error));
+      console.error('AI table detection failed:', error);
       return this.createFallbackAnalysis();
     }
   }
@@ -110,15 +85,10 @@ Content: ${content.substring(0, 8000)}
 Return structured JSON with detected tables and their analysis.
     `;
 
-    console.log('🔑 [AI-FIRST DEBUG] Checking API key before AI detection...');
     if (!grokService.hasApiKey()) {
-      console.error('❌ [AI-FIRST DEBUG] Grok API key not configured - cannot proceed with AI detection');
-      throw new Error('Grok AI service not available - API key not configured');
+      throw new Error('Grok AI service not available');
     }
-    
-    console.log('✅ [AI-FIRST DEBUG] API key confirmed, sending request to Grok...');
-    console.log('📝 [AI-FIRST DEBUG] Prompt length:', prompt.length, 'characters');
-    
+
     const response = await grokService.generateResponse({
       prompt,
       format: 'structured_json',
@@ -130,8 +100,6 @@ Return structured JSON with detected tables and their analysis.
         }
       }
     });
-    
-    console.log('📡 [AI-FIRST DEBUG] Received AI response, length:', response.text?.length || 0);
 
     return this.parseAITableResponse(response.text);
   }

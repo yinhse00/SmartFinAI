@@ -37,9 +37,7 @@ export const fileProcessingService = {
     const fileType = fileTypeDetector.detectFileType(file);
     const { mammothAvailable, xlsxAvailable } = checkDocumentLibraries();
     
-    console.log(`📁 [FILE PROCESSING] Processing file: ${file.name}`);
-    console.log(`📂 [FILE PROCESSING] Detected type: ${fileType}`);
-    console.log(`📚 [FILE PROCESSING] Libraries available:`, { mammothAvailable, xlsxAvailable });
+    console.log(`Processing file: ${file.name}, type: ${fileType}, libraries available:`, { mammothAvailable, xlsxAvailable });
     
     // Special handling for specific mapping schedule files
     const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');

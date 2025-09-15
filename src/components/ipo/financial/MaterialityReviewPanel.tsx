@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard, ArrowUp, ArrowDown, Minus, Zap } from 'lucide-react';
+import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard } from 'lucide-react';
 import { MaterialityAnalysis, MaterialityItem, materialityAnalyzer } from '@/services/financial/materialityAnalyzer';
 
 interface MaterialityReviewPanelProps {
@@ -117,49 +117,6 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
     }
   };
 
-  const getTrendIcon = (trendType?: MaterialityItem['trendAnalysis']) => {
-    switch (trendType) {
-      case 'increasing':
-        return <ArrowUp className="w-4 h-4 text-green-600" />;
-      case 'decreasing':
-        return <ArrowDown className="w-4 h-4 text-red-600" />;
-      case 'volatile':
-        return <Zap className="w-4 h-4 text-orange-600" />;
-      default:
-        return <Minus className="w-4 h-4 text-muted-foreground" />;
-    }
-  };
-
-  const formatYearlyProgression = (item: MaterialityItem) => {
-    if (!item.yearlyData || item.yearlyData.length === 0) {
-      return `Current: ${item.percentage?.toFixed(1) || 'N/A'}%`;
-    }
-
-    const sortedData = [...item.yearlyData].sort((a, b) => a.year.localeCompare(b.year));
-    return sortedData
-      .map(data => `${data.year} (${data.percentage.toFixed(1)}%)`)
-      .join(' → ');
-  };
-
-  const getMaterialityStatus = (item: MaterialityItem) => {
-    const currentPercentage = item.percentage || 0;
-    const threshold = item.materialityThreshold || 5;
-    
-    if (currentPercentage >= threshold) {
-      return {
-        status: 'Material',
-        reason: `${currentPercentage.toFixed(1)}% ≥ ${threshold}% threshold`,
-        className: 'text-green-600 bg-green-50 border-green-200'
-      };
-    } else {
-      return {
-        status: 'Not Material',
-        reason: `${currentPercentage.toFixed(1)}% < ${threshold}% threshold`,
-        className: 'text-muted-foreground bg-muted/5 border-muted'
-      };
-    }
-  };
-
   if (!currentAnalysis) {
     return (
       <Card>
@@ -242,21 +199,14 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
         </CardContent>
       </Card>
 
-      {/* Separated P&L and Balance Sheet Items Review */}
-      <div className="space-y-6">
-        {/* Profit & Loss Items */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5" />
-              Profit & Loss Items (vs Total Revenue)
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {currentAnalysis.items
-                .filter(item => item.itemType === 'revenue_item')
-                .map((item, index) => (
+      {/* Items Review */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Item Review</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {currentAnalysis.items.map((item, index) => (
               <div
                 key={`${item.itemName}-${index}`}
                 className={`p-4 border rounded-lg ${
@@ -282,24 +232,9 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                       )}
                     </div>
                     
-                    <div className="space-y-2 mb-3">
-                      <div className="text-sm text-muted-foreground">
-                        Amount: {item.amount?.toLocaleString() || 'N/A'}
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {formatYearlyProgression(item)}
-                        </span>
-                        {getTrendIcon(item.trendAnalysis)}
-                      </div>
-                      
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getMaterialityStatus(item).className}`}>
-                        {getMaterialityStatus(item).status}
-                        <span className="text-xs opacity-75">
-                          ({getMaterialityStatus(item).reason})
-                        </span>
-                      </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-2">
+                      <div>Amount: {item.amount.toLocaleString()}</div>
+                      <div>Percentage: {item.percentage.toFixed(1)}%</div>
                     </div>
 
                     {item.aiReasoning && (
@@ -329,127 +264,17 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                 </div>
               </div>
             ))}
-            {currentAnalysis.items.filter(item => item.itemType === 'revenue_item').length === 0 && (
-              <p className="text-muted-foreground text-center py-4">No P&L items identified</p>
-            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Balance Sheet Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building className="w-5 h-5" />
-            Balance Sheet Items (vs Total Assets)
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {currentAnalysis.items
-              .filter(item => item.itemType === 'asset_item' || item.itemType === 'liability_item')
-              .map((item, index) => (
-              <div
-                key={`bs-${item.itemName}-${index}`}
-                className={`p-4 border rounded-lg ${
-                  item.userConfirmed 
-                    ? item.isMaterial 
-                      ? 'border-success bg-success/5' 
-                      : 'border-muted bg-muted/5'
-                    : item.aiSuggested 
-                      ? 'border-orange-300 bg-orange-50' 
-                      : 'border-muted'
-                }`}
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      {getItemTypeIcon(item.itemType)}
-                      <h4 className="font-medium">{item.itemName}</h4>
-                      <Badge variant="outline" className="text-xs">
-                        {getItemTypeLabel(item.itemType)}
-                      </Badge>
-                      {item.userConfirmed && (
-                        <CheckCircle className="w-4 h-4 text-success" />
-                      )}
-                    </div>
-                    
-                    <div className="space-y-2 mb-3">
-                      <div className="text-sm text-muted-foreground">
-                        Amount: {item.amount?.toLocaleString() || 'N/A'}
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium">
-                          {formatYearlyProgression(item)}
-                        </span>
-                        {getTrendIcon(item.trendAnalysis)}
-                      </div>
-                      
-                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getMaterialityStatus(item).className}`}>
-                        {getMaterialityStatus(item).status}
-                        <span className="text-xs opacity-75">
-                          ({getMaterialityStatus(item).reason})
-                        </span>
-                      </div>
-                    </div>
-
-                    {item.aiReasoning && (
-                      <p className="text-sm text-muted-foreground italic mb-2">
-                        AI: {item.aiReasoning}
-                      </p>
-                    )}
-
-                    {item.businessContext?.relatedSegments?.length > 0 && (
-                      <div className="flex gap-1 mb-2">
-                        {item.businessContext.relatedSegments.map((segment: string) => (
-                          <Badge key={segment} variant="secondary" className="text-xs">
-                            {segment}
-                          </Badge>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-medium">Material</span>
-                    <Switch
-                      checked={item.isMaterial}
-                      onCheckedChange={(checked) => {
-                        const allItems = currentAnalysis.items;
-                        const actualIndex = allItems.findIndex(allItem => 
-                          allItem.itemName === item.itemName && allItem.itemType === item.itemType
-                        );
-                        handleItemToggle(actualIndex, checked);
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-            ))}
-            {currentAnalysis.items.filter(item => 
-              item.itemType === 'asset_item' || item.itemType === 'liability_item'
-            ).length === 0 && (
-              <p className="text-muted-foreground text-center py-4">No Balance Sheet items identified</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-      </div>
-
-      {/* Final Generation Button */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex justify-end">
+          <div className="mt-6 flex justify-end">
             <Button 
               onClick={onConfirmAll}
               disabled={confirmedItems < totalItems}
               className="min-w-32"
-              size="lg"
             >
               {confirmedItems < totalItems 
-                ? `Confirm ${confirmedItems}/${totalItems} Items` 
-                : 'Generate Financial Content'
+                ? `Confirm ${confirmedItems}/${totalItems}` 
+                : 'Generate Financial Information'
               }
             </Button>
           </div>

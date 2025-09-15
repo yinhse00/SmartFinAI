@@ -17,7 +17,6 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface FinancialAnalysisWorkspaceProps {
   projectId: string;
-  sectionType?: string;
   businessContext?: {
     businessContent?: string;
     userInputs?: any;
@@ -27,7 +26,6 @@ interface FinancialAnalysisWorkspaceProps {
 
 export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProps> = ({
   projectId,
-  sectionType = 'financial_information',
   businessContext,
   onContentGenerated
 }) => {
@@ -117,18 +115,12 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     try {
       const businessData = await getBusinessData();
       
-      // Map MD&A section type to financial information for guidance reference
-      const actualSectionType = sectionType === 'management-discussion-analysis' 
-        ? 'financial-information' 
-        : sectionType;
-      
       const request: IPOContentGenerationRequest = {
         project_id: projectId,
-        section_type: actualSectionType,
+        section_type: 'financial_information',
         key_elements: {
           materialityAnalyses,
-          businessContext: businessData,
-          isMDASection: sectionType === 'management-discussion-analysis'
+          businessContext: businessData
         }
       };
 
@@ -141,23 +133,16 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
           onContentGenerated(result.content || '');
         }
 
-        const contentType = sectionType === 'management-discussion-analysis' 
-          ? 'Management Discussion & Analysis' 
-          : 'Financial information';
-
         toast({
           title: "Content generated",
-          description: `${contentType} section has been generated and saved successfully.`
+          description: "Financial information section has been generated and saved successfully."
         });
       }
     } catch (error) {
       console.error('Error generating content:', error);
-      const contentType = sectionType === 'management-discussion-analysis' 
-        ? 'MD&A' 
-        : 'financial information';
       toast({
         title: "Generation failed",
-        description: `Failed to generate ${contentType} content.`,
+        description: "Failed to generate financial information content.",
         variant: "destructive"
       });
     }
@@ -174,11 +159,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>
-            {sectionType === 'management-discussion-analysis' 
-              ? 'Management Discussion & Analysis Generation' 
-              : 'Financial Information Analysis'}
-          </CardTitle>
+          <CardTitle>Financial Information Analysis</CardTitle>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as any)}>
@@ -234,11 +215,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
             <TabsContent value="generate" className="mt-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    {sectionType === 'management-discussion-analysis' 
-                      ? 'Generated Management Discussion & Analysis' 
-                      : 'Generated Financial Information'}
-                  </CardTitle>
+                  <CardTitle>Generated Financial Information</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {ipoGeneratedContent ? (
@@ -265,10 +242,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
                         disabled={isGenerating || !allItemsConfirmed}
                         size="lg"
                       >
-                        {isGenerating ? 'Generating...' : 
-                          sectionType === 'management-discussion-analysis' 
-                            ? 'Generate MD&A' 
-                            : 'Generate Financial Information'}
+                        {isGenerating ? 'Generating...' : 'Generate Financial Information'}
                       </Button>
                       {!allItemsConfirmed && (
                         <p className="text-sm text-muted-foreground mt-2">
