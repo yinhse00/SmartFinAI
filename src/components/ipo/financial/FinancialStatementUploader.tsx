@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, File, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, File, X, CheckCircle } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { financialDataExtractor, FinancialData } from '@/services/financial/financialDataExtractor';
 import { supabase } from '@/integrations/supabase/client';
-import { useGlobalApiKeyState } from '@/hooks/useGlobalApiKeyState';
 
 interface FinancialStatementUploaderProps {
   projectId: string;
@@ -29,7 +28,6 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
 }) => {
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [isUploading, setIsUploading] = useState(false);
-  const { hasApiKey } = useGlobalApiKeyState();
   const { validateFiles } = useFileUpload();
   const { toast } = useToast();
 
@@ -38,16 +36,6 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
     if (!files || files.length === 0) return;
 
     if (!validateFiles(files)) return;
-
-    // Check if API key is configured for enhanced processing
-    if (!hasApiKey) {
-      toast({
-        title: "API Key Required",
-        description: "Configure X.AI API key for AI-powered financial table recognition",
-        variant: "destructive"
-      });
-      return;
-    }
 
     setIsUploading(true);
 
@@ -165,37 +153,15 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
     }
   };
 
-  if (!hasApiKey) {
-    return (
-      <Card className="p-6">
-        <div className="text-center space-y-4">
-          <div className="text-xl font-semibold">API Key Required</div>
-          <p className="text-muted-foreground">
-            Please configure your X.AI API key in Settings to enable AI-powered financial analysis.
-          </p>
-          <Button 
-            onClick={() => window.open('/settings', '_blank')}
-            variant="default"
-          >
-            Configure API Key in Settings
-          </Button>
-        </div>
-      </Card>
-    );
-  }
-
   return (
-    <div className="space-y-4">
-      
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Upload className="w-5 h-5" />
-            Financial Statement Upload
-            {hasApiKey && <CheckCircle className="w-4 h-4 text-success ml-auto" />}
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Upload className="w-5 h-5" />
+          Financial Statement Upload
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
         <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-8 text-center">
           <Upload className="w-8 h-8 mx-auto mb-4 text-muted-foreground" />
           <p className="text-sm text-muted-foreground mb-4">
@@ -256,12 +222,8 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
         <div className="text-xs text-muted-foreground">
           <p>Supported formats: PDF, Word (.doc, .docx), Excel (.xls, .xlsx)</p>
           <p>Maximum file size: 20MB per file</p>
-          {hasApiKey && (
-            <p className="text-success">✅ AI-powered table recognition enabled</p>
-          )}
         </div>
       </CardContent>
     </Card>
-    </div>
   );
 };

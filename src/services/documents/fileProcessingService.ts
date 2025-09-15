@@ -31,7 +31,7 @@ export const fileProcessingService = {
   },
   
   /**
-   * Process a file and extract text content with AI-first financial document handling
+   * Process a file and extract text content based on file type
    */
   processFile: async (file: File): Promise<{ content: string; source: string; metadata?: any }> => {
     const fileType = fileTypeDetector.detectFileType(file);
@@ -42,30 +42,32 @@ export const fileProcessingService = {
     // Special handling for specific mapping schedule files
     const isListingGuidance = file.name.toLowerCase().includes('guide for new listing applicants');
     const isListedIssuerGuidance = file.name.toLowerCase().includes('guidance materials for listed issuers');
-    const isFinancialStatement = fileProcessingService.isFinancialStatement(file.name);
     
     const metadata = {
       isListingGuidance,
       isListedIssuerGuidance,
-      isRegulatoryMapping: isListingGuidance || isListedIssuerGuidance,
-      isFinancialStatement,
-      documentType: isFinancialStatement ? 'financial_statement' : 
-                   (isListingGuidance || isListedIssuerGuidance) ? 'regulatory_guidance' : 'general'
+      isRegulatoryMapping: isListingGuidance || isListedIssuerGuidance
     };
     
     try {
       let result;
       
+      // Enhanced financial statement detection - use direct processors for reliability
+      const isFinancialStatement = fileProcessingService.isFinancialStatement(file.name);
+      
       switch (fileType) {
         case 'pdf':
-          console.log(`🔧 Processing PDF directly: ${file.name}`);
+          // ALWAYS use direct processor for ALL documents to avoid API dependency issues
+          console.log(`🔧 Processing PDF directly (bypassing API): ${file.name}`);
           result = await enhancedPdfProcessor.extractText(file);
           break;
         case 'word':
-          console.log(`🔧 Processing Word document directly: ${file.name}`);
+          // ALWAYS use direct processor for ALL documents to avoid API dependency issues
+          console.log(`🔧 Processing Word document directly (bypassing API): ${file.name}`);
           result = await documentProcessor.extractWordText(file, mammothAvailable);
           break;
         case 'excel':
+          // Excel files always use direct processor (more reliable for financial data)
           console.log(`Processing Excel file directly: ${file.name}`);
           result = await spreadsheetProcessor.extractExcelText(file, xlsxAvailable);
           
@@ -79,51 +81,16 @@ export const fileProcessingService = {
           }
           break;
         case 'image':
+          // Use enhanced image processor with OCR capabilities and structure analysis
           result = await enhancedImageProcessor.extractText(file);
           break;
         default:
           return { content: `Unable to extract text from ${file.name}`, source: file.name };
       }
       
-      // AI-first table detection for financial statements
-      if (isFinancialStatement && result.content) {
-        try {
-          console.log('🤖 Attempting AI-first financial table detection...');
-          const { aiTableDetector } = await import('../financial/aiTableDetector');
-          
-          const tableAnalysis = await aiTableDetector.analyzeDocument(file, result.content);
-          
-          if (tableAnalysis.detectedTables.length > 0) {
-            console.log(`✅ AI detected ${tableAnalysis.detectedTables.length} financial tables`);
-            result.metadata = {
-              ...result.metadata,
-              ...metadata,
-              aiTableAnalysis: tableAnalysis,
-              hasFinancialTables: true,
-              processingMethod: 'ai_first'
-            };
-            
-            // Update source to reflect AI processing
-            result.source = `${result.source} (AI-Enhanced Financial Analysis)`;
-          } else {
-            console.log('⚠️ AI table detection found no valid financial tables, using fallback');
-            result.metadata = {
-              ...result.metadata,
-              ...metadata,
-              processingMethod: 'fallback_regex'
-            };
-          }
-        } catch (aiError) {
-          console.warn('AI table detection failed, using fallback:', aiError);
-          result.metadata = {
-            ...result.metadata,
-            ...metadata,
-            processingMethod: 'fallback_regex',
-            aiError: aiError instanceof Error ? aiError.message : String(aiError)
-          };
-        }
-      } else {
-        // Ensure metadata is preserved for non-financial documents
+      // Ensure result has metadata
+      if (metadata.isRegulatoryMapping) {
+        result.metadata = result.metadata || {};
         result.metadata = { ...result.metadata, ...metadata };
       }
       

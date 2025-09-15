@@ -18,8 +18,7 @@ export interface TableDetectionResult {
 }
 
 export interface DocumentTableAnalysis {
-  detectedTables: TableDetectionResult[];
-  tables: TableDetectionResult[]; // Legacy alias
+  tables: TableDetectionResult[];
   primaryProfitLossTable?: TableDetectionResult;
   primaryBalanceSheetTable?: TableDetectionResult;
   documentQuality: 'high' | 'medium' | 'low';
@@ -39,7 +38,6 @@ class AITableDetectorService {
       const validatedTables = await this.validateDetectedTables(tableAnalysis);
       
       return {
-        detectedTables: validatedTables,
         tables: validatedTables,
         primaryProfitLossTable: validatedTables.find(t => t.tableType === 'profit_loss' && t.confidence > 0.8),
         primaryBalanceSheetTable: validatedTables.find(t => t.tableType === 'balance_sheet' && t.confidence > 0.8),
@@ -265,7 +263,6 @@ Return structured JSON with detected tables and their analysis.
    */
   private createFallbackAnalysis(): DocumentTableAnalysis {
     return {
-      detectedTables: [],
       tables: [],
       documentQuality: 'low',
       processingRecommendation: 'Use generic document processing due to AI detection failure'

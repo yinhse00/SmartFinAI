@@ -61,9 +61,6 @@ const SettingsPage = () => {
         title: "Success",
         description: `${provider === 'grok' ? 'Grok' : 'Google'} API key saved successfully`,
       });
-      
-      // Notify other components about the API key update
-      window.dispatchEvent(new Event('apiKeyUpdated'));
     } catch (error) {
       toast({
         title: "Error",
