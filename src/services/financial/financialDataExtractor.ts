@@ -58,14 +58,26 @@ class FinancialDataExtractorService {
       
       console.log(`Extracted ${processed.content.length} characters from ${file.name}`);
       
-      // AI-FIRST APPROACH: Try AI table detection first
+      // 🚀 AI-FIRST APPROACH: Try AI table detection first
+      console.log('🔥 [SYSTEM DEBUG] Attempting AI-first table detection...');
       try {
         const { aiTableDetector } = await import('./aiTableDetector');
+        console.log('📦 [SYSTEM DEBUG] AI table detector imported successfully');
+        
         const tableAnalysis = await aiTableDetector.analyzeDocument(file, processed.content);
+        console.log('📊 [SYSTEM DEBUG] AI analysis complete:', {
+          quality: tableAnalysis.documentQuality,
+          tablesFound: tableAnalysis.tables.length,
+          hasProfitLoss: !!tableAnalysis.primaryProfitLossTable,
+          hasBalanceSheet: !!tableAnalysis.primaryBalanceSheetTable,
+          recommendation: tableAnalysis.processingRecommendation
+        });
         
         if (tableAnalysis.documentQuality === 'high' && 
             (tableAnalysis.primaryProfitLossTable || tableAnalysis.primaryBalanceSheetTable)) {
-          console.log('✅ AI table detection successful, using structured approach');
+          console.log('✅ [SYSTEM DEBUG] AI table detection successful! Using AI-enhanced structured approach');
+          console.log('🎯 [SYSTEM DEBUG] Processing with AI-detected tables instead of regex fallback');
+          
           const extractedData = await this.parseWithAITables(tableAnalysis, processed.content);
           
           return {
@@ -73,13 +85,17 @@ class FinancialDataExtractorService {
             data: extractedData
           };
         } else {
-          console.log('⚠️ AI table detection quality insufficient, falling back to traditional parsing');
+          console.log('⚠️ [SYSTEM DEBUG] AI table detection quality insufficient:', tableAnalysis.documentQuality);
+          console.log('📉 [SYSTEM DEBUG] Falling back to traditional regex parsing');
         }
       } catch (aiError) {
-        console.warn('AI table detection failed, using fallback:', aiError);
+        console.error('❌ [SYSTEM DEBUG] AI table detection failed:', aiError);
+        console.error('🔧 [SYSTEM DEBUG] Error details:', aiError instanceof Error ? aiError.message : String(aiError));
+        console.warn('🔄 [SYSTEM DEBUG] Using regex fallback due to AI failure');
       }
       
-      // FALLBACK: Traditional parsing
+      // 🔄 FALLBACK: Traditional regex parsing (AI detection not used)
+      console.log('📝 [SYSTEM DEBUG] Using traditional regex-based parsing as fallback');
       const extractedData = await this.parseFinancialContent(processed.content, file.name);
       
       if (extractedData.lineItems.length === 0) {

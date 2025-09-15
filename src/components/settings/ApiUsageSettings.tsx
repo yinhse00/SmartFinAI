@@ -1,5 +1,6 @@
 import { ApiUsageControl } from '@/components/chat/ApiUsageControl';
 import { APIUsageDashboard } from '@/components/ipo/APIUsageDashboard';
+import { AIProcessingStatus } from '@/components/debug/AIProcessingStatus';
 
 export const ApiUsageSettings = () => {
   return (
@@ -11,9 +12,13 @@ export const ApiUsageSettings = () => {
         </p>
       </div>
       
-      <div className="grid gap-6 md:grid-cols-2">
-        <ApiUsageControl />
-        <APIUsageDashboard />
+      <div className="space-y-6">
+        <AIProcessingStatus />
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <ApiUsageControl />
+          <APIUsageDashboard />
+        </div>
       </div>
     </div>
   );
