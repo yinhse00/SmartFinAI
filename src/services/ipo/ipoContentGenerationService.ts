@@ -294,7 +294,12 @@ export class IPOContentGenerationService {
     template: any,
     keyElements?: Record<string, any>
   ): string {
-    // Use enhanced section-specific prompt
+    // Handle financial section specifically
+    if (request.section_type === 'financial_information' && keyElements?.materialityAnalyses) {
+      return this.buildFinancialSpecificPrompt(project, keyElements);
+    }
+    
+    // Use enhanced section-specific prompt for other sections
     const enhancedPrompt = buildSectionSpecificPrompt(
       request.section_type,
       `Generate comprehensive content for this section`,
@@ -319,6 +324,48 @@ export class IPOContentGenerationService {
 3. Ensure HKEX Main Board compliance throughout
 4. Use specific company information rather than placeholders
 5. Maintain professional investment banking language and tone`;
+  }
+
+  private buildFinancialSpecificPrompt(project: any, keyElements: any): string {
+    const materialityAnalyses = keyElements.materialityAnalyses || [];
+    const businessContext = keyElements.businessContext || {};
+    
+    return `You are an expert Hong Kong investment banking professional specializing in IPO prospectus financial information sections.
+
+**COMPANY INFORMATION:**
+- Company: ${project.company_name}
+- Industry: ${project.industry || 'Not specified'}
+- Project: ${project.project_name}
+
+**MATERIALITY ANALYSIS DATA:**
+${materialityAnalyses.map((analysis: any) => `
+Financial Statement Analysis:
+${analysis.items?.map((item: any) => `
+- ${item.itemName}: ${item.amount} (${item.percentage}% of base)
+  Material: ${item.isMaterial ? 'Yes' : 'No'}
+  AI Reasoning: ${item.aiReasoning || 'Not provided'}
+  User Confirmed: ${item.userConfirmed ? 'Yes' : 'No'}
+`).join('') || 'No items'}
+`).join('')}
+
+**BUSINESS CONTEXT:**
+${businessContext.businessContent || 'Business context not provided'}
+
+**REGULATORY REQUIREMENTS:**
+- Must comply with HKEX Main Board Listing Rules
+- Follow App1A Part A requirements for financial information
+- Include material items identified in the analysis
+- Provide clear financial disclosures and explanations
+
+**CONTENT REQUIREMENTS:**
+1. Create a comprehensive Financial Information section
+2. Address all material items identified in the analysis
+3. Explain financial performance and position clearly
+4. Include regulatory-compliant disclosures
+5. Use professional investment banking language
+6. Ensure consistency with materiality assessments
+
+Generate professional financial information content that incorporates the materiality analysis results and meets HKEX prospectus standards.`;
   }
 
   /**

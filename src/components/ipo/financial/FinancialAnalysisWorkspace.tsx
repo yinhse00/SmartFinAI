@@ -10,10 +10,8 @@ import {
   MaterialityAnalysis, 
   materialityAnalyzer 
 } from '@/services/financial/materialityAnalyzer';
-import { 
-  financialContentGenerator, 
-  FinancialContentRequest 
-} from '@/services/financial/financialContentGenerator';
+import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
+import { IPOContentGenerationRequest } from '@/types/ipo';
 import { FinancialData } from '@/services/financial/financialDataExtractor';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -33,9 +31,14 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'generate'>('upload');
   const [materialityAnalyses, setMaterialityAnalyses] = useState<MaterialityAnalysis[]>([]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generatedContent, setGeneratedContent] = useState<string>('');
   const { toast } = useToast();
+  
+  const {
+    generateContent,
+    isGenerating,
+    generatedContent: ipoGeneratedContent,
+    lastGeneratedResponse
+  } = useIPOContentGeneration();
 
   useEffect(() => {
     loadExistingAnalyses();
@@ -110,31 +113,31 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     }
 
     try {
-      setIsGenerating(true);
       const businessData = await getBusinessData();
       
-      const request: FinancialContentRequest = {
-        projectId,
-        materialityAnalyses,
-        businessContext: businessData
+      const request: IPOContentGenerationRequest = {
+        project_id: projectId,
+        section_type: 'financial_information',
+        key_elements: {
+          materialityAnalyses,
+          businessContext: businessData
+        }
       };
 
-      const result = await financialContentGenerator.generateFinancialInformation(request);
-      setGeneratedContent(result.content);
+      const result = await generateContent(request);
       
-      // Save the generated content to ipo_prospectus_sections
-      await saveFinancialContent(result.content);
-      
-      setActiveTab('generate');
+      if (result) {
+        setActiveTab('generate');
 
-      if (onContentGenerated) {
-        onContentGenerated(result.content);
+        if (onContentGenerated) {
+          onContentGenerated(result.content || '');
+        }
+
+        toast({
+          title: "Content generated",
+          description: "Financial information section has been generated and saved successfully."
+        });
       }
-
-      toast({
-        title: "Content generated",
-        description: "Financial information section has been generated and saved successfully."
-      });
     } catch (error) {
       console.error('Error generating content:', error);
       toast({
@@ -142,72 +145,9 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
         description: "Failed to generate financial information content.",
         variant: "destructive"
       });
-    } finally {
-      setIsGenerating(false);
     }
   };
 
-  const saveFinancialContent = async (content: string) => {
-    try {
-      console.log('💾 Saving financial content for project:', projectId);
-      
-      // First, check if a record already exists
-      const { data: existingData, error: selectError } = await supabase
-        .from('ipo_prospectus_sections')
-        .select('id')
-        .eq('project_id', projectId)
-        .eq('section_type', 'financial_information')
-        .single();
-
-      if (selectError && selectError.code !== 'PGRST116') { // PGRST116 = no rows returned
-        console.error('Error checking existing content:', selectError);
-        throw selectError;
-      }
-
-      let result;
-      if (existingData) {
-        console.log('Updating existing financial section');
-        // Update existing record
-        result = await supabase
-          .from('ipo_prospectus_sections')
-          .update({
-            title: 'Financial Information',
-            content: content,
-            status: 'draft',
-            confidence_score: 0.85,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', existingData.id)
-          .select()
-          .single();
-      } else {
-        console.log('Creating new financial section');
-        // Insert new record
-        result = await supabase
-          .from('ipo_prospectus_sections')
-          .insert({
-            project_id: projectId,
-            section_type: 'financial_information',
-            title: 'Financial Information',
-            content: content,
-            status: 'draft',
-            confidence_score: 0.85
-          })
-          .select()
-          .single();
-      }
-
-      if (result.error) {
-        console.error('❌ Error saving financial content:', result.error);
-        throw result.error;
-      }
-      
-      console.log('✅ Financial content saved successfully');
-    } catch (error) {
-      console.error('❌ Failed to save financial content:', error);
-      throw error;
-    }
-  };
 
   const allItemsConfirmed = materialityAnalyses.every(analysis =>
     analysis.items.every(item => item.userConfirmed)
@@ -278,15 +218,15 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
                   <CardTitle>Generated Financial Information</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  {generatedContent ? (
+                  {ipoGeneratedContent ? (
                     <div className="space-y-4">
                       <div className="bg-muted/50 p-4 rounded-lg">
-                        <pre className="whitespace-pre-wrap text-sm">{generatedContent}</pre>
+                        <pre className="whitespace-pre-wrap text-sm">{ipoGeneratedContent}</pre>
                       </div>
                       <div className="flex gap-2">
                         <Button 
                           variant="outline"
-                          onClick={() => navigator.clipboard.writeText(generatedContent)}
+                          onClick={() => navigator.clipboard.writeText(ipoGeneratedContent)}
                         >
                           Copy to Clipboard
                         </Button>
