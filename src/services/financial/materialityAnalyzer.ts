@@ -13,6 +13,14 @@ export interface MaterialityItem {
   userConfirmed: boolean;
   aiReasoning?: string;
   businessContext?: any;
+  yearlyData?: Array<{
+    year: string;
+    amount: number;
+    percentage: number;
+    baseAmount: number;
+  }>;
+  trendAnalysis?: 'increasing' | 'decreasing' | 'stable' | 'volatile';
+  materialityReason?: 'current_year' | 'trend_based' | 'qualitative';
   comparativeAnalysis?: {
     periodChanges: Array<{
       fromPeriod: string;
@@ -75,7 +83,7 @@ class MaterialityAnalyzerService {
           businessContext
         );
         
-        // Add comparative analysis if available
+        // Add multi-year data and comparative analysis if available
         if (extractedData.comparativeData) {
           const comparativeItem = extractedData.comparativeData.comparativeItems
             .find(item => item.name === lineItem.name);
@@ -86,8 +94,21 @@ class MaterialityAnalyzerService {
               threshold,
               businessContext
             );
+            
+            // Extract yearly percentage data
+            materialityItem.yearlyData = this.extractYearlyData(
+              comparativeItem,
+              materialityItem.itemType,
+              statement
+            );
+            
+            // Determine trend analysis
+            materialityItem.trendAnalysis = this.determineTrendType(materialityItem.yearlyData);
           }
         }
+        
+        // Set materiality reason (current year percentage vs threshold)
+        materialityItem.materialityReason = materialityItem.percentage >= threshold ? 'current_year' : 'qualitative';
         
         items.push(materialityItem);
       }
@@ -366,6 +387,54 @@ class MaterialityAnalyzerService {
         );
       })
       .map((segment: any) => segment.name);
+  }
+
+  private extractYearlyData(
+    comparativeItem: any,
+    itemType: MaterialityItem['itemType'],
+    statement: any
+  ): MaterialityItem['yearlyData'] {
+    if (!comparativeItem.historicalData) return undefined;
+
+    return comparativeItem.historicalData.map((yearData: any) => {
+      let baseAmount = 0;
+      
+      // Determine base amount for percentage calculation
+      if (itemType === 'revenue_item') {
+        baseAmount = yearData.totalRevenue || statement.total_revenue || 1;
+      } else {
+        baseAmount = yearData.totalAssets || statement.total_assets || 1;
+      }
+
+      const percentage = Math.abs((yearData.amount / baseAmount) * 100);
+
+      return {
+        year: yearData.year,
+        amount: yearData.amount,
+        percentage,
+        baseAmount
+      };
+    });
+  }
+
+  private determineTrendType(yearlyData?: MaterialityItem['yearlyData']): MaterialityItem['trendAnalysis'] {
+    if (!yearlyData || yearlyData.length < 2) return 'stable';
+
+    const percentages = yearlyData.map(d => d.percentage);
+    const changes = [];
+    
+    for (let i = 1; i < percentages.length; i++) {
+      changes.push(percentages[i] - percentages[i-1]);
+    }
+
+    const positiveChanges = changes.filter(c => c > 1).length;
+    const negativeChanges = changes.filter(c => c < -1).length;
+    const volatileChanges = changes.filter(c => Math.abs(c) > 2).length;
+
+    if (volatileChanges > changes.length / 2) return 'volatile';
+    if (positiveChanges > negativeChanges) return 'increasing';
+    if (negativeChanges > positiveChanges) return 'decreasing';
+    return 'stable';
   }
 
   private async saveMaterialityAnalysis(analysis: MaterialityAnalysis): Promise<void> {

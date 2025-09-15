@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard } from 'lucide-react';
+import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard, ArrowUp, ArrowDown, Minus, Zap } from 'lucide-react';
 import { MaterialityAnalysis, MaterialityItem, materialityAnalyzer } from '@/services/financial/materialityAnalyzer';
 
 interface MaterialityReviewPanelProps {
@@ -114,6 +114,49 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
         return 'Asset';
       case 'liability_item':
         return 'Liability';
+    }
+  };
+
+  const getTrendIcon = (trendType?: MaterialityItem['trendAnalysis']) => {
+    switch (trendType) {
+      case 'increasing':
+        return <ArrowUp className="w-4 h-4 text-green-600" />;
+      case 'decreasing':
+        return <ArrowDown className="w-4 h-4 text-red-600" />;
+      case 'volatile':
+        return <Zap className="w-4 h-4 text-orange-600" />;
+      default:
+        return <Minus className="w-4 h-4 text-muted-foreground" />;
+    }
+  };
+
+  const formatYearlyProgression = (item: MaterialityItem) => {
+    if (!item.yearlyData || item.yearlyData.length === 0) {
+      return `Current: ${item.percentage?.toFixed(1) || 'N/A'}%`;
+    }
+
+    const sortedData = [...item.yearlyData].sort((a, b) => a.year.localeCompare(b.year));
+    return sortedData
+      .map(data => `${data.year} (${data.percentage.toFixed(1)}%)`)
+      .join(' → ');
+  };
+
+  const getMaterialityStatus = (item: MaterialityItem) => {
+    const currentPercentage = item.percentage || 0;
+    const threshold = item.materialityThreshold || 5;
+    
+    if (currentPercentage >= threshold) {
+      return {
+        status: 'Material',
+        reason: `${currentPercentage.toFixed(1)}% ≥ ${threshold}% threshold`,
+        className: 'text-green-600 bg-green-50 border-green-200'
+      };
+    } else {
+      return {
+        status: 'Not Material',
+        reason: `${currentPercentage.toFixed(1)}% < ${threshold}% threshold`,
+        className: 'text-muted-foreground bg-muted/5 border-muted'
+      };
     }
   };
 
@@ -239,9 +282,24 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-2">
-                      <div>Amount: {item.amount?.toLocaleString() || 'N/A'}</div>
-                      <div>% of Total Revenue: {item.percentage?.toFixed(1) || 'N/A'}%</div>
+                    <div className="space-y-2 mb-3">
+                      <div className="text-sm text-muted-foreground">
+                        Amount: {item.amount?.toLocaleString() || 'N/A'}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {formatYearlyProgression(item)}
+                        </span>
+                        {getTrendIcon(item.trendAnalysis)}
+                      </div>
+                      
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getMaterialityStatus(item).className}`}>
+                        {getMaterialityStatus(item).status}
+                        <span className="text-xs opacity-75">
+                          ({getMaterialityStatus(item).reason})
+                        </span>
+                      </div>
                     </div>
 
                     {item.aiReasoning && (
@@ -316,9 +374,24 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
                       )}
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4 text-sm text-muted-foreground mb-2">
-                      <div>Amount: {item.amount?.toLocaleString() || 'N/A'}</div>
-                      <div>% of Total Assets: {item.percentage?.toFixed(1) || 'N/A'}%</div>
+                    <div className="space-y-2 mb-3">
+                      <div className="text-sm text-muted-foreground">
+                        Amount: {item.amount?.toLocaleString() || 'N/A'}
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {formatYearlyProgression(item)}
+                        </span>
+                        {getTrendIcon(item.trendAnalysis)}
+                      </div>
+                      
+                      <div className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${getMaterialityStatus(item).className}`}>
+                        {getMaterialityStatus(item).status}
+                        <span className="text-xs opacity-75">
+                          ({getMaterialityStatus(item).reason})
+                        </span>
+                      </div>
                     </div>
 
                     {item.aiReasoning && (
