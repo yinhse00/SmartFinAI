@@ -57,36 +57,14 @@ export const fileProcessingService = {
       
       switch (fileType) {
         case 'pdf':
-          // For financial statements, ALWAYS use direct processor to ensure data extraction
-          if (isFinancialStatement) {
-            console.log(`🔧 Processing financial statement PDF directly (bypassing API): ${file.name}`);
-            result = await enhancedPdfProcessor.extractText(file);
-          } else {
-            // Use FileAdapter for non-financial documents only
-            try {
-              const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-              result = { content, source: file.name };
-            } catch (error) {
-              console.log(`FileAdapter failed for ${file.name}, using direct processor`);
-              result = await enhancedPdfProcessor.extractText(file);
-            }
-          }
+          // ALWAYS use direct processor for ALL documents to avoid API dependency issues
+          console.log(`🔧 Processing PDF directly (bypassing API): ${file.name}`);
+          result = await enhancedPdfProcessor.extractText(file);
           break;
         case 'word':
-          // For financial statements, always use direct processor to avoid API dependency
-          if (isFinancialStatement) {
-            console.log(`Processing financial statement Word doc directly: ${file.name}`);
-            result = await documentProcessor.extractWordText(file, mammothAvailable);
-          } else {
-            // Use FileAdapter for non-financial documents
-            try {
-              const content = await FileAdapter.extractContent([file], 'text', { feature: 'file_processing' });
-              result = { content, source: file.name };
-            } catch (error) {
-              console.log(`FileAdapter failed for ${file.name}, using direct processor`);
-              result = await documentProcessor.extractWordText(file, mammothAvailable);
-            }
-          }
+          // ALWAYS use direct processor for ALL documents to avoid API dependency issues
+          console.log(`🔧 Processing Word document directly (bypassing API): ${file.name}`);
+          result = await documentProcessor.extractWordText(file, mammothAvailable);
           break;
         case 'excel':
           // Excel files always use direct processor (more reliable for financial data)

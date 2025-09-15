@@ -332,8 +332,17 @@ export function hasGrokApiKey(): boolean {
     const keys = loadKeysFromStorage();
     const isValid = keys.some(key => typeof key === 'string' && key.startsWith('xai-') && key.length >= 20);
     
-    // Log verification for debugging
-    console.log(`API key validation: ${isValid ? 'Valid key found' : 'No valid keys found'}`);
+    // Enhanced debugging for key access issues
+    console.log(`🔧 API key validation: ${isValid ? 'Valid key found' : 'No valid keys found'}`, {
+      totalKeys: keys.length,
+      firstKeyPrefix: keys.length > 0 ? keys[0].substring(0, 8) + '...' : 'none',
+      storageLocations: {
+        primary: !!localStorage.getItem('GROK_API_KEYS'),
+        backup: !!localStorage.getItem('grokApiKeys'),
+        legacy: !!localStorage.getItem('GROK_API_KEY'),
+        legacyBackup: !!localStorage.getItem('grokApiKey')
+      }
+    });
     
     return isValid;
   } catch (error) {

@@ -35,6 +35,15 @@ export function loadKeysFromStorage(): string[] {
         keys = [legacyKey];
       }
     }
+    
+    // Debug logging to help troubleshoot key access issues
+    console.log(`🔧 API Key Debug - Found ${keys.length} valid keys:`, {
+      primaryExists: !!localStorage.getItem(PRIMARY_KEYS_KEY),
+      backupExists: !!localStorage.getItem(BACKUP_KEYS_KEY),
+      legacyExists: !!localStorage.getItem(LEGACY_SINGLE_KEY),
+      legacyBackupExists: !!localStorage.getItem(LEGACY_SINGLE_KEY_BACKUP),
+      keysFound: keys.length
+    });
   } catch (e) {
     console.warn('Could not parse API keys from storage:', e);
   }
@@ -66,6 +75,13 @@ export function setLegacySingleKey(key: string): void {
   try {
     localStorage.setItem(LEGACY_SINGLE_KEY, key);
     localStorage.setItem(LEGACY_SINGLE_KEY_BACKUP, key);
+    
+    // CRITICAL FIX: Also save to array storage to ensure grokKeyManager can access it
+    const currentKeys = loadKeysFromStorage();
+    const updatedKeys = currentKeys.includes(key) ? currentKeys : [...currentKeys, key];
+    saveKeysToStorage(updatedKeys);
+    
+    console.log('API key saved to all storage locations for maximum compatibility');
   } catch (error) {
     console.error('Failed to set API key in localStorage:', error);
   }
