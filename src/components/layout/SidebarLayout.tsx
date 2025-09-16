@@ -57,7 +57,7 @@ function AppSidebar() {
   };
 
   return (
-    <Sidebar className={sidebar.open ? "w-56" : "w-14"} collapsible="icon">
+    <Sidebar className={sidebar.open ? "w-48" : "w-16"} collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
