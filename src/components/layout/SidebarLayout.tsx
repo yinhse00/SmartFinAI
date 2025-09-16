@@ -31,6 +31,7 @@ interface SidebarLayoutProps {
 }
 
 const navigationItems = [
+  { title: 'Dashboard', url: '/', icon: Home },
   { title: 'Chat', url: '/chat', icon: MessageSquare },
   { title: 'IPO Prospectus', url: '/ipo-prospectus', icon: FileText },
 ];
