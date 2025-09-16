@@ -1,5 +1,5 @@
 
-import MainLayout from '@/components/layout/MainLayout';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
@@ -72,7 +72,7 @@ const SettingsPage = () => {
 
 
   return (
-    <MainLayout>
+    <SidebarLayout>
       <div className="container mx-auto py-10 max-w-4xl">
         <div className="space-y-6">
           <div>
@@ -164,7 +164,7 @@ const SettingsPage = () => {
           </Tabs>
         </div>
       </div>
-    </MainLayout>
+    </SidebarLayout>
   );
 };
 

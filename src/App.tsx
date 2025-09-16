@@ -11,18 +11,14 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 // Import pages
 import Chat from "./pages/Chat";
 import NotFound from "./pages/NotFound";
-import Database from "./pages/Database";
-import DealStructuring from "./pages/DealStructuring";
-import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
 import AuthPage from "./pages/Auth";
 import ProfilePage from "./pages/Profile";
 import SettingsPage from "./pages/Settings";
 import BillingPage from "./pages/Billing";
 import SupportPage from "./pages/Support";
 import UpdatePasswordPage from "./pages/UpdatePassword";
-import ExecutionPage from "./pages/Execution";
 import IPOProspectusPage from "./pages/IPOProspectus";
-import PresentationsPage from "./pages/Presentations";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -43,18 +39,12 @@ const App = () => (
           <Sonner />
           <BrowserRouter>
             <Routes>
-              <Route path="/" element={<Index />} />
+              <Route path="/" element={<Dashboard />} />
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/update-password" element={<UpdatePasswordPage />} />
               <Route path="/chat" element={
                 <ProtectedRoute>
                   <Chat />
-                </ProtectedRoute>
-              } />
-              <Route path="/database" element={<Database />} />
-              <Route path="/deal-structuring" element={
-                <ProtectedRoute>
-                  <DealStructuring />
                 </ProtectedRoute>
               } />
               <Route path="/profile" element={
@@ -75,16 +65,6 @@ const App = () => (
               <Route path="/support" element={
                 <ProtectedRoute>
                   <SupportPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/presentations" element={
-                <ProtectedRoute>
-                  <PresentationsPage />
-                </ProtectedRoute>
-              } />
-              <Route path="/execution" element={
-                <ProtectedRoute>
-                  <ExecutionPage />
                 </ProtectedRoute>
               } />
               <Route path="/ipo-prospectus" element={

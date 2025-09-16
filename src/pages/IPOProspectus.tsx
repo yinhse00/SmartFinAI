@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import MainLayout from '@/components/layout/MainLayout';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 import { IPOProspectusWorkspace } from '@/components/ipo/IPOProspectusWorkspace';
 import { ProjectSelector } from '@/components/ipo/ProjectSelector';
 import { CreateProjectDialog } from '@/components/ipo/CreateProjectDialog';
@@ -29,7 +29,7 @@ const IPOProspectus = () => {
 
   if (isLoading) {
     return (
-      <MainLayout>
+      <SidebarLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
@@ -38,13 +38,13 @@ const IPOProspectus = () => {
             </div>
           </div>
         </div>
-      </MainLayout>
+      </SidebarLayout>
     );
   }
 
   if (!selectedProject) {
     return (
-      <MainLayout>
+      <SidebarLayout>
         <div className="container mx-auto px-4 py-8">
           <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2">IPO Prospectus Drafting</h1>
@@ -93,17 +93,17 @@ const IPOProspectus = () => {
             onCreateProject={handleCreateProject}
           />
         </div>
-      </MainLayout>
+      </SidebarLayout>
     );
   }
 
   return (
-    <MainLayout>
+    <SidebarLayout>
       <IPOProspectusWorkspace
         project={selectedProject}
         onSwitchProject={() => setSelectedProjectId(null)}
       />
-    </MainLayout>
+    </SidebarLayout>
   );
 };
 

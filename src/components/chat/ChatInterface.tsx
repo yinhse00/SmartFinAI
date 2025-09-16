@@ -6,7 +6,11 @@ import { useLanguageDetection } from './hooks/useLanguageDetection';
 import { useMessageTranslator } from './translation/MessageTranslator';
 import { useFileHandling } from './hooks/useFileHandling';
 
-const ChatInterface: React.FC = () => {
+interface ChatInterfaceProps {
+  demoMode?: boolean;
+}
+
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ demoMode = false }) => {
   const {
     messages,
     setMessages,

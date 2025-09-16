@@ -1,10 +1,10 @@
 
-import MainLayout from '@/components/layout/MainLayout';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 
 const SupportPage = () => {
   return (
-    <MainLayout>
+    <SidebarLayout>
       <div className="container mx-auto py-10">
         <Card>
           <CardHeader>
@@ -15,7 +15,7 @@ const SupportPage = () => {
           </CardContent>
         </Card>
       </div>
-    </MainLayout>
+    </SidebarLayout>
   );
 };
 

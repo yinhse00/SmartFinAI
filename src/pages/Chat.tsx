@@ -1,5 +1,5 @@
 
-import MainLayout from '@/components/layout/MainLayout';
+import SidebarLayout from '@/components/layout/SidebarLayout';
 import ChatInterface from '@/components/chat/ChatInterface';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
@@ -54,9 +54,11 @@ const Chat = () => {
   }, []);
 
   return (
-    <MainLayout>
-      <ChatInterface />
-    </MainLayout>
+    <SidebarLayout>
+      <div className="container mx-auto px-4 py-8">
+        <ChatInterface demoMode={demoMode} />
+      </div>
+    </SidebarLayout>
   );
 };
 
