@@ -11,9 +11,12 @@ const Navbar = () => {
   } = useAuth();
   return <nav className="bg-white dark:bg-finance-dark-blue border-b border-gray-200 dark:border-finance-medium-blue">
       <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-        <span className="text-xl font-bold text-finance-dark-blue dark:text-white">
+        <Link 
+          to="/" 
+          className="text-xl font-bold text-finance-dark-blue dark:text-white hover:opacity-80 transition-opacity cursor-pointer"
+        >
           SmartFinAI
-        </span>
+        </Link>
         
       </div>
     </nav>;
