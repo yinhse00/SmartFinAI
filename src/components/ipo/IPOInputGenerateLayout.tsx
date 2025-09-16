@@ -119,7 +119,7 @@ export const IPOInputGenerateLayout: React.FC<IPOInputGenerateLayoutProps> = ({
 
       {/* Main Content */}
       <div className="flex-1 overflow-hidden">
-        <div className="h-full p-4">
+        <div className="h-full w-full overflow-auto p-2">
           <InputGenerateTab
             projectId={projectId}
             sectionType={selectedSectionData.title}
