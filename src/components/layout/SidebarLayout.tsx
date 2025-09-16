@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
 
 interface SidebarLayoutProps {
   children: ReactNode;
@@ -58,7 +59,7 @@ function AppSidebar() {
   };
 
   return (
-    <Sidebar className={sidebar.open ? "w-64" : "w-16"} collapsible="icon">
+    <Sidebar className="h-full w-full" collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
@@ -144,13 +145,27 @@ function AppSidebar() {
 const SidebarLayout = ({ children }: SidebarLayoutProps) => {
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
+      <div className="min-h-screen w-full">
+        <PanelGroup direction="horizontal">
+          <Panel
+            defaultSize={20}
+            minSize={15}
+            maxSize={40}
+            className="relative"
+          >
+            <AppSidebar />
+          </Panel>
+          
+          <PanelResizeHandle className="w-2 bg-border hover:bg-accent transition-colors cursor-col-resize" />
+          
+          <Panel defaultSize={80}>
+            <div className="flex-1 flex flex-col h-screen">
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
+          </Panel>
+        </PanelGroup>
       </div>
     </SidebarProvider>
   );
