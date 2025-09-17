@@ -89,16 +89,16 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
           </p>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
+        <div className="flex-1 grid grid-cols-2 gap-4 min-h-0 overflow-hidden">
           {/* Current Content */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-w-0">
             <h3 className="font-medium mb-3 text-sm text-muted-foreground">
               Current Content
             </h3>
-            <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
-              <div className="p-4">
+            <ScrollArea className="flex-1 bg-muted/30 rounded-lg overflow-hidden">
+              <div className="p-4 w-full overflow-hidden">
                 <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
+                  className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
                   dangerouslySetInnerHTML={{ __html: formattedOriginal }}
                 />
               </div>
@@ -106,23 +106,23 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
           </div>
 
           {/* AI Changes Preview */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-w-0">
             <h3 className="font-medium mb-3 text-sm text-muted-foreground">
               AI Changes Preview
             </h3>
-            <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
-              <div className="p-4">
+            <ScrollArea className="flex-1 bg-muted/30 rounded-lg overflow-hidden">
+              <div className="p-4 w-full overflow-hidden">
                 <div className="space-y-3">
                   {diffResult.changes.map((change, index) => (
                     <div
                       key={index}
-                      className={`p-3 rounded-lg ${getChangeColor(change.type)}`}
+                      className={`p-3 rounded-lg w-full overflow-hidden ${getChangeColor(change.type)}`}
                     >
-                      <div className="flex items-start gap-2">
+                      <div className="flex items-start gap-2 w-full min-w-0">
                         {getChangeIcon(change.type)}
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0 overflow-hidden">
                           <div 
-                            className="prose prose-sm max-w-none dark:prose-invert"
+                            className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
                             dangerouslySetInnerHTML={{ 
                               __html: ipoMessageFormatter.formatMessage(change.content) 
                             }}
