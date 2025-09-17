@@ -453,36 +453,41 @@ class EnhancedMaterialityAnalyzerService {
 
     const statement = data[0].financial_statements;
     
+    const businessContext = data[0]?.business_context as any;
+    
     return {
       projectId,
       financialStatementId: data[0].financial_statement_id,
-      items: data.map(item => ({
-        id: item.id,
-        itemName: item.item_name,
-        itemType: item.item_type,
-        amount: item.amount,
-        baseAmount: item.base_amount,
-        percentage: item.percentage,
-        yoyPercentage: item.yoy_percentage,
-        materialityThreshold: item.materiality_threshold,
-        yoyThreshold: item.yoy_threshold,
-        isMaterial: item.is_material,
-        aiSuggested: item.ai_suggested,
-        userConfirmed: item.user_confirmed,
-        aiReasoning: item.ai_reasoning,
-        section: item.business_context?.section || 'P/L',
-        periods: item.business_context?.periods || [],
-        businessContext: item.business_context
-      })),
+      items: data.map(item => {
+        const itemBusinessContext = item.business_context as any;
+        return {
+          id: item.id,
+          itemName: item.item_name,
+          itemType: (item.item_type as 'revenue_item' | 'asset_item' | 'liability_item' | 'qualitative_item'),
+          amount: item.amount,
+          baseAmount: item.base_amount,
+          percentage: item.percentage,
+          yoyPercentage: item.yoy_percentage || 0,
+          materialityThreshold: item.materiality_threshold,
+          yoyThreshold: item.yoy_threshold || this.defaultYoyThreshold,
+          isMaterial: item.is_material,
+          aiSuggested: item.ai_suggested,
+          userConfirmed: item.user_confirmed,
+          aiReasoning: item.ai_reasoning,
+          section: itemBusinessContext?.section || 'P/L',
+          periods: itemBusinessContext?.periods || [],
+          businessContext: itemBusinessContext
+        };
+      }),
       qualitativeFactors: [], // Would need separate table for this
       totalRevenue: statement.total_revenue,
       totalAssets: statement.total_assets,
       totalLiabilities: statement.total_liabilities,
       materialityThreshold: data[0]?.materiality_threshold || this.defaultMaterialityThreshold,
       yoyThreshold: data[0]?.yoy_threshold || this.defaultYoyThreshold,
-      extractedPeriods: data[0]?.business_context?.periods || [],
-      currency: data[0]?.business_context?.currency || 'Unknown',
-      auditStatus: data[0]?.business_context?.auditStatus || 'Unknown'
+      extractedPeriods: (data[0]?.extracted_periods as string[]) || [],
+      currency: data[0]?.currency || 'Unknown',
+      auditStatus: data[0]?.audit_status || 'Unknown'
     };
   }
 }

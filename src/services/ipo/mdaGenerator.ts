@@ -40,15 +40,12 @@ class MDAGeneratorService {
     const prompt = this.buildMDAPrompt(request);
     
     try {
-      const response = await CentralBrainService.processContentGeneration(
-        prompt,
-        {
-          preferences,
-          feature: 'mda_generation',
-          outputFormat: 'markdown',
-          wordCount: { min: 1200, max: 1800, target: 1500 }
-        }
-      );
+      const response = await CentralBrainService.processDocumentGeneration(prompt, {
+        preferences,
+        feature: 'mda_generation',
+        outputFormat: 'markdown',
+        wordCount: { min: 1200, max: 1800, target: 1500 }
+      });
 
       if (!response.success) {
         throw new Error('MD&A generation failed');
@@ -315,12 +312,14 @@ Provide only the MD&A content in Markdown format. Do not include explanations or
         return null;
       }
 
+      const metadata = data.metadata as any;
+      
       return {
         content: data.content || '',
-        wordCount: data.metadata?.wordCount || 0,
-        sections: data.metadata?.sections || [],
-        complianceNotes: data.metadata?.complianceNotes || [],
-        generatedAt: data.metadata?.generatedAt || data.created_at
+        wordCount: metadata?.wordCount || 0,
+        sections: metadata?.sections || [],
+        complianceNotes: metadata?.complianceNotes || [],
+        generatedAt: metadata?.generatedAt || data.created_at
       };
     } catch (error) {
       console.error('Failed to fetch MD&A:', error);

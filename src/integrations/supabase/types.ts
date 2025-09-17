@@ -626,6 +626,7 @@ export type Database = {
           content: string | null
           created_at: string
           id: string
+          metadata: Json | null
           project_id: string
           section_number: string | null
           section_type: string
@@ -638,6 +639,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
           project_id: string
           section_number?: string | null
           section_type: string
@@ -650,6 +652,7 @@ export type Database = {
           content?: string | null
           created_at?: string
           id?: string
+          metadata?: Json | null
           project_id?: string
           section_number?: string | null
           section_type?: string
@@ -995,9 +998,12 @@ export type Database = {
           ai_reasoning: string | null
           ai_suggested: boolean | null
           amount: number
+          audit_status: string | null
           base_amount: number
           business_context: Json | null
           created_at: string
+          currency: string | null
+          extracted_periods: Json | null
           financial_statement_id: string | null
           id: string
           is_material: boolean | null
@@ -1008,14 +1014,19 @@ export type Database = {
           project_id: string
           updated_at: string
           user_confirmed: boolean | null
+          yoy_percentage: number | null
+          yoy_threshold: number | null
         }
         Insert: {
           ai_reasoning?: string | null
           ai_suggested?: boolean | null
           amount: number
+          audit_status?: string | null
           base_amount: number
           business_context?: Json | null
           created_at?: string
+          currency?: string | null
+          extracted_periods?: Json | null
           financial_statement_id?: string | null
           id?: string
           is_material?: boolean | null
@@ -1026,14 +1037,19 @@ export type Database = {
           project_id: string
           updated_at?: string
           user_confirmed?: boolean | null
+          yoy_percentage?: number | null
+          yoy_threshold?: number | null
         }
         Update: {
           ai_reasoning?: string | null
           ai_suggested?: boolean | null
           amount?: number
+          audit_status?: string | null
           base_amount?: number
           business_context?: Json | null
           created_at?: string
+          currency?: string | null
+          extracted_periods?: Json | null
           financial_statement_id?: string | null
           id?: string
           is_material?: boolean | null
@@ -1044,6 +1060,8 @@ export type Database = {
           project_id?: string
           updated_at?: string
           user_confirmed?: boolean | null
+          yoy_percentage?: number | null
+          yoy_threshold?: number | null
         }
         Relationships: [
           {
