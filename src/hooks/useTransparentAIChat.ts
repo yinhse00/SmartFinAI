@@ -283,11 +283,21 @@ export const useTransparentAIChat = ({
   }, [currentContent, selectedSection, toast]);
 
   // Apply direct suggestion from message with smart merging
-  const applyDirectSuggestion = useCallback(async (content: string) => {
+  const applyDirectSuggestion = useCallback(async (content: string, strategy?: import('@/services/ipo/smartContentMerger').MergeStrategy, segments?: string[]) => {
     try {
       // Use smart content merger instead of replacing everything
       const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
-      const mergedContent = smartContentMerger.smartMerge(currentContent, content);
+      
+      let finalContent = content;
+      
+      // If segments are provided, use only those segments
+      if (segments?.length) {
+        finalContent = segments.join('\n\n');
+      }
+      
+      const mergedContent = strategy 
+        ? smartContentMerger.smartMerge(currentContent, finalContent, strategy)
+        : smartContentMerger.smartMerge(currentContent, finalContent);
       
       onContentUpdate(mergedContent);
       

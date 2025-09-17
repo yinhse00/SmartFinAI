@@ -2,9 +2,10 @@
  * Smart Content Merger for IPO Prospectus
  * Intelligently merges AI suggestions with existing content instead of replacing everything
  */
+import { contentExtractor } from './contentExtractor';
 
 export interface MergeStrategy {
-  type: 'append' | 'prepend' | 'replace-section' | 'merge-paragraphs' | 'insert-at-position';
+  type: 'append' | 'prepend' | 'replace-section' | 'merge-paragraphs' | 'insert-at-position' | 'enhance-existing';
   position?: number;
   sectionIdentifier?: string;
   preserveStructure?: boolean;
@@ -19,6 +20,7 @@ export interface MergePreview {
     position: number;
   }>;
   strategy: MergeStrategy;
+  extractedContent?: import('./contentExtractor').ExtractedContent;
 }
 
 export const smartContentMerger = {
@@ -26,6 +28,28 @@ export const smartContentMerger = {
    * Analyzes content and suggests the best merge strategy
    */
   analyzeBestMergeStrategy: (currentContent: string, aiSuggestion: string): MergeStrategy => {
+    const extracted = contentExtractor.extractImplementableContent(aiSuggestion);
+    const similarity = smartContentMerger.calculateSimilarity(currentContent, extracted.implementableContent);
+    // Use content extractor's type determination
+    switch (extracted.contentType) {
+      case 'replacement':
+        return { type: 'replace-section', sectionIdentifier: 'auto-detected', preserveStructure: true };
+      case 'enhancement':
+        return { type: 'enhance-existing', preserveStructure: true };
+      case 'correction':
+        return { type: 'replace-section', sectionIdentifier: 'auto-detected', preserveStructure: true };
+      case 'addition':
+      default:
+        return similarity > 0.7 
+          ? { type: 'merge-paragraphs', preserveStructure: true }
+          : { type: 'append', preserveStructure: true };
+    }
+  },
+
+  /**
+   * Fallback strategy analysis for when content extractor isn't used
+   */
+  _legacyAnalyzeBestMergeStrategy: (currentContent: string, aiSuggestion: string): MergeStrategy => {
     const currentLines = currentContent.split('\n').filter(line => line.trim());
     const suggestionLines = aiSuggestion.split('\n').filter(line => line.trim());
     
@@ -80,26 +104,36 @@ export const smartContentMerger = {
    * Performs smart content merging based on strategy
    */
   smartMerge: (currentContent: string, aiSuggestion: string, strategy?: MergeStrategy): string => {
-    const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, aiSuggestion);
+    // Extract clean implementable content first
+    const cleanedSuggestion = contentExtractor.cleanContent(aiSuggestion);
+    
+    if (!cleanedSuggestion.trim()) {
+      return currentContent; // No implementable content found
+    }
+    
+    const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, cleanedSuggestion);
     
     switch (mergeStrategy.type) {
       case 'append':
-        return smartContentMerger.appendContent(currentContent, aiSuggestion);
+        return smartContentMerger.appendContent(currentContent, cleanedSuggestion);
       
       case 'prepend':
-        return smartContentMerger.prependContent(currentContent, aiSuggestion);
+        return smartContentMerger.prependContent(currentContent, cleanedSuggestion);
       
       case 'replace-section':
-        return smartContentMerger.replaceSectionContent(currentContent, aiSuggestion, mergeStrategy);
+        return smartContentMerger.replaceSectionContent(currentContent, cleanedSuggestion, mergeStrategy);
       
       case 'merge-paragraphs':
-        return smartContentMerger.mergeParagraphs(currentContent, aiSuggestion);
+        return smartContentMerger.mergeParagraphs(currentContent, cleanedSuggestion);
       
       case 'insert-at-position':
-        return smartContentMerger.insertAtPosition(currentContent, aiSuggestion, mergeStrategy.position || 0);
+        return smartContentMerger.insertAtPosition(currentContent, cleanedSuggestion, mergeStrategy.position || 0);
+      
+      case 'enhance-existing':
+        return smartContentMerger.enhanceExisting(currentContent, cleanedSuggestion);
       
       default:
-        return aiSuggestion; // Fallback to replacement
+        return currentContent + '\n\n' + cleanedSuggestion;
     }
   },
 
@@ -107,7 +141,8 @@ export const smartContentMerger = {
    * Generates a preview of what the merge would look like
    */
   generateMergePreview: (currentContent: string, aiSuggestion: string, strategy?: MergeStrategy): MergePreview => {
-    const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, aiSuggestion);
+    const extracted = contentExtractor.extractImplementableContent(aiSuggestion);
+    const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, extracted.implementableContent);
     const merged = smartContentMerger.smartMerge(currentContent, aiSuggestion, mergeStrategy);
     
     const changes = smartContentMerger.analyzeChanges(currentContent, merged);
@@ -116,8 +151,39 @@ export const smartContentMerger = {
       original: currentContent,
       merged,
       changes,
-      strategy: mergeStrategy
+      strategy: mergeStrategy,
+      extractedContent: extracted
     };
+  },
+
+  /**
+   * Enhances existing content with AI suggestions
+   */
+  enhanceExisting: (current: string, suggestion: string): string => {
+    const currentParagraphs = current.split('\n\n').filter(p => p.trim());
+    const suggestionParagraphs = suggestion.split('\n\n').filter(p => p.trim());
+    
+    // Find the best place to integrate the enhancement
+    let enhanced = current;
+    
+    suggestionParagraphs.forEach(sugPara => {
+      // Look for similar existing content to enhance
+      const bestMatch = currentParagraphs.reduce((best, curPara, index) => {
+        const similarity = smartContentMerger.calculateSimilarity(curPara, sugPara);
+        return similarity > best.similarity ? { similarity, index, paragraph: curPara } : best;
+      }, { similarity: 0, index: -1, paragraph: '' });
+      
+      if (bestMatch.similarity > 0.5) {
+        // Enhance the existing paragraph
+        const enhancedParagraph = smartContentMerger.enhanceParagraph(bestMatch.paragraph, sugPara);
+        enhanced = enhanced.replace(bestMatch.paragraph, enhancedParagraph);
+      } else {
+        // Add as new content at appropriate location
+        enhanced = smartContentMerger.appendContent(enhanced, sugPara);
+      }
+    });
+    
+    return enhanced;
   },
 
   /**

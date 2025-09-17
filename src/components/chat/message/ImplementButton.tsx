@@ -2,13 +2,14 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Eye, Loader2 } from 'lucide-react';
-import { ContentPreviewModal } from '@/components/ipo/ContentPreviewModal';
+import { EnhancedContentPreviewModal } from '@/components/ipo/EnhancedContentPreviewModal';
 import { Message } from '../ChatMessage';
+import { MergeStrategy } from '@/services/ipo/smartContentMerger';
 
 interface ImplementButtonProps {
   message: Message;
   currentContent: string;
-  onImplement: (suggestedContent: string) => void;
+  onImplement: (suggestedContent: string, strategy?: MergeStrategy, segments?: string[]) => void;
   isImplementing?: boolean;
 }
 
@@ -31,9 +32,10 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
     setShowPreview(true);
   };
 
-  const handleImplement = () => {
+  const handleImplement = (strategy?: MergeStrategy, segments?: string[]) => {
     if (message.suggestedContent) {
-      onImplement(message.suggestedContent);
+      const content = segments?.length ? segments.join('\n\n') : message.suggestedContent;
+      onImplement(content, strategy, segments);
     }
     setShowPreview(false);
   };
@@ -76,7 +78,7 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
           
           <Button
             size="sm"
-            onClick={handleImplement}
+            onClick={() => handleImplement()}
             disabled={isImplementing}
             className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
           >
@@ -91,15 +93,15 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
       </div>
 
       {showPreview && hasPreview && (
-        <ContentPreviewModal
+        <EnhancedContentPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
           onApply={handleImplement}
           beforeContent={message.changePreview?.before || currentContent}
-          afterContent={message.changePreview?.after || message.suggestedContent || ''}
+          aiSuggestion={message.suggestedContent || ''}
           confidence={confidence}
           title="Apply AI Suggestion"
-          description="Review the changes before applying them to your IPO draft."
+          description="Choose how to apply the AI suggestion to your draft."
         />
       )}
     </>

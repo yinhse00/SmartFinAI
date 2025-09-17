@@ -233,12 +233,22 @@ export const useEnhancedIPOAIChat = ({
   }, [analyzeCurrentContent, toast]);
 
   // Apply suggested content directly from AI message with smart merging
-  const applyDirectSuggestion = useCallback(async (suggestedContent: string) => {
+  const applyDirectSuggestion = useCallback(async (suggestedContent: string, strategy?: import('@/services/ipo/smartContentMerger').MergeStrategy, segments?: string[]) => {
     try {
       if (onContentUpdate) {
         // Use smart content merger instead of replacing everything
         const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
-        const mergedContent = smartContentMerger.smartMerge(currentContent, suggestedContent);
+        
+        let finalContent = suggestedContent;
+        
+        // If segments are provided, use only those segments
+        if (segments?.length) {
+          finalContent = segments.join('\n\n');
+        }
+        
+        const mergedContent = strategy 
+          ? smartContentMerger.smartMerge(currentContent, finalContent, strategy)
+          : smartContentMerger.smartMerge(currentContent, finalContent);
         
         onContentUpdate(mergedContent);
         
