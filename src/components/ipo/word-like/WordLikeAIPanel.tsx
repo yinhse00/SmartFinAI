@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
+import { TransparentAIPanel } from '@/components/ipo/ai/TransparentAIPanel';
 import { complianceValidator } from '@/services/ipo/complianceValidator';
 
 interface WordLikeAIPanelProps {
@@ -28,6 +29,7 @@ interface WordLikeAIPanelProps {
   currentContent: string;
   onContentUpdate: (content: string) => void;
   onClose: () => void;
+  useTransparentMode?: boolean;
 }
 
 export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
@@ -35,7 +37,8 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
   selectedSection,
   currentContent,
   onContentUpdate,
-  onClose
+  onClose,
+  useTransparentMode = false
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [complianceData, setComplianceData] = useState<any>(null);
@@ -106,6 +109,19 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
         return <Lightbulb className="h-4 w-4 text-blue-600" />;
     }
   };
+
+  // Use Transparent AI Panel if requested
+  if (useTransparentMode) {
+    return (
+      <TransparentAIPanel
+        projectId={projectId}
+        selectedSection={selectedSection}
+        currentContent={currentContent}
+        onContentUpdate={onContentUpdate}
+        onClose={onClose}
+      />
+    );
+  }
 
   return (
     <div className="h-full flex flex-col border-l bg-background">
