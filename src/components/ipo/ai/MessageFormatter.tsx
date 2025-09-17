@@ -1,5 +1,5 @@
 import React from 'react';
-import detectAndFormatTables from '@/utils/tableFormatter';
+import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 
 interface MessageFormatterProps {
   content: string;
@@ -59,9 +59,9 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
     return formattedParagraphs.filter(p => p.trim().length > 0);
   };
 
-  // Format tables first, then split into paragraphs
-  const tableFormattedContent = detectAndFormatTables(content);
-  const paragraphs = formatText(tableFormattedContent);
+  // Apply complete formatting pipeline: bold, italic, HTML, tables, links
+  const fullyFormattedContent = ipoMessageFormatter.formatMessage(content);
+  const paragraphs = formatText(fullyFormattedContent);
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -74,9 +74,18 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
             dangerouslySetInnerHTML={{ __html: paragraph }}
           />
         ) : (
-          <p key={index} className="text-sm leading-relaxed">
-            {paragraph}
-          </p>
+          // Check if paragraph contains HTML formatting (bold, italic, etc.)
+          paragraph.includes('<') ? (
+            <div 
+              key={index} 
+              className="text-sm leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: paragraph }}
+            />
+          ) : (
+            <p key={index} className="text-sm leading-relaxed">
+              {paragraph}
+            </p>
+          )
         )
       ))}
     </div>
