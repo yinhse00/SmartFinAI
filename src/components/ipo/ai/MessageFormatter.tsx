@@ -1,4 +1,5 @@
 import React from 'react';
+import detectAndFormatTables from '@/utils/tableFormatter';
 
 interface MessageFormatterProps {
   content: string;
@@ -58,14 +59,25 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
     return formattedParagraphs.filter(p => p.trim().length > 0);
   };
 
-  const paragraphs = formatText(content);
+  // Format tables first, then split into paragraphs
+  const tableFormattedContent = detectAndFormatTables(content);
+  const paragraphs = formatText(tableFormattedContent);
 
   return (
     <div className={`space-y-3 ${className}`}>
       {paragraphs.map((paragraph, index) => (
-        <p key={index} className="text-sm leading-relaxed">
-          {paragraph}
-        </p>
+        // Check if paragraph contains HTML table
+        paragraph.includes('<table') ? (
+          <div 
+            key={index} 
+            className="text-sm leading-relaxed"
+            dangerouslySetInnerHTML={{ __html: paragraph }}
+          />
+        ) : (
+          <p key={index} className="text-sm leading-relaxed">
+            {paragraph}
+          </p>
+        )
       ))}
     </div>
   );

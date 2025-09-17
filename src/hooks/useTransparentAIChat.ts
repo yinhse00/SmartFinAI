@@ -140,6 +140,16 @@ export const useTransparentAIChat = ({
         currentContent
       );
 
+      // Detect if the response contains implementable content
+      const hasImplementableContent = response.updatedContent || (
+        response.message && (
+          response.message.includes('suggested revision') ||
+          response.message.includes('improved version') ||
+          response.message.includes('recommended text') ||
+          response.message.length > 200 // Substantial content that could replace current text
+        )
+      );
+
       const aiChatMessage: TransparentChatMessage = {
         id: `ai_${Date.now()}`,
         type: 'ai',
@@ -147,9 +157,9 @@ export const useTransparentAIChat = ({
         content: response.message,
         timestamp: new Date(),
         suggestions: response.suggestions,
-        confidence: response.confidence,
-        suggestedContent: response.updatedContent,
-        isDraftable: !!response.updatedContent,
+        confidence: response.confidence || 0.8,
+        suggestedContent: response.updatedContent || (hasImplementableContent ? response.message : undefined),
+        isDraftable: !!hasImplementableContent,
         changePreview: response.changePreview
       };
 
