@@ -232,18 +232,22 @@ export const useEnhancedIPOAIChat = ({
     });
   }, [analyzeCurrentContent, toast]);
 
-  // Apply suggested content directly from AI message
+  // Apply suggested content directly from AI message with smart merging
   const applyDirectSuggestion = useCallback(async (suggestedContent: string) => {
     try {
       if (onContentUpdate) {
-        onContentUpdate(suggestedContent);
+        // Use smart content merger instead of replacing everything
+        const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
+        const mergedContent = smartContentMerger.smartMerge(currentContent, suggestedContent);
+        
+        onContentUpdate(mergedContent);
         
         // Add confirmation message
         const confirmationMessage: ChatMessage = {
           id: `confirmation-${Date.now()}`,
           type: 'ai',
           isUser: false,
-          content: '✅ Changes applied successfully! Your draft has been updated with the suggested content.',
+          content: '✅ Content enhanced successfully! The AI suggestion has been intelligently merged with your existing draft.',
           timestamp: new Date(),
           responseType: 'CONTENT_UPDATE',
           confidence: 1.0
@@ -259,7 +263,7 @@ export const useEnhancedIPOAIChat = ({
     } catch (error) {
       console.error('Error applying suggestion:', error);
     }
-  }, [onContentUpdate, analyzeCurrentContent]);
+  }, [onContentUpdate, analyzeCurrentContent, currentContent]);
 
   return {
     messages,

@@ -282,17 +282,21 @@ export const useTransparentAIChat = ({
     }
   }, [currentContent, selectedSection, toast]);
 
-  // Apply direct suggestion from message
+  // Apply direct suggestion from message with smart merging
   const applyDirectSuggestion = useCallback(async (content: string) => {
     try {
-      onContentUpdate(content);
+      // Use smart content merger instead of replacing everything
+      const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
+      const mergedContent = smartContentMerger.smartMerge(currentContent, content);
+      
+      onContentUpdate(mergedContent);
       
       // Refresh analysis
       await analyzeCurrentContent();
       
       toast({
-        title: "Content Applied",
-        description: "The suggested content has been applied to your document."
+        title: "Content Enhanced",
+        description: "The AI suggestion has been intelligently merged with your existing content."
       });
     } catch (error) {
       console.error('Direct suggestion application failed:', error);
@@ -302,7 +306,7 @@ export const useTransparentAIChat = ({
         variant: "destructive"
       });
     }
-  }, [onContentUpdate, analyzeCurrentContent, toast]);
+  }, [onContentUpdate, analyzeCurrentContent, currentContent, toast]);
 
   // Refresh analysis
   const refreshAnalysis = useCallback(async () => {
