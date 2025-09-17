@@ -95,9 +95,21 @@ export const useTransparentAIChat = ({
       }
     } catch (error) {
       console.error('Transparent analysis failed:', error);
+      
+      // Add error message to chat instead of disappearing
+      const errorMessage: TransparentChatMessage = {
+        id: `error_analysis_${Date.now()}`,
+        type: 'ai',
+        isUser: false,
+        content: "I'm currently unable to analyze your content due to service limitations. Please try again later or check your API key settings.",
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      
       toast({
         title: "Analysis Failed",
-        description: "Unable to analyze content. Please try again.",
+        description: "AI service temporarily unavailable. Error message shown in chat.",
         variant: "destructive"
       });
     } finally {
@@ -151,11 +163,19 @@ export const useTransparentAIChat = ({
     } catch (error) {
       console.error('Message processing failed:', error);
       
+      // Provide more helpful error messages based on error type
+      let errorContent = "I encountered an error while processing your message. Please try again or rephrase your request.";
+      if (error instanceof Error && error.message.includes('Monthly token limit exceeded')) {
+        errorContent = "The AI service has reached its monthly usage limit. Please try again later or contact support for assistance.";
+      } else if (error instanceof Error && error.message.includes('AI service temporarily unavailable')) {
+        errorContent = "The AI service is temporarily unavailable. Please try again in a few moments.";
+      }
+      
       const errorMessage: TransparentChatMessage = {
         id: `error_${Date.now()}`,
         type: 'ai',
         isUser: false,
-        content: "I encountered an error while processing your message. Please try again or rephrase your request.",
+        content: errorContent,
         timestamp: new Date()
       };
       
@@ -163,7 +183,7 @@ export const useTransparentAIChat = ({
       
       toast({
         title: "Processing Failed",
-        description: "Unable to process your message. Please try again.",
+        description: "Error details shown in chat. Please try again later.",
         variant: "destructive"
       });
     } finally {

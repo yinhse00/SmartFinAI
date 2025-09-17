@@ -120,11 +120,11 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
             {!apiKeyStatus.hasKey && <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md p-2 mt-2">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <p className="text-xs text-amber-800">API key required for AI assistance</p>
+                  <p className="text-xs text-amber-800">AI service currently using system keys (limited usage)</p>
                 </div>
                 <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => navigate('/profile')}>
                   <Settings className="h-3 w-3 mr-1" />
-                  Setup
+                  Add Keys
                 </Button>
               </div>}
             

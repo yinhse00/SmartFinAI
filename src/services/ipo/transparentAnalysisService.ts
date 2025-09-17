@@ -183,8 +183,18 @@ export class TransparentAnalysisService {
     } catch (error) {
       console.error('Message processing failed:', error);
       
+      // Provide better error messages based on error type
+      let errorMessage = "I encountered an error while processing your request. Please try rephrasing your question or request.";
+      if (error instanceof Error) {
+        if (error.message.includes('Monthly token limit exceeded')) {
+          errorMessage = "The AI service has reached its monthly usage limit. Please try again later or contact support for assistance.";
+        } else if (error.message.includes('AI service temporarily unavailable')) {
+          errorMessage = "The AI service is temporarily unavailable. Please try again in a few moments.";
+        }
+      }
+      
       return {
-        message: "I encountered an error while processing your request. Please try rephrasing your question or request.",
+        message: errorMessage,
         reasoning: [],
         confidence: 0.3
       };

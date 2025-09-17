@@ -41,24 +41,43 @@ export class UniversalAiClient {
       });
 
       if (error) {
+        console.error('❌ Universal AI Proxy error:', error);
         throw new Error(error.message || 'Edge function error');
+      }
+
+      if (!data || !data.success) {
+        console.error('❌ Universal AI Proxy returned unsuccessful response:', data);
+        throw new Error(data?.error || 'AI service returned unsuccessful response');
       }
 
       console.log('✅ Generation completed successfully via system API');
       
       return {
         text: data.text || '',
-        success: data.success || false,
-        error: data.error,
+        success: true,
+        error: undefined,
         provider: request.provider,
         modelId: request.modelId
       };
     } catch (error) {
       console.error('❌ UniversalAiClient error:', error);
+      
+      // Provide more detailed error information
+      let errorMessage = 'AI service temporarily unavailable';
+      if (error instanceof Error) {
+        if (error.message.includes('Monthly token limit exceeded')) {
+          errorMessage = 'AI service has reached its monthly usage limit. Please try again later.';
+        } else if (error.message.includes('Edge function error')) {
+          errorMessage = 'AI service is currently experiencing issues. Please try again.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       return {
         text: '',
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error',
+        error: errorMessage,
         provider: request.provider,
         modelId: request.modelId
       };
