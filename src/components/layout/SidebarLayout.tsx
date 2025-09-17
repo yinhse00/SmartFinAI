@@ -17,6 +17,11 @@ import {
   useSidebar,
 } from '@/components/ui/sidebar';
 import {
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@/components/ui/resizable';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -58,14 +63,14 @@ function AppSidebar() {
   };
 
   return (
-    <Sidebar className={sidebar.open ? "w-64" : "w-16"} collapsible="icon">
+    <Sidebar collapsible="icon">
       <SidebarContent>
         <SidebarGroup>
           <SidebarGroupContent>
             <div className={`px-4 py-6 ${!sidebar.open ? 'px-2' : ''}`}>
-              <div className={`font-bold text-lg text-primary ${!sidebar.open ? 'text-center text-sm' : ''}`}>
+              <Link to="/" className={`font-bold text-lg text-primary block ${!sidebar.open ? 'text-center text-sm' : ''}`}>
                 {!sidebar.open ? 'SF' : 'SmartFinAI'}
-              </div>
+              </Link>
             </div>
             <SidebarMenu>
               {navigationItems.map((item) => (
@@ -145,12 +150,33 @@ const SidebarLayout = ({ children }: SidebarLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
+        <ResizablePanelGroup direction="horizontal" className="h-screen">
+          <ResizablePanel 
+            defaultSize={20} 
+            minSize={15} 
+            maxSize={30}
+            className="min-w-[200px] max-w-[400px]"
+          >
+            <AppSidebar />
+          </ResizablePanel>
+          
+          <ResizableHandle withHandle />
+          
+          <ResizablePanel defaultSize={80} minSize={70}>
+            <div className="flex flex-col h-full">
+              <header className="h-12 border-b bg-background flex items-center px-4">
+                <SidebarTrigger />
+                <Link to="/" className="ml-4 font-bold text-lg text-primary">
+                  SmartFinAI
+                </Link>
+              </header>
+              
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </SidebarProvider>
   );
