@@ -57,7 +57,7 @@ export const useTransparentAIChat = ({
       id: 'welcome',
       type: 'ai',
       isUser: false,
-      content: "I'll analyze your content and provide transparent, step-by-step suggestions. I'll show you my reasoning and let you preview changes before applying them.",
+      content: "I'll analyze your content and provide actionable suggestions to improve your IPO prospectus. Ask me questions or request specific improvements, and I'll provide implementable solutions with preview options.",
       timestamp: new Date()
     }
   ]);
@@ -86,10 +86,9 @@ export const useTransparentAIChat = ({
           id: `analysis_${Date.now()}`,
           type: 'ai',
           isUser: false,
-          content: `I've analyzed your ${selectedSection} section and found ${result.urgentIssues.length} issues and ${result.quickWins.length} improvement opportunities. Here's my detailed reasoning:`,
+          content: `I've analyzed your ${selectedSection} section and found ${result.urgentIssues.length} issues and ${result.quickWins.length} improvement opportunities that need attention.`,
           timestamp: new Date(),
-          analysisResult: result,
-          reasoning: result.reasoning
+          analysisResult: result
         };
         
         setMessages(prev => [...prev, aiMessage]);
@@ -135,7 +134,6 @@ export const useTransparentAIChat = ({
         isUser: false,
         content: response.message,
         timestamp: new Date(),
-        reasoning: response.reasoning,
         suggestions: response.suggestions,
         confidence: response.confidence,
         suggestedContent: response.updatedContent,

@@ -4,13 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import { X, Send, Bot, User, Loader2, Brain, ChevronDown, ChevronUp, Minimize2, AlertCircle, Settings, Eye, CheckCircle } from 'lucide-react';
+import { X, Send, Bot, Loader2, Brain, ChevronDown, ChevronUp, AlertCircle, Settings, Eye, CheckCircle } from 'lucide-react';
 import { useTransparentAIChat } from '@/hooks/useTransparentAIChat';
-import { AIReasoningPanel } from './AIReasoningPanel';
 import { SuggestionCard } from './SuggestionCard';
 import { PreviewDiffViewer } from './PreviewDiffViewer';
-import { ChatMessage } from '@/components/chat/ChatMessage';
+import { MessageFormatter } from './MessageFormatter';
+import { ImplementButton } from '@/components/chat/message/ImplementButton';
 import { Message } from '@/components/chat/ChatMessage';
 import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
@@ -99,8 +98,6 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
   const handleSuggestionPreview = async (suggestionId: string) => {
     await previewSuggestion(suggestionId);
   };
-  const currentReasoning = messages.filter(msg => msg.reasoning && msg.reasoning.length > 0).map(msg => msg.reasoning!).flat().slice(-5); // Show last 5 reasoning steps
-
   return <Card className={`${isCollapsed ? 'h-auto' : 'h-full'} rounded-none border-0 border-l transition-all duration-300`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
@@ -142,9 +139,6 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
       </CardHeader>
       
       {!isCollapsed && <CardContent className="flex flex-col h-[calc(100vh-12rem)] p-0">
-          {/* AI Reasoning Panel */}
-          {currentReasoning.length > 0}
-
           {/* Current Analysis Suggestions */}
           {currentAnalysis && currentAnalysis.hasIssues && <div className="px-4 pb-4 border-b space-y-3">
               <div className="flex items-center justify-between">
@@ -184,13 +178,37 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
               isDraftable: message.isDraftable,
               changePreview: message.changePreview
             };
+            
+            const isUserMessage = message.isUser ?? message.type === 'user';
+            
             return <div key={message.id} className="space-y-2">
-                    <ChatMessage message={standardMessage} currentContent={currentContent} onImplementSuggestion={applyDirectSuggestion} isImplementing={isProcessing} />
-                    
-                    {/* Show reasoning for AI messages */}
-                    {message.reasoning && message.reasoning.length > 0 && <div className="ml-8">
-                        <AIReasoningPanel reasoningSteps={message.reasoning} isProcessing={false} />
-                      </div>}
+                    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
+                      <div className={`flex items-start gap-3 w-full max-w-[85%] ${isUserMessage ? 'flex-row-reverse' : ''}`}>
+                        <div className={`w-6 h-6 rounded-full ${isUserMessage ? 'bg-primary' : 'bg-muted'} flex items-center justify-center shrink-0 mt-1`}>
+                          {isUserMessage ? 
+                            <span className="text-xs font-medium text-primary-foreground">U</span> :
+                            <Bot className="h-3 w-3 text-muted-foreground" />
+                          }
+                        </div>
+                        <Card className={`p-3 rounded-lg w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                          {isUserMessage ? (
+                            <p className="text-sm">{message.content}</p>
+                          ) : (
+                            <>
+                              <MessageFormatter content={message.content} />
+                              {message.isDraftable && message.suggestedContent && (
+                                <ImplementButton
+                                  message={standardMessage}
+                                  currentContent={currentContent}
+                                  onImplement={applyDirectSuggestion}
+                                  isImplementing={isProcessing}
+                                />
+                              )}
+                            </>
+                          )}
+                        </Card>
+                      </div>
+                    </div>
                   </div>;
           })}
               
