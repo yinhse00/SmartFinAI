@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { MaximizedDraftingArea } from './MaximizedDraftingArea';
 import { IPOAIChat } from './IPOAIChat';
+import { TransparentAIPanel } from './ai/TransparentAIPanel';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
+import { ArrowLeft, Settings, Edit3, FileText, Key, Brain, Zap } from 'lucide-react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { IPOInputGenerateLayout } from './IPOInputGenerateLayout';
 interface IPOProspectusWorkspaceProps {
@@ -20,6 +21,7 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
   const [chatContent, setChatContent] = useState<string>('');
   const [chatContentUpdater, setChatContentUpdater] = useState<((content: string) => void) | null>(null);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('input-generate');
+  const [transparentMode, setTransparentMode] = useState(true);
   const handlePassContentToChat = (content: string, onUpdate: (newContent: string) => void) => {
     setChatContent(content);
     setChatContentUpdater(() => onUpdate);
@@ -60,7 +62,29 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
               </Button>
             </div>
             
-            
+            {/* AI Mode Switcher - Only show in drafting mode */}
+            {layoutMode === 'drafting' && (
+              <div className="flex items-center gap-1 bg-muted p-1 rounded-lg">
+                <Button 
+                  variant={transparentMode ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setTransparentMode(true)} 
+                  className="h-7 px-3"
+                >
+                  <Brain className="h-3 w-3 mr-1" />
+                  Transparent
+                </Button>
+                <Button 
+                  variant={!transparentMode ? 'default' : 'ghost'} 
+                  size="sm" 
+                  onClick={() => setTransparentMode(false)} 
+                  className="h-7 px-3"
+                >
+                  <Zap className="h-3 w-3 mr-1" />
+                  Auto
+                </Button>
+              </div>
+            )}
             
           </div>
         </div>
@@ -82,7 +106,23 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
             {isChatPanelOpen && <>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
-                  <IPOAIChat projectId={project.id} selectedSection={selectedSection} currentContent={chatContent} onContentUpdate={handleChatContentUpdate} onClose={() => setIsChatPanelOpen(false)} />
+                  {transparentMode ? (
+                    <TransparentAIPanel 
+                      projectId={project.id} 
+                      selectedSection={selectedSection} 
+                      currentContent={chatContent} 
+                      onContentUpdate={handleChatContentUpdate} 
+                      onClose={() => setIsChatPanelOpen(false)} 
+                    />
+                  ) : (
+                    <IPOAIChat 
+                      projectId={project.id} 
+                      selectedSection={selectedSection} 
+                      currentContent={chatContent} 
+                      onContentUpdate={handleChatContentUpdate} 
+                      onClose={() => setIsChatPanelOpen(false)} 
+                    />
+                  )}
                 </ResizablePanel>
               </>}
           </ResizablePanelGroup>}
