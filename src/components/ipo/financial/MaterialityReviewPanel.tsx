@@ -13,8 +13,8 @@ import { MaterialityAnalysis, MaterialityItem, materialityAnalyzer } from '@/ser
 import { enhancedMaterialityAnalyzer, EnhancedMaterialityItem } from '@/services/financial/enhancedMaterialityAnalyzer';
 
 interface MaterialityReviewPanelProps {
-  analyses: MaterialityAnalysis[];
-  onAnalysisUpdate: (updatedAnalyses: MaterialityAnalysis[]) => void;
+  analyses: any[];
+  onAnalysisUpdate: (updatedAnalyses: any[]) => void;
   onConfirmAll: () => void;
 }
 

@@ -10,7 +10,7 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface FinancialStatementUploaderProps {
   projectId: string;
-  onFileProcessed: (statementId: string, data: FinancialData) => void;
+  onFileProcessed: (statementId: string, data: FinancialData, documentContent?: string) => void;
 }
 
 interface UploadedFile {
