@@ -105,17 +105,33 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
             </ScrollArea>
           </div>
 
-          {/* Content After AI Changes */}
+          {/* AI Changes Preview */}
           <div className="flex flex-col h-full">
             <h3 className="font-medium mb-3 text-sm text-muted-foreground">
-              After AI Changes
+              AI Changes Preview
             </h3>
             <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
               <div className="p-4">
-                <div 
-                  className="prose prose-sm max-w-none dark:prose-invert"
-                  dangerouslySetInnerHTML={{ __html: formattedSuggested }}
-                />
+                <div className="space-y-3">
+                  {diffResult.changes.map((change, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 rounded-lg ${getChangeColor(change.type)}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {getChangeIcon(change.type)}
+                        <div className="flex-1">
+                          <div 
+                            className="prose prose-sm max-w-none dark:prose-invert"
+                            dangerouslySetInnerHTML={{ 
+                              __html: ipoMessageFormatter.formatMessage(change.content) 
+                            }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </ScrollArea>
           </div>
