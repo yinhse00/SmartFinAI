@@ -183,14 +183,14 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
             
             return <div key={message.id} className="space-y-2">
                     <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
-                      <div className={`flex items-start gap-3 w-full max-w-[85%] ${isUserMessage ? 'flex-row-reverse' : ''}`}>
+                      <div className={`flex items-start gap-3 w-full ${isUserMessage ? 'flex-row-reverse' : ''}`}>
                         <div className={`w-6 h-6 rounded-full ${isUserMessage ? 'bg-primary' : 'bg-muted'} flex items-center justify-center shrink-0 mt-1`}>
                           {isUserMessage ? 
                             <span className="text-xs font-medium text-primary-foreground">U</span> :
                             <Bot className="h-3 w-3 text-muted-foreground" />
                           }
                         </div>
-                        <Card className={`p-3 rounded-lg w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                        <div className={`w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'} p-3 rounded-lg`}>
                           {isUserMessage ? (
                             <p className="text-sm">{message.content}</p>
                           ) : (
@@ -206,7 +206,7 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
                               )}
                             </>
                           )}
-                        </Card>
+                        </div>
                       </div>
                     </div>
                   </div>;
