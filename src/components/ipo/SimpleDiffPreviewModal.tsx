@@ -2,6 +2,7 @@ import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle, Plus, Edit3, Loader2 } from 'lucide-react';
 import { diffGenerator, type DiffResult } from '@/services/ipo/diffGenerator';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
@@ -93,43 +94,47 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
 
         <div className="flex-1 grid grid-cols-2 gap-4 min-h-0">
           {/* Current Content */}
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full">
             <h3 className="font-medium mb-3 text-sm text-muted-foreground">
               Current Content
             </h3>
-            <div className="flex-1 overflow-auto p-4 bg-muted/30 rounded-lg">
-              <div 
-                className="prose prose-sm max-w-none dark:prose-invert"
-                dangerouslySetInnerHTML={{ __html: formattedOriginal }}
-              />
-            </div>
+            <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
+              <div className="p-4">
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: formattedOriginal }}
+                />
+              </div>
+            </ScrollArea>
           </div>
 
           {/* Content After AI Changes */}
-          <div className="flex flex-col">
+          <div className="flex flex-col h-full">
             <h3 className="font-medium mb-3 text-sm text-muted-foreground">
               After AI Changes
             </h3>
-            <div className="flex-1 overflow-auto p-4 bg-muted/30 rounded-lg">
-              <div className="space-y-2">
-                {diffResult.changes.map((change, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded ${getChangeColor(change.type)}`}
-                  >
-                    <div className="flex items-start gap-2">
-                      {getChangeIcon(change.type)}
-                      <div 
-                        className="flex-1 prose prose-sm max-w-none dark:prose-invert"
-                        dangerouslySetInnerHTML={{ 
-                          __html: ipoMessageFormatter.formatMessage(change.content) 
-                        }}
-                      />
+            <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
+              <div className="p-4">
+                <div className="space-y-2">
+                  {diffResult.changes.map((change, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 rounded ${getChangeColor(change.type)}`}
+                    >
+                      <div className="flex items-start gap-2">
+                        {getChangeIcon(change.type)}
+                        <div 
+                          className="flex-1 prose prose-sm max-w-none dark:prose-invert"
+                          dangerouslySetInnerHTML={{ 
+                            __html: ipoMessageFormatter.formatMessage(change.content) 
+                          }}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            </ScrollArea>
           </div>
         </div>
 
