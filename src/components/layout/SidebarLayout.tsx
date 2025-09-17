@@ -16,6 +16,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -145,12 +146,19 @@ const SidebarLayout = ({ children }: SidebarLayoutProps) => {
   return (
     <SidebarProvider>
       <div className="min-h-screen flex w-full">
-        <AppSidebar />
-        <div className="flex-1 flex flex-col">
-          <main className="flex-1 overflow-auto">
-            {children}
-          </main>
-        </div>
+        <ResizablePanelGroup direction="horizontal" className="min-h-screen">
+          <ResizablePanel defaultSize={20} minSize={15} maxSize={30}>
+            <AppSidebar />
+          </ResizablePanel>
+          <ResizableHandle />
+          <ResizablePanel defaultSize={80}>
+            <div className="flex-1 flex flex-col h-full">
+              <main className="flex-1 overflow-auto">
+                {children}
+              </main>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </SidebarProvider>
   );
