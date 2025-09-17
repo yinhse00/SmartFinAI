@@ -181,35 +181,37 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
             
             const isUserMessage = message.isUser ?? message.type === 'user';
             
-            return <div key={message.id} className="space-y-2">
-                    <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
-                      <div className={`flex items-start gap-3 w-full ${isUserMessage ? 'flex-row-reverse' : ''}`}>
-                        <div className={`w-6 h-6 rounded-full ${isUserMessage ? 'bg-primary' : 'bg-muted'} flex items-center justify-center shrink-0 mt-1`}>
-                          {isUserMessage ? 
-                            <span className="text-xs font-medium text-primary-foreground">U</span> :
-                            <Bot className="h-3 w-3 text-muted-foreground" />
-                          }
-                        </div>
-                        <div className={`w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'} p-3 rounded-lg`}>
-                          {isUserMessage ? (
-                            <p className="text-sm">{message.content}</p>
-                          ) : (
-                            <>
-                              <MessageFormatter content={message.content} />
-                              {message.isDraftable && message.suggestedContent && (
-                                <ImplementButton
-                                  message={standardMessage}
-                                  currentContent={currentContent}
-                                  onImplement={applyDirectSuggestion}
-                                  isImplementing={isProcessing}
-                                />
-                              )}
-                            </>
-                          )}
-                        </div>
-                      </div>
+            return (
+              <div key={message.id} className="space-y-2">
+                <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
+                  <div className={`flex items-start gap-3 w-full ${isUserMessage ? 'flex-row-reverse' : ''}`}>
+                    <div className={`w-6 h-6 rounded-full ${isUserMessage ? 'bg-primary' : 'bg-muted'} flex items-center justify-center shrink-0 mt-1`}>
+                      {isUserMessage ? 
+                        <span className="text-xs font-medium text-primary-foreground">U</span> :
+                        <Bot className="h-3 w-3 text-muted-foreground" />
+                      }
                     </div>
-                  </div>;
+                    <div className={`w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'} p-3 rounded-lg`}>
+                      {isUserMessage ? (
+                        <p className="text-sm">{message.content}</p>
+                      ) : (
+                        <>
+                          <MessageFormatter content={message.content} />
+                          {message.isDraftable && message.suggestedContent && (
+                            <ImplementButton
+                              message={standardMessage}
+                              currentContent={currentContent}
+                              onImplement={applyDirectSuggestion}
+                              isImplementing={isProcessing}
+                            />
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
           })}
               
               {isProcessing && <div className="flex justify-start">
