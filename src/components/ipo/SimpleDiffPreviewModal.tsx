@@ -35,11 +35,8 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
   }, [originalContent]);
 
   const formattedSuggested = React.useMemo(() => {
-    const mergedContent = diffResult.changes
-      .map(change => change.content)
-      .join('\n');
-    return ipoMessageFormatter.formatMessage(mergedContent);
-  }, [diffResult]);
+    return ipoMessageFormatter.formatMessage(suggestedContent);
+  }, [suggestedContent]);
 
   const getChangeIcon = (type: string) => {
     switch (type) {
@@ -115,24 +112,10 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
             </h3>
             <ScrollArea className="flex-1 bg-muted/30 rounded-lg">
               <div className="p-4">
-                <div className="space-y-2">
-                  {diffResult.changes.map((change, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 rounded ${getChangeColor(change.type)}`}
-                    >
-                      <div className="flex items-start gap-2">
-                        {getChangeIcon(change.type)}
-                        <div 
-                          className="flex-1 prose prose-sm max-w-none dark:prose-invert"
-                          dangerouslySetInnerHTML={{ 
-                            __html: ipoMessageFormatter.formatMessage(change.content) 
-                          }}
-                        />
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <div 
+                  className="prose prose-sm max-w-none dark:prose-invert"
+                  dangerouslySetInnerHTML={{ __html: formattedSuggested }}
+                />
               </div>
             </ScrollArea>
           </div>
