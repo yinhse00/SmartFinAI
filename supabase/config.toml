@@ -4,5 +4,8 @@ project_id = "petoxjdikxxugbrzajpj"
 [functions.parse-vetting-requirements]
 verify_jwt = false
 
+[functions.universal-ai-proxy]
+verify_jwt = true
+
 [functions.grok-proxy]
 verify_jwt = false

@@ -53,6 +53,42 @@ export type Database = {
         }
         Relationships: []
       }
+      api_usage: {
+        Row: {
+          created_at: string | null
+          feature_context: string | null
+          id: string
+          model_id: string
+          provider: string
+          request_count: number | null
+          session_id: string | null
+          tokens_used: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          feature_context?: string | null
+          id?: string
+          model_id: string
+          provider: string
+          request_count?: number | null
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          feature_context?: string | null
+          id?: string
+          model_id?: string
+          provider?: string
+          request_count?: number | null
+          session_id?: string | null
+          tokens_used?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       execution_ai_documents: {
         Row: {
           content: string
@@ -1188,6 +1224,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_subscriptions: {
+        Row: {
+          billing_cycle_start: string | null
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          monthly_token_limit: number | null
+          plan_type: string
+          tokens_used_this_month: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          billing_cycle_start?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          monthly_token_limit?: number | null
+          plan_type?: string
+          tokens_used_this_month?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          billing_cycle_start?: string | null
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          monthly_token_limit?: number | null
+          plan_type?: string
+          tokens_used_this_month?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -1198,6 +1270,10 @@ export type Database = {
         Returns: {
           table_name: string
         }[]
+      }
+      reset_monthly_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
     }
     Enums: {
