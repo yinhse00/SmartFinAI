@@ -16,6 +16,9 @@ export interface ContentSegment {
   isImplementable: boolean;
 }
 
+import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
+import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
+
 export class ContentExtractor {
   private commentaryPatterns = [
     /^(Here's|Here is|I suggest|Consider|You might want to|I recommend|Let me|I'll|I would suggest)/i,
@@ -63,9 +66,12 @@ export class ContentExtractor {
     const segments: ContentSegment[] = [];
 
     paragraphs.forEach((paragraph, index) => {
-      const trimmed = paragraph.trim();
+      let trimmed = paragraph.trim();
       
       if (!trimmed) return;
+
+      // Clean markdown artifacts from content
+      trimmed = codeBlockCleaner.cleanupCodeBlockMarkers(trimmed);
 
       const isCommentary = this.isCommentary(trimmed);
       const segmentType = this.detectSegmentType(trimmed);
@@ -137,7 +143,8 @@ export class ContentExtractor {
    */
   cleanContent(content: string): string {
     const extracted = this.extractImplementableContent(content);
-    return extracted.implementableContent;
+    // Apply full formatting pipeline to clean content
+    return ipoMessageFormatter.formatMessage(extracted.implementableContent);
   }
 }
 

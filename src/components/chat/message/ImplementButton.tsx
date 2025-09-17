@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Eye, Loader2 } from 'lucide-react';
-import { EnhancedContentPreviewModal } from '@/components/ipo/EnhancedContentPreviewModal';
+import { SimpleDiffPreviewModal } from '@/components/ipo/SimpleDiffPreviewModal';
 import { Message } from '../ChatMessage';
 import { MergeStrategy } from '@/services/ipo/smartContentMerger';
 
@@ -32,10 +32,9 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
     setShowPreview(true);
   };
 
-  const handleImplement = (strategy?: MergeStrategy, segments?: string[]) => {
+  const handleImplement = () => {
     if (message.suggestedContent) {
-      const content = segments?.length ? segments.join('\n\n') : message.suggestedContent;
-      onImplement(content, strategy, segments);
+      onImplement(message.suggestedContent);
     }
     setShowPreview(false);
   };
@@ -78,7 +77,7 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
           
           <Button
             size="sm"
-            onClick={() => handleImplement()}
+            onClick={handleImplement}
             disabled={isImplementing}
             className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
           >
@@ -93,15 +92,13 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
       </div>
 
       {showPreview && hasPreview && (
-        <EnhancedContentPreviewModal
+        <SimpleDiffPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
+          originalContent={currentContent}
+          suggestedContent={message.suggestedContent || ''}
           onApply={handleImplement}
-          beforeContent={message.changePreview?.before || currentContent}
-          aiSuggestion={message.suggestedContent || ''}
-          confidence={confidence}
-          title="Apply AI Suggestion"
-          description="Choose how to apply the AI suggestion to your draft."
+          isApplying={isImplementing}
         />
       )}
     </>
