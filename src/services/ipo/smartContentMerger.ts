@@ -132,94 +132,43 @@ export const smartContentMerger = {
   smartMerge: (currentContent: string, aiSuggestion: string, strategy?: MergeStrategy): string => {
     const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, aiSuggestion);
     
-    // Extract only the new/different content from AI suggestion
-    const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, aiSuggestion);
-    
-    console.log(`[SmartMerger] Using strategy: ${mergeStrategy.type}`, {
-      currentLength: currentContent.length,
-      suggestionLength: aiSuggestion.length,
-      extractedLength: extractedContent.length,
-      strategy: mergeStrategy
-    });
-    
-    // If no new content found, return original
-    if (!extractedContent.trim()) {
-      console.log('[SmartMerger] No new content detected, returning original');
-      return currentContent;
-    }
+    // Clean the suggestion first
+    const cleanSuggestion = contentExtractor.cleanContent(aiSuggestion);
 
     let mergedContent: string;
     
     switch (mergeStrategy.type) {
       case 'append':
-        mergedContent = smartContentMerger.appendContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.appendContent(currentContent, cleanSuggestion);
         break;
       
       case 'prepend':
-        mergedContent = smartContentMerger.prependContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.prependContent(currentContent, cleanSuggestion);
         break;
       
       case 'replace-section':
-        mergedContent = smartContentMerger.replaceSectionContent(currentContent, extractedContent, mergeStrategy);
+        mergedContent = smartContentMerger.replaceSectionContent(currentContent, cleanSuggestion, mergeStrategy);
         break;
       
       case 'merge-paragraphs':
-        mergedContent = smartContentMerger.mergeParagraphs(currentContent, extractedContent);
+        mergedContent = smartContentMerger.mergeParagraphs(currentContent, cleanSuggestion);
         break;
       
       case 'insert-at-line':
-        mergedContent = smartContentMerger.insertAtPosition(currentContent, extractedContent, mergeStrategy.targetLine || 0);
+        mergedContent = smartContentMerger.insertAtPosition(currentContent, cleanSuggestion, mergeStrategy.targetLine || 0);
         break;
       
       case 'enhance-existing':
-        mergedContent = smartContentMerger.enhanceExisting(currentContent, extractedContent);
+        mergedContent = smartContentMerger.enhanceExisting(currentContent, cleanSuggestion);
         break;
       
       default:
-        mergedContent = smartContentMerger.appendContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.appendContent(currentContent, cleanSuggestion);
         break;
     }
     
-    return mergedContent;
-  },
-
-  /**
-   * Extract only the new/different content from AI suggestion
-   */
-  extractOnlyNewContent: (currentContent: string, aiSuggestion: string): string => {
-    // First, clean the AI suggestion to remove commentary
-    const cleanedSuggestion = aiSuggestion
-      .split('\n')
-      .filter(line => {
-        const trimmed = line.trim();
-        if (!trimmed) return false;
-        
-        // Filter out AI commentary
-        if (trimmed.match(/^(Here's|Here is|I suggest|Consider|You might want to|Let me|I'll|I can)/i)) return false;
-        if (trimmed.match(/^(This would|That would|These would|This will|This should)/i)) return false;
-        if (trimmed.match(/^(To improve|To enhance|To address|For better)/i)) return false;
-        if (trimmed.match(/^(The following|Below is|Above is|Based on)/i)) return false;
-        
-        return true;
-      })
-      .join('\n');
-    
-    const currentParagraphs = currentContent.split('\n\n').filter(p => p.trim());
-    const suggestionParagraphs = cleanedSuggestion.split('\n\n').filter(p => p.trim());
-    
-    const newParagraphs = suggestionParagraphs.filter(suggestionPara => {
-      // Lower minimum length requirement to capture smaller but important additions
-      if (suggestionPara.length < 20) return false;
-      
-      // Lower similarity threshold to catch more genuinely new content
-      const hasOverlap = currentParagraphs.some(currentPara => 
-        smartContentMerger.calculateSimilarity(currentPara, suggestionPara) > 0.2
-      );
-      
-      return !hasOverlap;
-    });
-    
-    return newParagraphs.join('\n\n');
+    // Apply final formatting to ensure clean output
+    return ipoMessageFormatter.formatMessage(mergedContent);
   },
 
   /**
