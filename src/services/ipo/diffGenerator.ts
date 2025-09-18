@@ -102,39 +102,51 @@ export class DiffGenerator {
   }
 
   /**
-   * Generate a full diff that shows all AI suggestions paragraph by paragraph
+   * Generate a focused diff that shows only changes and additions
    */
   generateFullDiff(original: string, aiSuggestion: string): DiffResult {
+    const cleanSuggestion = this.extractMeaningfulContent(aiSuggestion);
     const originalParagraphs = original.split('\n\n').filter(p => p.trim());
-    const suggestionParagraphs = aiSuggestion.split('\n\n').filter(p => p.trim());
+    const suggestionParagraphs = cleanSuggestion.split('\n\n').filter(p => p.trim());
     
     const changes: DiffChange[] = [];
     let additions = 0;
     let modifications = 0;
     
-    // Show all original content as unchanged
-    originalParagraphs.forEach((paragraph, index) => {
-      changes.push({
-        type: 'unchanged',
-        content: paragraph,
-        lineNumber: index + 1
-      });
-    });
+    // Find relevant original sections that might be modified
+    const relevantOriginalSections: string[] = [];
     
-    // Find and add new content from AI suggestion
-    suggestionParagraphs.forEach((suggestionPara, index) => {
-      const hasOverlap = originalParagraphs.some(origPara => 
-        this.calculateSimilarity(origPara, suggestionPara) > 0.4
-      );
+    // Check each suggestion paragraph against original to find modifications
+    suggestionParagraphs.forEach(suggestionPara => {
+      if (suggestionPara.length < 30) return; // Skip very short segments
       
-      if (!hasOverlap && suggestionPara.length > 50) {
-        // This is new content to be added
+      const bestMatch = originalParagraphs.find(origPara => {
+        const similarity = this.calculateSimilarity(origPara, suggestionPara);
+        return similarity > 0.15 && similarity < 0.8; // Potential modification
+      });
+      
+      if (bestMatch && !relevantOriginalSections.includes(bestMatch)) {
+        relevantOriginalSections.push(bestMatch);
         changes.push({
-          type: 'addition',
+          type: 'modification',
           content: suggestionPara,
-          lineNumber: originalParagraphs.length + additions + 1
+          lineNumber: modifications + 1
         });
-        additions++;
+        modifications++;
+      } else {
+        // Check if this is genuinely new content
+        const hasAnyOverlap = originalParagraphs.some(origPara => 
+          this.calculateSimilarity(origPara, suggestionPara) > 0.2
+        );
+        
+        if (!hasAnyOverlap) {
+          changes.push({
+            type: 'addition',
+            content: suggestionPara,
+            lineNumber: modifications + additions + 1
+          });
+          additions++;
+        }
       }
     });
     
@@ -145,7 +157,7 @@ export class DiffGenerator {
       summary: {
         additions,
         modifications,
-        totalLines: originalParagraphs.length + additions
+        totalLines: additions + modifications
       },
       description
     };
@@ -161,10 +173,12 @@ export class DiffGenerator {
       const trimmed = line.trim();
       if (!trimmed) return false;
       
-      // Skip AI commentary
-      if (trimmed.match(/^(Here's|Here is|I suggest|Consider|You might want to)/i)) return false;
-      if (trimmed.match(/^(This would|That would|These would)/i)) return false;
-      if (trimmed.length < 20) return false;
+      // Skip AI commentary patterns
+      if (trimmed.match(/^(Here's|Here is|I suggest|Consider|You might want to|Let me|I'll|I can)/i)) return false;
+      if (trimmed.match(/^(This would|That would|These would|This will|This should)/i)) return false;
+      if (trimmed.match(/^(To improve|To enhance|To address|For better)/i)) return false;
+      if (trimmed.match(/^(The following|Below is|Above is)/i)) return false;
+      if (trimmed.length < 15) return false;
       
       return true;
     });

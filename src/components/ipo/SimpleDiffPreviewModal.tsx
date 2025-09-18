@@ -89,52 +89,47 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
           </p>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-2 gap-4 min-h-0 overflow-hidden">
-          {/* Current Content */}
-          <div className="flex flex-col h-full min-w-0">
-            <h3 className="font-medium mb-3 text-sm text-muted-foreground">
-              Current Content
-            </h3>
-            <ScrollArea className="flex-1 bg-muted/30 rounded-lg overflow-hidden">
-              <div className="p-4 w-full overflow-hidden">
-                <div 
-                  className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
-                  dangerouslySetInnerHTML={{ __html: formattedOriginal }}
-                />
-              </div>
-            </ScrollArea>
-          </div>
-
-          {/* AI Changes Preview */}
-          <div className="flex flex-col h-full min-w-0">
-            <h3 className="font-medium mb-3 text-sm text-muted-foreground">
-              AI Changes Preview
-            </h3>
-            <ScrollArea className="flex-1 bg-muted/30 rounded-lg overflow-hidden">
-              <div className="p-4 w-full overflow-hidden">
-                <div className="space-y-3">
-                  {diffResult.changes.map((change, index) => (
-                    <div
-                      key={index}
-                      className={`p-3 rounded-lg w-full overflow-hidden ${getChangeColor(change.type)}`}
-                    >
-                      <div className="flex items-start gap-2 w-full min-w-0">
-                        {getChangeIcon(change.type)}
-                        <div className="flex-1 min-w-0 overflow-hidden">
-                          <div 
-                            className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
-                            dangerouslySetInnerHTML={{ 
-                              __html: ipoMessageFormatter.formatMessage(change.content) 
-                            }}
-                          />
+        <div className="flex-1 min-h-0 overflow-hidden">
+          {diffResult.changes.length === 0 ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-muted-foreground">No changes to preview</p>
+            </div>
+          ) : (
+            <div className="h-full">
+              <h3 className="font-medium mb-3 text-sm text-muted-foreground">
+                AI Suggested Changes ({diffResult.summary.additions} additions, {diffResult.summary.modifications} enhancements)
+              </h3>
+              <ScrollArea className="h-[calc(100%-2rem)] bg-muted/30 rounded-lg">
+                <div className="p-4">
+                  <div className="space-y-4">
+                    {diffResult.changes.map((change, index) => (
+                      <div
+                        key={index}
+                        className={`p-4 rounded-lg ${getChangeColor(change.type)}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          {getChangeIcon(change.type)}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-2">
+                              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                                {change.type === 'addition' ? 'New Content' : 'Enhancement'}
+                              </span>
+                            </div>
+                            <div 
+                              className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
+                              dangerouslySetInnerHTML={{ 
+                                __html: ipoMessageFormatter.formatMessage(change.content) 
+                              }}
+                            />
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            </ScrollArea>
-          </div>
+              </ScrollArea>
+            </div>
+          )}
         </div>
 
         <div className="flex justify-between items-center pt-4 border-t">

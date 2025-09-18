@@ -187,16 +187,33 @@ export const smartContentMerger = {
    * Extract only the new/different content from AI suggestion
    */
   extractOnlyNewContent: (currentContent: string, aiSuggestion: string): string => {
+    // First, clean the AI suggestion to remove commentary
+    const cleanedSuggestion = aiSuggestion
+      .split('\n')
+      .filter(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return false;
+        
+        // Filter out AI commentary
+        if (trimmed.match(/^(Here's|Here is|I suggest|Consider|You might want to|Let me|I'll|I can)/i)) return false;
+        if (trimmed.match(/^(This would|That would|These would|This will|This should)/i)) return false;
+        if (trimmed.match(/^(To improve|To enhance|To address|For better)/i)) return false;
+        if (trimmed.match(/^(The following|Below is|Above is|Based on)/i)) return false;
+        
+        return true;
+      })
+      .join('\n');
+    
     const currentParagraphs = currentContent.split('\n\n').filter(p => p.trim());
-    const suggestionParagraphs = aiSuggestion.split('\n\n').filter(p => p.trim());
+    const suggestionParagraphs = cleanedSuggestion.split('\n\n').filter(p => p.trim());
     
     const newParagraphs = suggestionParagraphs.filter(suggestionPara => {
-      // Skip if too short to be meaningful
-      if (suggestionPara.length < 50) return false;
+      // Lower minimum length requirement to capture smaller but important additions
+      if (suggestionPara.length < 20) return false;
       
-      // Check if this paragraph is genuinely new
+      // Lower similarity threshold to catch more genuinely new content
       const hasOverlap = currentParagraphs.some(currentPara => 
-        smartContentMerger.calculateSimilarity(currentPara, suggestionPara) > 0.4
+        smartContentMerger.calculateSimilarity(currentPara, suggestionPara) > 0.2
       );
       
       return !hasOverlap;
