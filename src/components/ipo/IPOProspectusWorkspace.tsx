@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { MaximizedDraftingArea } from './MaximizedDraftingArea';
-import { IPOAIChat } from './IPOAIChat';
+import { TransparentAIPanel } from './ai/TransparentAIPanel';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
@@ -82,7 +82,7 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
             {isChatPanelOpen && <>
                 <ResizableHandle />
                 <ResizablePanel defaultSize={30} minSize={25} maxSize={40}>
-                  <IPOAIChat projectId={project.id} selectedSection={selectedSection} currentContent={chatContent} onContentUpdate={handleChatContentUpdate} onClose={() => setIsChatPanelOpen(false)} />
+                  <TransparentAIPanel projectId={project.id} selectedSection={selectedSection} currentContent={chatContent} onContentUpdate={handleChatContentUpdate} onClose={() => setIsChatPanelOpen(false)} />
                 </ResizablePanel>
               </>}
           </ResizablePanelGroup>}
