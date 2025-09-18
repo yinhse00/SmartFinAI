@@ -4,25 +4,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Slider } from '@/components/ui/slider';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard, Plus, Trash2, RotateCcw } from 'lucide-react';
+import { CheckCircle, AlertCircle, TrendingUp, Building, CreditCard } from 'lucide-react';
 import { MaterialityAnalysis, MaterialityItem, materialityAnalyzer } from '@/services/financial/materialityAnalyzer';
-import { enhancedMaterialityAnalyzer, EnhancedMaterialityItem } from '@/services/financial/enhancedMaterialityAnalyzer';
 
 interface MaterialityReviewPanelProps {
-  analyses: any[];
-  onAnalysisUpdate: (updatedAnalyses: any[]) => void;
+  analyses: MaterialityAnalysis[];
+  onAnalysisUpdate: (updatedAnalyses: MaterialityAnalysis[]) => void;
   onConfirmAll: () => void;
-}
-
-interface QualitativeItem {
-  id: string;
-  factor: string;
-  description: string;
-  material: boolean;
 }
 
 export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
@@ -31,11 +20,7 @@ export const MaterialityReviewPanel: React.FC<MaterialityReviewPanelProps> = ({
   onConfirmAll
 }) => {
   const [threshold, setThreshold] = useState(5);
-  const [yoyThreshold, setYoyThreshold] = useState(20);
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] = useState(0);
-  const [qualitativeItems, setQualitativeItems] = useState<QualitativeItem[]>([]);
-  const [newQualitativeItem, setNewQualitativeItem] = useState({ factor: '', description: '', material: true });
-  const [isRecalculating, setIsRecalculating] = useState(false);
   const { toast } = useToast();
 
   const currentAnalysis = analyses[selectedAnalysisIndex];

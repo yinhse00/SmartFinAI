@@ -20,11 +20,7 @@ import {
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
-import { TransparentAIPanel } from '@/components/ipo/ai/TransparentAIPanel';
-import { MessageFormatter } from '@/components/ipo/ai/MessageFormatter';
-import { ImplementButton } from '@/components/chat/message/ImplementButton';
 import { complianceValidator } from '@/services/ipo/complianceValidator';
-import { Message } from '@/components/chat/ChatMessage';
 
 interface WordLikeAIPanelProps {
   projectId: string;
@@ -32,7 +28,6 @@ interface WordLikeAIPanelProps {
   currentContent: string;
   onContentUpdate: (content: string) => void;
   onClose: () => void;
-  useTransparentMode?: boolean;
 }
 
 export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
@@ -40,8 +35,7 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
   selectedSection,
   currentContent,
   onContentUpdate,
-  onClose,
-  useTransparentMode = false
+  onClose
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [complianceData, setComplianceData] = useState<any>(null);
@@ -112,19 +106,6 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
         return <Lightbulb className="h-4 w-4 text-blue-600" />;
     }
   };
-
-  // Use Transparent AI Panel if requested
-  if (useTransparentMode) {
-    return (
-      <TransparentAIPanel
-        projectId={projectId}
-        selectedSection={selectedSection}
-        currentContent={currentContent}
-        onContentUpdate={onContentUpdate}
-        onClose={onClose}
-      />
-    );
-  }
 
   return (
     <div className="h-full flex flex-col border-l bg-background">
@@ -208,50 +189,53 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
         {/* Chat Messages */}
         <ScrollArea className="flex-1 p-4">
           <div className="space-y-4">
-            {messages.map((message, index) => {
-              const standardMessage: Message = {
-                id: `msg_${index}`,
-                content: message.content,
-                isUser: message.type === 'user',
-                timestamp: message.timestamp ? new Date(message.timestamp) : new Date(),
-                confidence: message.confidence,
-                suggestedContent: message.suggestedContent,
-                isDraftable: !!message.suggestedContent || (message.targetedEdits && message.targetedEdits.length > 0),
-                changePreview: message.changePreview
-              };
-
-              return (
-                <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`max-w-[80%] p-3 rounded-lg ${
-                    message.type === 'user' 
-                      ? 'bg-primary text-primary-foreground' 
-                      : 'bg-muted'
-                  }`}>
-                    {message.type === 'user' ? (
-                      <p className="text-sm">{message.content}</p>
-                    ) : (
-                      <>
-                        <MessageFormatter content={message.content} />
-                        {(message.suggestedContent || (message.targetedEdits && message.targetedEdits.length > 0)) && (
-                          <ImplementButton
-                            message={standardMessage}
-                            currentContent={currentContent}
-                            onImplement={applyDirectSuggestion}
-                            isImplementing={isProcessing}
-                          />
-                        )}
-                      </>
-                    )}
-                    
-                    {message.timestamp && (
-                      <p className="text-xs opacity-70 mt-1">
-                        {new Date(message.timestamp).toLocaleTimeString()}
-                      </p>
-                    )}
-                  </div>
+            {messages.map((message, index) => (
+              <div key={index} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`max-w-[80%] p-3 rounded-lg ${
+                  message.type === 'user' 
+                    ? 'bg-primary text-primary-foreground' 
+                    : 'bg-muted'
+                }`}>
+                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                  {message.timestamp && (
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  )}
+                  
+                  {/* AI suggestion actions */}
+                  {message.type === 'ai' && message.proactiveAnalysis && (
+                    <div className="mt-3 space-y-2">
+                      <div className="bg-background/50 rounded p-2">
+                        <p className="text-xs font-medium">AI Analysis Available</p>
+                        <p className="text-xs text-muted-foreground">Click to view detailed insights</p>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          className="h-6 text-xs mt-1"
+                          onClick={refreshAnalysis}
+                        >
+                          View Analysis
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Direct content suggestion */}
+                  {message.type === 'ai' && message.targetedEdits && message.targetedEdits.length > 0 && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      className="h-6 text-xs mt-2"
+                      onClick={() => applyDirectSuggestion(message.suggestedContent || message.content)}
+                    >
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Apply Suggestion
+                    </Button>
+                  )}
                 </div>
-              );
-            })}
+              </div>
+            ))}
             
             {isProcessing && (
               <div className="flex justify-start">

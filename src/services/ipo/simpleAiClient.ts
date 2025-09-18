@@ -55,9 +55,7 @@ export class SimpleAiClient {
       console.log('📄 Generated content length:', response.text?.length || 0);
 
       if (!response.success || !response.text || response.text.trim().length === 0) {
-        const errorMsg = response.error || 'Empty response from AI service';
-        console.error('❌ AI service returned unsuccessful response:', { success: response.success, error: response.error, textLength: response.text?.length });
-        throw new Error(errorMsg);
+        throw new Error(response.error || 'Empty response from AI service');
       }
 
       return {
@@ -67,23 +65,10 @@ export class SimpleAiClient {
 
     } catch (error) {
       console.error('❌ SimpleAiClient error:', error);
-      
-      // Provide specific error messages based on error type
-      let errorMessage = 'AI service temporarily unavailable';
-      if (error instanceof Error) {
-        if (error.message.includes('Monthly token limit exceeded')) {
-          errorMessage = 'AI service has reached its monthly usage limit. Please try again later.';
-        } else if (error.message.includes('Edge function error')) {
-          errorMessage = 'AI service is currently experiencing issues. Please try again.';
-        } else {
-          errorMessage = error.message;
-        }
-      }
-      
       return {
         text: '',
         success: false,
-        error: errorMessage
+        error: error.message
       };
     }
   }

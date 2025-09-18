@@ -1,7 +1,6 @@
 import { boldFormatter } from '@/services/response/modules/boldFormatter';
 import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
 import { enhanceWithClickableLinks } from '@/utils/regulatoryReferenceFormatter';
-import { codeBlockCleaner } from '@/utils/codeBlockCleaner';
 
 /**
  * IPO-specific message formatting service
@@ -13,9 +12,6 @@ export const ipoMessageFormatter = {
    */
   formatMessage: (content: string): string => {
     let formattedText = content;
-    
-    // Clean up code block markers first
-    formattedText = codeBlockCleaner.cleanupCodeBlockMarkers(formattedText);
     
     // Apply clickable links to regulatory references
     formattedText = enhanceWithClickableLinks(formattedText);

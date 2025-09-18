@@ -2,14 +2,13 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Eye, Loader2 } from 'lucide-react';
-import { SimpleDiffPreviewModal } from '@/components/ipo/SimpleDiffPreviewModal';
+import { ContentPreviewModal } from '@/components/ipo/ContentPreviewModal';
 import { Message } from '../ChatMessage';
-import { MergeStrategy } from '@/services/ipo/smartContentMerger';
 
 interface ImplementButtonProps {
   message: Message;
   currentContent: string;
-  onImplement: (suggestedContent: string, strategy?: MergeStrategy, segments?: string[]) => void;
+  onImplement: (suggestedContent: string) => void;
   isImplementing?: boolean;
 }
 
@@ -40,24 +39,24 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
   };
 
   const getConfidenceColor = () => {
-    if (confidence >= 0.8) return 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400';
-    if (confidence >= 0.6) return 'bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400';
-    return 'bg-orange-50 text-orange-700 dark:bg-orange-900/20 dark:text-orange-400';
+    if (confidence >= 0.8) return 'bg-green-100 text-green-800';
+    if (confidence >= 0.6) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-orange-100 text-orange-800';
   };
 
   return (
     <>
-      <div className="flex items-center gap-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg dark:bg-blue-900/20 dark:border-blue-800">
+      <div className="flex items-center gap-2 mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
         <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+            <span className="text-sm font-medium text-blue-800">
               AI Suggestion Ready
             </span>
             <Badge variant="secondary" className={getConfidenceColor()}>
               {Math.round(confidence * 100)}% confidence
             </Badge>
           </div>
-          <p className="text-xs text-blue-600 dark:text-blue-300">
+          <p className="text-xs text-blue-600">
             Click "Implement" to apply this suggestion directly to your draft.
           </p>
         </div>
@@ -68,7 +67,7 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
               variant="outline"
               size="sm"
               onClick={handlePreview}
-              className="text-blue-700 border-blue-300 hover:bg-blue-100 dark:text-blue-200 dark:border-blue-600 dark:hover:bg-blue-900/30"
+              className="text-blue-700 border-blue-300 hover:bg-blue-100"
             >
               <Eye className="h-3 w-3 mr-1" />
               Preview
@@ -79,7 +78,7 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
             size="sm"
             onClick={handleImplement}
             disabled={isImplementing}
-            className="bg-blue-600 hover:bg-blue-700 text-white dark:bg-blue-500 dark:hover:bg-blue-600"
+            className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isImplementing ? (
               <Loader2 className="h-3 w-3 mr-1 animate-spin" />
@@ -92,13 +91,15 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
       </div>
 
       {showPreview && hasPreview && (
-        <SimpleDiffPreviewModal
+        <ContentPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
-          originalContent={currentContent}
-          suggestedContent={message.suggestedContent || ''}
           onApply={handleImplement}
-          isApplying={isImplementing}
+          beforeContent={message.changePreview?.before || currentContent}
+          afterContent={message.changePreview?.after || message.suggestedContent || ''}
+          confidence={confidence}
+          title="Apply AI Suggestion"
+          description="Review the changes before applying them to your IPO draft."
         />
       )}
     </>

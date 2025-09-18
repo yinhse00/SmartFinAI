@@ -10,10 +10,6 @@ import {
   MaterialityAnalysis, 
   materialityAnalyzer 
 } from '@/services/financial/materialityAnalyzer';
-import { 
-  EnhancedMaterialityAnalysis, 
-  enhancedMaterialityAnalyzer 
-} from '@/services/financial/enhancedMaterialityAnalyzer';
 import { useIPOContentGeneration } from '@/hooks/useIPOContentGeneration';
 import { IPOContentGenerationRequest } from '@/types/ipo';
 import { FinancialData } from '@/services/financial/financialDataExtractor';
@@ -34,7 +30,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
   onContentGenerated
 }) => {
   const [activeTab, setActiveTab] = useState<'upload' | 'review' | 'generate'>('upload');
-  const [materialityAnalyses, setMaterialityAnalyses] = useState<EnhancedMaterialityAnalysis[]>([]);
+  const [materialityAnalyses, setMaterialityAnalyses] = useState<MaterialityAnalysis[]>([]);
   const { toast } = useToast();
   
   const {
@@ -50,7 +46,7 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
 
   const loadExistingAnalyses = async () => {
     try {
-      const analyses = await enhancedMaterialityAnalyzer.getEnhancedMaterialityAnalysis(projectId);
+      const analyses = await materialityAnalyzer.getMaterialityAnalysis(projectId);
       setMaterialityAnalyses(analyses);
       
       if (analyses.length > 0) {
@@ -61,103 +57,29 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
     }
   };
 
-  const handleFileProcessed = async (statementId: string, data: FinancialData, documentContent?: string) => {
+  const handleFileProcessed = async (statementId: string, data: FinancialData) => {
     try {
-      console.log('🔍 Starting enhanced materiality analysis...');
-      console.log('📊 Financial data extracted:', {
-        statementType: data.statementType,
-        lineItemsCount: data.lineItems.length,
-        totalRevenue: data.totalRevenue,
-        totalAssets: data.totalAssets,
-        totalLiabilities: data.totalLiabilities,
-        hasComparativeData: !!data.comparativeData
-      });
-
       const businessData = await getBusinessData();
       
-      // Use enhanced materiality analyzer with document content for NLP analysis
-      const analysis = await enhancedMaterialityAnalyzer.analyzeFinancialStatementEnhanced(
+      const analysis = await materialityAnalyzer.analyzeFinancialStatement(
         projectId,
         statementId,
-        businessData?.businessContent || '',
-        documentContent
+        businessData
       );
-
-      console.log('✅ Enhanced materiality analysis completed:', {
-        totalItems: analysis.items.length,
-        materialItems: analysis.items.filter(item => item.isMaterial).length,
-        qualitativeFactors: analysis.qualitativeFactors?.length || 0
-      });
 
       setMaterialityAnalyses(prev => [...prev, analysis]);
       setActiveTab('review');
 
       toast({
-        title: "Enhanced analysis completed",
-        description: `Analyzed ${analysis.items.length} financial items (${analysis.items.filter(item => item.isMaterial).length} material).`
+        title: "Analysis completed",
+        description: "Financial statement has been analyzed for materiality."
       });
     } catch (error) {
-      console.error('Enhanced analysis failed, falling back to basic analyzer:', error);
-      
-      // Fallback to basic analyzer
-      try {
-        const businessData = await getBusinessData();
-        const basicAnalysis = await materialityAnalyzer.analyzeFinancialStatement(
-          projectId,
-          statementId,
-          businessData
-        );
-        
-        // Convert to enhanced format
-        const enhancedAnalysis: EnhancedMaterialityAnalysis = {
-          projectId: basicAnalysis.projectId,
-          financialStatementId: basicAnalysis.financialStatementId,
-          items: basicAnalysis.items.map(item => ({
-            itemName: item.itemName,
-            itemType: item.itemType as any,
-            amount: item.amount,
-            baseAmount: item.baseAmount,
-            percentage: item.percentage,
-            yoyPercentage: 0,
-            materialityThreshold: item.materialityThreshold,
-            yoyThreshold: 20,
-            isMaterial: item.isMaterial,
-            aiSuggested: item.aiSuggested,
-            userConfirmed: item.userConfirmed,
-            aiReasoning: item.aiReasoning,
-            section: 'P/L',
-            currency: 'Unknown',
-            auditStatus: 'Unknown',
-            businessContext: item.businessContext
-          })),
-          qualitativeFactors: [],
-          summaryData: {
-            totalRevenue: data.totalRevenue || 0,
-            totalAssets: data.totalAssets || 0,
-            totalLiabilities: data.totalLiabilities || 0
-          },
-          thresholds: {
-            materiality: 5.0,
-            yoyChange: 20.0
-          },
-          extractedPeriods: []
-        };
-        
-        setMaterialityAnalyses(prev => [...prev, enhancedAnalysis]);
-        setActiveTab('review');
-
-        toast({
-          title: "Basic analysis completed",
-          description: "Financial statement analyzed with basic materiality detection."
-        });
-      } catch (fallbackError) {
-        console.error('Both enhanced and basic analysis failed:', fallbackError);
-        toast({
-          title: "Analysis failed",
-          description: "Failed to analyze financial statement for materiality.",
-          variant: "destructive"
-        });
-      }
+      toast({
+        title: "Analysis failed",
+        description: "Failed to analyze financial statement for materiality.",
+        variant: "destructive"
+      });
     }
   };
 
@@ -230,19 +152,6 @@ export const FinancialAnalysisWorkspace: React.FC<FinancialAnalysisWorkspaceProp
   const allItemsConfirmed = materialityAnalyses.every(analysis =>
     analysis.items.every(item => item.userConfirmed)
   );
-
-  // Debug information for troubleshooting
-  useEffect(() => {
-    if (materialityAnalyses.length > 0) {
-      console.log('📋 Current materiality analyses:', materialityAnalyses.map(analysis => ({
-        projectId: analysis.projectId,
-        totalItems: analysis.items.length,
-        materialItems: analysis.items.filter(item => item.isMaterial).length,
-        confirmedItems: analysis.items.filter(item => item.userConfirmed).length,
-        qualitativeFactors: analysis.qualitativeFactors?.length || 0
-      })));
-    }
-  }, [materialityAnalyses]);
 
   const hasUploadedFiles = materialityAnalyses.length > 0;
 
