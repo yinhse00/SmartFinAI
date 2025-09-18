@@ -285,7 +285,6 @@ export const useTransparentAIChat = ({
   // Apply direct suggestion from message with smart merging
   const applyDirectSuggestion = useCallback(async (content: string, strategy?: import('@/services/ipo/smartContentMerger').MergeStrategy, segments?: string[]) => {
     try {
-      // Use smart content merger instead of replacing everything
       const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
       
       let finalContent = content;
@@ -295,9 +294,23 @@ export const useTransparentAIChat = ({
         finalContent = segments.join('\n\n');
       }
       
-      const mergedContent = strategy 
-        ? smartContentMerger.smartMerge(currentContent, finalContent, strategy)
-        : smartContentMerger.smartMerge(currentContent, finalContent);
+      // Extract only new content to avoid full replacement
+      const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, finalContent);
+      
+      // If no new content found, fallback to using the original content with append strategy
+      if (!extractedContent.trim()) {
+        finalContent = finalContent;
+      } else {
+        finalContent = extractedContent;
+      }
+      
+      // Default to append strategy unless specifically requested otherwise
+      const mergeStrategy = strategy || { 
+        type: 'append' as const,
+        reason: 'Adding new content to existing draft'
+      };
+      
+      const mergedContent = smartContentMerger.smartMerge(currentContent, finalContent, mergeStrategy);
       
       onContentUpdate(mergedContent);
       
@@ -306,7 +319,7 @@ export const useTransparentAIChat = ({
       
       toast({
         title: "Content Enhanced",
-        description: "The AI suggestion has been intelligently merged with your existing content."
+        description: "New content has been added to your existing draft."
       });
     } catch (error) {
       console.error('Direct suggestion application failed:', error);
