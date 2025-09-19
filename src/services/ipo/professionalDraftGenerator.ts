@@ -1,9 +1,6 @@
+import { simpleAiClient } from './simpleAiClient';
 import { precedentService, type PrecedentCase } from './precedentService';
 import { ipoRequirementsService } from './ipoRequirementsService';
-import { universalAiClient } from '@/services/ai/universalAiClient';
-import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
-import { AIProvider } from '@/types/aiProvider';
-import { analyzeFinancialResponse, detectTruncationComprehensive, getTruncationDiagnostics } from '@/utils/truncation';
 
 export interface DraftGenerationRequest {
   currentContent: string;
@@ -105,7 +102,7 @@ export class ProfessionalDraftGenerator {
   }
 
   /**
-   * Generate complete professional section with precedent support and quality validation
+   * Generate complete professional section with precedent support
    */
   private async generateCompleteSection(
     request: DraftGenerationRequest,
@@ -123,7 +120,6 @@ export class ProfessionalDraftGenerator {
     // Get detailed requirements for this section
     const detailedRequirements = ipoRequirementsService.getDetailedRequirements(request.sectionType);
 
-    // Enhanced prompt with completion requirements
     const prompt = `
 You are an expert IPO prospectus drafter. Generate a complete, professionally formatted ${request.sectionType} section.
 
@@ -153,189 +149,51 @@ CRITICAL REQUIREMENTS:
 9. Use professional IPO terminology and formatting
 10. Provide comprehensive coverage of all required subsections
 
-COMPLETION REQUIREMENTS:
-- ENSURE COMPLETE RESPONSE - DO NOT TRUNCATE
-- Generate MINIMUM 2000 words for complex sections (Overview, Business Model)
-- Generate MINIMUM 1500 words for standard sections
-- Include ALL required subsections and elements
-- Provide thorough analysis and comprehensive disclosure
-
 Please provide the FULL REVISED SECTION with proper IPO formatting and ALL required elements:
 `;
 
-    // Try multiple attempts with different providers if needed
-    for (let attempt = 0; attempt < 3; attempt++) {
-      console.log(`Professional draft generation attempt ${attempt + 1}/3`);
-      
-      try {
-        const result = await this.attemptGeneration(prompt, request, attempt);
-        
-        // Validate completeness
-        const validation = await this.validateDraftCompleteness(result, request.sectionType);
-        
-        if (validation.isComplete) {
-          console.log('✅ Professional draft generation successful');
-          return this.formatIPOSection(result, request.sectionType);
-        } else {
-          console.log(`⚠ Draft incomplete on attempt ${attempt + 1}:`, validation.issues);
-          
-          // If this is the last attempt, return what we have
-          if (attempt === 2) {
-            console.log('Using final attempt result despite incompleteness');
-            return this.formatIPOSection(result, request.sectionType);
-          }
-          
-          // Continue to next attempt with different provider/parameters
-        }
-      } catch (error) {
-        console.error(`Attempt ${attempt + 1} failed:`, error);
-        
-        // If this is the last attempt, throw the error
-        if (attempt === 2) {
-          throw error;
-        }
-      }
-    }
-    
-    // Fallback (should not reach here)
-    throw new Error('All generation attempts failed');
-  }
-
-  /**
-   * Attempt generation with smart provider selection
-   */
-  private async attemptGeneration(prompt: string, request: DraftGenerationRequest, attempt: number): Promise<string> {
-    // Smart provider selection based on attempt
-    let provider: AIProvider;
-    let modelId: string;
-    let maxTokens: number;
-    
-    if (attempt === 0) {
-      // First attempt: Use Google Gemini for high token limit
-      provider = AIProvider.GOOGLE;
-      modelId = 'gemini-2.0-flash';
-      maxTokens = 100000; // Very high for complex sections
-    } else if (attempt === 1) {
-      // Second attempt: Use user preference with enhanced params
-      const userPreference = getFeatureAIPreference('ipo');
-      provider = userPreference.provider;
-      modelId = userPreference.model;
-      maxTokens = 50000;
-    } else {
-      // Final attempt: Fallback to Grok with maximum tokens
-      provider = AIProvider.GROK;
-      modelId = 'grok-4-0709';
-      maxTokens = 25000;
-    }
-    
-    console.log(`Attempting generation with ${provider}/${modelId}, maxTokens: ${maxTokens}`);
-    
-    const aiResponse = await universalAiClient.generateContent({
+    const aiResponse = await simpleAiClient.generateContent({
       prompt,
-      provider,
-      modelId,
       metadata: { 
         requestType: 'professional_draft_generation',
-        sectionType: request.sectionType,
-        maxTokens,
-        temperature: 0.3 // Lower temperature for consistency
+        sectionType: request.sectionType
       }
     });
-    
-    if (!aiResponse.success) {
-      throw new Error(aiResponse.error || 'AI generation failed');
-    }
-    
-    return aiResponse.text;
+
+    return this.formatIPOSection(aiResponse.text, request.sectionType);
   }
 
   /**
-   * Validate draft completeness using main chat quality system
-   */
-  private async validateDraftCompleteness(content: string, sectionType: string): Promise<{
-    isComplete: boolean;
-    issues: string[];
-  }> {
-    const issues: string[] = [];
-    
-    // 1. Basic truncation detection
-    const basicTruncation = detectTruncationComprehensive(content);
-    if (basicTruncation) {
-      issues.push('Basic truncation patterns detected');
-    }
-    
-    // 2. Advanced diagnostics
-    const diagnostics = getTruncationDiagnostics(content);
-    if (diagnostics.isTruncated) {
-      issues.push(`Truncation detected: ${diagnostics.reasons.join(', ')}`);
-    }
-    
-    // 3. Financial content analysis
-    const financialAnalysis = analyzeFinancialResponse(content, sectionType);
-    if (!financialAnalysis.isComplete) {
-      issues.push(`Financial content incomplete: ${financialAnalysis.missingElements?.join(', ') || 'Missing elements detected'}`);
-    }
-    
-    // 4. Content length validation based on section complexity
-    const minLength = this.getMinimumContentLength(sectionType);
-    if (content.length < minLength) {
-      issues.push(`Content too short: ${content.length} chars (minimum: ${minLength})`);
-    }
-    
-    // 5. Required elements validation
-    const requirements = ipoRequirementsService.getRequirements(sectionType);
-    if (requirements) {
-      const compliance = ipoRequirementsService.checkCompliance(content, sectionType);
-      if (compliance.complianceScore < 0.7) {
-        issues.push(`Low compliance score: ${Math.round(compliance.complianceScore * 100)}%`);
-      }
-      
-      if (compliance.missingRequirements.length > 0) {
-        issues.push(`Missing requirements: ${compliance.missingRequirements.length} items`);
-      }
-    }
-    
-    return {
-      isComplete: issues.length === 0,
-      issues
-    };
-  }
-
-  /**
-   * Get minimum content length based on section type
-   */
-  private getMinimumContentLength(sectionType: string): number {
-    const complexSections = ['overview', 'business model', 'risk factors', 'financial information'];
-    const isComplex = complexSections.some(section => 
-      sectionType.toLowerCase().includes(section)
-    );
-    
-    return isComplex ? 8000 : 4000; // Character minimums, not word counts
-  }
-
-  /**
-   * Format content according to IPO prospectus standards (less aggressive cleaning)
+   * Format content according to IPO prospectus standards
    */
   private formatIPOSection(content: string, sectionType: string): string {
-    // Less aggressive cleaning - only remove obvious AI artifacts
+    // Remove any AI commentary or instructions
     const cleanContent = content
-      .replace(/^(Here's the|This is the|I've generated).*?section:\s*/i, '')
-      .replace(/^Note: This is.*$/gm, '')
-      .replace(/^Based on.*?here's.*?:/gm, '')
+      .replace(/^(Here's|This is|I've|The following).*?:\s*/i, '')
+      .replace(/^Note:.*$/gm, '')
+      .replace(/^\*\*[^*]*\*\*:\s*/gm, '')
       .trim();
 
-    // Preserve legitimate content structure
+    // Ensure proper section formatting
     const lines = cleanContent.split('\n');
     const formattedLines: string[] = [];
     
-    for (const line of lines) {
-      const trimmedLine = line.trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
       
-      // Keep all content, just clean up excessive whitespace
-      if (trimmedLine.length > 0) {
-        formattedLines.push(trimmedLine);
-      } else if (formattedLines.length > 0 && formattedLines[formattedLines.length - 1] !== '') {
-        formattedLines.push(''); // Preserve paragraph breaks
+      if (line === '') {
+        formattedLines.push('');
+        continue;
+      }
+
+      // Format headers and subheaders
+      if (line.match(/^\d+\.\s/) || line.match(/^\d+\.\d+\s/)) {
+        formattedLines.push(line);
+      } else if (line.length > 0 && !line.endsWith('.') && !line.endsWith(':') && i < lines.length - 1) {
+        // Ensure proper paragraph formatting
+        formattedLines.push(line);
+      } else {
+        formattedLines.push(line);
       }
     }
 
