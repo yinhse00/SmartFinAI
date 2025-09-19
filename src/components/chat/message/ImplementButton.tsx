@@ -33,11 +33,16 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
   };
 
   const handleImplement = () => {
-    // For professional drafts, use the full draft content
+    // For professional drafts, use the full draft content with replace-all strategy
     const contentToImplement = message.professionalDraft?.fullDraft || message.suggestedContent;
     
     if (contentToImplement) {
-      onImplement(contentToImplement);
+      // Professional drafts should replace entirely, regular suggestions use smart merging
+      const strategy = message.professionalDraft 
+        ? { type: 'replace-all' as const, reason: 'Complete professional draft replacement' }
+        : undefined;
+      
+      onImplement(contentToImplement, strategy);
     }
     setShowPreview(false);
   };

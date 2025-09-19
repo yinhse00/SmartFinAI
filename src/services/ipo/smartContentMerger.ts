@@ -6,10 +6,11 @@ import { contentExtractor } from './contentExtractor';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 
 export interface MergeStrategy {
-  type: 'append' | 'prepend' | 'replace-section' | 'merge-paragraphs' | 'insert-at-line' | 'enhance-existing';
+  type: 'append' | 'prepend' | 'replace-section' | 'merge-paragraphs' | 'insert-at-line' | 'enhance-existing' | 'replace-all';
   targetLine?: number;
   targetSection?: string;
   preserveStructure?: boolean;
+  reason?: string;
 }
 
 export interface MergePreview {
@@ -132,6 +133,12 @@ export const smartContentMerger = {
   smartMerge: (currentContent: string, aiSuggestion: string, strategy?: MergeStrategy): string => {
     const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, aiSuggestion);
     
+    // Special handling for complete replacement strategies
+    if (mergeStrategy.type === 'replace-all') {
+      console.log('[SmartMerger] Using complete replacement strategy');
+      return aiSuggestion.trim();
+    }
+    
     // Extract only the new/different content from AI suggestion
     const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, aiSuggestion);
     
@@ -173,6 +180,10 @@ export const smartContentMerger = {
       
       case 'enhance-existing':
         mergedContent = smartContentMerger.enhanceExisting(currentContent, extractedContent);
+        break;
+      
+      case 'replace-all':
+        mergedContent = aiSuggestion.trim();
         break;
       
       default:

@@ -296,7 +296,19 @@ export const useTransparentAIChat = ({
         finalContent = segments.join('\n\n');
       }
       
-      // Extract only new content to avoid full replacement
+      // Handle replace-all strategy for professional drafts
+      if (strategy?.type === 'replace-all') {
+        onContentUpdate(finalContent);
+        await analyzeCurrentContent();
+        
+        toast({
+          title: "Professional Draft Applied",
+          description: "Your content has been replaced with the professional version."
+        });
+        return;
+      }
+      
+      // Extract only new content to avoid full replacement for regular suggestions
       const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, finalContent);
       
       // If no new content found, fallback to using the original content with append strategy
