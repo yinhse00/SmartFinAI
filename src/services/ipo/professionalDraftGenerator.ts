@@ -1,5 +1,6 @@
 import { simpleAiClient } from './simpleAiClient';
 import { precedentService, type PrecedentCase } from './precedentService';
+import { ipoRequirementsService } from './ipoRequirementsService';
 
 export interface DraftGenerationRequest {
   currentContent: string;
@@ -116,6 +117,9 @@ export class ProfessionalDraftGenerator {
       `${step.title}: ${step.findings.join(', ')}`
     ).join('\n');
 
+    // Get detailed requirements for this section
+    const detailedRequirements = ipoRequirementsService.getDetailedRequirements(request.sectionType);
+
     const prompt = `
 You are an expert IPO prospectus drafter. Generate a complete, professionally formatted ${request.sectionType} section.
 
@@ -131,16 +135,21 @@ ${analysisContext}
 PRECEDENT CASES FOR REFERENCE:
 ${precedentContext}
 
-REQUIREMENTS:
+${detailedRequirements}
+
+CRITICAL REQUIREMENTS:
 1. Generate a COMPLETE, professionally formatted section (not just additions)
-2. Follow Hong Kong Stock Exchange disclosure requirements
-3. Use formal, professional IPO language
-4. Include proper numbering and structure
+2. Follow ALL Hong Kong Stock Exchange disclosure requirements listed above
+3. Use formal, professional IPO language throughout
+4. Include proper numbering and structure per HKEX standards
 5. Incorporate insights from precedent cases where applicable
 6. Address all gaps identified in the analysis
-7. Ensure regulatory compliance
+7. Include ALL mandatory tables and disclosures specified above
+8. Ensure full regulatory compliance with App1A requirements
+9. Use professional IPO terminology and formatting
+10. Provide comprehensive coverage of all required subsections
 
-Please provide the FULL REVISED SECTION with proper IPO formatting:
+Please provide the FULL REVISED SECTION with proper IPO formatting and ALL required elements:
 `;
 
     const aiResponse = await simpleAiClient.generateContent({
@@ -221,70 +230,72 @@ Please provide the FULL REVISED SECTION with proper IPO formatting:
   }
 
   /**
-   * Identify mandatory requirements for section type
+   * Identify mandatory requirements for section type using comprehensive requirements service
    */
   private identifyRequirements(sectionType: string): string[] {
-    const requirementMap: Record<string, string[]> = {
-      'business_overview': [
-        'Principal business activities and revenue streams',
-        'Competitive strengths and market position',
-        'Business strategy and future plans'
-      ],
-      'financial_information': [
-        'Historical financial performance (3 years)',
-        'Key financial metrics and ratios',
-        'Material changes in financial position'
-      ],
-      'risk_factors': [
-        'Material risks specific to the business',
-        'Industry and market risks',
-        'Regulatory and compliance risks'
-      ],
-      'use_of_proceeds': [
-        'Detailed breakdown of fund allocation',
-        'Timeline for utilization',
-        'Expected impact on business operations'
-      ]
-    };
+    const requirements = ipoRequirementsService.getRequirements(sectionType);
+    if (!requirements) {
+      return [
+        'Mandatory disclosure requirements per HKEX Listing Rules',
+        'Professional presentation standards',
+        'Regulatory compliance elements'
+      ];
+    }
 
-    return requirementMap[sectionType] || [
-      'Mandatory disclosure requirements per HKEX Listing Rules',
-      'Professional presentation standards',
-      'Regulatory compliance elements'
-    ];
+    // Extract requirement titles and descriptions
+    const findings: string[] = [];
+    requirements.requirements.forEach(req => {
+      if (req.mandatory) {
+        findings.push(`${req.title}: ${req.description}`);
+        // Add key subsections
+        req.subsections.slice(0, 2).forEach(sub => {
+          findings.push(`Must include: ${sub}`);
+        });
+      }
+    });
+
+    // Add mandatory tables requirement
+    if (requirements.mandatoryTables.length > 0) {
+      findings.push(`Required tables: ${requirements.mandatoryTables.join(', ')}`);
+    }
+
+    return findings.slice(0, 8); // Limit for readability
   }
 
   /**
-   * Find content gaps
+   * Find content gaps using comprehensive requirements checking
    */
   private findContentGaps(content: string, sectionType: string): string[] {
+    // Use the requirements service for comprehensive gap analysis
+    const compliance = ipoRequirementsService.checkCompliance(content, sectionType);
+    
     const gaps: string[] = [];
-    const lowerContent = content.toLowerCase();
 
-    // Section-specific gap analysis
-    if (sectionType === 'business_overview') {
-      if (!lowerContent.includes('revenue') && !lowerContent.includes('income')) {
-        gaps.push('Missing revenue information');
-      }
-      if (!lowerContent.includes('competitive') && !lowerContent.includes('advantage')) {
-        gaps.push('Missing competitive positioning');
-      }
-    } else if (sectionType === 'risk_factors') {
-      if (!lowerContent.includes('risk') && !lowerContent.includes('uncertainty')) {
-        gaps.push('Insufficient risk disclosure');
-      }
-    }
+    // Add missing requirements
+    compliance.missingRequirements.forEach(req => {
+      gaps.push(`Missing: ${req.title} - ${req.description}`);
+    });
 
-    // General gaps
-    if (!lowerContent.includes('hong kong') && !lowerContent.includes('hkex')) {
-      gaps.push('Missing Hong Kong market context');
-    }
+    // Add missing tables
+    compliance.missingTables.forEach(table => {
+      gaps.push(`Missing mandatory table: ${table}`);
+    });
 
+    // Add specific recommendations
+    compliance.recommendations.slice(0, 3).forEach(rec => {
+      gaps.push(rec);
+    });
+
+    // If no specific gaps, provide general assessment
     if (gaps.length === 0) {
-      gaps.push('Content structure aligns with IPO requirements');
+      if (compliance.complianceScore >= 0.8) {
+        gaps.push('Content structure aligns well with IPO requirements');
+      } else {
+        gaps.push(`Compliance score: ${Math.round(compliance.complianceScore * 100)}% - Enhancement recommended`);
+      }
     }
 
-    return gaps;
+    return gaps.slice(0, 6); // Limit for readability
   }
 
   /**

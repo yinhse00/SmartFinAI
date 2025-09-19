@@ -2,6 +2,7 @@ import { contentAnalysisService } from './contentAnalysisService';
 import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 import { professionalDraftGenerator, type ProfessionalDraftResult } from './professionalDraftGenerator';
+import { ipoRequirementsService } from './ipoRequirementsService';
 
 interface ReasoningStep {
   id: string;
@@ -84,8 +85,12 @@ export class TransparentAnalysisService {
 
       const analysis = await contentAnalysisService.analyzeContent(content, sectionType, projectId);
       
+      // Enhanced compliance check using comprehensive requirements
+      const complianceCheck = ipoRequirementsService.checkCompliance(content, sectionType);
+      
       reasoning[1].status = 'completed';
-      reasoning[1].confidence = 0.9;
+      reasoning[1].confidence = complianceCheck.complianceScore;
+      reasoning[1].citations?.push(`Compliance Score: ${Math.round(complianceCheck.complianceScore * 100)}%`);
 
       // Step 3: Issue Identification
       reasoning.push({

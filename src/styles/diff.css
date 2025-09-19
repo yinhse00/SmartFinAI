@@ -1,0 +1,45 @@
+/* Diff highlighting styles */
+.diff-content .diff-addition {
+  background-color: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary) / 0.3);
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 500;
+}
+
+.diff-content .diff-deletion {
+  background-color: hsl(var(--destructive) / 0.1);
+  color: hsl(var(--destructive));
+  text-decoration: line-through;
+  opacity: 0.7;
+  padding: 1px 2px;
+  border-radius: 2px;
+}
+
+.diff-content .diff-modification {
+  background-color: hsl(var(--warning) / 0.1);
+  color: hsl(var(--warning));
+  border-bottom: 2px solid hsl(var(--warning) / 0.4);
+  padding: 1px 2px;
+  border-radius: 2px;
+  font-weight: 500;
+  cursor: help;
+}
+
+.diff-content .diff-modification:hover {
+  background-color: hsl(var(--warning) / 0.2);
+}
+
+/* Dark mode adjustments */
+.dark .diff-content .diff-addition {
+  background-color: hsl(var(--primary) / 0.15);
+}
+
+.dark .diff-content .diff-deletion {
+  background-color: hsl(var(--destructive) / 0.15);
+}
+
+.dark .diff-content .diff-modification {
+  background-color: hsl(var(--warning) / 0.15);
+}

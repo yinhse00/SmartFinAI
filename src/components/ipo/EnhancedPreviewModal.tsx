@@ -1,12 +1,13 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { CheckCircle, FileText, Building, Calendar, Loader2, AlertTriangle } from 'lucide-react';
+import { CheckCircle, FileText, Building, Calendar, Loader2, AlertTriangle, Eye, Code, BarChart3 } from 'lucide-react';
 import { ProfessionalDraftResult } from '@/services/ipo/professionalDraftGenerator';
+import { textDiffEngine } from '@/utils/textDiffEngine';
 
 interface EnhancedPreviewModalProps {
   isOpen: boolean;
@@ -26,6 +27,16 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
   isApplying = false
 }) => {
   const { fullDraft, analysisSteps, precedentCases, complianceNotes, confidence } = draftResult;
+  const [showMarkup, setShowMarkup] = useState(true);
+  const [diffResult, setDiffResult] = useState<any>(null);
+
+  // Generate diff on modal open
+  useEffect(() => {
+    if (isOpen && originalContent && fullDraft) {
+      const result = textDiffEngine.generateDiff(originalContent, fullDraft);
+      setDiffResult(result);
+    }
+  }, [isOpen, originalContent, fullDraft]);
 
   const getConfidenceColor = () => {
     if (confidence >= 0.8) return 'bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800';
@@ -136,10 +147,40 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
           {/* Draft Preview Panel */}
           <div className="lg:col-span-2 flex flex-col min-h-0">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-semibold text-sm">Professional Draft vs Original</h3>
-              <Badge variant="outline" className="text-xs">
-                Complete Section Replacement
-              </Badge>
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-sm">Professional Draft vs Original</h3>
+                {diffResult && (
+                  <Badge variant="outline" className="text-xs">
+                    {diffResult.stats.totalChanges} changes detected
+                  </Badge>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowMarkup(!showMarkup)}
+                  className="text-xs"
+                >
+                  {showMarkup ? (
+                    <>
+                      <Eye className="h-3 w-3 mr-1" />
+                      Clean View
+                    </>
+                  ) : (
+                    <>
+                      <Code className="h-3 w-3 mr-1" />
+                      Show Changes
+                    </>
+                  )}
+                </Button>
+                {diffResult && (
+                  <Badge variant="secondary" className="text-xs">
+                    <BarChart3 className="h-3 w-3 mr-1" />
+                    {textDiffEngine.getChangeSummary(diffResult.changes)}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4 min-h-0">
@@ -160,12 +201,19 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
               {/* Professional Draft */}
               <div className="flex flex-col min-h-0">
                 <h4 className="text-xs font-medium text-foreground mb-2 uppercase tracking-wide">
-                  Professional IPO Draft
+                  Professional IPO Draft {showMarkup && '(with changes highlighted)'}
                 </h4>
                 <ScrollArea className="h-[400px] border-2 border-primary/20 rounded-lg bg-primary/5">
                   <div className="p-4">
                     <div className="text-sm text-foreground break-words leading-relaxed">
-                      {fullDraft}
+                      {showMarkup && diffResult ? (
+                        <div 
+                          dangerouslySetInnerHTML={{ __html: diffResult.markedUpText }}
+                          className="diff-content"
+                        />
+                      ) : (
+                        fullDraft
+                      )}
                     </div>
                   </div>
                 </ScrollArea>

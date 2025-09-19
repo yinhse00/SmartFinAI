@@ -1,6 +1,7 @@
 
 @import url('./styles/tables.css');
 @import url('./styles/chat.css');
+@import url('./styles/diff.css');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
