@@ -182,10 +182,6 @@ export const smartContentMerger = {
         mergedContent = smartContentMerger.enhanceExisting(currentContent, extractedContent);
         break;
       
-      case 'replace-all':
-        mergedContent = aiSuggestion.trim();
-        break;
-      
       default:
         mergedContent = smartContentMerger.appendContent(currentContent, extractedContent);
         break;
