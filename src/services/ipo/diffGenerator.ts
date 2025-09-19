@@ -100,56 +100,6 @@ export class DiffGenerator {
     
     return this.generateDiff(original, mergedContent);
   }
-
-  /**
-   * Generate a full diff that shows all AI suggestions paragraph by paragraph
-   */
-  generateFullDiff(original: string, aiSuggestion: string): DiffResult {
-    const originalParagraphs = original.split('\n\n').filter(p => p.trim());
-    const suggestionParagraphs = aiSuggestion.split('\n\n').filter(p => p.trim());
-    
-    const changes: DiffChange[] = [];
-    let additions = 0;
-    let modifications = 0;
-    
-    // Show all original content as unchanged
-    originalParagraphs.forEach((paragraph, index) => {
-      changes.push({
-        type: 'unchanged',
-        content: paragraph,
-        lineNumber: index + 1
-      });
-    });
-    
-    // Find and add new content from AI suggestion
-    suggestionParagraphs.forEach((suggestionPara, index) => {
-      const hasOverlap = originalParagraphs.some(origPara => 
-        this.calculateSimilarity(origPara, suggestionPara) > 0.4
-      );
-      
-      if (!hasOverlap && suggestionPara.length > 50) {
-        // This is new content to be added
-        changes.push({
-          type: 'addition',
-          content: suggestionPara,
-          lineNumber: originalParagraphs.length + additions + 1
-        });
-        additions++;
-      }
-    });
-    
-    const description = this.generateDescription(additions, modifications);
-    
-    return {
-      changes,
-      summary: {
-        additions,
-        modifications,
-        totalLines: originalParagraphs.length + additions
-      },
-      description
-    };
-  }
   
   /**
    * Extract only implementable content from AI suggestion

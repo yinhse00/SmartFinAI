@@ -132,77 +132,43 @@ export const smartContentMerger = {
   smartMerge: (currentContent: string, aiSuggestion: string, strategy?: MergeStrategy): string => {
     const mergeStrategy = strategy || smartContentMerger.analyzeBestMergeStrategy(currentContent, aiSuggestion);
     
-    // Extract only the new/different content from AI suggestion
-    const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, aiSuggestion);
-    
-    console.log(`[SmartMerger] Using strategy: ${mergeStrategy.type}`, {
-      currentLength: currentContent.length,
-      suggestionLength: aiSuggestion.length,
-      extractedLength: extractedContent.length,
-      strategy: mergeStrategy
-    });
-    
-    // If no new content found, return original
-    if (!extractedContent.trim()) {
-      console.log('[SmartMerger] No new content detected, returning original');
-      return currentContent;
-    }
+    // Clean the suggestion first
+    const cleanSuggestion = contentExtractor.cleanContent(aiSuggestion);
 
     let mergedContent: string;
     
     switch (mergeStrategy.type) {
       case 'append':
-        mergedContent = smartContentMerger.appendContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.appendContent(currentContent, cleanSuggestion);
         break;
       
       case 'prepend':
-        mergedContent = smartContentMerger.prependContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.prependContent(currentContent, cleanSuggestion);
         break;
       
       case 'replace-section':
-        mergedContent = smartContentMerger.replaceSectionContent(currentContent, extractedContent, mergeStrategy);
+        mergedContent = smartContentMerger.replaceSectionContent(currentContent, cleanSuggestion, mergeStrategy);
         break;
       
       case 'merge-paragraphs':
-        mergedContent = smartContentMerger.mergeParagraphs(currentContent, extractedContent);
+        mergedContent = smartContentMerger.mergeParagraphs(currentContent, cleanSuggestion);
         break;
       
       case 'insert-at-line':
-        mergedContent = smartContentMerger.insertAtPosition(currentContent, extractedContent, mergeStrategy.targetLine || 0);
+        mergedContent = smartContentMerger.insertAtPosition(currentContent, cleanSuggestion, mergeStrategy.targetLine || 0);
         break;
       
       case 'enhance-existing':
-        mergedContent = smartContentMerger.enhanceExisting(currentContent, extractedContent);
+        mergedContent = smartContentMerger.enhanceExisting(currentContent, cleanSuggestion);
         break;
       
       default:
-        mergedContent = smartContentMerger.appendContent(currentContent, extractedContent);
+        mergedContent = smartContentMerger.appendContent(currentContent, cleanSuggestion);
         break;
     }
     
-    return mergedContent;
-  },
-
-  /**
-   * Extract only the new/different content from AI suggestion
-   */
-  extractOnlyNewContent: (currentContent: string, aiSuggestion: string): string => {
-    const currentParagraphs = currentContent.split('\n\n').filter(p => p.trim());
-    const suggestionParagraphs = aiSuggestion.split('\n\n').filter(p => p.trim());
-    
-    const newParagraphs = suggestionParagraphs.filter(suggestionPara => {
-      // Skip if too short to be meaningful
-      if (suggestionPara.length < 50) return false;
-      
-      // Check if this paragraph is genuinely new
-      const hasOverlap = currentParagraphs.some(currentPara => 
-        smartContentMerger.calculateSimilarity(currentPara, suggestionPara) > 0.4
-      );
-      
-      return !hasOverlap;
-    });
-    
-    return newParagraphs.join('\n\n');
+    // Apply final formatting to ensure clean output
+    return ipoMessageFormatter.formatMessage(mergedContent);
   },
 
   /**

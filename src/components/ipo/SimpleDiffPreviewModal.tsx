@@ -26,7 +26,7 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
 }) => {
   // Generate diff between original and suggested content
   const diffResult: DiffResult = React.useMemo(() => {
-    return diffGenerator.generateFullDiff(originalContent, suggestedContent);
+    return diffGenerator.generateSmartDiff(originalContent, suggestedContent);
   }, [originalContent, suggestedContent]);
 
   // Format content for display
