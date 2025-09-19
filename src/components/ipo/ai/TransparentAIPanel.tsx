@@ -179,34 +179,18 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
               changePreview: message.changePreview,
               professionalDraft: message.professionalDraft
             };
-            
             const isUserMessage = message.isUser ?? message.type === 'user';
-            
             return <div key={message.id} className="space-y-2">
                     <div className={`flex ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 w-full`}>
                       <div className={`flex items-start gap-3 w-full max-w-[85%] ${isUserMessage ? 'flex-row-reverse' : ''}`}>
                         <div className={`w-6 h-6 rounded-full ${isUserMessage ? 'bg-primary' : 'bg-muted'} flex items-center justify-center shrink-0 mt-1`}>
-                          {isUserMessage ? 
-                            <span className="text-xs font-medium text-primary-foreground">U</span> :
-                            <Bot className="h-3 w-3 text-muted-foreground" />
-                          }
+                          {isUserMessage ? <span className="text-xs font-medium text-primary-foreground">U</span> : <Bot className="h-3 w-3 text-muted-foreground" />}
                         </div>
                         <Card className={`p-3 rounded-lg w-full ${isUserMessage ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                          {isUserMessage ? (
-                            <p className="text-sm">{message.content}</p>
-                          ) : (
-                            <>
+                          {isUserMessage ? <p className="text-sm">{message.content}</p> : <>
                               <MessageFormatter content={message.content} />
-                              {message.isDraftable && message.suggestedContent && (
-                                <ImplementButton
-                                  message={standardMessage}
-                                  currentContent={currentContent}
-                                  onImplement={applyDirectSuggestion}
-                                  isImplementing={isProcessing}
-                                />
-                              )}
-                            </>
-                          )}
+                              {message.isDraftable && message.suggestedContent && <ImplementButton message={standardMessage} currentContent={currentContent} onImplement={applyDirectSuggestion} isImplementing={isProcessing} />}
+                            </>}
                         </Card>
                       </div>
                     </div>
@@ -230,14 +214,7 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
           {/* Minimized Input Area */}
           <div className="p-2 border-t">
             <div className="flex gap-2">
-              <Input 
-                placeholder="Ask me to analyze, improve, or fix your content..." 
-                value={inputValue} 
-                onChange={e => setInputValue(e.target.value)} 
-                onKeyPress={handleKeyPress} 
-                className="flex-1 h-8 text-sm" 
-                disabled={isProcessing} 
-              />
+              <Input placeholder="Ask me to analyze, improve, or fix your content..." value={inputValue} onChange={e => setInputValue(e.target.value)} onKeyPress={handleKeyPress} className="flex-1 h-8 text-sm" disabled={isProcessing} />
               <Button size="sm" onClick={handleSendMessage} disabled={!inputValue.trim() || isProcessing} className="h-8 px-3">
                 {isProcessing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Send className="h-3 w-3" />}
               </Button>
@@ -245,17 +222,8 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
             
             {/* Collapsible Quick Actions */}
             <div className="mt-2">
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowQuickActions(!showQuickActions)}
-                className="h-6 text-xs text-muted-foreground hover:text-foreground w-full justify-start"
-              >
-                <ChevronDown className={`h-3 w-3 mr-1 transition-transform ${showQuickActions ? 'rotate-180' : ''}`} />
-                Quick Actions
-              </Button>
-              {showQuickActions && (
-                <div className="flex flex-wrap gap-1 mt-1">
+              
+              {showQuickActions && <div className="flex flex-wrap gap-1 mt-1">
                   <Button variant="outline" size="sm" onClick={() => processMessage("Analyze my content for HKEX compliance")} disabled={isProcessing} className="text-xs h-6">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Check Compliance
@@ -264,8 +232,7 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
                     <Eye className="h-3 w-3 mr-1" />
                     Find Improvements
                   </Button>
-                </div>
-              )}
+                </div>}
             </div>
           </div>
         </CardContent>}
