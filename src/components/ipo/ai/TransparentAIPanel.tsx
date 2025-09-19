@@ -176,7 +176,8 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
               confidence: message.confidence,
               suggestedContent: message.suggestedContent,
               isDraftable: message.isDraftable,
-              changePreview: message.changePreview
+              changePreview: message.changePreview,
+              professionalDraft: message.professionalDraft
             };
             
             const isUserMessage = message.isUser ?? message.type === 'user';
