@@ -31,6 +31,7 @@ interface TransparentChatMessage {
   reasoning?: ReasoningStep[];
   confidence?: number;
   suggestedContent?: string;
+  professionalDraft?: import('@/services/ipo/professionalDraftGenerator').ProfessionalDraftResult;
   isDraftable?: boolean;
   changePreview?: {
     before: string;
@@ -152,6 +153,7 @@ export const useTransparentAIChat = ({
 
       const aiChatMessage: TransparentChatMessage = {
         id: `ai_${Date.now()}`,
+        type: 'ai',
         isUser: false,
         content: response.message,
         timestamp: new Date(),
