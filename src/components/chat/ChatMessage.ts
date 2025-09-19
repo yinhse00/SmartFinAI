@@ -10,21 +10,21 @@ export interface Message {
   isError?: boolean;
   isUsingFallback?: boolean;
   reasoning?: string;
+  confidence?: number;
+  isDraftable?: boolean;
+  suggestedContent?: string;
+  professionalDraft?: import('@/services/ipo/professionalDraftGenerator').ProfessionalDraftResult;
+  changePreview?: {
+    before: string;
+    after: string;
+    location?: string;
+  };
   queryType?: string;
   isTruncated?: boolean;
   isBatchPart?: boolean;
   originalContent?: string;
   translationInProgress?: boolean;
   isTranslated?: boolean;
-  // IPO AI Features
-  suggestedContent?: string;
-  isDraftable?: boolean;
-  confidence?: number;
-  changePreview?: {
-    before: string;
-    after: string;
-    location?: string;
-  };
   metadata?: {
     financialQueryType?: string;
     reasoning?: string;

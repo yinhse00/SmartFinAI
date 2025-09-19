@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Play, Eye, Loader2 } from 'lucide-react';
-import { SimpleDiffPreviewModal } from '@/components/ipo/SimpleDiffPreviewModal';
+import { EnhancedPreviewModal } from '@/components/ipo/EnhancedPreviewModal';
 import { Message } from '../ChatMessage';
 import { MergeStrategy } from '@/services/ipo/smartContentMerger';
 
@@ -91,12 +91,12 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
         </div>
       </div>
 
-      {showPreview && hasPreview && (
-        <SimpleDiffPreviewModal
+      {showPreview && hasPreview && message.professionalDraft && (
+        <EnhancedPreviewModal
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
           originalContent={currentContent}
-          suggestedContent={message.suggestedContent || ''}
+          draftResult={message.professionalDraft}
           onApply={handleImplement}
           isApplying={isImplementing}
         />

@@ -1,6 +1,7 @@
 import { contentAnalysisService } from './contentAnalysisService';
 import { simpleAiClient } from './simpleAiClient';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
+import { professionalDraftGenerator, type ProfessionalDraftResult } from './professionalDraftGenerator';
 
 interface ReasoningStep {
   id: string;
@@ -27,6 +28,7 @@ interface TransparentResponse {
     after: string;
     location?: string;
   };
+  professionalDraft?: ProfessionalDraftResult;
 }
 
 /**
@@ -151,7 +153,7 @@ export class TransparentAnalysisService {
   }
 
   /**
-   * Process user message with streamlined analysis
+   * Process user message with professional draft generation
    */
   async processMessageWithReasoning(
     userMessage: string,
@@ -160,34 +162,43 @@ export class TransparentAnalysisService {
     currentContent: string
   ): Promise<TransparentResponse> {
     try {
-      const requestType = this.classifyRequest(userMessage);
-      const prompt = this.buildTransparentPrompt(userMessage, sectionType, currentContent);
-      
-      const aiResponse = await simpleAiClient.generateContent({
-        prompt,
-        metadata: { requestType: 'transparent_analysis' }
+      // Generate professional draft with precedent analysis
+      const professionalDraft = await professionalDraftGenerator.generateProfessionalDraft({
+        currentContent,
+        sectionType,
+        userRequest: userMessage,
+        projectId
       });
 
-      const suggestedContent = this.extractSuggestedContent(aiResponse.text);
-      const suggestions = await this.extractSuggestions(aiResponse.text, currentContent);
+      // Create structured response message
+      const responseMessage = this.formatProfessionalResponse(
+        professionalDraft.analysisSteps,
+        professionalDraft.precedentCases,
+        professionalDraft.complianceNotes
+      );
 
       return {
-        message: this.formatStreamlinedResponse(aiResponse.text),
-        reasoning: [], // No reasoning steps in streamlined mode
-        suggestions,
-        updatedContent: suggestedContent?.content,
-        confidence: suggestedContent?.confidence || 0.7,
-        changePreview: suggestedContent ? this.generateChangePreview(currentContent, suggestedContent.content) : undefined
+        message: responseMessage,
+        reasoning: professionalDraft.analysisSteps.map(step => ({
+          id: step.title.toLowerCase().replace(/\s+/g, '_'),
+          title: step.title,
+          description: step.description,
+          status: 'completed' as const,
+          confidence: 0.9,
+          citations: step.findings
+        })),
+        professionalDraft,
+        updatedContent: professionalDraft.fullDraft,
+        confidence: professionalDraft.confidence
       };
 
     } catch (error) {
-      console.error('Message processing failed:', error);
+      console.error('Professional draft generation failed:', error);
       
-      // Provide better error messages based on error type
-      let errorMessage = "I encountered an error while processing your request. Please try rephrasing your question or request.";
+      let errorMessage = "I encountered an error while generating the professional draft. Please try again or contact support.";
       if (error instanceof Error) {
         if (error.message.includes('Monthly token limit exceeded')) {
-          errorMessage = "The AI service has reached its monthly usage limit. Please try again later or contact support for assistance.";
+          errorMessage = "The AI service has reached its monthly usage limit. Please try again later.";
         } else if (error.message.includes('AI service temporarily unavailable')) {
           errorMessage = "The AI service is temporarily unavailable. Please try again in a few moments.";
         }
@@ -339,22 +350,49 @@ Format your response to show transparent thinking and reasoning.
   }
 
   /**
-   * Format response without reasoning steps - focused on actionable content
+   * Format professional response with analysis, precedents, and compliance
    */
-  private formatStreamlinedResponse(aiText: string): string {
-    // Clean up the AI response to focus on actionable content
-    const cleanText = aiText
-      .replace(/Step \d+:.*?\n/gi, '') // Remove step markers
-      .replace(/Reasoning:.*?\n/gi, '') // Remove reasoning sections
-      .replace(/Analysis:.*?\n/gi, '') // Remove analysis headers
-      .replace(/\*\*([^*]+)\*\*/g, '$1') // Remove markdown bold
-      .trim();
-
-    // Ensure proper paragraph formatting
-    return cleanText
-      .split('\n\n')
-      .filter(para => para.trim().length > 0)
-      .join('\n\n');
+  private formatProfessionalResponse(
+    analysisSteps: any[],
+    precedentCases: any[],
+    complianceNotes: string[]
+  ): string {
+    let response = "## Analysis Complete\n\n";
+    
+    // Analysis Summary
+    response += "**Content Analysis:**\n";
+    analysisSteps.forEach(step => {
+      response += `• ${step.title}: ${step.description}\n`;
+    });
+    
+    // Precedent Cases
+    if (precedentCases.length > 0) {
+      response += "\n**Relevant Precedent Cases:**\n";
+      precedentCases.forEach(precedent => {
+        response += `• **${precedent.companyName}** (${precedent.prospectusDate}) - ${precedent.industry}\n`;
+        response += `  Key insights: ${precedent.keyInsights.join(', ')}\n`;
+      });
+    }
+    
+    // Professional Draft Generated
+    response += "\n**Professional Draft Generated:**\n";
+    response += "A complete, professionally formatted IPO section has been generated incorporating:\n";
+    response += "• HKEX listing requirements and best practices\n";
+    response += "• Insights from relevant precedent cases\n";
+    response += "• Professional IPO language and structure\n";
+    response += "• Regulatory compliance enhancements\n";
+    
+    // Compliance Notes
+    if (complianceNotes.length > 0) {
+      response += "\n**Compliance Notes:**\n";
+      complianceNotes.slice(0, 3).forEach(note => {
+        response += `• ${note}\n`;
+      });
+    }
+    
+    response += "\nPlease review the complete professional draft in the preview and apply when ready.";
+    
+    return response;
   }
 }
 

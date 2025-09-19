@@ -152,13 +152,13 @@ export const useTransparentAIChat = ({
 
       const aiChatMessage: TransparentChatMessage = {
         id: `ai_${Date.now()}`,
-        type: 'ai',
         isUser: false,
         content: response.message,
         timestamp: new Date(),
         suggestions: response.suggestions,
         confidence: response.confidence || 0.8,
         suggestedContent: response.updatedContent || (hasImplementableContent ? response.message : undefined),
+        professionalDraft: response.professionalDraft,
         isDraftable: !!hasImplementableContent,
         changePreview: response.changePreview
       };
