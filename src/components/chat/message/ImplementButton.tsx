@@ -33,8 +33,11 @@ export const ImplementButton: React.FC<ImplementButtonProps> = ({
   };
 
   const handleImplement = () => {
-    if (message.suggestedContent) {
-      onImplement(message.suggestedContent);
+    // For professional drafts, use the full draft content
+    const contentToImplement = message.professionalDraft?.fullDraft || message.suggestedContent;
+    
+    if (contentToImplement) {
+      onImplement(contentToImplement);
     }
     setShowPreview(false);
   };

@@ -35,8 +35,8 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-7xl h-[90vh] flex flex-col">
-        <DialogHeader className="pb-4">
+      <DialogContent className="max-w-6xl max-h-[85vh] flex flex-col">
+        <DialogHeader className="pb-4 shrink-0">
           <div className="flex items-center justify-between">
             <DialogTitle className="flex items-center gap-3">
               <FileText className="h-5 w-5" />
@@ -51,7 +51,8 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
           </p>
         </DialogHeader>
 
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
+        <div className="flex-1 overflow-hidden">
+          <div className="h-full grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Analysis & Precedents Panel */}
           <div className="lg:col-span-1 space-y-4">
             {/* Analysis Steps */}
@@ -147,9 +148,9 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
                 <h4 className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wide">
                   Original Content
                 </h4>
-                <ScrollArea className="flex-1 border rounded-lg bg-muted/20">
+                <ScrollArea className="h-[400px] border rounded-lg bg-muted/20">
                   <div className="p-4">
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <div className="text-sm text-muted-foreground break-words">
                       {originalContent || 'No original content'}
                     </div>
                   </div>
@@ -161,9 +162,9 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
                 <h4 className="text-xs font-medium text-foreground mb-2 uppercase tracking-wide">
                   Professional IPO Draft
                 </h4>
-                <ScrollArea className="flex-1 border-2 border-primary/20 rounded-lg bg-primary/5">
+                <ScrollArea className="h-[400px] border-2 border-primary/20 rounded-lg bg-primary/5">
                   <div className="p-4">
-                    <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    <div className="text-sm text-foreground break-words leading-relaxed">
                       {fullDraft}
                     </div>
                   </div>
@@ -171,11 +172,12 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
               </div>
             </div>
           </div>
+          </div>
         </div>
 
         <Separator className="my-4" />
 
-        <div className="flex justify-between items-center">
+        <div className="flex justify-between items-center shrink-0">
           <div className="text-sm text-muted-foreground">
             This will replace your current draft with the complete professional version
           </div>
