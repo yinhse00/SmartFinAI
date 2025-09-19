@@ -287,6 +287,34 @@ export const useTransparentAIChat = ({
   // Apply direct suggestion from message with smart merging
   const applyDirectSuggestion = useCallback(async (content: string, strategy?: import('@/services/ipo/smartContentMerger').MergeStrategy, segments?: string[]) => {
     try {
+      console.log('🔄 Applying direct suggestion with strategy:', strategy);
+      
+      // Validate inputs
+      if (!content?.trim()) {
+        console.warn('⚠️ Empty content provided');
+        toast({
+          title: "Invalid Content",
+          description: "The suggested content is empty or invalid.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!currentContent) {
+        console.warn('⚠️ No current content available');
+        toast({
+          title: "No Current Content",
+          description: "No existing content found to merge with.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Validate onContentUpdate callback
+      if (typeof onContentUpdate !== 'function') {
+        throw new Error('onContentUpdate callback is not available');
+      }
+
       const { smartContentMerger } = await import('@/services/ipo/smartContentMerger');
       
       let finalContent = content;
@@ -298,6 +326,11 @@ export const useTransparentAIChat = ({
       
       // Handle replace-all strategy for professional drafts
       if (strategy?.type === 'replace-all') {
+        console.log('📝 Applying professional draft directly');
+        if (!finalContent?.trim()) {
+          throw new Error('Professional draft content is empty');
+        }
+        
         onContentUpdate(finalContent);
         await analyzeCurrentContent();
         
@@ -308,13 +341,16 @@ export const useTransparentAIChat = ({
         return;
       }
       
-      // Extract only new content to avoid full replacement for regular suggestions
+      // Extract implementable content with validation
+      console.log('📝 Extracting implementable content...');
       const extractedContent = smartContentMerger.extractOnlyNewContent(currentContent, finalContent);
       
-      // If no new content found, fallback to using the original content with append strategy
-      if (!extractedContent.trim()) {
-        finalContent = finalContent;
+      // Use smart fallback if extraction yields no content
+      if (!extractedContent?.trim()) {
+        console.warn('⚠️ No implementable content found, using fallback strategy');
+        finalContent = finalContent; // Use original content as fallback
       } else {
+        console.log('📝 Successfully extracted content');
         finalContent = extractedContent;
       }
       
@@ -324,7 +360,19 @@ export const useTransparentAIChat = ({
         reason: 'Adding new content to existing draft'
       };
       
-      const mergedContent = smartContentMerger.smartMerge(currentContent, finalContent, mergeStrategy);
+      console.log('📝 Applying smart merge...');
+      let mergedContent: string;
+      try {
+        mergedContent = smartContentMerger.smartMerge(currentContent, finalContent, mergeStrategy);
+      } catch (mergeError) {
+        console.warn('⚠️ Smart merge failed, using append fallback:', mergeError);
+        mergedContent = currentContent + '\n\n' + finalContent;
+      }
+      
+      // Validate final content
+      if (!mergedContent?.trim()) {
+        throw new Error('Final merged content is empty');
+      }
       
       onContentUpdate(mergedContent);
       
@@ -336,10 +384,11 @@ export const useTransparentAIChat = ({
         description: "New content has been added to your existing draft."
       });
     } catch (error) {
-      console.error('Direct suggestion application failed:', error);
+      console.error('❌ Direct suggestion application failed:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       toast({
         title: "Application Failed",
-        description: "Unable to apply the suggested content.",
+        description: `Unable to apply the suggested content: ${errorMessage}`,
         variant: "destructive"
       });
     }
