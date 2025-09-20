@@ -4,7 +4,6 @@ import { universalAiClient } from '@/services/ai/universalAiClient';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { AIProvider } from '@/types/aiProvider';
 import { analyzeFinancialResponse, detectTruncationComprehensive, getTruncationDiagnostics } from '@/utils/truncation';
-import { complianceValidationService } from './complianceValidationService';
 
 export interface DraftGenerationRequest {
   currentContent: string;
@@ -124,24 +123,15 @@ export class ProfessionalDraftGenerator {
     // Get detailed requirements for this section
     const detailedRequirements = ipoRequirementsService.getDetailedRequirements(request.sectionType);
 
-    // Generate compliance checklist for enhanced requirements integration
-    const complianceChecklist = await this.generateComplianceChecklist(request.sectionType);
-    
-    // Enhanced prompt with compliance-first approach
+    // Enhanced prompt with completion requirements
     const prompt = `
-You are a senior IPO prospectus advisor specialized in HKEX Main Board requirements. You MUST generate content that achieves 85%+ compliance with all mandatory requirements.
-
-SECTION TYPE: ${request.sectionType}
-USER REQUEST: ${request.userRequest}
+You are an expert IPO prospectus drafter. Generate a complete, professionally formatted ${request.sectionType} section.
 
 CURRENT CONTENT:
 ${request.currentContent}
 
-=== MANDATORY HKEX REQUIREMENTS (MUST BE 100% ADDRESSED) ===
-${detailedRequirements}
-
-=== COMPLIANCE CHECKLIST (MUST SCORE 85%+) ===
-${complianceChecklist.map(item => `☐ ${item}`).join('\n')}
+USER REQUEST:
+${request.userRequest}
 
 ANALYSIS FINDINGS:
 ${analysisContext}
@@ -149,21 +139,19 @@ ${analysisContext}
 PRECEDENT CASES FOR REFERENCE:
 ${precedentContext}
 
-CRITICAL COMPLIANCE INSTRUCTIONS:
-1. MANDATORY: Address every item in the compliance checklist above
-2. Include all required subsections as specified in HKEX requirements
-3. Use specific examples and quantifiable data where mandated
-4. Include proper regulatory citations and cross-references
-5. Follow exact HKEX format requirements (tables, structure, disclosures)
-6. Ensure minimum content depth as required by HKEX standards
-7. PENALTY: Content missing mandatory elements will be rejected
+${detailedRequirements}
 
-QUALITY STANDARDS:
-- Professional investment banking language
-- Investor-focused information hierarchy  
-- Compliance with HKEX App1A Part A requirements
-- Cross-referencing to other prospectus sections where required
-- Proper disclosure of material information
+CRITICAL REQUIREMENTS:
+1. Generate a COMPLETE, professionally formatted section (not just additions)
+2. Follow ALL Hong Kong Stock Exchange disclosure requirements listed above
+3. Use formal, professional IPO language throughout
+4. Include proper numbering and structure per HKEX standards
+5. Incorporate insights from precedent cases where applicable
+6. Address all gaps identified in the analysis
+7. Include ALL mandatory tables and disclosures specified above
+8. Ensure full regulatory compliance with App1A requirements
+9. Use professional IPO terminology and formatting
+10. Provide comprehensive coverage of all required subsections
 
 COMPLETION REQUIREMENTS:
 - ENSURE COMPLETE RESPONSE - DO NOT TRUNCATE
@@ -171,8 +159,6 @@ COMPLETION REQUIREMENTS:
 - Generate MINIMUM 1500 words for standard sections
 - Include ALL required subsections and elements
 - Provide thorough analysis and comprehensive disclosure
-
-VALIDATION: Before finalizing, verify each compliance checklist item is addressed. Content must achieve 85%+ compliance score.
 
 Please provide the FULL REVISED SECTION with proper IPO formatting and ALL required elements:
 `;
@@ -184,16 +170,14 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
       try {
         const result = await this.attemptGeneration(prompt, request, attempt);
         
-        // Enhanced validation with compliance scoring
+        // Validate completeness
         const validation = await this.validateDraftCompleteness(result, request.sectionType);
         
-        // If compliance is too low, attempt regeneration
-        if (validation.isComplete && validation.complianceScore >= 0.85) {
+        if (validation.isComplete) {
           console.log('✅ Professional draft generation successful');
           return this.formatIPOSection(result, request.sectionType);
         } else {
           console.log(`⚠ Draft incomplete on attempt ${attempt + 1}:`, validation.issues);
-          console.log(`Compliance score: ${Math.round(validation.complianceScore * 100)}%`);
           
           // If this is the last attempt, return what we have
           if (attempt === 2) {
@@ -201,7 +185,7 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
             return this.formatIPOSection(result, request.sectionType);
           }
           
-          // Continue to next attempt with enhanced compliance instructions
+          // Continue to next attempt with different provider/parameters
         }
       } catch (error) {
         console.error(`Attempt ${attempt + 1} failed:`, error);
@@ -266,12 +250,11 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
   }
 
   /**
-   * Validate draft completeness using main chat quality system with enhanced compliance
+   * Validate draft completeness using main chat quality system
    */
   private async validateDraftCompleteness(content: string, sectionType: string): Promise<{
     isComplete: boolean;
     issues: string[];
-    complianceScore: number;
   }> {
     const issues: string[] = [];
     
@@ -299,42 +282,22 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
       issues.push(`Content too short: ${content.length} chars (minimum: ${minLength})`);
     }
     
-    // 5. Enhanced compliance validation using semantic analysis
-    let complianceScore = 0.7; // Default fallback score
+    // 5. Required elements validation
     const requirements = ipoRequirementsService.getRequirements(sectionType);
     if (requirements) {
-      // Use semantic compliance validation for more accurate scoring
-      try {
-        const semanticValidation = await complianceValidationService.validateCompliance(content, sectionType);
-        complianceScore = semanticValidation.overallScore;
-        
-        if (!semanticValidation.passesThreshold) {
-          issues.push(`Compliance score too low: ${Math.round(complianceScore * 100)}% (minimum 85% required)`);
-        }
-        
-        if (semanticValidation.missingRequirements.length > 0) {
-          issues.push(`Missing mandatory requirements: ${semanticValidation.missingRequirements.join(', ')}`);
-        }
-      } catch (error) {
-        console.warn('Semantic validation failed, using basic compliance check:', error);
-        // Fallback to basic compliance checking
-        const basicCompliance = ipoRequirementsService.checkCompliance(content, sectionType);
-        complianceScore = basicCompliance.complianceScore;
-        
-        if (complianceScore < 0.7) {
-          issues.push(`Low compliance score: ${Math.round(complianceScore * 100)}%`);
-        }
-        
-        if (basicCompliance.missingRequirements.length > 0) {
-          issues.push(`Missing requirements: ${basicCompliance.missingRequirements.length} items`);
-        }
+      const compliance = ipoRequirementsService.checkCompliance(content, sectionType);
+      if (compliance.complianceScore < 0.7) {
+        issues.push(`Low compliance score: ${Math.round(compliance.complianceScore * 100)}%`);
+      }
+      
+      if (compliance.missingRequirements.length > 0) {
+        issues.push(`Missing requirements: ${compliance.missingRequirements.length} items`);
       }
     }
     
     return {
-      isComplete: issues.length === 0 && complianceScore >= 0.85,
-      issues,
-      complianceScore
+      isComplete: issues.length === 0,
+      issues
     };
   }
 
@@ -518,47 +481,6 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
     }
 
     return Math.min(confidence, 0.95); // Cap at 95%
-  }
-
-  /**
-   * Generate compliance checklist for specific section
-   */
-  private async generateComplianceChecklist(sectionType: string): Promise<string[]> {
-    const requirements = ipoRequirementsService.getRequirements(sectionType);
-    if (!requirements) return [];
-
-    const checklist: string[] = [];
-
-    // Add mandatory requirements to checklist
-    requirements.requirements
-      .filter(req => req.mandatory)
-      .forEach(req => {
-        checklist.push(`🔴 MANDATORY: ${req.title} - ${req.description}`);
-        req.subsections.forEach(sub => {
-          checklist.push(`   • Include: ${sub}`);
-        });
-        req.disclosures.forEach(disc => {
-          checklist.push(`   • Disclose: ${disc}`);
-        });
-      });
-
-    // Add mandatory tables
-    if (requirements.mandatoryTables.length > 0) {
-      checklist.push('🔴 MANDATORY TABLES:');
-      requirements.mandatoryTables.forEach(table => {
-        checklist.push(`   • ${table}`);
-      });
-    }
-
-    // Add compliance notes
-    if (requirements.complianceNotes.length > 0) {
-      checklist.push('🔴 COMPLIANCE REQUIREMENTS:');
-      requirements.complianceNotes.forEach(note => {
-        checklist.push(`   • ${note}`);
-      });
-    }
-
-    return checklist;
   }
 }
 
