@@ -33,8 +33,17 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
   // Generate diff on modal open
   useEffect(() => {
     if (isOpen && originalContent && fullDraft) {
-      const result = textDiffEngine.generateDiff(originalContent, fullDraft);
-      setDiffResult(result);
+      // Check if generation failed (draft is same as original)
+      if (fullDraft === originalContent) {
+        setDiffResult({ 
+          markedUpText: 'Generation failed - no changes were made to the content. Please try again.',
+          stats: { totalChanges: 0 },
+          changes: []
+        });
+      } else {
+        const result = textDiffEngine.generateDiff(originalContent, fullDraft);
+        setDiffResult(result);
+      }
     }
   }, [isOpen, originalContent, fullDraft]);
 
@@ -207,10 +216,16 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
                   <div className="p-4">
                     <div className="text-sm text-foreground break-words leading-relaxed">
                       {showMarkup && diffResult ? (
-                        <div 
-                          dangerouslySetInnerHTML={{ __html: diffResult.markedUpText }}
-                          className="diff-content"
-                        />
+                        diffResult.stats.totalChanges === 0 ? (
+                          <div className="text-orange-600 bg-orange-50 p-3 rounded border">
+                            {diffResult.markedUpText}
+                          </div>
+                        ) : (
+                          <div 
+                            dangerouslySetInnerHTML={{ __html: diffResult.markedUpText }}
+                            className="diff-content"
+                          />
+                        )
                       ) : (
                         fullDraft
                       )}

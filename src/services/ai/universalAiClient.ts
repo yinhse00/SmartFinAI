@@ -36,7 +36,12 @@ export class UniversalAiClient {
           model: request.modelId,
           prompt: request.prompt,
           feature: request.metadata?.feature,
-          sessionId: request.metadata?.sessionId
+          sessionId: request.metadata?.sessionId,
+          metadata: {
+            maxTokens: request.metadata?.maxTokens,
+            temperature: request.metadata?.temperature,
+            requestType: request.metadata?.requestType
+          }
         }
       });
 

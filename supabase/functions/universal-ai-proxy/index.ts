@@ -12,6 +12,11 @@ interface AIRequest {
   prompt: string;
   feature?: string;
   sessionId?: string;
+  metadata?: {
+    maxTokens?: number;
+    temperature?: number;
+    requestType?: string;
+  };
 }
 
 interface AIResponse {
@@ -75,7 +80,18 @@ serve(async (req) => {
       if (!apiKey) {
         throw new Error('Grok API key not configured');
       }
-      response = await callGrokAPI(request, apiKey);
+      try {
+        response = await callGrokAPI(request, apiKey);
+      } catch (error) {
+        console.error('Grok API failed, trying Google fallback:', error);
+        // Fallback to Google if Grok fails
+        const googleApiKey = Deno.env.get('GOOGLE_API_KEY') ?? '';
+        if (googleApiKey) {
+          response = await callGoogleAPI({ ...request, provider: 'google', model: 'gemini-2.0-flash' }, googleApiKey);
+        } else {
+          throw error;
+        }
+      }
     } else if (request.provider === 'google') {
       apiKey = Deno.env.get('GOOGLE_API_KEY') ?? '';
       if (!apiKey) {
@@ -133,6 +149,13 @@ serve(async (req) => {
 });
 
 async function callGrokAPI(request: AIRequest, apiKey: string): Promise<AIResponse> {
+  // Dynamic token allocation based on request type
+  const isProfessionalDraft = request.metadata?.requestType === 'professional_draft_generation';
+  const maxTokens = request.metadata?.maxTokens || (isProfessionalDraft ? 25000 : 4000);
+  const temperature = request.metadata?.temperature || 0.3;
+
+  console.log(`Grok API call - maxTokens: ${maxTokens}, temperature: ${temperature}, isProfessionalDraft: ${isProfessionalDraft}`);
+
   const response = await fetch('https://api.x.ai/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -144,8 +167,8 @@ async function callGrokAPI(request: AIRequest, apiKey: string): Promise<AIRespon
       messages: [
         { role: 'user', content: request.prompt }
       ],
-      max_tokens: 4000,
-      temperature: 0.3,
+      max_tokens: maxTokens,
+      temperature: temperature,
     }),
   });
 
@@ -168,6 +191,13 @@ async function callGrokAPI(request: AIRequest, apiKey: string): Promise<AIRespon
 }
 
 async function callGoogleAPI(request: AIRequest, apiKey: string): Promise<AIResponse> {
+  // Dynamic token allocation based on request type
+  const isProfessionalDraft = request.metadata?.requestType === 'professional_draft_generation';
+  const maxOutputTokens = request.metadata?.maxTokens || (isProfessionalDraft ? 100000 : 4000);
+  const temperature = request.metadata?.temperature || 0.4;
+
+  console.log(`Google API call - maxOutputTokens: ${maxOutputTokens}, temperature: ${temperature}, isProfessionalDraft: ${isProfessionalDraft}`);
+
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${apiKey}`,
     {
@@ -184,10 +214,10 @@ async function callGoogleAPI(request: AIRequest, apiKey: string): Promise<AIResp
           }
         ],
         generationConfig: {
-          temperature: 0.4,
+          temperature: temperature,
           topK: 32,
           topP: 1,
-          maxOutputTokens: 4000,
+          maxOutputTokens: maxOutputTokens,
         }
       }),
     }
