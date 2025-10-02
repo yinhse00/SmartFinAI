@@ -3,6 +3,7 @@ import { AlertCircle, Database, Zap, MessageSquare, CheckCircle2, Loader2 } from
 import { cn } from '@/lib/utils';
 import { WorkflowPhase, getWorkflowStep } from './workflowConfig';
 import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface WorkflowIndicatorProps {
   currentStep: WorkflowPhase;
@@ -29,7 +30,7 @@ export const WorkflowIndicator = ({ currentStep, stepProgress }: WorkflowIndicat
       <div className="flex items-center justify-center mb-1">
         <span 
           className="text-xs text-gray-500 dark:text-gray-400"
-          dangerouslySetInnerHTML={{ __html: formattedStepProgress }}
+          dangerouslySetInnerHTML={createSafeMarkup(formattedStepProgress)}
         />
       </div>
       

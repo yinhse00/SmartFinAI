@@ -1,5 +1,6 @@
 import React from 'react';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface MessageFormatterProps {
   content: string;
@@ -71,7 +72,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
           <div 
             key={index} 
             className="text-sm leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: paragraph }}
+            dangerouslySetInnerHTML={createSafeMarkup(paragraph)}
           />
         ) : (
           // Check if paragraph contains HTML formatting (bold, italic, etc.)
@@ -79,7 +80,7 @@ export const MessageFormatter: React.FC<MessageFormatterProps> = ({
             <div 
               key={index} 
               className="text-sm leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: paragraph }}
+              dangerouslySetInnerHTML={createSafeMarkup(paragraph)}
             />
           ) : (
             <p key={index} className="text-sm leading-relaxed">

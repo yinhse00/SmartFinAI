@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from 'react';
 import detectAndFormatTables from '@/utils/tableFormatter';
 import TypingAnimation from '../TypingAnimation';
 import ChatTimetableRenderer from '../ChatTimetableRenderer';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface MessageContentProps {
   content: string;
@@ -72,14 +73,14 @@ export const MessageContent: React.FC<MessageContentProps> = ({
         {translationInProgress && isBot ? (
           <div className="flex flex-col gap-2">
             <div className="text-sm text-gray-500 dark:text-gray-400">正在翻译中...</div>
-            <div className="opacity-60" dangerouslySetInnerHTML={{ __html: formattedContent }} />
+            <div className="opacity-60" dangerouslySetInnerHTML={createSafeMarkup(formattedContent)} />
           </div>
         ) : isUserMessage ? (
           <div className="whitespace-pre-line">{formattedContent}</div>
         ) : (
           <div 
             ref={contentRef}
-            dangerouslySetInnerHTML={{ __html: formattedContent }}
+            dangerouslySetInnerHTML={createSafeMarkup(formattedContent)}
             className="regulatory-content [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm"
           />
         )}

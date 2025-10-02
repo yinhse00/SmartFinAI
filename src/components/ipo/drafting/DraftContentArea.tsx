@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { FileText, Edit3, EyeIcon, RotateCcw, Save, Loader2, BarChart3, Zap, AlertTriangle, CheckCircle, TrendingUp, Download, FileType, FileSpreadsheet } from 'lucide-react';
 import { documentService } from '@/services/documents/documentService';
+import { createSafeMarkup } from '@/utils/sanitize';
 import { useToast } from '@/hooks/use-toast';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
@@ -93,9 +94,7 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
                       {isLoading ? <div className="text-center py-8">
                           <Loader2 className="h-6 w-6 mx-auto mb-3 animate-spin opacity-50" />
                           <p className="text-muted-foreground text-sm">Loading existing content...</p>
-                        </div> : generatedContent ? <div className="regulatory-content prose prose-sm max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm" dangerouslySetInnerHTML={{
-                  __html: ipoMessageFormatter.formatMessage(generatedContent)
-                }} /> : <div className="text-muted-foreground text-center py-8">
+                        </div> : generatedContent ? <div className="regulatory-content prose prose-sm max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm" dangerouslySetInnerHTML={createSafeMarkup(ipoMessageFormatter.formatMessage(generatedContent))} /> : <div className="text-muted-foreground text-center py-8">
                           <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
                           <p className="text-sm font-medium">No content generated yet.</p>
                           <p className="text-xs mt-1">
@@ -141,9 +140,7 @@ export const DraftContentArea: React.FC<DraftContentAreaProps> = ({
                   {isLoading ? <div className="text-center py-8">
                       <Loader2 className="h-6 w-6 mx-auto mb-3 animate-spin opacity-50" />
                       <p className="text-muted-foreground text-sm">Loading existing content...</p>
-                    </div> : generatedContent ? <div className="regulatory-content prose prose-sm max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm" dangerouslySetInnerHTML={{
-              __html: ipoMessageFormatter.formatMessage(generatedContent)
-            }} /> : <div className="text-muted-foreground text-center py-8">
+                    </div> : generatedContent ? <div className="regulatory-content prose prose-sm max-w-none [&_a]:text-inherit [&_a]:underline [&_a]:decoration-dotted [&_a]:underline-offset-2 [&_a]:transition-all [&_a]:duration-200 [&_a:hover]:decoration-solid [&_a:hover]:decoration-finance-accent-green [&_a:visited]:text-inherit [&_a:focus]:outline-2 [&_a:focus]:outline-finance-accent-blue [&_a:focus]:outline-offset-2 [&_a:focus]:rounded-sm" dangerouslySetInnerHTML={createSafeMarkup(ipoMessageFormatter.formatMessage(generatedContent))} /> : <div className="text-muted-foreground text-center py-8">
                       <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
                       <p className="text-sm font-medium">No content generated yet.</p>
                       <p className="text-xs mt-1">

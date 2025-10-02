@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Download, FileText, FileSpreadsheet, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import detectAndFormatTables from '@/utils/tableFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface GeneratedResponseDisplayProps {
   response: string | null;
@@ -67,7 +68,7 @@ const GeneratedResponseDisplay = ({
       </div>
       <div 
         className="p-4 rounded-md bg-gray-50 dark:bg-finance-dark-blue/20 text-sm response-container"
-        dangerouslySetInnerHTML={{ __html: formattedResponse }}
+        dangerouslySetInnerHTML={createSafeMarkup(formattedResponse)}
       />
       <style>{`
         .response-container {

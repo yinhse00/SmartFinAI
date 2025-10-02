@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface TypingAnimationProps {
   text: string;
@@ -206,7 +207,7 @@ const TypingAnimation: React.FC<TypingAnimationProps> = ({
   return (
     <div className={`${className} cursor-pointer`} onClick={handleClick}>
       {renderAsHTML ? (
-        <div dangerouslySetInnerHTML={{ __html: displayedText }} />
+        <div dangerouslySetInnerHTML={createSafeMarkup(displayedText)} />
       ) : (
         <>
           {displayedText}

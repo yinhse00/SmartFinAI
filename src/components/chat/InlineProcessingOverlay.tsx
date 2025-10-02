@@ -4,6 +4,7 @@ import { WorkflowStep } from './hooks/workflow/types';
 import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check, Zap } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface InlineProcessingOverlayProps {
   currentStep: WorkflowStep | 'preparing' | 'processing' | 'finalizing' | 'reviewing';
@@ -205,7 +206,7 @@ const InlineProcessingOverlay: React.FC<InlineProcessingOverlayProps> = ({
                 {status === 'active' && stepProgress && (
                   <p 
                     className="text-sm opacity-80"
-                    dangerouslySetInnerHTML={{ __html: htmlFormatter.applyHtmlFormatting(stepProgress) }}
+                    dangerouslySetInnerHTML={createSafeMarkup(htmlFormatter.applyHtmlFormatting(stepProgress))}
                   />
                 )}
               </div>

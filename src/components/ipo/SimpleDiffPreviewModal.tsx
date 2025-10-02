@@ -6,6 +6,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { CheckCircle, Plus, Edit3, Loader2 } from 'lucide-react';
 import { diffGenerator, type DiffResult } from '@/services/ipo/diffGenerator';
 import { ipoMessageFormatter } from '@/services/ipo/ipoMessageFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface SimpleDiffPreviewModalProps {
   isOpen: boolean;
@@ -117,9 +118,7 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
                             </div>
                             <div 
                               className="prose prose-sm w-full dark:prose-invert break-words overflow-wrap-anywhere"
-                              dangerouslySetInnerHTML={{ 
-                                __html: ipoMessageFormatter.formatMessage(change.content) 
-                              }}
+                              dangerouslySetInnerHTML={createSafeMarkup(ipoMessageFormatter.formatMessage(change.content))}
                             />
                           </div>
                         </div>

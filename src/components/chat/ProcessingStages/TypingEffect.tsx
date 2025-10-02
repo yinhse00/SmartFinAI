@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface TypingEffectProps {
   messages: string[];
@@ -90,7 +91,7 @@ const TypingEffect: React.FC<TypingEffectProps> = ({ messages, progress, isVisib
 
   return (
     <div className={`text-sm text-gray-600 dark:text-gray-400 mt-3 p-2 ${getBgColorClass()} rounded border border-gray-200 dark:border-gray-700 min-h-[2rem]`}>
-      <span dangerouslySetInnerHTML={{ __html: formattedOutput }} />
+      <span dangerouslySetInnerHTML={createSafeMarkup(formattedOutput)} />
       <span className="animate-pulse inline-block w-2 h-4 ml-0.5 bg-gray-400 dark:bg-gray-500"></span>
     </div>
   );

@@ -3,6 +3,7 @@ import React from 'react';
 import { WorkflowStep } from './hooks/workflow/types';
 import { Loader2, Brain, Database, MessagesSquare, ListChecks, Check } from 'lucide-react';
 import { htmlFormatter } from '@/services/response/modules/htmlFormatter';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface ProcessingOverlayProps {
   currentStep: WorkflowStep;
@@ -96,12 +97,12 @@ const ProcessingOverlay: React.FC<ProcessingOverlayProps> = ({
                 </div>
                 <div className="flex-1">
                   <p className="font-medium">{stepLabels[step]}</p>
-                  {status === 'active' && (
-                    <p 
-                      className="text-sm opacity-80"
-                      dangerouslySetInnerHTML={{ __html: htmlFormatter.applyHtmlFormatting(stepProgress) }}
-                    />
-                  )}
+                {status === 'active' && (
+                  <p 
+                    className="text-sm opacity-80"
+                    dangerouslySetInnerHTML={createSafeMarkup(htmlFormatter.applyHtmlFormatting(stepProgress))}
+                  />
+                )}
                 </div>
                 {status === 'active' && (
                   <div className="ml-2">

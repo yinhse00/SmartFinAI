@@ -8,6 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { CheckCircle, FileText, Building, Calendar, Loader2, AlertTriangle, Eye, Code, BarChart3 } from 'lucide-react';
 import { ProfessionalDraftResult } from '@/services/ipo/professionalDraftGenerator';
 import { textDiffEngine } from '@/utils/textDiffEngine';
+import { createSafeMarkup } from '@/utils/sanitize';
 
 interface EnhancedPreviewModalProps {
   isOpen: boolean;
@@ -222,7 +223,7 @@ export const EnhancedPreviewModal: React.FC<EnhancedPreviewModalProps> = ({
                           </div>
                         ) : (
                           <div 
-                            dangerouslySetInnerHTML={{ __html: diffResult.markedUpText }}
+                            dangerouslySetInnerHTML={createSafeMarkup(diffResult.markedUpText)}
                             className="diff-content"
                           />
                         )
