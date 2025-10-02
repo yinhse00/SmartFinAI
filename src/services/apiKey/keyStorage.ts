@@ -35,8 +35,6 @@ export function loadKeysFromStorage(): string[] {
         keys = [legacyKey];
       }
     }
-    
-    // Key access validation completed (debug logging removed for security)
   } catch (e) {
     console.warn('Could not parse API keys from storage:', e);
   }
@@ -54,7 +52,7 @@ export function saveKeysToStorage(keys: string[]) {
     localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(validKeys));
     localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(validKeys));
   } catch (e) {
-    console.error('Failed to save API keys');
+    console.error('Failed to save API keys:', e);
   }
 }
 
@@ -68,7 +66,7 @@ export function setLegacySingleKey(key: string): void {
     localStorage.setItem(LEGACY_SINGLE_KEY, key);
     localStorage.setItem(LEGACY_SINGLE_KEY_BACKUP, key);
     
-    // Also save to array storage to ensure grokKeyManager can access it
+    // CRITICAL FIX: Also save to array storage to ensure grokKeyManager can access it
     const currentKeys = loadKeysFromStorage();
     const updatedKeys = currentKeys.includes(key) ? currentKeys : [...currentKeys, key];
     saveKeysToStorage(updatedKeys);
@@ -99,13 +97,13 @@ export function getGoogleApiKey(): string {
 
 export function setGoogleApiKey(key: string): void {
   if (typeof key !== 'string' || !key.startsWith('AIza') || key.length < 20) {
-    console.error('Invalid Google API key format');
+    console.error('Invalid Google API key format, not saving');
     return;
   }
   try {
     localStorage.setItem(GOOGLE_API_KEY, key);
   } catch (e) {
-    console.warn('Failed to store Google API key');
+    console.warn('Failed to store Google API key:', e);
   }
 }
 
