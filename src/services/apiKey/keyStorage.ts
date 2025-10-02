@@ -36,14 +36,7 @@ export function loadKeysFromStorage(): string[] {
       }
     }
     
-    // Debug logging to help troubleshoot key access issues
-    console.log(`🔧 API Key Debug - Found ${keys.length} valid keys:`, {
-      primaryExists: !!localStorage.getItem(PRIMARY_KEYS_KEY),
-      backupExists: !!localStorage.getItem(BACKUP_KEYS_KEY),
-      legacyExists: !!localStorage.getItem(LEGACY_SINGLE_KEY),
-      legacyBackupExists: !!localStorage.getItem(LEGACY_SINGLE_KEY_BACKUP),
-      keysFound: keys.length
-    });
+    // Key access validation completed (debug logging removed for security)
   } catch (e) {
     console.warn('Could not parse API keys from storage:', e);
   }
@@ -60,9 +53,8 @@ export function saveKeysToStorage(keys: string[]) {
   try {
     localStorage.setItem(PRIMARY_KEYS_KEY, JSON.stringify(validKeys));
     localStorage.setItem(BACKUP_KEYS_KEY, JSON.stringify(validKeys));
-    console.log('API keys saved to both storages.');
   } catch (e) {
-    console.error('Failed to save API keys:', e);
+    console.error('Failed to save API keys');
   }
 }
 
@@ -76,12 +68,10 @@ export function setLegacySingleKey(key: string): void {
     localStorage.setItem(LEGACY_SINGLE_KEY, key);
     localStorage.setItem(LEGACY_SINGLE_KEY_BACKUP, key);
     
-    // CRITICAL FIX: Also save to array storage to ensure grokKeyManager can access it
+    // Also save to array storage to ensure grokKeyManager can access it
     const currentKeys = loadKeysFromStorage();
     const updatedKeys = currentKeys.includes(key) ? currentKeys : [...currentKeys, key];
     saveKeysToStorage(updatedKeys);
-    
-    console.log('API key saved to all storage locations for maximum compatibility');
   } catch (error) {
     console.error('Failed to set API key in localStorage:', error);
   }
@@ -109,14 +99,13 @@ export function getGoogleApiKey(): string {
 
 export function setGoogleApiKey(key: string): void {
   if (typeof key !== 'string' || !key.startsWith('AIza') || key.length < 20) {
-    console.error('Invalid Google API key format, not saving');
+    console.error('Invalid Google API key format');
     return;
   }
   try {
     localStorage.setItem(GOOGLE_API_KEY, key);
-    console.log('Google API key saved successfully');
   } catch (e) {
-    console.warn('Failed to store Google API key:', e);
+    console.warn('Failed to store Google API key');
   }
 }
 

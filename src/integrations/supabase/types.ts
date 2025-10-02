@@ -1271,6 +1271,18 @@ export type Database = {
           table_name: string
         }[]
       }
+      is_active_project_member: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_admin: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_project_owner: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
       reset_monthly_usage: {
         Args: Record<PropertyKey, never>
         Returns: undefined

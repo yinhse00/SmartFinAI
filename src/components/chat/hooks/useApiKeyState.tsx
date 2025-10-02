@@ -58,30 +58,18 @@ export const useApiKeyState = () => {
       if (chatPreference.provider === AIProvider.GROK) {
         const hasGrokKey = hasGrokApiKey();
         if (!hasGrokKey) {
-          // Try to set default API key first
-          const defaultApiKey = 'xai-VDZl0d1KOqa1a6od7PwcSJa8H6voWmnmPo1P97ElrW2JHHD7pF3kFxm7Ii5Or6SdhairQkgBlQ1zOci3';
-          setGrokApiKey(defaultApiKey);
-          
-          // Verify key was stored
-          setTimeout(() => {
-            const keyStored = hasGrokApiKey();
-            setIsGrokApiKeySet(keyStored);
-            
-            if (!keyStored) {
-              setKeyStatus({
-                isValidating: false,
-                isValid: false,
-                message: 'Unable to store API key in browser storage. Private browsing mode may block storage.',
-                lastChecked: Date.now()
-              });
-              toast({
-                title: "API Key Storage Issue",
-                description: "Unable to store API key in browser storage. Private browsing mode may block storage.",
-                variant: "destructive"
-              });
-              return;
-            }
-          }, 500);
+          setKeyStatus({
+            isValidating: false,
+            isValid: false,
+            message: 'No Grok API key configured. Please set up your API key.',
+            lastChecked: Date.now()
+          });
+          toast({
+            title: "Grok API Key Required",
+            description: "Please configure your Grok API key to use this feature.",
+            variant: "destructive"
+          });
+          return;
         }
         
         // Test the Grok connection
