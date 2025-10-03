@@ -12,7 +12,8 @@ import { hasGrokApiKey, hasGoogleApiKey, setGrokApiKey, setGoogleApiKey } from '
 import { AI_PROVIDERS } from '@/config/aiModels';
 import { AIProvider } from '@/types/aiProvider';
 import { useToast } from '@/hooks/use-toast';
-import { Settings as SettingsIcon, Key } from 'lucide-react';
+import { Settings as SettingsIcon, Key, Zap } from 'lucide-react';
+import AIPreferencesTab from '@/components/settings/AIPreferencesTab';
 
 const SettingsPage = () => {
   const { toast } = useToast();
@@ -80,8 +81,12 @@ const SettingsPage = () => {
             <p className="text-muted-foreground">Technical settings and API key management</p>
           </div>
 
-          <Tabs defaultValue="api-keys" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
+          <Tabs defaultValue="ai-preferences" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="ai-preferences" className="flex items-center gap-2">
+                <Zap className="h-4 w-4" />
+                AI Preferences
+              </TabsTrigger>
               <TabsTrigger value="api-keys" className="flex items-center gap-2">
                 <Key className="h-4 w-4" />
                 API Keys
@@ -91,6 +96,10 @@ const SettingsPage = () => {
                 Account
               </TabsTrigger>
             </TabsList>
+
+            <TabsContent value="ai-preferences" className="space-y-6">
+              <AIPreferencesTab />
+            </TabsContent>
 
 
           <TabsContent value="api-keys" className="space-y-6">
