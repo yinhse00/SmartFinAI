@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { latexContentService } from '@/services/ipo/latexContentService';
 import { LaTeXGenerationRequest, LaTeXGenerationResponse } from '@/types/latex';
 import { useToast } from '@/hooks/use-toast';
-import { loadKeysFromStorage } from '@/services/apiKey/keyStorage';
+import { hasGrokApiKey } from '@/services/apiKeyService';
 
 export const useLaTeXGeneration = () => {
   const [isGenerating, setIsGenerating] = useState(false);
@@ -17,8 +17,7 @@ export const useLaTeXGeneration = () => {
     
     try {
       // Check API key
-      const apiKeys = loadKeysFromStorage();
-      if (apiKeys.length === 0) {
+      if (!hasGrokApiKey()) {
         throw new Error('No API key configured. Please set up your X.AI API key.');
       }
       

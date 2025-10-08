@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { ipoContentGenerationService } from '@/services/ipo/ipoContentGenerationService';
 import { IPOContentGenerationRequest, IPOContentGenerationResponse, IPOSection } from '@/types/ipo';
 import { useToast } from '@/hooks/use-toast';
-import { loadKeysFromStorage, getGoogleApiKey } from '@/services/apiKey/keyStorage';
+import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { AIProvider } from '@/types/aiProvider';
 
@@ -27,12 +27,10 @@ export const useIPOContentGeneration = () => {
       let providerName = '';
       
       if (preference.provider === AIProvider.GROK) {
-        const grokKeys = loadKeysFromStorage();
-        hasValidKey = grokKeys.length > 0;
+        hasValidKey = hasGrokApiKey();
         providerName = 'Grok (X.AI)';
       } else if (preference.provider === AIProvider.GOOGLE) {
-        const googleKey = getGoogleApiKey();
-        hasValidKey = googleKey.length > 0;
+        hasValidKey = hasGoogleApiKey();
         providerName = 'Google';
       }
       

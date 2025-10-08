@@ -350,7 +350,7 @@ export const documentGenerationService = {
       }
       
       // Generate and return blob
-      const pptxBuffer = await pres.write({ outputType: 'arraybuffer' });
+      const pptxBuffer = await pres.write({ outputType: 'arraybuffer' }) as ArrayBuffer;
       return new Blob([pptxBuffer], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
     } catch (error) {
       console.error("Error generating PowerPoint document:", error);

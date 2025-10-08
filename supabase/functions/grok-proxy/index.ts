@@ -1,5 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.8';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,43 @@ serve(async (req) => {
 
   try {
     console.log(`🚀 Grok Proxy: ${req.method} ${req.url}`);
+    
+    // Verify authentication (JWT required)
+    const authHeader = req.headers.get('authorization');
+    if (!authHeader) {
+      console.error('❌ No authorization header');
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    // Create Supabase client to verify user
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_ANON_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: {
+        headers: { Authorization: authHeader },
+      },
+    });
+
+    // Verify user authentication
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      console.error('❌ Authentication failed:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid authentication' }),
+        {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
+    }
+
+    console.log(`✅ Authenticated user: ${user.id}`);
     
     // Get the API key from Supabase environment
     const grokApiKey = Deno.env.get('GROK_API_KEY');
@@ -97,6 +135,17 @@ serve(async (req) => {
     // Get the response data
     const responseData = await response.json();
     console.log(`✅ Successful response from Grok API`);
+
+    // Track API usage (async, don't wait)
+    supabase.from('api_usage').insert({
+      user_id: user.id,
+      provider: 'grok',
+      model_id: requestBody?.model || 'grok-beta',
+      tokens_used: responseData?.usage?.total_tokens || 0,
+      feature_context: 'grok-proxy',
+    }).then(({ error }) => {
+      if (error) console.warn('Failed to track API usage:', error);
+    });
 
     return new Response(
       JSON.stringify(responseData),

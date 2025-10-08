@@ -20,12 +20,12 @@ export {
   trackResponseQuality
 } from './apiKey/keyUsageTracker';
 
-// Re-export Perplexity-related functions
+// Re-export Perplexity-related functions (synchronous versions for backward compatibility)
 export {
-  getPerplexityApiKey,
-  setPerplexityApiKey,
-  hasPerplexityApiKey,
-  getGoogleApiKey,
-  setGoogleApiKey,
-  hasGoogleApiKey
-} from './apiKey/keyStorage';
+  getPerplexityApiKeySync as getPerplexityApiKey,
+  setPerplexityApiKeySync as setPerplexityApiKey,
+  hasPerplexityApiKeySync as hasPerplexityApiKey,
+  getGoogleApiKeySync as getGoogleApiKey,
+  setGoogleApiKeySync as setGoogleApiKey,
+  hasGoogleApiKeySync as hasGoogleApiKey
+} from './apiKey/keyStorageSync';

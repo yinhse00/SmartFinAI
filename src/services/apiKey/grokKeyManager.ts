@@ -3,15 +3,16 @@
  * Enhanced with better CORS and batch continuation handling.
  */
 import { 
-  loadKeysFromStorage, 
-  saveKeysToStorage, 
+  loadKeysFromStorageSync as loadKeysFromStorage,
+  saveKeysToStorageSync as saveKeysToStorage, 
   filterValidKeys, 
-  setLegacySingleKey, 
+  setLegacySingleKeySync as setLegacySingleKey, 
   DEFAULT_DEPLOYMENT_KEYS,
-  getPerplexityApiKey, 
-  setPerplexityApiKey, 
-  hasPerplexityApiKey,
-} from './keyStorage';
+  getPerplexityApiKeySync as getPerplexityApiKey, 
+  setPerplexityApiKeySync as setPerplexityApiKey, 
+  hasPerplexityApiKeySync as hasPerplexityApiKey,
+  refreshKeyCache
+} from './keyStorageSync';
 
 import {
   trackTokenUsage,
@@ -293,14 +294,15 @@ export function getBatchContinuationKey(
 /**
  * Set multiple API keys at once with validation
  */
-export function setGrokApiKeys(keys: string[]): void {
+export async function setGrokApiKeys(keys: string[]): Promise<void> {
   const validKeys = keys.filter(k => typeof k === 'string' && k.startsWith('xai-') && k.length >= 20);
   if (validKeys.length === 0) {
     console.error('No valid API keys provided');
     return;
   }
   
-  saveKeysToStorage(validKeys);
+  await saveKeysToStorage(validKeys);
+  await refreshKeyCache(); // Refresh the cache
   clearUsage();
   currentKeyIndex = 0; // Reset the index when setting new keys
   // Clear conversation-key associations when keys change
@@ -311,14 +313,15 @@ export function setGrokApiKeys(keys: string[]): void {
 /**
  * Set a single API key (legacy support)
  */
-export function setGrokApiKey(key: string): void {
+export async function setGrokApiKey(key: string): Promise<void> {
   if (typeof key !== 'string' || !key.startsWith('xai-') || key.length < 20) {
     console.error('Invalid API key format, not saving');
     return;
   }
   
-  setLegacySingleKey(key);
-  saveKeysToStorage([key]);
+  await setLegacySingleKey(key);
+  await saveKeysToStorage([key]);
+  await refreshKeyCache(); // Refresh the cache
   // Clear conversation-key associations when key changes
   conversationKeyMap.clear();
   console.log('API key saved successfully');
