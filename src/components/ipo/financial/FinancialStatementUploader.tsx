@@ -7,6 +7,9 @@ import { Upload, File, X, CheckCircle } from 'lucide-react';
 import { useFileUpload } from '@/hooks/useFileUpload';
 import { financialDataExtractor, FinancialData } from '@/services/financial/financialDataExtractor';
 import { supabase } from '@/integrations/supabase/client';
+import { aiDocumentStructureAnalyzer } from '@/services/financial/aiDocumentStructureAnalyzer';
+import { documentStructureService } from '@/services/financial/documentStructureService';
+import { grokService } from '@/services/grokService';
 
 interface FinancialStatementUploaderProps {
   projectId: string;
@@ -56,14 +59,31 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
           prev.map(f => f.id === fileId ? { ...f, status: 'processing' } : f)
         );
 
-        // Extract financial data
+        // Extract text content from document
+        const documentContent = await grokService.extractDocumentText(file);
+        
+        // Step 1: Discover document structure using AI
+        console.log('🔍 Analyzing document structure with AI...');
+        const analysisResult = await aiDocumentStructureAnalyzer.analyzeDocumentStructure(
+          documentContent,
+          file.name
+        );
+        
+        console.log('✓ Document analysis complete:', {
+          quality: analysisResult.quality.overall,
+          contentBlocks: analysisResult.structure.contentBlocks.length,
+          crossReferences: analysisResult.structure.crossReferences.length,
+          processingTime: `${analysisResult.processingTime}ms`
+        });
+
+        // Step 2: Extract financial data (existing logic)
         const extractionResult = await financialDataExtractor.extractFinancialData(file);
         
         if (!extractionResult.success || !extractionResult.data) {
           throw new Error(extractionResult.error || 'Failed to extract financial data');
         }
 
-        // Save to database
+        // Step 3: Save to database
         const { data: savedStatement, error: saveError } = await supabase
           .from('financial_statements')
           .insert({
@@ -82,6 +102,18 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
           throw new Error(`Failed to save financial statement: ${saveError.message}`);
         }
 
+        // Step 4: Save AI-discovered structure
+        console.log('💾 Saving document structure to database...');
+        await documentStructureService.saveContentBlocks(
+          savedStatement.id,
+          analysisResult.structure.contentBlocks
+        );
+        
+        await documentStructureService.saveCrossReferences(
+          savedStatement.id,
+          analysisResult.structure.crossReferences
+        );
+
         // Update status to completed
         setUploadedFiles(prev => 
           prev.map(f => f.id === fileId ? { 
@@ -91,7 +123,7 @@ export const FinancialStatementUploader: React.FC<FinancialStatementUploaderProp
           } : f)
         );
 
-        onFileProcessed(savedStatement.id, extractionResult.data);
+        onFileProcessed(savedStatement.id, extractionResult.data, documentContent);
 
         toast({
           title: "Financial statement processed",

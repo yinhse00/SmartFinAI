@@ -490,6 +490,98 @@ export type Database = {
           },
         ]
       }
+      financial_content_blocks: {
+        Row: {
+          block_type: string
+          confidence_score: number | null
+          content: Json
+          created_at: string | null
+          financial_statement_id: string | null
+          id: string
+          page_numbers: number[] | null
+          relevance_score: number | null
+          section_path: string[] | null
+          semantic_classification: Json | null
+        }
+        Insert: {
+          block_type: string
+          confidence_score?: number | null
+          content: Json
+          created_at?: string | null
+          financial_statement_id?: string | null
+          id?: string
+          page_numbers?: number[] | null
+          relevance_score?: number | null
+          section_path?: string[] | null
+          semantic_classification?: Json | null
+        }
+        Update: {
+          block_type?: string
+          confidence_score?: number | null
+          content?: Json
+          created_at?: string | null
+          financial_statement_id?: string | null
+          id?: string
+          page_numbers?: number[] | null
+          relevance_score?: number | null
+          section_path?: string[] | null
+          semantic_classification?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_content_blocks_financial_statement_id_fkey"
+            columns: ["financial_statement_id"]
+            isOneToOne: false
+            referencedRelation: "financial_statements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_cross_references: {
+        Row: {
+          confidence: number | null
+          created_at: string | null
+          id: string
+          relationship_metadata: Json | null
+          relationship_type: string
+          source_block_id: string | null
+          target_block_id: string | null
+        }
+        Insert: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          relationship_metadata?: Json | null
+          relationship_type: string
+          source_block_id?: string | null
+          target_block_id?: string | null
+        }
+        Update: {
+          confidence?: number | null
+          created_at?: string | null
+          id?: string
+          relationship_metadata?: Json | null
+          relationship_type?: string
+          source_block_id?: string | null
+          target_block_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_cross_references_source_block_id_fkey"
+            columns: ["source_block_id"]
+            isOneToOne: false
+            referencedRelation: "financial_content_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_cross_references_target_block_id_fkey"
+            columns: ["target_block_id"]
+            isOneToOne: false
+            referencedRelation: "financial_content_blocks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_statements: {
         Row: {
           created_at: string
