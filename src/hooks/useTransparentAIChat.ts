@@ -296,32 +296,36 @@ export const useTransparentAIChat = ({
   }, [toast]);
 
   // Preview suggestion
-  const previewSuggestion = useCallback(async (suggestionId: string) => {
+  const previewSuggestion = useCallback(async (suggestion: {
+    id: string;
+    title: string;
+    description: string;
+    suggestedAction: string;
+    severity?: string;
+    impact?: string;
+  }) => {
     try {
       const preview = await transparentAnalysisService.generateSuggestionPreview(
-        suggestionId,
+        {
+          title: suggestion.title,
+          description: suggestion.description,
+          suggestedAction: suggestion.suggestedAction,
+          severity: suggestion.severity,
+          impact: suggestion.impact
+        },
         currentContent,
         selectedSection
       );
 
-      // Add preview message to chat
-      const previewMessage: TransparentChatMessage = {
-        id: `preview_${Date.now()}`,
-        type: 'ai',
-        isUser: false,
-        content: `Here's a preview of what would change if you apply this suggestion:`,
-        timestamp: new Date(),
-        changePreview: preview
-      };
-
-      setMessages(prev => [...prev, previewMessage]);
+      return preview;
     } catch (error) {
       console.error('Preview generation failed:', error);
       toast({
         title: "Preview Failed",
-        description: "Unable to generate preview for this suggestion.",
+        description: "Could not generate preview. Please try applying directly.",
         variant: "destructive"
       });
+      return null;
     }
   }, [currentContent, selectedSection, toast]);
 

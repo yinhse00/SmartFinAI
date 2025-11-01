@@ -13,6 +13,8 @@ import { ImplementButton } from '@/components/chat/message/ImplementButton';
 import { Message } from '@/components/chat/ChatMessage';
 import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
+import { SimpleDiffPreviewModal } from '../SimpleDiffPreviewModal';
+import { useToast } from '@/hooks/use-toast';
 interface TransparentAIPanelProps {
   projectId: string;
   selectedSection: string;
@@ -48,6 +50,9 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [activePreview, setActivePreview] = useState<any>(null);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewContent, setPreviewContent] = useState<{ original: string; suggested: string } | null>(null);
+  const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
   const [showQuickActions, setShowQuickActions] = useState(false);
   const [apiKeyStatus, setApiKeyStatus] = useState({
     hasKey: false,
@@ -56,6 +61,7 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [lastError, setLastError] = useState<string | null>(null);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   // Auto-analyze content when it changes
   useEffect(() => {
@@ -111,8 +117,22 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
   const handleSuggestionApply = async (suggestionId: string, customAction?: string) => {
     await applySuggestion(suggestionId, customAction);
   };
-  const handleSuggestionPreview = async (suggestionId: string) => {
-    await previewSuggestion(suggestionId);
+  const handleSuggestionPreview = async (suggestion: any) => {
+    setIsGeneratingPreview(true);
+    try {
+      const preview = await previewSuggestion(suggestion);
+      if (preview?.fullPreview) {
+        setPreviewContent(preview.fullPreview);
+        setPreviewModalOpen(true);
+      } else {
+        toast({
+          title: "Preview Generated",
+          description: "Check the chat for preview details",
+        });
+      }
+    } finally {
+      setIsGeneratingPreview(false);
+    }
   };
   return <Card className={`${isCollapsed ? 'h-auto' : 'h-full'} rounded-none border-0 border-l transition-all duration-300`}>
       <CardHeader className="pb-3">
@@ -218,10 +238,28 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
               </div>
               
               {/* Urgent Issues */}
-              {currentAnalysis.urgentIssues.map((issue, index) => <SuggestionCard key={`issue_${index}`} id={`issue_${index}`} type="issue" severity={issue.severity} title={issue.title} description={issue.description} reasoning={`HKEX compliance check identified this as a ${issue.severity} priority issue that may affect regulatory approval.`} suggestedAction={issue.suggestedFix || "Review and address this compliance requirement"} confidence={0.9} citations={['HKEX Listing Rules']} onApply={handleSuggestionApply} onReject={rejectSuggestion} onPreview={handleSuggestionPreview} isRejected={rejectedSuggestions.has(`issue_${index}`)} />)}
+              {currentAnalysis.urgentIssues.map((issue, index) => {
+                const issueData = {
+                  id: `issue_${index}`,
+                  title: issue.title,
+                  description: issue.description,
+                  suggestedAction: issue.suggestedFix || "Review and address this compliance requirement",
+                  severity: issue.severity
+                };
+                return <SuggestionCard key={issueData.id} id={issueData.id} type="issue" severity={issue.severity} title={issue.title} description={issue.description} reasoning={`HKEX compliance check identified this as a ${issue.severity} priority issue that may affect regulatory approval.`} suggestedAction={issueData.suggestedAction} confidence={0.9} citations={['HKEX Listing Rules']} onApply={handleSuggestionApply} onReject={rejectSuggestion} onPreview={() => handleSuggestionPreview(issueData)} isRejected={rejectedSuggestions.has(`issue_${index}`)} isGeneratingPreview={isGeneratingPreview} />;
+              })}
               
               {/* Quick Wins */}
-              {currentAnalysis.quickWins.map((win, index) => <SuggestionCard key={`win_${index}`} id={`win_${index}`} type="improvement" impact={win.impact} title={win.title} description={win.description} reasoning={`Content analysis suggests this improvement would enhance quality with minimal effort required.`} suggestedAction={win.suggestedAction} confidence={0.8} onApply={handleSuggestionApply} onReject={rejectSuggestion} onPreview={handleSuggestionPreview} isRejected={rejectedSuggestions.has(`win_${index}`)} />)}
+              {currentAnalysis.quickWins.map((win, index) => {
+                const winData = {
+                  id: `win_${index}`,
+                  title: win.title,
+                  description: win.description,
+                  suggestedAction: win.suggestedAction,
+                  impact: win.impact
+                };
+                return <SuggestionCard key={winData.id} id={winData.id} type="improvement" impact={win.impact} title={win.title} description={win.description} reasoning={`Content analysis suggests this improvement would enhance quality with minimal effort required.`} suggestedAction={win.suggestedAction} confidence={0.8} onApply={handleSuggestionApply} onReject={rejectSuggestion} onPreview={() => handleSuggestionPreview(winData)} isRejected={rejectedSuggestions.has(`win_${index}`)} isGeneratingPreview={isGeneratingPreview} />;
+              })}
             </div>}
 
           {/* Preview Modal */}
@@ -306,5 +344,27 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
             </div>
           </div>
         </CardContent>}
+
+      {/* Preview Modal */}
+      {previewContent && (
+        <SimpleDiffPreviewModal
+          isOpen={previewModalOpen}
+          onClose={() => {
+            setPreviewModalOpen(false);
+            setPreviewContent(null);
+          }}
+          originalContent={previewContent.original}
+          suggestedContent={previewContent.suggested}
+          onApply={() => {
+            onContentUpdate(previewContent.suggested);
+            setPreviewModalOpen(false);
+            setPreviewContent(null);
+            toast({
+              title: "Changes Applied",
+              description: "The suggested changes have been applied to your content."
+            });
+          }}
+        />
+      )}
     </Card>;
 };

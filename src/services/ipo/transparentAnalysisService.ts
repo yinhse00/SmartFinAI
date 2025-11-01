@@ -268,16 +268,71 @@ export class TransparentAnalysisService {
    * Generate preview for suggestion
    */
   async generateSuggestionPreview(
-    suggestionId: string,
+    suggestion: {
+      title: string;
+      description: string;
+      suggestedAction: string;
+      severity?: string;
+      impact?: string;
+    },
     currentContent: string,
     sectionType: string
-  ): Promise<{ before: string; after: string; location?: string }> {
-    // This would generate an actual preview
-    return {
-      before: "Original content here...",
-      after: "Improved content here...",
-      location: "Section beginning"
-    };
+  ): Promise<{ before: string; after: string; location?: string; fullPreview?: { original: string; suggested: string } }> {
+    try {
+      // Use smart content merger to generate preview
+      const { smartContentMerger } = await import('./smartContentMerger');
+      
+      // Build a simulated AI response based on the suggestion
+      const simulatedAiSuggestion = `${suggestion.title}\n\n${suggestion.description}\n\n${suggestion.suggestedAction}`;
+      
+      // Generate merge preview using smart content merger
+      const mergePreview = smartContentMerger.generateMergePreview(
+        currentContent,
+        simulatedAiSuggestion
+      );
+      
+      // Extract a meaningful snippet for before/after display
+      const changes = mergePreview.changes.filter(c => c.type === 'addition' || c.type === 'modification');
+      
+      if (changes.length > 0) {
+        const firstChange = changes[0];
+        const lines = currentContent.split('\n');
+        const beforeSnippet = lines.slice(Math.max(0, firstChange.position - 2), firstChange.position + 1).join('\n');
+        const afterLines = mergePreview.merged.split('\n');
+        const afterSnippet = afterLines.slice(Math.max(0, firstChange.position - 2), firstChange.position + 3).join('\n');
+        
+        return {
+          before: beforeSnippet || currentContent.substring(0, 200),
+          after: afterSnippet || mergePreview.merged.substring(0, 200),
+          location: `Line ${firstChange.position + 1} (${mergePreview.strategy.type})`,
+          fullPreview: {
+            original: currentContent,
+            suggested: mergePreview.merged
+          }
+        };
+      }
+      
+      // If no specific changes detected, show full comparison
+      return {
+        before: currentContent.substring(0, 300),
+        after: mergePreview.merged.substring(0, 300),
+        location: `Content enhancement (${mergePreview.strategy.type})`,
+        fullPreview: {
+          original: currentContent,
+          suggested: mergePreview.merged
+        }
+      };
+      
+    } catch (error) {
+      console.error('Preview generation failed:', error);
+      
+      // Fallback to simple preview
+      return {
+        before: currentContent.substring(0, 200),
+        after: `${currentContent.substring(0, 100)}\n\n[New content would be added here based on: ${suggestion.title}]`,
+        location: 'Content will be merged intelligently'
+      };
+    }
   }
 
   // Private helper methods

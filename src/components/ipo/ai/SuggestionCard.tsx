@@ -34,9 +34,10 @@ interface SuggestionCardProps {
   };
   onApply: (id: string, customAction?: string) => void;
   onReject: (id: string) => void;
-  onPreview: (id: string) => void;
+  onPreview: () => void;
   isApplying?: boolean;
   isRejected?: boolean;
+  isGeneratingPreview?: boolean;
 }
 
 export const SuggestionCard: React.FC<SuggestionCardProps> = ({
@@ -55,7 +56,8 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
   onReject,
   onPreview,
   isApplying = false,
-  isRejected = false
+  isRejected = false,
+  isGeneratingPreview = false
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -236,11 +238,21 @@ export const SuggestionCard: React.FC<SuggestionCardProps> = ({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => onPreview(id)}
+            onClick={onPreview}
+            disabled={isGeneratingPreview}
             className="text-xs h-7"
           >
-            <Eye className="h-3 w-3 mr-1" />
-            Preview
+            {isGeneratingPreview ? (
+              <>
+                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                Previewing...
+              </>
+            ) : (
+              <>
+                <Eye className="h-3 w-3 mr-1" />
+                Preview
+              </>
+            )}
           </Button>
           
           <Button

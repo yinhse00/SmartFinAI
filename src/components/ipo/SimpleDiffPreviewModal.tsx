@@ -15,6 +15,7 @@ interface SimpleDiffPreviewModalProps {
   suggestedContent: string;
   onApply: () => void;
   isApplying?: boolean;
+  suggestionTitle?: string;
 }
 
 export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
@@ -23,7 +24,8 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
   originalContent,
   suggestedContent,
   onApply,
-  isApplying = false
+  isApplying = false,
+  suggestionTitle
 }) => {
   // Generate diff between original and suggested content
   const diffResult: DiffResult = React.useMemo(() => {
@@ -66,7 +68,7 @@ export const SimpleDiffPreviewModal: React.FC<SimpleDiffPreviewModalProps> = ({
       <DialogContent className="max-w-6xl h-[80vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3">
-            AI Suggested Changes
+            {suggestionTitle || 'AI Suggested Changes'}
             <Badge variant="outline" className="flex items-center gap-1">
               {diffResult.summary.additions > 0 && (
                 <span className="flex items-center gap-1 text-green-600">
