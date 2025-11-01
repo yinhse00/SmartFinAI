@@ -15,6 +15,7 @@ import { hasGrokApiKey, hasGoogleApiKey } from '@/services/apiKeyService';
 import { useNavigate } from 'react-router-dom';
 import { SimpleDiffPreviewModal } from '../SimpleDiffPreviewModal';
 import { useToast } from '@/hooks/use-toast';
+import { ApiKeyErrorAlert } from './ApiKeyErrorAlert';
 interface TransparentAIPanelProps {
   projectId: string;
   selectedSection: string;
@@ -196,22 +197,16 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
       </CardHeader>
       
       {!isCollapsed && <CardContent className="flex flex-col h-[calc(100vh-12rem)] p-0">
-          {/* Error Display */}
+          {/* Enhanced Error Display with API Key Guidance */}
           {lastError && (
-            <div className="mx-4 mt-4 mb-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
-              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-destructive">Error</p>
-                <p className="text-xs text-destructive/80 mt-1">{lastError}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLastError(null)}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+            <div className="mx-4 mt-4">
+              <ApiKeyErrorAlert 
+                error={lastError} 
+                onRetry={() => {
+                  setLastError(null);
+                  processMessage("Retry last request");
+                }} 
+              />
             </div>
           )}
 

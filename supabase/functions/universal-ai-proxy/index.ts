@@ -241,7 +241,10 @@ async function callGrokAPI(request: AIRequest, apiKey: string): Promise<AIRespon
   };
 }
 
-async function callGoogleAPI(request: AIRequest, apiKey: string): Promise<AIResponse> {
+async function callGoogleAPI(request: AIRequest, apiKey: string, retryCount: number = 0): Promise<AIResponse> {
+  const maxRetries = 3;
+  const baseDelay = 2000; // Start with 2 seconds
+  
   // Dynamic token allocation based on request type
   const isProfessionalDraft = request.metadata?.requestType === 'professional_draft_generation';
   const maxOutputTokens = request.metadata?.maxTokens || (isProfessionalDraft ? 100000 : 4000);
@@ -249,47 +252,81 @@ async function callGoogleAPI(request: AIRequest, apiKey: string): Promise<AIResp
 
   console.log(`Google API call - maxOutputTokens: ${maxOutputTokens}, temperature: ${temperature}, isProfessionalDraft: ${isProfessionalDraft}`);
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: request.prompt }
-            ]
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${request.model}:generateContent?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              parts: [
+                { text: request.prompt }
+              ]
+            }
+          ],
+          generationConfig: {
+            temperature: temperature,
+            topK: 32,
+            topP: 1,
+            maxOutputTokens: maxOutputTokens,
           }
-        ],
-        generationConfig: {
-          temperature: temperature,
-          topK: 32,
-          topP: 1,
-          maxOutputTokens: maxOutputTokens,
-        }
-      }),
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      
+      // Check if this is a rate limit error (429)
+      if (response.status === 429 && retryCount < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryCount); // Exponential backoff: 2s, 4s, 8s
+        const jitter = Math.random() * 1000; // Add 0-1s jitter
+        const totalDelay = delay + jitter;
+        
+        console.warn(`⚠️ Google API rate limit (429), retrying in ${Math.round(totalDelay)}ms (attempt ${retryCount + 1}/${maxRetries})`);
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, totalDelay));
+        
+        // Retry with incremented count
+        return callGoogleAPI(request, apiKey, retryCount + 1);
+      }
+      
+      throw new Error(`Google API error: ${response.status} - ${errorText}`);
     }
-  );
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Google API error: ${response.status} - ${errorText}`);
+    const data = await response.json();
+    const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    // Google doesn't return token usage in the same way, estimate based on text length
+    const tokensUsed = Math.ceil(text.length / 4); // Rough estimation
+
+    return {
+      text,
+      success: true,
+      tokensUsed,
+      provider: 'google',
+      model: request.model
+    };
+  } catch (error) {
+    // If we hit a rate limit and haven't exhausted retries, try again
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    if ((errorMsg.includes('429') || errorMsg.includes('Resource exhausted')) && retryCount < maxRetries) {
+      const delay = baseDelay * Math.pow(2, retryCount);
+      const jitter = Math.random() * 1000;
+      const totalDelay = delay + jitter;
+      
+      console.warn(`⚠️ Google API error (rate limit), retrying in ${Math.round(totalDelay)}ms (attempt ${retryCount + 1}/${maxRetries})`);
+      
+      await new Promise(resolve => setTimeout(resolve, totalDelay));
+      return callGoogleAPI(request, apiKey, retryCount + 1);
+    }
+    
+    // Re-throw if not retryable or max retries reached
+    throw error;
   }
-
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-  
-  // Google doesn't return token usage in the same way, estimate based on text length
-  const tokensUsed = Math.ceil(text.length / 4); // Rough estimation
-
-  return {
-    text,
-    success: true,
-    tokensUsed,
-    provider: 'google',
-    model: request.model
-  };
 }

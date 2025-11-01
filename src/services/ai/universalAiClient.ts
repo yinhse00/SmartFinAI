@@ -1,6 +1,7 @@
 import { AIProvider, AIRequest, AIResponse } from '@/types/aiProvider';
 import { getProviderConfig, getModelConfig } from '@/config/aiModels';
 import { supabase } from '@/integrations/supabase/client';
+import { requestThrottler } from './requestThrottler';
 
 /**
  * Universal AI client that supports multiple providers via system-owned API keys
@@ -29,21 +30,24 @@ export class UniversalAiClient {
 
       console.log(`🚀 Calling universal AI proxy for ${request.provider}`);
 
-      // Call universal AI proxy Edge Function
-      const { data, error } = await supabase.functions.invoke('universal-ai-proxy', {
-        body: {
-          provider: request.provider,
-          model: request.modelId,
-          prompt: request.prompt,
-          feature: request.metadata?.feature,
-          sessionId: request.metadata?.sessionId,
-          metadata: {
-            maxTokens: request.metadata?.maxTokens,
-            temperature: request.metadata?.temperature,
-            requestType: request.metadata?.requestType
+      // Call universal AI proxy Edge Function with throttling
+      const { data, error } = await requestThrottler.throttledRequest(
+        () => supabase.functions.invoke('universal-ai-proxy', {
+          body: {
+            provider: request.provider,
+            model: request.modelId,
+            prompt: request.prompt,
+            feature: request.metadata?.feature,
+            sessionId: request.metadata?.sessionId,
+            metadata: {
+              maxTokens: request.metadata?.maxTokens,
+              temperature: request.metadata?.temperature,
+              requestType: request.metadata?.requestType
+            }
           }
-        }
-      });
+        }),
+        request.provider
+      );
 
       if (error) {
         console.error('❌ Universal AI Proxy error:', error);
@@ -76,11 +80,11 @@ export class UniversalAiClient {
           errorMessage = 'Monthly AI usage limit exceeded';
           errorDetails = 'The system AI service has reached its monthly token limit. Add your own API key in Profile settings to continue using AI features.';
         } else if (error.message.includes('disabled') || error.message.includes('API_KEY_DISABLED') || error.message.includes('403')) {
-          errorMessage = 'API key is disabled';
-          errorDetails = 'Your API key has been disabled. Please check console.x.ai or Google AI Studio to re-enable it, or add a new key in Profile settings.';
-        } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT') || error.message.includes('Rate limit')) {
-          errorMessage = 'Rate limit exceeded';
-          errorDetails = 'Too many requests in a short time. Please wait 30-60 seconds before trying again.';
+          errorMessage = '⚠️ API Key Disabled';
+          errorDetails = 'Your Grok API key is disabled. To fix:\n• Go to console.x.ai → API Keys\n• Re-enable or create a new key\n• Or add your own API key in Profile settings';
+        } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT') || error.message.includes('Rate limit') || error.message.includes('Resource exhausted')) {
+          errorMessage = '⏳ Rate Limit Exceeded';
+          errorDetails = 'Google API quota exhausted. This happens because:\n• Grok API key is disabled (see above)\n• Too many requests to fallback Google API\n\nSolution: Re-enable Grok key at console.x.ai or wait 1-2 minutes';
         } else if (error.message.includes('Network') || error.message.includes('timeout')) {
           errorMessage = 'Network connection error';
           errorDetails = 'Could not reach the AI service. Please check your internet connection and try again.';
