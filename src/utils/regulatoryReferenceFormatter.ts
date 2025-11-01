@@ -116,7 +116,7 @@ export const enhanceWithClickableLinks = (text: string): string => {
   
   const references = extractRuleReferences(text);
   if (references.length === 0) {
-    console.log('No regulatory references found in text');
+    console.debug('No regulatory references found in text');
     return text;
   }
   

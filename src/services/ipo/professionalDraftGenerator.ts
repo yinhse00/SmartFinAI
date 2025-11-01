@@ -127,67 +127,61 @@ export class ProfessionalDraftGenerator {
     // Generate compliance checklist for enhanced requirements integration
     const complianceChecklist = await this.generateComplianceChecklist(request.sectionType);
     
-    // Enhanced prompt with compliance-first approach
-    const prompt = `
-You are a senior IPO prospectus advisor specialized in HKEX Main Board requirements. You MUST generate content that achieves 85%+ compliance with all mandatory requirements.
+    // Optimized prompt - reduced context size while maintaining quality
+    const prompt = `You are a senior IPO prospectus advisor for HKEX Main Board. Generate content with 85%+ compliance.
 
-SECTION TYPE: ${request.sectionType}
-USER REQUEST: ${request.userRequest}
+SECTION: ${request.sectionType}
+REQUEST: ${request.userRequest}
 
-CURRENT CONTENT:
-${request.currentContent}
+CURRENT CONTENT (excerpt):
+${request.currentContent.substring(0, 3000)}${request.currentContent.length > 3000 ? '...' : ''}
 
-=== MANDATORY HKEX REQUIREMENTS (MUST BE 100% ADDRESSED) ===
+MANDATORY REQUIREMENTS:
 ${detailedRequirements}
 
-=== COMPLIANCE CHECKLIST (MUST SCORE 85%+) ===
-${complianceChecklist.map(item => `☐ ${item}`).join('\n')}
+COMPLIANCE CHECKLIST:
+${complianceChecklist.slice(0, 10).map(item => `☐ ${item}`).join('\n')}
 
-ANALYSIS FINDINGS:
-${analysisContext}
+KEY PRECEDENTS:
+${precedents.length > 0 ? precedents.slice(0, 2).map(p => `${p.companyName}: ${p.keyInsights?.slice(0, 1).join('; ')}`).join('\n') : 'Apply IPO best practices'}
 
-PRECEDENT CASES FOR REFERENCE:
-${precedentContext}
+INSTRUCTIONS:
+1. Address all checklist items (85%+ compliance required)
+2. Include required subsections per HKEX format
+3. Use professional language and specific examples
+4. Add regulatory citations where needed
+5. Ensure complete response - no truncation
+6. Target: 1500-2500 words for standard sections, 2000-3500 for complex sections
 
-CRITICAL COMPLIANCE INSTRUCTIONS:
-1. MANDATORY: Address every item in the compliance checklist above
-2. Include all required subsections as specified in HKEX requirements
-3. Use specific examples and quantifiable data where mandated
-4. Include proper regulatory citations and cross-references
-5. Follow exact HKEX format requirements (tables, structure, disclosures)
-6. Ensure minimum content depth as required by HKEX standards
-7. PENALTY: Content missing mandatory elements will be rejected
-
-QUALITY STANDARDS:
-- Professional investment banking language
-- Investor-focused information hierarchy  
-- Compliance with HKEX App1A Part A requirements
-- Cross-referencing to other prospectus sections where required
-- Proper disclosure of material information
-
-COMPLETION REQUIREMENTS:
-- ENSURE COMPLETE RESPONSE - DO NOT TRUNCATE
-- Generate MINIMUM 2000 words for complex sections (Overview, Business Model)
-- Generate MINIMUM 1500 words for standard sections
-- Include ALL required subsections and elements
-- Provide thorough analysis and comprehensive disclosure
-
-VALIDATION: Before finalizing, verify each compliance checklist item is addressed. Content must achieve 85%+ compliance score.
-
-Please provide the FULL REVISED SECTION with proper IPO formatting and ALL required elements:
-`;
+Generate the COMPLETE revised section with proper IPO formatting:`;
 
     // Try multiple attempts with different providers if needed
     for (let attempt = 0; attempt < 3; attempt++) {
       console.log(`Professional draft generation attempt ${attempt + 1}/3`);
       
       try {
-        const result = await this.attemptGeneration(prompt, request, attempt);
+        const { result, provider, modelId } = await this.attemptGeneration(prompt, request, attempt);
         
         // Enhanced validation with compliance scoring
         const validation = await this.validateDraftCompleteness(result, request.sectionType);
         
-        // If compliance is too low, attempt regeneration
+        // Check for truncation and attempt recovery
+        if (validation.issues.some(issue => issue.includes('truncation'))) {
+          console.log('⚠️ Truncation detected, attempting recovery...');
+          try {
+            const recoveredResult = await this.recoverTruncatedContent(result, prompt, provider, modelId);
+            // Re-validate recovered content
+            const recoveredValidation = await this.validateDraftCompleteness(recoveredResult, request.sectionType);
+            if (recoveredValidation.isComplete || recoveredValidation.complianceScore > validation.complianceScore) {
+              console.log('✅ Truncation recovery successful');
+              return this.formatIPOSection(recoveredResult, request.sectionType);
+            }
+          } catch (recoveryError) {
+            console.warn('Truncation recovery failed:', recoveryError);
+          }
+        }
+        
+        // If compliance is sufficient, return result
         if (validation.isComplete && validation.complianceScore >= 0.85) {
           console.log('✅ Professional draft generation successful');
           return this.formatIPOSection(result, request.sectionType);
@@ -218,30 +212,83 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
   }
 
   /**
+   * Recover truncated content by requesting continuation
+   */
+  private async recoverTruncatedContent(
+    truncatedContent: string, 
+    originalPrompt: string,
+    provider: AIProvider,
+    modelId: string
+  ): Promise<string> {
+    // Find last complete sentence
+    const sentences = truncatedContent.match(/[^.!?]+[.!?]+/g) || [];
+    const lastCompleteSentence = sentences[sentences.length - 1] || '';
+    const lastWords = lastCompleteSentence.split(' ').slice(-10).join(' ');
+    
+    const continuationPrompt = `Continue the IPO prospectus section from where it was cut off.
+
+LAST COMPLETE CONTENT:
+...${lastWords}
+
+INSTRUCTIONS:
+- Continue naturally from the last sentence
+- Complete any unfinished subsections
+- Maintain consistent tone and format
+- Do NOT repeat previous content
+- Provide ONLY the continuation (no introduction)
+
+Continue here:`;
+
+    console.log('Requesting continuation from:', lastWords.substring(0, 100));
+    
+    const aiResponse = await universalAiClient.generateContent({
+      prompt: continuationPrompt,
+      provider,
+      modelId,
+      metadata: { 
+        requestType: 'truncation_recovery',
+        maxTokens: 8000,
+        temperature: 0.3
+      }
+    });
+    
+    if (!aiResponse.success) {
+      throw new Error('Continuation failed: ' + aiResponse.error);
+    }
+    
+    // Merge original and continuation
+    return truncatedContent + '\n\n' + aiResponse.text;
+  }
+
+  /**
    * Attempt generation with smart provider selection
    */
-  private async attemptGeneration(prompt: string, request: DraftGenerationRequest, attempt: number): Promise<string> {
+  private async attemptGeneration(prompt: string, request: DraftGenerationRequest, attempt: number): Promise<{
+    result: string;
+    provider: AIProvider;
+    modelId: string;
+  }> {
     // Smart provider selection based on attempt
     let provider: AIProvider;
     let modelId: string;
     let maxTokens: number;
     
     if (attempt === 0) {
-      // First attempt: Use Google Gemini for high token limit
+      // First attempt: Use Google Gemini with optimized token limit
       provider = AIProvider.GOOGLE;
       modelId = 'gemini-2.0-flash';
-      maxTokens = 100000; // Very high for complex sections
+      maxTokens = 16000; // Optimized for reliable complete responses
     } else if (attempt === 1) {
-      // Second attempt: Use user preference with enhanced params
+      // Second attempt: Use user preference with reduced tokens
       const userPreference = getFeatureAIPreference('ipo');
       provider = userPreference.provider;
       modelId = userPreference.model;
-      maxTokens = 50000;
+      maxTokens = 12000;
     } else {
-      // Final attempt: Fallback to Grok with maximum tokens
+      // Final attempt: Fallback to Grok with conservative tokens
       provider = AIProvider.GROK;
       modelId = 'grok-4-0709';
-      maxTokens = 25000;
+      maxTokens = 8000;
     }
     
     console.log(`Attempting generation with ${provider}/${modelId}, maxTokens: ${maxTokens}`);
@@ -262,7 +309,11 @@ Please provide the FULL REVISED SECTION with proper IPO formatting and ALL requi
       throw new Error(aiResponse.error || 'AI generation failed');
     }
     
-    return aiResponse.text;
+    return {
+      result: aiResponse.text,
+      provider,
+      modelId
+    };
   }
 
   /**

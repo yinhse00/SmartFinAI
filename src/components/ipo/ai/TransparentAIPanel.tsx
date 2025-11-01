@@ -176,6 +176,38 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
       </CardHeader>
       
       {!isCollapsed && <CardContent className="flex flex-col h-[calc(100vh-12rem)] p-0">
+          {/* Error Display */}
+          {lastError && (
+            <div className="mx-4 mt-4 mb-2 p-3 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-destructive">Error</p>
+                <p className="text-xs text-destructive/80 mt-1">{lastError}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setLastError(null)}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* Truncation Warning */}
+          {currentAnalysis?.urgentIssues.some(issue => issue.title?.toLowerCase().includes('incomplete') || issue.title?.toLowerCase().includes('truncat')) && (
+            <div className="mx-4 mt-4 mb-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-amber-600 dark:text-amber-400">Content May Be Incomplete</p>
+                <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                  The AI response was truncated. Try regenerating with shorter request or break into smaller sections.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Current Analysis Suggestions */}
           {currentAnalysis && currentAnalysis.hasIssues && <div className="px-4 pb-4 border-b space-y-3">
               <div className="flex items-center justify-between">
