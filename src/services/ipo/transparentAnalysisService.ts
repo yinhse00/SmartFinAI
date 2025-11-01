@@ -200,18 +200,39 @@ export class TransparentAnalysisService {
     } catch (error) {
       console.error('Professional draft generation failed:', error);
       
-      let errorMessage = "I encountered an error while generating the professional draft. Please try again or contact support.";
+      // Provide detailed error categorization
+      let errorMessage = "I encountered an error while generating the professional draft.";
+      
       if (error instanceof Error) {
-        if (error.message.includes('Monthly token limit exceeded')) {
-          errorMessage = "The AI service has reached its monthly usage limit. Please try again later.";
-        } else if (error.message.includes('AI service temporarily unavailable')) {
-          errorMessage = "The AI service is temporarily unavailable. Please try again in a few moments.";
+        if (error.message.includes('Monthly token limit exceeded') || error.message.includes('LIMIT_EXCEEDED') || error.message.includes('402')) {
+          errorMessage = "⚠️ **AI Usage Limit Reached**\n\nThe system AI service has reached its monthly token limit. You can:\n• Wait until next month for the limit to reset\n• Add your own Grok or Google API key in Profile settings to continue";
+        } else if (error.message.includes('disabled') || error.message.includes('API_KEY_DISABLED') || error.message.includes('403')) {
+          errorMessage = "⚠️ **API Key Disabled**\n\nYour API key appears to be disabled:\n• Go to console.x.ai (Grok) or Google AI Studio (Google)\n• Re-enable or create a new API key\n• Update it in Profile settings";
+        } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT') || error.message.includes('Rate limit')) {
+          errorMessage = "⚠️ **Rate Limit Exceeded**\n\nToo many requests. Please wait 30-60 seconds before trying again.";
+        } else if (error.message.includes('Network') || error.message.includes('timeout')) {
+          errorMessage = "⚠️ **Network Error**\n\nCouldn't reach the AI service. Please check your internet connection.";
+        } else if (error.message.includes('temporarily unavailable')) {
+          errorMessage = "⚠️ **Service Unavailable**\n\nThe AI service is temporarily down. Please try again in a few minutes.";
+        } else {
+          errorMessage = `⚠️ **Error**: ${error.message}\n\nPlease try again or contact support if the issue persists.`;
         }
       }
       
+      // Include reasoning steps to show what was attempted
+      const reasoningSteps: ReasoningStep[] = [
+        {
+          id: 'error_occurred',
+          title: 'Error During Processing',
+          description: 'Failed to generate professional draft due to service error',
+          status: 'completed',
+          confidence: 0.0
+        }
+      ];
+      
       return {
         message: errorMessage,
-        reasoning: [],
+        reasoning: reasoningSteps,
         confidence: 0.3
       };
     }

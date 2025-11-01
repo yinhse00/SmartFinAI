@@ -67,22 +67,38 @@ export class UniversalAiClient {
     } catch (error) {
       console.error('❌ UniversalAiClient error:', error);
       
-      // Provide more detailed error information
+      // Provide detailed, actionable error information
       let errorMessage = 'AI service temporarily unavailable';
+      let errorDetails = '';
+      
       if (error instanceof Error) {
-        if (error.message.includes('Monthly token limit exceeded')) {
-          errorMessage = 'AI service has reached its monthly usage limit. Please try again later.';
+        if (error.message.includes('Monthly token limit exceeded') || error.message.includes('LIMIT_EXCEEDED')) {
+          errorMessage = 'Monthly AI usage limit exceeded';
+          errorDetails = 'The system AI service has reached its monthly token limit. Add your own API key in Profile settings to continue using AI features.';
+        } else if (error.message.includes('disabled') || error.message.includes('API_KEY_DISABLED') || error.message.includes('403')) {
+          errorMessage = 'API key is disabled';
+          errorDetails = 'Your API key has been disabled. Please check console.x.ai or Google AI Studio to re-enable it, or add a new key in Profile settings.';
+        } else if (error.message.includes('429') || error.message.includes('RATE_LIMIT') || error.message.includes('Rate limit')) {
+          errorMessage = 'Rate limit exceeded';
+          errorDetails = 'Too many requests in a short time. Please wait 30-60 seconds before trying again.';
+        } else if (error.message.includes('Network') || error.message.includes('timeout')) {
+          errorMessage = 'Network connection error';
+          errorDetails = 'Could not reach the AI service. Please check your internet connection and try again.';
         } else if (error.message.includes('Edge function error')) {
-          errorMessage = 'AI service is currently experiencing issues. Please try again.';
+          errorMessage = 'AI service error';
+          errorDetails = 'The AI service is currently experiencing issues. Please try again in a few moments.';
         } else {
           errorMessage = error.message;
+          errorDetails = 'An unexpected error occurred. Please try again or contact support if the issue persists.';
         }
       }
+      
+      console.error('📊 Error categorization:', { errorMessage, errorDetails });
       
       return {
         text: '',
         success: false,
-        error: errorMessage,
+        error: errorDetails || errorMessage,
         provider: request.provider,
         modelId: request.modelId
       };

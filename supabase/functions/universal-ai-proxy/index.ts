@@ -68,7 +68,26 @@ serve(async (req) => {
     }
 
     if (subscription.tokens_used_this_month >= subscription.monthly_token_limit) {
-      throw new Error('Monthly token limit exceeded');
+      console.error('Monthly token limit exceeded:', {
+        userId: user.id,
+        tokensUsed: subscription.tokens_used_this_month,
+        limit: subscription.monthly_token_limit
+      });
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Monthly token limit exceeded. Please upgrade your plan or add your own API key.',
+          text: '',
+          tokensUsed: 0,
+          provider: '',
+          model: '',
+          errorCode: 'LIMIT_EXCEEDED'
+        }),
+        {
+          status: 402,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        }
+      );
     }
 
     // Get system API key for provider
@@ -83,13 +102,24 @@ serve(async (req) => {
       try {
         response = await callGrokAPI(request, apiKey);
       } catch (error) {
-        console.error('Grok API failed, trying Google fallback:', error);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error('Grok API failed:', errorMsg);
+        
+        // Check if API key is disabled (403 error)
+        if (errorMsg.includes('403') || errorMsg.includes('disabled')) {
+          console.error('Grok API key is disabled, trying Google fallback');
+        } else if (errorMsg.includes('429')) {
+          console.error('Grok rate limit hit, trying Google fallback');
+        }
+        
         // Fallback to Google if Grok fails
         const googleApiKey = Deno.env.get('GOOGLE_API_KEY') ?? '';
         if (googleApiKey) {
+          console.log('Using Google API as fallback');
           response = await callGoogleAPI({ ...request, provider: 'google', model: 'gemini-2.0-flash' }, googleApiKey);
         } else {
-          throw error;
+          console.error('No Google fallback available');
+          throw new Error(`Grok API failed and no fallback available: ${errorMsg}`);
         }
       }
     } else if (request.provider === 'google') {
@@ -131,17 +161,38 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Universal AI Proxy Error:', error);
+    
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    let statusCode = 500;
+    let errorCode = 'INTERNAL_ERROR';
+    
+    // Categorize errors for better client handling
+    if (errorMessage.includes('Monthly token limit exceeded')) {
+      statusCode = 402;
+      errorCode = 'LIMIT_EXCEEDED';
+    } else if (errorMessage.includes('disabled') || errorMessage.includes('403')) {
+      statusCode = 403;
+      errorCode = 'API_KEY_DISABLED';
+    } else if (errorMessage.includes('429') || errorMessage.includes('Rate limit')) {
+      statusCode = 429;
+      errorCode = 'RATE_LIMIT';
+    } else if (errorMessage.includes('Invalid authentication')) {
+      statusCode = 401;
+      errorCode = 'AUTH_FAILED';
+    }
+    
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: error.message,
+        error: errorMessage,
+        errorCode,
         text: '',
         tokensUsed: 0,
         provider: '',
         model: ''
       }),
       {
-        status: 500,
+        status: statusCode,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );

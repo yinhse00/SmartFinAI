@@ -53,6 +53,8 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
     hasKey: false,
     provider: undefined as string | undefined
   });
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [lastError, setLastError] = useState<string | null>(null);
   const navigate = useNavigate();
 
   // Auto-analyze content when it changes
@@ -81,6 +83,20 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
     };
     checkApiKeys();
   }, []);
+
+  // Test AI connection
+  const testConnection = async () => {
+    setIsTestingConnection(true);
+    setLastError(null);
+    try {
+      await processMessage("Test AI connection");
+      setLastError(null);
+    } catch (error) {
+      setLastError(error instanceof Error ? error.message : "Connection test failed");
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
   const handleSendMessage = () => {
     if (!inputValue.trim() || isProcessing) return;
     processMessage(inputValue);
@@ -117,10 +133,22 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
         </div>
         
         {!isCollapsed && <>
+            {/* Error Display */}
+            {lastError && <div className="flex items-center justify-between bg-destructive/10 border border-destructive/30 rounded-md p-2 mt-2">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-destructive" />
+                  <p className="text-xs text-destructive">{lastError}</p>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => setLastError(null)} className="h-6 w-6 p-0">
+                  <X className="h-3 w-3" />
+                </Button>
+              </div>}
+
+            {/* API Key Status Warning */}
             {!apiKeyStatus.hasKey && <div className="flex items-center justify-between bg-amber-50 border border-amber-200 rounded-md p-2 mt-2">
                 <div className="flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 text-amber-600" />
-                  <p className="text-xs text-amber-800">AI service currently using system keys (limited usage)</p>
+                  <p className="text-xs text-amber-800">Using system keys (may have rate limits)</p>
                 </div>
                 <Button variant="outline" size="sm" className="h-6 text-xs" onClick={() => navigate('/profile')}>
                   <Settings className="h-3 w-3 mr-1" />
@@ -128,12 +156,21 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
                 </Button>
               </div>}
             
-            {/* Content Metrics */}
-            <div className="flex items-center gap-4 text-xs text-muted-foreground mt-2">
-              <span>Content: {currentContent.length} chars</span>
-              {currentAnalysis && <Badge variant="outline" className="text-xs">
-                  Quality: {currentAnalysis.urgentIssues.length === 0 ? 'Good' : 'Needs Work'}
-                </Badge>}
+            {/* Connection Status & Diagnostics */}
+            <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
+              <div className="flex items-center gap-4">
+                <span>Content: {currentContent.length} chars</span>
+                {currentAnalysis && <Badge variant="outline" className="text-xs">
+                    Quality: {currentAnalysis.urgentIssues.length === 0 ? 'Good' : 'Needs Work'}
+                  </Badge>}
+                {apiKeyStatus.hasKey && <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                    {apiKeyStatus.provider} AI
+                  </Badge>}
+              </div>
+              <Button variant="ghost" size="sm" onClick={testConnection} disabled={isTestingConnection} className="h-6 text-xs">
+                {isTestingConnection ? <Loader2 className="h-3 w-3 animate-spin mr-1" /> : <CheckCircle className="h-3 w-3 mr-1" />}
+                Test AI
+              </Button>
             </div>
           </>}
       </CardHeader>
@@ -204,8 +241,9 @@ export const TransparentAIPanel: React.FC<TransparentAIPanelProps> = ({
                   <div className="bg-muted rounded-lg p-3 text-sm">
                     <div className="flex items-center gap-2">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Analyzing content with transparent reasoning...</span>
+                      <span>Processing with {apiKeyStatus.provider || 'system'} AI...</span>
                     </div>
+                    <p className="text-xs text-muted-foreground mt-1">Analyzing content and generating recommendations</p>
                   </div>
                 </div>}
             </div>

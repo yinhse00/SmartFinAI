@@ -97,12 +97,35 @@ export const useTransparentAIChat = ({
     } catch (error) {
       console.error('Transparent analysis failed:', error);
       
-      // Add error message to chat instead of disappearing
+      // Categorize error type for better user feedback
+      let errorContent = "I'm currently unable to analyze your content. Please try again.";
+      let toastDescription = "AI service temporarily unavailable.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Monthly token limit exceeded') || error.message.includes('402')) {
+          errorContent = "⚠️ AI service has reached its monthly usage limit. The service will be available again next month, or you can add your own API key in Profile settings.";
+          toastDescription = "Monthly usage limit reached. Add your own API key to continue.";
+        } else if (error.message.includes('Rate limit') || error.message.includes('429')) {
+          errorContent = "⚠️ Too many requests. Please wait a moment and try again.";
+          toastDescription = "Rate limit reached. Please wait before trying again.";
+        } else if (error.message.includes('disabled') || error.message.includes('403')) {
+          errorContent = "⚠️ API key is disabled. Please check your API key status in console.x.ai or Profile settings.";
+          toastDescription = "API key appears to be disabled. Check your settings.";
+        } else if (error.message.includes('Network') || error.message.includes('timeout')) {
+          errorContent = "⚠️ Network connection issue. Please check your internet connection and try again.";
+          toastDescription = "Network error. Check connection and retry.";
+        } else {
+          errorContent = `⚠️ ${error.message}`;
+          toastDescription = error.message;
+        }
+      }
+      
+      // Add error message to chat
       const errorMessage: TransparentChatMessage = {
         id: `error_analysis_${Date.now()}`,
         type: 'ai',
         isUser: false,
-        content: "I'm currently unable to analyze your content due to service limitations. Please try again later or check your API key settings.",
+        content: errorContent,
         timestamp: new Date()
       };
       
@@ -110,7 +133,7 @@ export const useTransparentAIChat = ({
       
       toast({
         title: "Analysis Failed",
-        description: "AI service temporarily unavailable. Error message shown in chat.",
+        description: toastDescription,
         variant: "destructive"
       });
     } finally {
@@ -175,12 +198,30 @@ export const useTransparentAIChat = ({
     } catch (error) {
       console.error('Message processing failed:', error);
       
-      // Provide more helpful error messages based on error type
-      let errorContent = "I encountered an error while processing your message. Please try again or rephrase your request.";
-      if (error instanceof Error && error.message.includes('Monthly token limit exceeded')) {
-        errorContent = "The AI service has reached its monthly usage limit. Please try again later or contact support for assistance.";
-      } else if (error instanceof Error && error.message.includes('AI service temporarily unavailable')) {
-        errorContent = "The AI service is temporarily unavailable. Please try again in a few moments.";
+      // Categorize error type for detailed user feedback
+      let errorContent = "I encountered an error while processing your message. Please try again.";
+      let toastDescription = "Processing failed.";
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Monthly token limit exceeded') || error.message.includes('402')) {
+          errorContent = "⚠️ **AI Usage Limit Reached**\n\nThe system AI service has reached its monthly token limit. You can:\n• Wait until next month for the limit to reset\n• Add your own API key in Profile settings to continue using AI features";
+          toastDescription = "Monthly limit reached. Add your API key to continue.";
+        } else if (error.message.includes('Rate limit') || error.message.includes('429')) {
+          errorContent = "⚠️ **Rate Limit Exceeded**\n\nToo many requests in a short time. Please wait 30-60 seconds before trying again.";
+          toastDescription = "Rate limit hit. Wait a moment and retry.";
+        } else if (error.message.includes('disabled') || error.message.includes('403')) {
+          errorContent = "⚠️ **API Key Disabled**\n\nYour API key appears to be disabled. Please:\n• Go to console.x.ai (for Grok) or Google AI Studio (for Google)\n• Check your API key status\n• Re-enable or create a new key\n• Update it in Profile settings";
+          toastDescription = "API key disabled. Check console.x.ai settings.";
+        } else if (error.message.includes('Network') || error.message.includes('timeout')) {
+          errorContent = "⚠️ **Network Error**\n\nCouldn't reach the AI service. Please check your internet connection and try again.";
+          toastDescription = "Network error. Check connection.";
+        } else if (error.message.includes('temporarily unavailable')) {
+          errorContent = "⚠️ **Service Temporarily Unavailable**\n\nThe AI service is experiencing issues. Please try again in a few minutes.";
+          toastDescription = "AI service down. Try again later.";
+        } else {
+          errorContent = `⚠️ **Error**: ${error.message}`;
+          toastDescription = error.message;
+        }
       }
       
       const errorMessage: TransparentChatMessage = {
@@ -195,7 +236,7 @@ export const useTransparentAIChat = ({
       
       toast({
         title: "Processing Failed",
-        description: "Error details shown in chat. Please try again later.",
+        description: toastDescription,
         variant: "destructive"
       });
     } finally {
