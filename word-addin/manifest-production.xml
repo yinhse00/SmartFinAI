@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  IPO AI Assistant - Production Manifest for Microsoft AppSource
+  
+  Before submission:
+  1. Replace [YOUR_PRODUCTION_DOMAIN] with your actual domain (e.g., ipo-ai-assistant.lovable.app)
+  2. Ensure all icon files exist at the specified URLs
+  3. Validate using: npx office-addin-manifest validate manifest-production.xml
+-->
+<OfficeApp
+  xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0"
+  xmlns:ov="http://schemas.microsoft.com/office/taskpaneappversionoverrides"
+  xsi:type="TaskPaneApp">
+
+  <!-- Unique Add-in ID - DO NOT CHANGE after AppSource submission -->
+  <Id>f8c3d2e1-4a5b-6c7d-8e9f-0a1b2c3d4e5f</Id>
+  
+  <Version>1.0.0.0</Version>
+  <ProviderName>IPO AI Assistant</ProviderName>
+  <DefaultLocale>en-US</DefaultLocale>
+  
+  <DisplayName DefaultValue="IPO AI Assistant"/>
+  <Description DefaultValue="AI-powered IPO prospectus drafting assistant with HKEX regulatory compliance checking. Analyzes your documents and suggests amendments based on Hong Kong Stock Exchange listing rules."/>
+  
+  <!-- Icon URLs - Production -->
+  <IconUrl DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/assets/icon-32.png"/>
+  <HighResolutionIconUrl DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/assets/icon-64.png"/>
+  
+  <!-- Support and Legal URLs - Required for AppSource -->
+  <SupportUrl DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin-support"/>
+  
+  <AppDomains>
+    <AppDomain>https://petoxjdikxxugbrzajpj.supabase.co</AppDomain>
+    <AppDomain>https://[YOUR_PRODUCTION_DOMAIN]</AppDomain>
+  </AppDomains>
+
+  <Hosts>
+    <Host Name="Document"/>
+  </Hosts>
+
+  <DefaultSettings>
+    <SourceLocation DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/taskpane.html"/>
+  </DefaultSettings>
+
+  <Permissions>ReadWriteDocument</Permissions>
+
+  <VersionOverrides xmlns="http://schemas.microsoft.com/office/taskpaneappversionoverrides" xsi:type="VersionOverridesV1_0">
+    <Hosts>
+      <Host xsi:type="Document">
+        <DesktopFormFactor>
+          <GetStarted>
+            <Title resid="GetStarted.Title"/>
+            <Description resid="GetStarted.Description"/>
+            <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
+          </GetStarted>
+          <FunctionFile resid="Commands.Url"/>
+          <ExtensionPoint xsi:type="PrimaryCommandSurface">
+            <OfficeTab id="TabHome">
+              <Group id="IPOToolsGroup">
+                <Label resid="CommandsGroup.Label"/>
+                <Icon>
+                  <bt:Image size="16" resid="Icon.16x16"/>
+                  <bt:Image size="32" resid="Icon.32x32"/>
+                  <bt:Image size="80" resid="Icon.80x80"/>
+                </Icon>
+                <Control xsi:type="Button" id="TaskpaneButton">
+                  <Label resid="TaskpaneButton.Label"/>
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label"/>
+                    <Description resid="TaskpaneButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <TaskpaneId>IPOAssistantPane</TaskpaneId>
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </DesktopFormFactor>
+      </Host>
+    </Hosts>
+
+    <Resources>
+      <bt:Images>
+        <bt:Image id="Icon.16x16" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/assets/icon-80.png"/>
+      </bt:Images>
+      <bt:Urls>
+        <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin-support"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://[YOUR_PRODUCTION_DOMAIN]/word-addin/taskpane.html"/>
+      </bt:Urls>
+      <bt:ShortStrings>
+        <bt:String id="GetStarted.Title" DefaultValue="IPO AI Assistant"/>
+        <bt:String id="CommandsGroup.Label" DefaultValue="IPO Compliance"/>
+        <bt:String id="TaskpaneButton.Label" DefaultValue="IPO AI Assistant"/>
+      </bt:ShortStrings>
+      <bt:LongStrings>
+        <bt:String id="GetStarted.Description" DefaultValue="AI-powered IPO prospectus drafting with HKEX compliance checking. Get instant regulatory feedback on your documents."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open IPO AI Assistant to analyze your document for HKEX regulatory compliance and get AI-powered suggestions"/>
+      </bt:LongStrings>
+    </Resources>
+  </VersionOverrides>
+</OfficeApp>

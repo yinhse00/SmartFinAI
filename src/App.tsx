@@ -19,6 +19,9 @@ import BillingPage from "./pages/Billing";
 import SupportPage from "./pages/Support";
 import UpdatePasswordPage from "./pages/UpdatePassword";
 import IPOProspectusPage from "./pages/IPOProspectus";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfUse from "./pages/TermsOfUse";
+import WordAddinSupport from "./pages/WordAddinSupport";
 
 // Create a client
 const queryClient = new QueryClient({
@@ -72,6 +75,10 @@ const App = () => (
                   <IPOProspectusPage />
                 </ProtectedRoute>
               } />
+              {/* Public legal and support pages for AppSource */}
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-use" element={<TermsOfUse />} />
+              <Route path="/word-addin-support" element={<WordAddinSupport />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
