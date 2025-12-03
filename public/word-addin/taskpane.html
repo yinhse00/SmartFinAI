@@ -89,6 +89,27 @@
     .retry-button:hover {
       background: #4f46e5;
     }
+    
+    /* Success toast */
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 1000;
+      animation: slideUp 0.3s ease;
+    }
+    .toast-success { background: #22c55e; color: white; }
+    .toast-error { background: #ef4444; color: white; }
+    .toast-info { background: #6366f1; color: white; }
+    @keyframes slideUp {
+      from { transform: translateX(-50%) translateY(20px); opacity: 0; }
+      to { transform: translateX(-50%) translateY(0); opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -107,19 +128,17 @@
     // State
     let currentUser = null;
     let isAnalyzing = false;
+    let currentAmendments = [];
     
     // Initialize Office
     Office.onReady(function(info) {
       if (info.host === Office.HostType.Word) {
         // Enable Auto-Open Task Pane for future documents
-        // Once set, the task pane will automatically open when any document is opened
         try {
           Office.context.document.settings.set("Office.AutoShowTaskpaneWithDocument", true);
           Office.context.document.settings.saveAsync(function(asyncResult) {
             if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
               console.log('Auto-open task pane enabled successfully');
-            } else {
-              console.warn('Failed to save auto-open setting:', asyncResult.error);
             }
           });
         } catch (e) {
@@ -311,6 +330,9 @@
           throw new Error(result.error);
         }
         
+        // Store amendments for later use
+        currentAmendments = result.amendments || [];
+        
         renderAnalysisResults(result);
       } catch (error) {
         contentEl.innerHTML = `
@@ -356,6 +378,16 @@
             <div style="font-size: 14px; color: #6b7280;">Compliance Score</div>
           </div>
           
+          <!-- Apply All Button -->
+          ${amendments?.length ? `
+            <button onclick="applyAllAmendments()" style="width: 100%; padding: 12px; background: #22c55e; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 16px; display: flex; align-items: center; justify-content: center; gap: 8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20,6 9,17 4,12"/>
+              </svg>
+              Apply All as Track Changes
+            </button>
+          ` : ''}
+          
           <!-- Summary -->
           <div style="margin-bottom: 20px;">
             <h3 style="font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">Analysis Summary</h3>
@@ -384,7 +416,7 @@
       const colors = severityColors[amendment.severity] || severityColors.medium;
       
       return `
-        <div style="background: ${colors.bg}; border: 1px solid ${colors.border}; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+        <div id="amendment-${index}" style="background: ${colors.bg}; border: 1px solid ${colors.border}; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
           <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
             <span style="font-size: 11px; font-weight: 600; color: ${colors.text}; text-transform: uppercase;">${amendment.severity}</span>
             <span style="font-size: 11px; color: #6b7280;">${amendment.regulatoryCitation || ''}</span>
@@ -393,7 +425,8 @@
           ${amendment.originalText ? `<p style="font-size: 12px; color: #9ca3af; text-decoration: line-through; margin-bottom: 4px;">${truncateText(amendment.originalText, 100)}</p>` : ''}
           ${amendment.suggestedText ? `<p style="font-size: 12px; color: #059669; margin-bottom: 12px;">${truncateText(amendment.suggestedText, 100)}</p>` : ''}
           <div style="display: flex; gap: 8px;">
-            <button onclick="applyAmendment(${index})" style="flex: 1; padding: 8px; background: #22c55e; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Accept</button>
+            <button onclick="applyAmendment(${index})" style="flex: 1; padding: 8px; background: #22c55e; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Apply</button>
+            <button onclick="highlightInDocument(${index})" style="flex: 1; padding: 8px; background: #6366f1; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Find</button>
             <button onclick="rejectAmendment(${index})" style="flex: 1; padding: 8px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; cursor: pointer;">Reject</button>
           </div>
         </div>
@@ -405,21 +438,216 @@
       return text.substring(0, maxLength) + '...';
     }
     
+    // ============================================
+    // REAL TRACK CHANGES IMPLEMENTATION via Word.js
+    // ============================================
+    
     async function applyAmendment(index) {
-      // Implementation would apply track change to Word document
-      console.log('Applying amendment', index);
-      // For now, just show feedback
-      alert('Amendment applied as track change');
+      const amendment = currentAmendments[index];
+      if (!amendment || !amendment.originalText || !amendment.suggestedText) {
+        showToast('Invalid amendment data', 'error');
+        return;
+      }
+      
+      try {
+        await Word.run(async (context) => {
+          // Search for the original text in the document
+          const searchResults = context.document.body.search(amendment.originalText, {
+            matchCase: false,
+            matchWholeWord: false
+          });
+          
+          searchResults.load('items');
+          await context.sync();
+          
+          if (searchResults.items.length === 0) {
+            showToast('Text not found in document', 'error');
+            return;
+          }
+          
+          // Get the first match
+          const range = searchResults.items[0];
+          
+          // Replace with suggested text (Word will track this as a revision)
+          range.insertText(amendment.suggestedText, Word.InsertLocation.replace);
+          
+          // Add a comment with the regulatory citation
+          if (amendment.regulatoryCitation || amendment.reason) {
+            const commentText = amendment.regulatoryCitation 
+              ? `${amendment.regulatoryCitation}\n\n${amendment.reason}`
+              : amendment.reason;
+            range.insertComment(commentText);
+          }
+          
+          await context.sync();
+          
+          // Mark as applied in UI
+          markAmendmentApplied(index);
+          showToast('Amendment applied as Track Change', 'success');
+        });
+      } catch (error) {
+        console.error('Failed to apply amendment:', error);
+        showToast('Failed to apply: ' + error.message, 'error');
+      }
+    }
+    
+    async function applyAllAmendments() {
+      showToast('Applying all amendments...', 'info');
+      
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (let i = 0; i < currentAmendments.length; i++) {
+        const amendment = currentAmendments[i];
+        if (!amendment.originalText || !amendment.suggestedText) continue;
+        
+        try {
+          await Word.run(async (context) => {
+            const searchResults = context.document.body.search(amendment.originalText, {
+              matchCase: false,
+              matchWholeWord: false
+            });
+            
+            searchResults.load('items');
+            await context.sync();
+            
+            if (searchResults.items.length > 0) {
+              const range = searchResults.items[0];
+              range.insertText(amendment.suggestedText, Word.InsertLocation.replace);
+              
+              if (amendment.regulatoryCitation || amendment.reason) {
+                const commentText = amendment.regulatoryCitation 
+                  ? `${amendment.regulatoryCitation}\n\n${amendment.reason}`
+                  : amendment.reason;
+                range.insertComment(commentText);
+              }
+              
+              await context.sync();
+              markAmendmentApplied(i);
+              successCount++;
+            } else {
+              failCount++;
+            }
+          });
+        } catch (error) {
+          console.error(`Failed to apply amendment ${i}:`, error);
+          failCount++;
+        }
+      }
+      
+      if (failCount === 0) {
+        showToast(`Applied ${successCount} amendments`, 'success');
+      } else {
+        showToast(`Applied ${successCount}, failed ${failCount}`, 'info');
+      }
+    }
+    
+    async function highlightInDocument(index) {
+      const amendment = currentAmendments[index];
+      if (!amendment || !amendment.originalText) {
+        showToast('No text to find', 'error');
+        return;
+      }
+      
+      try {
+        await Word.run(async (context) => {
+          // Clear previous highlights
+          const body = context.document.body;
+          body.load('text');
+          await context.sync();
+          
+          // Search for the text
+          const searchResults = context.document.body.search(amendment.originalText, {
+            matchCase: false,
+            matchWholeWord: false
+          });
+          
+          searchResults.load('items');
+          await context.sync();
+          
+          if (searchResults.items.length === 0) {
+            showToast('Text not found in document', 'error');
+            return;
+          }
+          
+          // Highlight and select the first match
+          const range = searchResults.items[0];
+          range.font.highlightColor = 'Yellow';
+          range.select();
+          
+          await context.sync();
+          showToast('Text highlighted and selected', 'success');
+          
+          // Remove highlight after 5 seconds
+          setTimeout(async () => {
+            try {
+              await Word.run(async (ctx) => {
+                const results = ctx.document.body.search(amendment.originalText, {
+                  matchCase: false,
+                  matchWholeWord: false
+                });
+                results.load('items');
+                await ctx.sync();
+                if (results.items.length > 0) {
+                  results.items[0].font.highlightColor = null;
+                  await ctx.sync();
+                }
+              });
+            } catch (e) {
+              // Ignore errors when clearing highlight
+            }
+          }, 5000);
+        });
+      } catch (error) {
+        console.error('Failed to highlight text:', error);
+        showToast('Failed to find text', 'error');
+      }
+    }
+    
+    function markAmendmentApplied(index) {
+      const card = document.getElementById(`amendment-${index}`);
+      if (card) {
+        card.style.opacity = '0.6';
+        card.style.pointerEvents = 'none';
+        card.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px; color: #22c55e;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20,6 9,17 4,12"/>
+            </svg>
+            <span style="font-weight: 500;">Amendment Applied</span>
+          </div>
+        `;
+      }
     }
     
     function rejectAmendment(index) {
-      console.log('Rejecting amendment', index);
-      // Remove the amendment card
-      const cards = document.querySelectorAll('#amendmentsList > div');
-      if (cards[index]) {
-        cards[index].style.opacity = '0.5';
-        cards[index].style.pointerEvents = 'none';
+      const card = document.getElementById(`amendment-${index}`);
+      if (card) {
+        card.style.opacity = '0.5';
+        card.style.pointerEvents = 'none';
+        card.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 8px; color: #6b7280;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"/>
+              <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+            <span>Amendment Rejected</span>
+          </div>
+        `;
       }
+    }
+    
+    function showToast(message, type = 'info') {
+      // Remove existing toast
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      
+      setTimeout(() => toast.remove(), 3000);
     }
     
     function handleSignOut() {
