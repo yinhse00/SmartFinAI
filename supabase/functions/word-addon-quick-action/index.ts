@@ -16,6 +16,18 @@ interface QuickActionRequest {
   targetLanguage?: 'en' | 'zh-TW' | 'zh-CN';
 }
 
+// Anti-markdown and anti-preamble rules to add to all prompts
+const OUTPUT_FORMAT_RULES = `
+
+CRITICAL OUTPUT FORMAT RULES:
+- Output PLAIN TEXT ONLY - absolutely NO markdown formatting
+- Do NOT use: ** (bold), * (italic), ## (headers), - (bullets), \` (code blocks)
+- Do NOT start with "Okay", "Here's", "Sure", "I've", "Certainly", or any preamble
+- Do NOT add any explanation before or after the text
+- Do NOT add commentary about what you changed
+- Start DIRECTLY with the revised text content
+- End DIRECTLY when the content ends`;
+
 const ACTION_PROMPTS: Record<QuickAction, string> = {
   improve: `You are a senior IPO prospectus editor at a top-tier investment bank (Goldman Sachs, Morgan Stanley caliber). Your task is to improve text for Hong Kong Stock Exchange disclosure documents.
 
@@ -33,8 +45,7 @@ WHAT YOU MUST NOT DO:
 - Do NOT change the meaning or implication of any statement
 - Do NOT add promotional or marketing language
 - Do NOT explain your changes - output ONLY the improved text
-
-Return ONLY the improved text. No preambles, explanations, or commentary.`,
+${OUTPUT_FORMAT_RULES}`,
   
   summarize: `You are a senior IPO prospectus editor. Summarize this text concisely for Hong Kong Stock Exchange disclosure documents.
 
@@ -50,8 +61,7 @@ MUST INCLUDE in summary:
 - Key risk factors mentioned
 - Regulatory requirements cited
 - Material facts about the business
-
-Return ONLY the summary. No explanations.`,
+${OUTPUT_FORMAT_RULES}`,
   
   rewrite: `You are a senior IPO prospectus editor. Rewrite this text with alternative phrasing while maintaining identical meaning for Hong Kong Stock Exchange disclosure documents.
 
@@ -67,8 +77,7 @@ PRESERVE EXACTLY - DO NOT CHANGE:
 - Company names, person names, regulatory citations
 - Technical terminology and defined terms
 - The logical flow and structure of information
-
-Return ONLY the rewritten text. No explanations.`,
+${OUTPUT_FORMAT_RULES}`,
   
   compliance: `You are an HKEX Listing Rules compliance expert with 15+ years experience reviewing IPO prospectuses. Analyze this text for compliance with Hong Kong Stock Exchange Main Board Listing Rules.
 
@@ -114,8 +123,7 @@ PRESERVE EXACTLY (do not translate):
 - Company names and entity names (unless official translation known)
 - Regulatory rule numbers (e.g., "Rule 8.05")
 - Proper nouns and place names
-
-Return ONLY the translation. No explanations.`,
+${OUTPUT_FORMAT_RULES}`,
   
   formal: `You are a senior legal counsel at a Magic Circle law firm specializing in Hong Kong IPO prospectuses. Transform this text into formal securities disclosure language.
 
@@ -135,11 +143,56 @@ PRESERVE EXACTLY - DO NOT CHANGE:
 - The factual content and meaning
 
 LENGTH: Keep similar length to original (±15% words maximum)
-
-Return ONLY the formal text. No explanations or commentary.`,
+${OUTPUT_FORMAT_RULES}`,
   
   custom: '' // Will be replaced with user's custom prompt
 };
+
+/**
+ * Post-processing function to clean AI output for Word documents
+ * Removes markdown formatting and common AI preambles
+ */
+function cleanOutputForWord(text: string): string {
+  if (!text || typeof text !== 'string') {
+    return text;
+  }
+  
+  let cleaned = text;
+  
+  // Remove markdown bold/italic
+  cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+  cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
+  cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+  cleaned = cleaned.replace(/_([^_]+)_/g, '$1');
+  
+  // Remove markdown headers
+  cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+  
+  // Remove markdown bullet points (convert to simple bullet)
+  cleaned = cleaned.replace(/^[\s]*[-*+]\s+/gm, '• ');
+  
+  // Remove code blocks
+  cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
+  cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+  
+  // Remove common AI preambles (case-insensitive, at start of text)
+  const preamblePatterns = [
+    /^(Okay|Sure|Certainly|Of course)[,.]?\s*(here('s| is)|I('ve| have))[^.]*[.!:]\s*/i,
+    /^Here('s| is) (a |the )?(revised|improved|rewritten|formal|translated|summarized)[^.]*[.!:]\s*/i,
+    /^I('ve| have) (revised|improved|rewritten|made|transformed)[^.]*[.!:]\s*/i,
+    /^(The following|Below) (is|are)[^.]*[.!:]\s*/i,
+    /^This (is a |)(revised|improved)[^.]*[.!:]\s*/i,
+  ];
+  
+  for (const pattern of preamblePatterns) {
+    cleaned = cleaned.replace(pattern, '');
+  }
+  
+  // Clean up extra whitespace
+  cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+  
+  return cleaned.trim();
+}
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -197,6 +250,7 @@ The user will provide specific instructions. Follow them precisely while adherin
 4. TONE: Professional, formal language suitable for securities disclosure
 5. NEVER: Add speculative, promotional, or unsubstantiated claims
 6. OUTPUT: Return ONLY the revised text - no explanations, preambles, or meta-commentary
+${OUTPUT_FORMAT_RULES}
 
 USER'S INSTRUCTION: ${customPrompt}
 
@@ -250,8 +304,10 @@ Process the following text according to the user's instruction:`;
         const jsonMatch = resultText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const complianceResult = JSON.parse(jsonMatch[0]);
+          // Clean the suggested revision for Word
+          const cleanedRevision = cleanOutputForWord(complianceResult.suggestedRevision || selectedText);
           return new Response(JSON.stringify({
-            result: complianceResult.suggestedRevision || selectedText,
+            result: cleanedRevision,
             explanation: `Compliance Score: ${complianceResult.complianceScore}/100`,
             complianceNotes: complianceResult.issues?.map((i: any) => `[${i.severity?.toUpperCase() || 'INFO'}] ${i.rule}: ${i.issue}`) || [],
             isCompliant: complianceResult.isCompliant,
@@ -265,8 +321,11 @@ Process the following text according to the user's instruction:`;
       }
     }
 
+    // Clean the result for Word (remove markdown and preambles)
+    const cleanedResult = cleanOutputForWord(resultText);
+
     return new Response(JSON.stringify({
-      result: resultText,
+      result: cleanedResult,
       explanation: action === 'translate' ? `Translated to ${targetLanguage}` : undefined,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
