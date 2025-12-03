@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "12.2.3 (519615d)"
+    PostgrestVersion: "13.0.5"
   }
   public: {
     Tables: {
@@ -1321,7 +1321,7 @@ export type Database = {
           action: string
           created_at: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           record_id: string | null
           table_name: string
           user_agent: string | null
@@ -1331,7 +1331,7 @@ export type Database = {
           action: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name: string
           user_agent?: string | null
@@ -1341,7 +1341,7 @@ export type Database = {
           action?: string
           created_at?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           record_id?: string | null
           table_name?: string
           user_agent?: string | null
@@ -1409,13 +1409,113 @@ export type Database = {
         }
         Relationships: []
       }
+      word_addon_amendments: {
+        Row: {
+          amendment_type: string
+          applied_at: string | null
+          comment_text: string | null
+          created_at: string
+          id: string
+          regulatory_citation: string | null
+          replacement_text: string | null
+          search_text: string
+          session_id: string
+          severity: string | null
+          user_action: string | null
+        }
+        Insert: {
+          amendment_type: string
+          applied_at?: string | null
+          comment_text?: string | null
+          created_at?: string
+          id?: string
+          regulatory_citation?: string | null
+          replacement_text?: string | null
+          search_text: string
+          session_id: string
+          severity?: string | null
+          user_action?: string | null
+        }
+        Update: {
+          amendment_type?: string
+          applied_at?: string | null
+          comment_text?: string | null
+          created_at?: string
+          id?: string
+          regulatory_citation?: string | null
+          replacement_text?: string | null
+          search_text?: string
+          session_id?: string
+          severity?: string | null
+          user_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_addon_amendments_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "word_addon_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      word_addon_sessions: {
+        Row: {
+          amendments_applied: number | null
+          amendments_rejected: number | null
+          created_at: string
+          document_hash: string | null
+          id: string
+          language: string | null
+          last_analysis: Json | null
+          project_id: string | null
+          section_type: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          amendments_applied?: number | null
+          amendments_rejected?: number | null
+          created_at?: string
+          document_hash?: string | null
+          id?: string
+          language?: string | null
+          last_analysis?: Json | null
+          project_id?: string | null
+          section_type?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          amendments_applied?: number | null
+          amendments_rejected?: number | null
+          created_at?: string
+          document_hash?: string | null
+          id?: string
+          language?: string | null
+          last_analysis?: Json | null
+          project_id?: string | null
+          section_type?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "word_addon_sessions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "ipo_prospectus_projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
       get_public_tables: {
-        Args: Record<PropertyKey, never>
+        Args: never
         Returns: {
           table_name: string
         }[]
@@ -1431,10 +1531,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_project_admin: {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
@@ -1443,10 +1540,7 @@ export type Database = {
         Args: { _project_id: string; _user_id: string }
         Returns: boolean
       }
-      reset_monthly_usage: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      reset_monthly_usage: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "manager" | "analyst" | "user"
