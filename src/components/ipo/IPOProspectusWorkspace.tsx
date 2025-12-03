@@ -3,7 +3,8 @@ import { MaximizedDraftingArea } from './MaximizedDraftingArea';
 import { TransparentAIPanel } from './ai/TransparentAIPanel';
 import { IPOProject } from '@/types/ipo';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Settings, Edit3, FileText, Key } from 'lucide-react';
+import { ArrowLeft, Edit3, FileText } from 'lucide-react';
+import { OpenInWordButton } from './OpenInWordButton';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 import { IPOInputGenerateLayout } from './IPOInputGenerateLayout';
 interface IPOProspectusWorkspaceProps {
@@ -59,9 +60,14 @@ export const IPOProspectusWorkspace: React.FC<IPOProspectusWorkspaceProps> = ({
                 Draft & Edit
               </Button>
             </div>
-            
-            
-            
+
+            {/* Open in Word Button */}
+            <OpenInWordButton
+              content={chatContent}
+              sectionTitle={selectedSection}
+              companyName={project.company_name}
+              sectionType={selectedSection}
+            />
           </div>
         </div>
       </div>
