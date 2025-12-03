@@ -111,6 +111,21 @@
     // Initialize Office
     Office.onReady(function(info) {
       if (info.host === Office.HostType.Word) {
+        // Enable Auto-Open Task Pane for future documents
+        // Once set, the task pane will automatically open when any document is opened
+        try {
+          Office.context.document.settings.set("Office.AutoShowTaskpaneWithDocument", true);
+          Office.context.document.settings.saveAsync(function(asyncResult) {
+            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+              console.log('Auto-open task pane enabled successfully');
+            } else {
+              console.warn('Failed to save auto-open setting:', asyncResult.error);
+            }
+          });
+        } catch (e) {
+          console.warn('Could not set auto-open:', e);
+        }
+        
         initializeApp();
       } else {
         showError('Unsupported Application', 'This add-in only works in Microsoft Word.');
