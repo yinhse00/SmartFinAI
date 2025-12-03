@@ -11,3 +11,6 @@ verify_jwt = true
 
 [functions.word-addon-analyze]
 verify_jwt = true
+
+[functions.upload-temp-document]
+verify_jwt = false
