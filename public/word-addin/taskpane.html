@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IPO AI Assistant</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    html, body, #root {
+      height: 100%;
+      width: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+      background: #faf9f8;
+    }
+    
+    /* Loading state */
+    .loading-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+    .loading-spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e5e7eb;
+      border-top-color: #6366f1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .loading-text {
+      margin-top: 16px;
+      color: #6b7280;
+      font-size: 14px;
+    }
+    
+    /* Error state */
+    .error-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      padding: 20px;
+      text-align: center;
+    }
+    .error-icon {
+      width: 48px;
+      height: 48px;
+      color: #ef4444;
+    }
+    .error-title {
+      margin-top: 16px;
+      font-size: 18px;
+      font-weight: 600;
+      color: #1f2937;
+    }
+    .error-message {
+      margin-top: 8px;
+      color: #6b7280;
+      font-size: 14px;
+      max-width: 280px;
+    }
+    .retry-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #6366f1;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .retry-button:hover {
+      background: #4f46e5;
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <p class="loading-text">Loading IPO AI Assistant...</p>
+    </div>
+  </div>
+  
+  <script>
+    // Configuration
+    const SUPABASE_URL = 'https://petoxjdikxxugbrzajpj.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBldG94amRpa3h4dWdicnphanBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMwNTMxMDksImV4cCI6MjA1ODYyOTEwOX0.wPAUBKDWryZtO8oFVDPdNLVE99bMVdAUECMaKZqi2bk';
+    
+    // State
+    let currentUser = null;
+    let isAnalyzing = false;
+    
+    // Initialize Office
+    Office.onReady(function(info) {
+      if (info.host === Office.HostType.Word) {
+        initializeApp();
+      } else {
+        showError('Unsupported Application', 'This add-in only works in Microsoft Word.');
+      }
+    });
+    
+    function initializeApp() {
+      checkAuthStatus();
+    }
+    
+    async function checkAuthStatus() {
+      try {
+        const session = localStorage.getItem('ipo_ai_session');
+        if (session) {
+          const parsed = JSON.parse(session);
+          if (parsed.expires_at > Date.now()) {
+            currentUser = parsed.user;
+            renderMainPanel();
+            return;
+          }
+        }
+        renderLoginPanel();
+      } catch (error) {
+        renderLoginPanel();
+      }
+    }
+    
+    function renderLoginPanel() {
+      document.getElementById('root').innerHTML = `
+        <div style="padding: 24px; height: 100%; display: flex; flex-direction: column;">
+          <div style="text-align: center; margin-bottom: 32px;">
+            <div style="width: 64px; height: 64px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 16px; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"/>
+              </svg>
+            </div>
+            <h1 style="font-size: 20px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">IPO AI Assistant</h1>
+            <p style="font-size: 14px; color: #6b7280;">AI-powered HKEX compliance checking</p>
+          </div>
+          
+          <form id="loginForm" style="flex: 1;">
+            <div style="margin-bottom: 16px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Email</label>
+              <input type="email" id="email" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none;" placeholder="you@company.com">
+            </div>
+            <div style="margin-bottom: 24px;">
+              <label style="display: block; font-size: 14px; font-weight: 500; color: #374151; margin-bottom: 6px;">Password</label>
+              <input type="password" id="password" required style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; outline: none;" placeholder="••••••••">
+            </div>
+            <button type="submit" style="width: 100%; padding: 12px; background: #6366f1; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 500; cursor: pointer;">
+              Sign In
+            </button>
+            <p id="loginError" style="color: #ef4444; font-size: 13px; margin-top: 12px; text-align: center; display: none;"></p>
+          </form>
+        </div>
+      `;
+      
+      document.getElementById('loginForm').addEventListener('submit', handleLogin);
+    }
+    
+    async function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+      
+      try {
+        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.error) {
+          errorEl.textContent = data.error_description || 'Invalid credentials';
+          errorEl.style.display = 'block';
+          return;
+        }
+        
+        currentUser = data.user;
+        localStorage.setItem('ipo_ai_session', JSON.stringify({
+          user: data.user,
+          access_token: data.access_token,
+          expires_at: Date.now() + (data.expires_in * 1000)
+        }));
+        
+        renderMainPanel();
+      } catch (error) {
+        errorEl.textContent = 'Connection error. Please try again.';
+        errorEl.style.display = 'block';
+      }
+    }
+    
+    function renderMainPanel() {
+      document.getElementById('root').innerHTML = `
+        <div style="height: 100%; display: flex; flex-direction: column;">
+          <!-- Header -->
+          <div style="padding: 16px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <div style="width: 32px; height: 32px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: 8px; display: flex; align-items: center; justify-content: center;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2">
+                  <path d="M9 12l2 2 4-4"/>
+                  <path d="M12 3c7.2 0 9 1.8 9 9s-1.8 9-9 9-9-1.8-9-9 1.8-9 9-9z"/>
+                </svg>
+              </div>
+              <span style="font-weight: 600; color: #1f2937;">IPO AI Assistant</span>
+            </div>
+            <button onclick="handleSignOut()" style="padding: 6px 12px; font-size: 12px; color: #6b7280; background: none; border: 1px solid #d1d5db; border-radius: 4px; cursor: pointer;">
+              Sign Out
+            </button>
+          </div>
+          
+          <!-- Main Content -->
+          <div style="flex: 1; padding: 16px; overflow-y: auto;">
+            <div id="analysisContent">
+              <div style="text-align: center; padding: 40px 20px;">
+                <div style="width: 80px; height: 80px; background: #f3f4f6; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+                    <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                  </svg>
+                </div>
+                <h3 style="font-size: 16px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">Ready to Analyze</h3>
+                <p style="font-size: 14px; color: #6b7280; margin-bottom: 24px;">
+                  Click the button below to analyze your IPO prospectus for HKEX compliance
+                </p>
+                <button onclick="analyzeDocument()" id="analyzeBtn" style="padding: 12px 24px; background: #6366f1; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="M21 21l-4.35-4.35"/>
+                  </svg>
+                  Analyze Document
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    async function analyzeDocument() {
+      if (isAnalyzing) return;
+      isAnalyzing = true;
+      
+      const contentEl = document.getElementById('analysisContent');
+      contentEl.innerHTML = `
+        <div style="text-align: center; padding: 60px 20px;">
+          <div class="loading-spinner" style="margin: 0 auto;"></div>
+          <p style="margin-top: 20px; color: #6b7280; font-size: 14px;">Analyzing document for HKEX compliance...</p>
+          <p style="margin-top: 8px; color: #9ca3af; font-size: 12px;">This may take 30-60 seconds</p>
+        </div>
+      `;
+      
+      try {
+        // Get document content from Word
+        const documentContent = await getDocumentContent();
+        
+        // Get session from localStorage
+        const session = JSON.parse(localStorage.getItem('ipo_ai_session'));
+        
+        // Call the analysis API
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/word-addon-analyze`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            documentContent,
+            sectionType: 'full_document',
+            language: 'en'
+          })
+        });
+        
+        const result = await response.json();
+        
+        if (result.error) {
+          throw new Error(result.error);
+        }
+        
+        renderAnalysisResults(result);
+      } catch (error) {
+        contentEl.innerHTML = `
+          <div class="error-container">
+            <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <h3 class="error-title">Analysis Failed</h3>
+            <p class="error-message">${error.message || 'Unable to analyze document. Please try again.'}</p>
+            <button class="retry-button" onclick="analyzeDocument()">Try Again</button>
+          </div>
+        `;
+      } finally {
+        isAnalyzing = false;
+      }
+    }
+    
+    function getDocumentContent() {
+      return new Promise((resolve, reject) => {
+        Word.run(async (context) => {
+          const body = context.document.body;
+          body.load('text');
+          await context.sync();
+          resolve(body.text);
+        }).catch(reject);
+      });
+    }
+    
+    function renderAnalysisResults(result) {
+      const { complianceScore, amendments, reasoningSteps } = result;
+      const contentEl = document.getElementById('analysisContent');
+      
+      // Calculate score color
+      const scoreColor = complianceScore >= 80 ? '#22c55e' : complianceScore >= 60 ? '#f59e0b' : '#ef4444';
+      
+      contentEl.innerHTML = `
+        <div>
+          <!-- Compliance Score -->
+          <div style="text-align: center; padding: 20px; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border-radius: 12px; margin-bottom: 20px;">
+            <div style="font-size: 48px; font-weight: 700; color: ${scoreColor};">${complianceScore}</div>
+            <div style="font-size: 14px; color: #6b7280;">Compliance Score</div>
+          </div>
+          
+          <!-- Summary -->
+          <div style="margin-bottom: 20px;">
+            <h3 style="font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 8px;">Analysis Summary</h3>
+            <p style="font-size: 13px; color: #6b7280;">
+              Found ${amendments?.length || 0} compliance issues requiring attention.
+            </p>
+          </div>
+          
+          <!-- Amendments -->
+          <div>
+            <h3 style="font-size: 14px; font-weight: 600; color: #1f2937; margin-bottom: 12px;">Suggested Amendments</h3>
+            <div id="amendmentsList">
+              ${amendments?.length ? amendments.map((a, i) => renderAmendmentCard(a, i)).join('') : '<p style="color: #6b7280; font-size: 13px;">No amendments needed - document appears compliant!</p>'}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+    
+    function renderAmendmentCard(amendment, index) {
+      const severityColors = {
+        high: { bg: '#fef2f2', border: '#fecaca', text: '#dc2626' },
+        medium: { bg: '#fffbeb', border: '#fde68a', text: '#d97706' },
+        low: { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a' }
+      };
+      const colors = severityColors[amendment.severity] || severityColors.medium;
+      
+      return `
+        <div style="background: ${colors.bg}; border: 1px solid ${colors.border}; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
+          <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+            <span style="font-size: 11px; font-weight: 600; color: ${colors.text}; text-transform: uppercase;">${amendment.severity}</span>
+            <span style="font-size: 11px; color: #6b7280;">${amendment.regulatoryCitation || ''}</span>
+          </div>
+          <p style="font-size: 13px; color: #374151; margin-bottom: 8px;">${amendment.reason}</p>
+          ${amendment.originalText ? `<p style="font-size: 12px; color: #9ca3af; text-decoration: line-through; margin-bottom: 4px;">${truncateText(amendment.originalText, 100)}</p>` : ''}
+          ${amendment.suggestedText ? `<p style="font-size: 12px; color: #059669; margin-bottom: 12px;">${truncateText(amendment.suggestedText, 100)}</p>` : ''}
+          <div style="display: flex; gap: 8px;">
+            <button onclick="applyAmendment(${index})" style="flex: 1; padding: 8px; background: #22c55e; color: white; border: none; border-radius: 4px; font-size: 12px; cursor: pointer;">Accept</button>
+            <button onclick="rejectAmendment(${index})" style="flex: 1; padding: 8px; background: white; color: #6b7280; border: 1px solid #d1d5db; border-radius: 4px; font-size: 12px; cursor: pointer;">Reject</button>
+          </div>
+        </div>
+      `;
+    }
+    
+    function truncateText(text, maxLength) {
+      if (text.length <= maxLength) return text;
+      return text.substring(0, maxLength) + '...';
+    }
+    
+    async function applyAmendment(index) {
+      // Implementation would apply track change to Word document
+      console.log('Applying amendment', index);
+      // For now, just show feedback
+      alert('Amendment applied as track change');
+    }
+    
+    function rejectAmendment(index) {
+      console.log('Rejecting amendment', index);
+      // Remove the amendment card
+      const cards = document.querySelectorAll('#amendmentsList > div');
+      if (cards[index]) {
+        cards[index].style.opacity = '0.5';
+        cards[index].style.pointerEvents = 'none';
+      }
+    }
+    
+    function handleSignOut() {
+      localStorage.removeItem('ipo_ai_session');
+      currentUser = null;
+      renderLoginPanel();
+    }
+    
+    function showError(title, message) {
+      document.getElementById('root').innerHTML = `
+        <div class="error-container">
+          <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h3 class="error-title">${title}</h3>
+          <p class="error-message">${message}</p>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
