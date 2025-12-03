@@ -2,10 +2,8 @@
 <!--
   IPO AI Assistant - Production Manifest for Microsoft AppSource
   
-  Before submission:
-  1. Replace [YOUR_PRODUCTION_DOMAIN] with your actual domain (e.g., ipo-ai-assistant.lovable.app)
-  2. Ensure all icon files exist at the specified URLs
-  3. Validate using: npx office-addin-manifest validate manifest-production.xml
+  READY FOR SUBMISSION - Domain configured
+  Validate using: npx office-addin-manifest validate manifest-production.xml
 -->
 <OfficeApp
   xmlns="http://schemas.microsoft.com/office/appforoffice/1.1"
