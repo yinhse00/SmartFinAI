@@ -153,7 +153,16 @@ INSTRUCTIONS:
 5. Ensure complete response - no truncation
 6. Target: 1500-2500 words for standard sections, 2000-3500 for complex sections
 
-Generate the COMPLETE revised section with proper IPO formatting:`;
+CRITICAL OUTPUT FORMAT RULES:
+- Output PLAIN TEXT ONLY - absolutely NO markdown formatting
+- Do NOT use: ** (bold), * (italic), ## (headers), - (bullets at start of lines), \` (code blocks)
+- Do NOT start with "Okay", "Here's", "Sure", "I've", "Certainly", "Of course", or any preamble
+- Do NOT add any explanation or commentary about what you're generating
+- Do NOT say things like "Here's a revised version" or "I've expanded the section"
+- Start DIRECTLY with the section title or content
+- Write content ready for Word document insertion
+
+Generate the COMPLETE revised section:`;
 
     // Try multiple attempts with different providers if needed
     for (let attempt = 0; attempt < 3; attempt++) {
@@ -402,14 +411,61 @@ Continue here:`;
   }
 
   /**
-   * Format content according to IPO prospectus standards (less aggressive cleaning)
+   * Clean AI output for Word/document insertion
+   * Removes markdown formatting and AI preambles
+   */
+  private cleanOutputForWord(text: string): string {
+    if (!text || typeof text !== 'string') return text;
+    
+    let cleaned = text;
+    
+    // Remove markdown bold/italic
+    cleaned = cleaned.replace(/\*\*([^*]+)\*\*/g, '$1');
+    cleaned = cleaned.replace(/\*([^*]+)\*/g, '$1');
+    cleaned = cleaned.replace(/__([^_]+)__/g, '$1');
+    cleaned = cleaned.replace(/_([^_]+)_/g, '$1');
+    
+    // Remove markdown headers
+    cleaned = cleaned.replace(/^#{1,6}\s+/gm, '');
+    
+    // Remove markdown bullet points (convert to simple format)
+    cleaned = cleaned.replace(/^[\s]*[-*+]\s+/gm, '• ');
+    
+    // Remove code blocks
+    cleaned = cleaned.replace(/```[\s\S]*?```/g, '');
+    cleaned = cleaned.replace(/`([^`]+)`/g, '$1');
+    
+    // Remove common AI preambles (expanded patterns)
+    const preamblePatterns = [
+      /^(Okay|Sure|Certainly|Of course)[,.]?\s*(here('s| is)|I('ve| have))[^.]*[.!:]\s*/i,
+      /^Here('s| is) (a |the )?(revised|improved|rewritten|expanded|complete|updated|professional)[^.]*[.!:]\s*/i,
+      /^I('ve| have) (revised|improved|rewritten|expanded|generated|created)[^.]*[.!:]\s*/i,
+      /^(The following|Below) (is|are)[^.]*[.!:]\s*/i,
+      /^This (is a |)(revised|improved|expanded|complete)[^.]*[.!:]\s*/i,
+      /^(Okay|Sure|Certainly)[,.]?\s*here('s| is)[^]*?standards[.!:]\s*/i,
+    ];
+    
+    for (const pattern of preamblePatterns) {
+      cleaned = cleaned.replace(pattern, '');
+    }
+    
+    // Clean up extra whitespace
+    cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
+    
+    return cleaned.trim();
+  }
+
+  /**
+   * Format content according to IPO prospectus standards
    */
   private formatIPOSection(content: string, sectionType: string): string {
-    // Less aggressive cleaning - only remove obvious AI artifacts
-    const cleanContent = content
-      .replace(/^(Here's the|This is the|I've generated).*?section:\s*/i, '')
+    // First apply comprehensive markdown/preamble cleaning
+    let cleanContent = this.cleanOutputForWord(content);
+    
+    // Additional IPO-specific cleanup
+    cleanContent = cleanContent
       .replace(/^Note: This is.*$/gm, '')
-      .replace(/^Based on.*?here's.*?:/gm, '')
+      .replace(/^This draft.*$/gm, '')
       .trim();
 
     // Preserve legitimate content structure
