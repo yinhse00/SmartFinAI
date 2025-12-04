@@ -169,6 +169,7 @@ OUTPUT FORMAT:
 - Plain text only - NO markdown
 - Start directly with the content, no preamble
 - Do NOT add comments like "[CHANGED]" - just output the final text
+- Do NOT include HKEX draft disclaimers like "THIS DOCUMENT IS IN DRAFT FORM"
 
 Return the amended content:`;
 
@@ -357,6 +358,7 @@ CRITICAL OUTPUT FORMAT RULES:
 - Do NOT start with "Okay", "Here's", "Sure", "I've", "Certainly", "Of course", or any preamble
 - Do NOT add any explanation or commentary about what you're generating
 - Do NOT say things like "Here's a revised version" or "I've expanded the section"
+- Do NOT include HKEX draft disclaimers like "THIS DOCUMENT IS IN DRAFT FORM, INCOMPLETE AND SUBJECT TO CHANGE"
 - Start DIRECTLY with the section title or content
 - Write content ready for Word document insertion
 
@@ -653,6 +655,16 @@ Continue here:`;
     for (const pattern of preamblePatterns) {
       cleaned = cleaned.replace(pattern, '');
     }
+    
+    // Remove HKEX draft disclaimers
+    const disclaimerPatterns = [
+      /THIS DOCUMENT IS IN DRAFT FORM[^.]*\.\s*/gi,
+      /INCOMPLETE AND SUBJECT TO CHANGE[^.]*\.\s*/gi,
+      /THE INFORMATION MUST BE READ IN CONJUNCTION WITH[^.]*\.\s*/gi,
+    ];
+    disclaimerPatterns.forEach(pattern => {
+      cleaned = cleaned.replace(pattern, '');
+    });
     
     // Clean up extra whitespace
     cleaned = cleaned.replace(/\n{3,}/g, '\n\n');
