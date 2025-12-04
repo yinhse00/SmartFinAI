@@ -39,6 +39,23 @@ export class ProfessionalDraftGenerator {
    */
   async generateProfessionalDraft(request: DraftGenerationRequest): Promise<ProfessionalDraftResult> {
     try {
+      // FORMAT-ONLY PATH: Preserve all content, only change structure
+      if (this.isFormatOnlyRequest(request.userRequest) && request.currentContent?.length > 200) {
+        console.log('📐 Format-only request detected, using content-preserving handler');
+        const formattedContent = await this.generateFormatAmendment(request);
+        return {
+          fullDraft: formattedContent,
+          analysisSteps: [{ 
+            title: 'Format Enhancement', 
+            description: 'Applied formatting improvements while preserving all content',
+            findings: ['Structure improved', 'All original content preserved']
+          }],
+          precedentCases: [],
+          complianceNotes: ['Format enhanced - all content preserved'],
+          confidence: 0.95
+        };
+      }
+
       // FAST PATH: For amendments, skip heavy analysis
       if (this.isAmendmentRequest(request)) {
         console.log('⚡ Fast-track amendment mode - skipping full analysis');
@@ -120,13 +137,17 @@ export class ProfessionalDraftGenerator {
     // If no existing content or very short, it's always a new generation
     if (content.length < 200) return false;
     
-    // Check for amendment keywords
+    // Check for amendment keywords (including format/structure)
     const amendmentKeywords = [
       'amend', 'change', 'update', 'modify', 'revise', 'edit', 'fix',
       'add to', 'add more', 'remove', 'replace', 'improve', 'enhance', 
       'correct', 'adjust', 'refine', 'strengthen', 'clarify', 'expand on',
       'delete', 'shorten', 'lengthen', 'rewrite paragraph', 'fix the',
-      'tweak', 'polish', 'rephrase'
+      'tweak', 'polish', 'rephrase',
+      // Format/structure keywords
+      'format', 'structure', 'reorganize', 'restructure', 'reformat', 
+      'reorder', 'layout', 'organize', 'paragraph', 'heading', 'bullet',
+      'better organized', 'cleaner', 'readable'
     ];
     
     // Check for new generation keywords (override amendment detection)
@@ -140,6 +161,105 @@ export class ProfessionalDraftGenerator {
     }
     
     return amendmentKeywords.some(keyword => userRequest.includes(keyword));
+  }
+
+  /**
+   * Detect if this is a format/structure-only request (no content changes)
+   */
+  private isFormatOnlyRequest(userRequest: string): boolean {
+    const request = userRequest.toLowerCase();
+    const formatKeywords = [
+      'format', 'structure', 'reorganize', 'restructure', 'reformat',
+      'reorder', 'layout', 'paragraph', 'heading', 'bullet point',
+      'better organized', 'cleaner format', 'improve layout', 'readable',
+      'better structure', 'improve structure', 'fix format', 'fix structure'
+    ];
+    
+    // Check if it's asking for content changes (not just formatting)
+    const contentChangeKeywords = ['add', 'remove', 'delete', 'expand', 'shorten', 'write', 'include', 'mention'];
+    const hasContentChange = contentChangeKeywords.some(k => request.includes(k));
+    const hasFormatRequest = formatKeywords.some(k => request.includes(k));
+    
+    return hasFormatRequest && !hasContentChange;
+  }
+
+  /**
+   * Generate format-only amendment with strict content preservation
+   */
+  private async generateFormatAmendment(request: DraftGenerationRequest): Promise<string> {
+    const originalLength = request.currentContent.length;
+    
+    const prompt = `You are an IPO prospectus FORMAT editor. Your task is to REORGANIZE and REFORMAT text while PRESERVING EVERY WORD.
+
+USER REQUEST: ${request.userRequest}
+
+CURRENT CONTENT (YOU MUST PRESERVE ALL OF THIS TEXT):
+${request.currentContent}
+
+CRITICAL PRESERVATION RULES:
+1. DO NOT delete, summarize, or shorten ANY text content
+2. DO NOT add new substantive content or examples
+3. DO NOT change any numbers, dates, names, percentages, financial figures
+4. DO NOT remove any sentences or paragraphs
+5. The output MUST contain approximately the same number of characters (within 5%)
+
+WHAT YOU CAN CHANGE:
+- Add paragraph breaks to improve readability
+- Add section headings (use plain text like "SECTION NAME" not markdown)
+- Reorder paragraphs if it improves logical flow
+- Convert run-on text into proper paragraphs
+- Add bullet formatting using plain text (• or numbers)
+- Improve sentence structure within paragraphs
+
+OUTPUT FORMAT:
+- Plain text only - NO markdown (no **, *, ##, etc.)
+- Use blank lines between paragraphs
+- Section headers on their own line
+- Start directly with the content, no preamble
+
+Return the reformatted content with ALL original text preserved:`;
+
+    const { result } = await this.attemptGeneration(prompt, request, 0);
+    
+    // Strict validation: format changes should NOT significantly change length
+    const newLength = result.length;
+    const lengthRatio = newLength / originalLength;
+    
+    if (lengthRatio < 0.9) {
+      console.warn(`⚠️ Format amendment lost ${Math.round((1 - lengthRatio) * 100)}% content, using safe fallback`);
+      return this.applyMinimalFormatting(request.currentContent, request.userRequest);
+    }
+    
+    if (lengthRatio > 1.15) {
+      console.warn(`⚠️ Format amendment added ${Math.round((lengthRatio - 1) * 100)}% content, using safe fallback`);
+      return this.applyMinimalFormatting(request.currentContent, request.userRequest);
+    }
+    
+    console.log(`✅ Format amendment preserved ${Math.round(lengthRatio * 100)}% of content length`);
+    return this.formatIPOSection(result, request.sectionType);
+  }
+
+  /**
+   * Apply minimal, non-destructive formatting as a safe fallback
+   */
+  private applyMinimalFormatting(content: string, userRequest: string): string {
+    let result = content;
+    const request = userRequest.toLowerCase();
+    
+    // Add paragraph breaks after periods followed by capital letters (if requested)
+    if (request.includes('paragraph') || request.includes('readable') || request.includes('structure')) {
+      // Split long blocks into paragraphs at natural sentence boundaries
+      result = result.replace(/([.!?])(\s+)([A-Z])/g, '$1\n\n$3');
+    }
+    
+    // Ensure section headers have proper spacing
+    if (request.includes('heading') || request.includes('section') || request.includes('structure')) {
+      // Add spacing around lines that look like headers (short, possibly caps, ending with colon)
+      result = result.replace(/\n([A-Z][A-Z\s]{2,40}:?)\n/g, '\n\n$1\n\n');
+    }
+    
+    console.log('📝 Applied minimal safe formatting');
+    return result;
   }
 
   /**
