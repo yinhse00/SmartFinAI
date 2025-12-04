@@ -928,6 +928,73 @@ Continue here:`;
 
     return checklist;
   }
+
+  /**
+   * Generate amendment for selected text only
+   */
+  async generateSelectionAmendment(request: {
+    fullContent: string;
+    selectedText: string;
+    userRequest: string;
+    sectionType: string;
+  }): Promise<string> {
+    const { fullContent, selectedText, userRequest, sectionType } = request;
+    
+    // Get context around the selection for better understanding
+    const selectionIndex = fullContent.indexOf(selectedText);
+    const contextBefore = selectionIndex > 0 
+      ? fullContent.substring(Math.max(0, selectionIndex - 500), selectionIndex)
+      : '';
+    const contextAfter = selectionIndex >= 0 
+      ? fullContent.substring(selectionIndex + selectedText.length, selectionIndex + selectedText.length + 500)
+      : '';
+
+    const prompt = `You are an IPO prospectus editor. The user has SELECTED a specific portion of text to amend.
+
+DOCUMENT SECTION TYPE: ${sectionType}
+
+CONTEXT BEFORE SELECTION:
+...${contextBefore}
+
+USER'S SELECTED TEXT (THIS IS WHAT YOU MUST AMEND):
+"${selectedText}"
+
+CONTEXT AFTER SELECTION:
+${contextAfter}...
+
+USER REQUEST: ${userRequest}
+
+CRITICAL RULES:
+1. Return ONLY the amended version of the selected text
+2. Do NOT return the full document or surrounding context
+3. Do NOT add any text before or after the amendment
+4. Keep the same approximate length (±20%) unless expanding/shortening is requested
+5. PRESERVE any:
+   - Numbers, dates, percentages, financial figures
+   - Company names, regulatory citations
+   - Technical terms and proper nouns
+6. Match the tone and style of the surrounding document
+7. Plain text only - NO markdown formatting (**bold**, *italic*, ## headers)
+8. Do NOT start with "Here's", "Sure", "Okay" or any preamble
+9. Do NOT include HKEX draft disclaimers
+
+OUTPUT: Return ONLY the improved version of the selected text, nothing else.`;
+
+    const preference = getFeatureAIPreference('ipo');
+    
+    const response = await universalAiClient.generateContent({
+      prompt,
+      provider: preference.provider,
+      modelId: preference.model,
+      metadata: {
+        maxTokens: Math.max(500, selectedText.length * 3),
+        temperature: 0.2,
+        featureContext: 'selection-amendment'
+      }
+    });
+    
+    return this.cleanOutputForWord(response.text);
+  }
 }
 
 export const professionalDraftGenerator = new ProfessionalDraftGenerator();

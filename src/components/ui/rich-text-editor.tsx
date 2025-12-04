@@ -1,10 +1,12 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useCallback } from 'react';
 import JoditEditor from 'jodit-react';
 import { cn } from '@/lib/utils';
+import { TextSelection } from '@/types/textSelection';
 
 interface RichTextEditorProps {
   value: string;
   onChange: (value: string) => void;
+  onSelectionChange?: (selection: TextSelection | null) => void;
   placeholder?: string;
   className?: string;
   height?: number;
@@ -14,7 +16,34 @@ interface RichTextEditorProps {
 export const RichTextEditor = React.forwardRef<
   HTMLDivElement,
   RichTextEditorProps
->(({ value, onChange, placeholder, className, height = 400, disabled = false }, ref) => {
+>(({ value, onChange, onSelectionChange, placeholder, className, height = 400, disabled = false }, ref) => {
+  const editorRef = useRef<any>(null);
+
+  const handleSelectionChange = useCallback(() => {
+    if (!editorRef.current || !onSelectionChange) return;
+    
+    const editor = editorRef.current;
+    try {
+      const selection = editor.s?.sel;
+      if (selection && selection.toString().trim().length > 0) {
+        const selectedText = selection.toString();
+        const range = selection.getRangeAt?.(0);
+        
+        onSelectionChange({
+          text: selectedText,
+          html: editor.s?.html || selectedText,
+          startOffset: range?.startOffset || 0,
+          endOffset: range?.endOffset || selectedText.length
+        });
+      } else {
+        onSelectionChange(null);
+      }
+    } catch (e) {
+      // Selection API may not be available in all contexts
+      console.debug('Selection change handler error:', e);
+    }
+  }, [onSelectionChange]);
+
   const config = useMemo(() => ({
     readonly: disabled,
     placeholder: placeholder || 'Start typing...',
@@ -38,6 +67,15 @@ export const RichTextEditor = React.forwardRef<
       'undo', 'redo', '|',
       'hr', 'eraser', 'fullsize'
     ],
+    
+    // Event handlers for selection
+    events: {
+      afterInit: (editor: any) => {
+        editorRef.current = editor;
+      },
+      mouseup: handleSelectionChange,
+      keyup: handleSelectionChange,
+    },
     
     // Custom CSS for Word-compatible styling
     iframeStyle: `
@@ -94,8 +132,11 @@ export const RichTextEditor = React.forwardRef<
       li { 
         margin: 3pt 0 !important;
       }
+      ::selection {
+        background-color: #b4d5fe !important;
+      }
     `
-  }), [disabled, placeholder, height]);
+  }), [disabled, placeholder, height, handleSelectionChange]);
 
   return (
     <div ref={ref} className={cn("rich-text-editor", className)}>
