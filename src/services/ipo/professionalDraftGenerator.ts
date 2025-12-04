@@ -5,6 +5,7 @@ import { getFeatureAIPreference } from '@/services/ai/aiPreferences';
 import { AIProvider } from '@/types/aiProvider';
 import { analyzeFinancialResponse, detectTruncationComprehensive, getTruncationDiagnostics } from '@/utils/truncation';
 import { complianceValidationService } from './complianceValidationService';
+import { smartContentMerger } from './smartContentMerger';
 
 export interface DraftGenerationRequest {
   currentContent: string;
@@ -29,33 +30,67 @@ export interface AnalysisStep {
 }
 
 export class ProfessionalDraftGenerator {
+  // Cache for precedent cases to avoid repeated DB queries
+  private precedentCache: Map<string, { data: PrecedentCase[]; timestamp: number }> = new Map();
+  private readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
   /**
    * Generate a complete professional IPO draft based on user request and precedents
    */
   async generateProfessionalDraft(request: DraftGenerationRequest): Promise<ProfessionalDraftResult> {
     try {
-      // Step 1: Analyze current content and requirements
-      const analysisSteps = await this.analyzeCurrentContent(request);
+      // FAST PATH: For amendments, skip heavy analysis
+      if (this.isAmendmentRequest(request)) {
+        console.log('⚡ Fast-track amendment mode - skipping full analysis');
+        
+        const startTime = Date.now();
+        const fullDraft = await this.generateTargetedAmendment(request);
+        
+        // Validate content preservation
+        const validation = this.validateAmendmentPreservation(
+          request.currentContent, 
+          fullDraft, 
+          request.userRequest
+        );
+        
+        const finalDraft = validation.isValid ? fullDraft : validation.recoveredContent!;
+        
+        console.log(`✅ Amendment completed in ${Date.now() - startTime}ms`);
+        
+        return {
+          fullDraft: finalDraft,
+          analysisSteps: [{
+            title: 'Targeted Amendment',
+            description: 'Made precise changes as requested',
+            findings: ['Existing content preserved', 'Only requested changes applied']
+          }],
+          precedentCases: [], // Skip precedent lookup for speed
+          complianceNotes: ['Amendment applied - verify compliance if needed'],
+          confidence: 0.9
+        };
+      }
 
-      // Step 2: Find relevant precedent cases
-      const precedentCases = await precedentService.findRelevantPrecedents(
-        request.sectionType,
-        request.industry,
-        3
-      );
+      // FULL PATH: For new generation, run complete analysis
+      console.log('📝 Full generation mode with complete analysis');
+      
+      // Run analysis and precedent lookup IN PARALLEL for speed
+      const [analysisSteps, precedentCases] = await Promise.all([
+        this.analyzeCurrentContent(request),
+        this.getCachedPrecedents(request.sectionType, request.industry)
+      ]);
 
-      // Step 3: Generate professional draft with precedent support
-      const fullDraft = await this.generateCompleteSection(request, precedentCases.cases, analysisSteps);
+      // Generate professional draft with precedent support
+      const fullDraft = await this.generateCompleteSection(request, precedentCases, analysisSteps);
 
-      // Step 4: Extract compliance notes
+      // Extract compliance notes
       const complianceNotes = this.extractComplianceNotes(analysisSteps);
 
       return {
         fullDraft,
         analysisSteps,
-        precedentCases: precedentCases.cases,
+        precedentCases,
         complianceNotes,
-        confidence: this.calculateConfidence(analysisSteps, precedentCases.cases)
+        confidence: this.calculateConfidence(analysisSteps, precedentCases)
       };
 
     } catch (error) {
@@ -73,6 +108,169 @@ export class ProfessionalDraftGenerator {
         confidence: 0.3
       };
     }
+  }
+
+  /**
+   * Detect if this is an amendment request or new generation
+   */
+  private isAmendmentRequest(request: DraftGenerationRequest): boolean {
+    const content = request.currentContent?.trim() || '';
+    const userRequest = request.userRequest.toLowerCase();
+    
+    // If no existing content or very short, it's always a new generation
+    if (content.length < 200) return false;
+    
+    // Check for amendment keywords
+    const amendmentKeywords = [
+      'amend', 'change', 'update', 'modify', 'revise', 'edit', 'fix',
+      'add to', 'add more', 'remove', 'replace', 'improve', 'enhance', 
+      'correct', 'adjust', 'refine', 'strengthen', 'clarify', 'expand on',
+      'delete', 'shorten', 'lengthen', 'rewrite paragraph', 'fix the',
+      'tweak', 'polish', 'rephrase'
+    ];
+    
+    // Check for new generation keywords (override amendment detection)
+    const newGenerationKeywords = [
+      'generate new', 'create new', 'write new', 'draft new', 'start fresh',
+      'regenerate', 'rewrite completely', 'write from scratch'
+    ];
+    
+    if (newGenerationKeywords.some(keyword => userRequest.includes(keyword))) {
+      return false;
+    }
+    
+    return amendmentKeywords.some(keyword => userRequest.includes(keyword));
+  }
+
+  /**
+   * Generate targeted amendment preserving existing content
+   */
+  private async generateTargetedAmendment(request: DraftGenerationRequest): Promise<string> {
+    const prompt = `You are an IPO prospectus editor. Make PRECISE, TARGETED amendments ONLY.
+
+USER REQUEST: ${request.userRequest}
+
+CURRENT CONTENT (PRESERVE THIS STRUCTURE):
+${request.currentContent}
+
+CRITICAL RULES - READ CAREFULLY:
+1. ONLY modify the specific parts mentioned in the user's request
+2. DO NOT rewrite or reorganize content that wasn't mentioned
+3. DO NOT delete any paragraphs unless explicitly requested
+4. PRESERVE all:
+   - Section headers and structure
+   - Numbers, dates, percentages, financial figures
+   - Company names, regulatory citations
+   - Paragraphs NOT related to the request
+5. Return the COMPLETE content with your targeted changes applied
+
+OUTPUT FORMAT:
+- Output the FULL content with changes applied inline
+- Plain text only - NO markdown
+- Start directly with the content, no preamble
+- Do NOT add comments like "[CHANGED]" - just output the final text
+
+Return the amended content:`;
+
+    const { result } = await this.attemptGeneration(prompt, request, 0);
+    
+    // Safety check: ensure we haven't lost significant content
+    const originalLength = request.currentContent.length;
+    const newLength = result.length;
+    const lengthRatio = newLength / originalLength;
+    
+    if (lengthRatio < 0.7) {
+      console.warn('⚠️ Amendment resulted in >30% content loss, using smart merge instead');
+      return smartContentMerger.smartMerge(request.currentContent, result, { 
+        type: 'enhance-existing', 
+        preserveStructure: true 
+      });
+    }
+    
+    return this.formatIPOSection(result, request.sectionType);
+  }
+
+  /**
+   * Validate that amendment preserved necessary content
+   */
+  private validateAmendmentPreservation(
+    original: string, 
+    amended: string, 
+    userRequest: string
+  ): { isValid: boolean; recoveredContent?: string } {
+    // Extract key paragraphs from original (at least 50 chars)
+    const originalParagraphs = original.split(/\n\n+/).filter(p => p.trim().length > 50);
+    const amendedContent = amended.toLowerCase();
+    const requestWords = userRequest.toLowerCase().split(/\s+/).filter(w => w.length > 4);
+    
+    // Find missing paragraphs that are NOT related to the user's request
+    const missingParagraphs = originalParagraphs.filter(origPara => {
+      const paraLower = origPara.toLowerCase();
+      
+      // Check if this paragraph was intentionally targeted by the request
+      const isRequestRelated = requestWords.some(word => paraLower.includes(word));
+      if (isRequestRelated) return false; // Expected to be modified
+      
+      // Check if key phrases from this paragraph still exist
+      const keyPhrases = origPara.split(/[.!?]/).filter(s => s.trim().length > 20).slice(0, 2);
+      const stillExists = keyPhrases.some(phrase => {
+        const cleanPhrase = phrase.trim().toLowerCase().substring(0, 50);
+        return amendedContent.includes(cleanPhrase);
+      });
+      
+      return !stillExists;
+    });
+    
+    if (missingParagraphs.length > 0) {
+      console.warn(`⚠️ ${missingParagraphs.length} paragraphs may be missing, attempting recovery`);
+      const recoveredContent = this.recoverMissingContent(original, amended, missingParagraphs);
+      return { isValid: false, recoveredContent };
+    }
+    
+    return { isValid: true };
+  }
+
+  /**
+   * Recover content that was accidentally removed during amendment
+   */
+  private recoverMissingContent(original: string, amended: string, missing: string[]): string {
+    // Use smart merger to reintegrate missing content
+    let result = amended;
+    
+    for (const paragraph of missing) {
+      // Find approximate position in original
+      const originalIndex = original.indexOf(paragraph);
+      const textBefore = original.substring(0, originalIndex);
+      const paragraphsBefore = textBefore.split(/\n\n+/).length;
+      
+      // Insert at similar position in amended content
+      const amendedParts = result.split(/\n\n+/);
+      const insertPosition = Math.min(paragraphsBefore, amendedParts.length);
+      
+      console.log(`Recovering paragraph at position ${insertPosition}`);
+      amendedParts.splice(insertPosition, 0, paragraph);
+      result = amendedParts.join('\n\n');
+    }
+    
+    return result;
+  }
+
+  /**
+   * Get cached precedents or fetch from database
+   */
+  private async getCachedPrecedents(sectionType: string, industry?: string): Promise<PrecedentCase[]> {
+    const cacheKey = `${sectionType}-${industry || 'general'}`;
+    const cached = this.precedentCache.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < this.CACHE_TTL) {
+      console.log('⚡ Using cached precedents');
+      return cached.data;
+    }
+    
+    const result = await precedentService.findRelevantPrecedents(sectionType, industry, 3);
+    this.precedentCache.set(cacheKey, { data: result.cases, timestamp: Date.now() });
+    
+    return result.cases;
   }
 
   /**
