@@ -6,6 +6,7 @@ import { professionalDraftGenerator } from '@/services/ipo/professionalDraftGene
 import { useToast } from '@/hooks/use-toast';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
 import { TextSelection } from '@/types/textSelection';
+import { ContentFlag } from '@/services/ipo/contentRelevanceAnalyzer';
 
 interface ChatMessage {
   id: string;
@@ -51,6 +52,7 @@ export const useEnhancedIPOAIChat = ({
   ]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentAnalysis, setCurrentAnalysis] = useState<ProactiveAnalysisResult | null>(null);
+  const [contentFlags, setContentFlags] = useState<ContentFlag[]>([]);
   const { toast } = useToast();
 
   // Automatically analyze content when it changes
@@ -71,6 +73,21 @@ export const useEnhancedIPOAIChat = ({
     }
   }, [currentContent, selectedSection]);
 
+  // Check if message is a format-only request
+  const isFormatOnlyRequest = useCallback((userRequest: string): boolean => {
+    const request = userRequest.toLowerCase();
+    const formatKeywords = [
+      'format', 'structure', 'reorganize', 'restructure', 'reformat',
+      'reorder', 'layout', 'paragraph', 'heading', 'bullet point',
+      'better organized', 'cleaner format', 'improve layout', 'readable',
+      'better structure', 'improve structure', 'fix format', 'fix structure'
+    ];
+    const contentChangeKeywords = ['add', 'remove', 'delete', 'expand', 'shorten', 'write', 'include', 'mention'];
+    const hasContentChange = contentChangeKeywords.some(k => request.includes(k));
+    const hasFormatRequest = formatKeywords.some(k => request.includes(k));
+    return hasFormatRequest && !hasContentChange;
+  }, []);
+
   // Process user message with enhanced capabilities
   const processMessage = useCallback(async (userMessage: string) => {
     if (!userMessage.trim() || isProcessing) return;
@@ -88,6 +105,55 @@ export const useEnhancedIPOAIChat = ({
 
     try {
       console.log('🔵 Enhanced IPO Chat: Processing message...');
+      
+      // Check for format-only requests - use professionalDraftGenerator for content flags
+      if (isFormatOnlyRequest(userMessage) && currentContent?.length > 200) {
+        console.log('📐 Format-only request detected, using professionalDraftGenerator');
+        
+        const draftResult = await professionalDraftGenerator.generateProfessionalDraft({
+          currentContent,
+          sectionType: selectedSection,
+          userRequest: userMessage,
+          projectId
+        });
+        
+        // Update content flags if present
+        if (draftResult.contentFlags && draftResult.contentFlags.length > 0) {
+          console.log(`🔍 Found ${draftResult.contentFlags.length} content flags`);
+          setContentFlags(draftResult.contentFlags);
+        }
+        
+        const aiChatMessage: ChatMessage = {
+          id: (Date.now() + 1).toString(),
+          type: 'ai',
+          isUser: false,
+          content: draftResult.contentFlags?.length 
+            ? `Format applied. Found ${draftResult.contentFlags.length} items that may need review - see the Content Review panel above.`
+            : 'Format improved while preserving all content.',
+          timestamp: new Date(),
+          responseType: 'CONTENT_UPDATE',
+          confidence: draftResult.confidence,
+          suggestedContent: draftResult.fullDraft,
+          isDraftable: true,
+          changePreview: {
+            before: currentContent,
+            after: draftResult.fullDraft
+          }
+        };
+        
+        setMessages(prev => [...prev, aiChatMessage]);
+        onContentUpdate(draftResult.fullDraft);
+        
+        toast({
+          title: "Format Applied",
+          description: draftResult.contentFlags?.length 
+            ? `Format improved. ${draftResult.contentFlags.length} items flagged for review.`
+            : "Format improved while preserving all content."
+        });
+        
+        setIsProcessing(false);
+        return;
+      }
       
       const response = await enhancedIPOAIChatService.processMessageWithAnalysis(
         userMessage,
@@ -153,7 +219,7 @@ export const useEnhancedIPOAIChat = ({
     } finally {
       setIsProcessing(false);
     }
-  }, [projectId, selectedSection, currentContent, onContentUpdate, isProcessing, toast]);
+  }, [projectId, selectedSection, currentContent, onContentUpdate, isProcessing, toast, isFormatOnlyRequest, setContentFlags]);
 
   // Process selection-based amendment
   const processSelectionMessage = useCallback(async (
@@ -355,6 +421,8 @@ export const useEnhancedIPOAIChat = ({
     messages,
     isProcessing,
     currentAnalysis,
+    contentFlags,
+    setContentFlags,
     processMessage,
     processSelectionMessage,
     applyAutoFix,
