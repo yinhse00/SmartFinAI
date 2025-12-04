@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { WordLikeEditor } from './WordLikeEditor';
 import { EnhancedDocumentToolbar } from './EnhancedDocumentToolbar';
 import { WordLikeAIPanel } from './WordLikeAIPanel';
@@ -6,6 +6,7 @@ import { CommentsSidebar } from './CommentsSidebar';
 import { VersionHistory } from './VersionHistory';
 import { GuidanceAssessmentPanel } from './GuidanceAssessmentPanel';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { TextSelection } from '@/types/textSelection';
 
 interface WordLikeWorkspaceProps {
   projectId: string;
@@ -33,6 +34,13 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
   const [showTrackChanges, setShowTrackChanges] = useState(false);
   const [documentZoom, setDocumentZoom] = useState(100);
   const [viewMode, setViewMode] = useState<'print' | 'web' | 'outline'>('print');
+  const [currentSelection, setCurrentSelection] = useState<TextSelection | null>(null);
+
+  const handleSelectionUpdate = useCallback((oldText: string, newText: string) => {
+    const newContent = content.replace(oldText, newText);
+    onContentChange(newContent);
+    setCurrentSelection(null);
+  }, [content, onContentChange]);
 
   const getMainPanelSize = () => {
     let totalPanels = 1; // Main document
@@ -84,6 +92,7 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
                 <WordLikeEditor
                   content={content}
                   onChange={onContentChange}
+                  onSelectionChange={setCurrentSelection}
                   showTrackChanges={showTrackChanges}
                   zoom={documentZoom}
                   viewMode={viewMode}
@@ -139,6 +148,8 @@ export const WordLikeWorkspace: React.FC<WordLikeWorkspaceProps> = ({
                     currentContent={content}
                     onContentUpdate={onContentChange}
                     onClose={() => setIsAIPanelOpen(false)}
+                    currentSelection={currentSelection}
+                    onSelectionUpdate={handleSelectionUpdate}
                   />
                 )}
               </ResizablePanel>

@@ -1,10 +1,12 @@
 import React, { useMemo } from 'react';
 import { RichTextEditor } from '@/components/ui/rich-text-editor';
 import { cn } from '@/lib/utils';
+import { TextSelection } from '@/types/textSelection';
 
 interface WordLikeEditorProps {
   content: string;
   onChange: (content: string) => void;
+  onSelectionChange?: (selection: TextSelection | null) => void;
   showTrackChanges?: boolean;
   zoom?: number;
   viewMode?: 'print' | 'web' | 'outline';
@@ -15,6 +17,7 @@ interface WordLikeEditorProps {
 export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
   content,
   onChange,
+  onSelectionChange,
   showTrackChanges = false,
   zoom = 100,
   viewMode = 'print',
@@ -222,6 +225,7 @@ export const WordLikeEditor: React.FC<WordLikeEditorProps> = ({
         <RichTextEditor
           value={content}
           onChange={onChange}
+          onSelectionChange={onSelectionChange}
           height={viewMode === 'print' ? 600 : undefined}
           className="h-full w-full"
           placeholder={editorConfig.placeholder}

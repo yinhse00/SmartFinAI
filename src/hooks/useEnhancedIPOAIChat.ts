@@ -2,8 +2,10 @@
 import { useState, useCallback } from 'react';
 import { enhancedIPOAIChatService } from '@/services/ipo/enhancedIPOAIChatService';
 import { contentAnalysisService } from '@/services/ipo/contentAnalysisService';
+import { professionalDraftGenerator } from '@/services/ipo/professionalDraftGenerator';
 import { useToast } from '@/hooks/use-toast';
 import { ProactiveAnalysisResult, TargetedEdit } from '@/types/ipoAnalysis';
+import { TextSelection } from '@/types/textSelection';
 
 interface ChatMessage {
   id: string;
@@ -153,6 +155,80 @@ export const useEnhancedIPOAIChat = ({
     }
   }, [projectId, selectedSection, currentContent, onContentUpdate, isProcessing, toast]);
 
+  // Process selection-based amendment
+  const processSelectionMessage = useCallback(async (
+    userMessage: string, 
+    selection: TextSelection,
+    onSelectionUpdate: (oldText: string, newText: string) => void
+  ) => {
+    if (!userMessage.trim() || isProcessing || !selection.text.trim()) return;
+
+    const userChatMessage: ChatMessage = {
+      id: Date.now().toString(),
+      type: 'user',
+      isUser: true,
+      content: `[Selection: "${selection.text.substring(0, 50)}${selection.text.length > 50 ? '...' : ''}"] ${userMessage}`,
+      timestamp: new Date()
+    };
+
+    setMessages(prev => [...prev, userChatMessage]);
+    setIsProcessing(true);
+
+    try {
+      console.log('🔵 Selection-based amendment: Processing...');
+      
+      const amendedText = await professionalDraftGenerator.generateSelectionAmendment({
+        fullContent: currentContent,
+        selectedText: selection.text,
+        userRequest: userMessage,
+        sectionType: selectedSection
+      });
+      
+      console.log('🟢 Selection amendment received:', amendedText.substring(0, 100));
+
+      // Apply the amendment
+      onSelectionUpdate(selection.text, amendedText);
+
+      const aiChatMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        isUser: false,
+        content: `✅ Selection amended successfully!\n\n**Original:**\n"${selection.text.substring(0, 100)}${selection.text.length > 100 ? '...' : ''}"\n\n**Updated:**\n"${amendedText.substring(0, 100)}${amendedText.length > 100 ? '...' : ''}"`,
+        timestamp: new Date(),
+        responseType: 'SELECTION_AMENDMENT',
+        confidence: 0.95
+      };
+
+      setMessages(prev => [...prev, aiChatMessage]);
+
+      toast({
+        title: "Selection Amended",
+        description: "The selected text has been updated.",
+      });
+
+    } catch (error) {
+      console.error('🔴 Selection amendment error:', error);
+      
+      const errorMessage: ChatMessage = {
+        id: (Date.now() + 1).toString(),
+        type: 'ai',
+        isUser: false,
+        content: 'I encountered an error processing your selection amendment. Please try again.',
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, errorMessage]);
+      
+      toast({
+        title: "Error",
+        description: "Failed to amend selection. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [currentContent, selectedSection, isProcessing, toast]);
+
   // Apply automatic fix for an issue
   const applyAutoFix = useCallback(async (issueId: string) => {
     try {
@@ -280,6 +356,7 @@ export const useEnhancedIPOAIChat = ({
     isProcessing,
     currentAnalysis,
     processMessage,
+    processSelectionMessage,
     applyAutoFix,
     applyImprovement,
     applyDirectSuggestion,

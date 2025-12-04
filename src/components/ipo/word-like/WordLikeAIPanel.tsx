@@ -16,7 +16,12 @@ import {
   Loader2,
   Lightbulb,
   FileCheck,
-  Target
+  Target,
+  MousePointerClick,
+  Minimize2,
+  FileText,
+  Languages,
+  Scale
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
@@ -25,6 +30,7 @@ import { MessageFormatter } from '@/components/ipo/ai/MessageFormatter';
 import { ImplementButton } from '@/components/chat/message/ImplementButton';
 import { complianceValidator } from '@/services/ipo/complianceValidator';
 import { Message } from '@/components/chat/ChatMessage';
+import { TextSelection } from '@/types/textSelection';
 
 interface WordLikeAIPanelProps {
   projectId: string;
@@ -33,6 +39,8 @@ interface WordLikeAIPanelProps {
   onContentUpdate: (content: string) => void;
   onClose: () => void;
   useTransparentMode?: boolean;
+  currentSelection?: TextSelection | null;
+  onSelectionUpdate?: (oldText: string, newText: string) => void;
 }
 
 export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
@@ -41,7 +49,9 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
   currentContent,
   onContentUpdate,
   onClose,
-  useTransparentMode = false
+  useTransparentMode = false,
+  currentSelection,
+  onSelectionUpdate
 }) => {
   const [inputMessage, setInputMessage] = useState('');
   const [complianceData, setComplianceData] = useState<any>(null);
@@ -51,6 +61,7 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
     isProcessing,
     currentAnalysis,
     processMessage,
+    processSelectionMessage,
     applyAutoFix,
     applyImprovement,
     refreshAnalysis,
@@ -88,9 +99,17 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
     }
   }, [currentContent, selectedSection]);
 
+  const hasSelection = currentSelection && currentSelection.text.trim().length >= 10;
+
   const handleSendMessage = () => {
     if (inputMessage.trim() && !isProcessing) {
-      processMessage(inputMessage);
+      if (hasSelection && onSelectionUpdate) {
+        // Selection-based amendment
+        processSelectionMessage(inputMessage, currentSelection!, onSelectionUpdate);
+      } else {
+        // Full document amendment
+        processMessage(inputMessage);
+      }
       setInputMessage('');
     }
   };
@@ -100,6 +119,10 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
       e.preventDefault();
       handleSendMessage();
     }
+  };
+
+  const handleQuickAction = (action: string) => {
+    setInputMessage(action);
   };
 
   const getSeverityIcon = (severity: 'error' | 'warning' | 'suggestion') => {
@@ -158,8 +181,67 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
       </div>
 
       <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Selection Mode Indicator */}
+        {hasSelection && (
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/30 border-b border-blue-200 dark:border-blue-800">
+            <div className="flex items-center gap-2 mb-2">
+              <MousePointerClick className="h-4 w-4 text-blue-600" />
+              <span className="font-medium text-sm text-blue-800 dark:text-blue-200">Selection Mode Active</span>
+              <Badge variant="secondary" className="text-xs">
+                {currentSelection!.text.length} chars
+              </Badge>
+            </div>
+            <p className="text-xs text-blue-600 dark:text-blue-300 italic line-clamp-2 mb-2">
+              "{currentSelection!.text.substring(0, 80)}{currentSelection!.text.length > 80 ? '...' : ''}"
+            </p>
+            <p className="text-xs text-muted-foreground mb-3">
+              AI will only amend the selected text while preserving context
+            </p>
+            
+            {/* Quick actions for selection */}
+            <div className="flex flex-wrap gap-1.5">
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-6 text-xs"
+                onClick={() => handleQuickAction('Improve clarity and readability')}
+              >
+                <Sparkles className="h-3 w-3 mr-1" />
+                Improve
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-6 text-xs"
+                onClick={() => handleQuickAction('Make this more concise')}
+              >
+                <Minimize2 className="h-3 w-3 mr-1" />
+                Shorten
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-6 text-xs"
+                onClick={() => handleQuickAction('Expand with more detail')}
+              >
+                <FileText className="h-3 w-3 mr-1" />
+                Expand
+              </Button>
+              <Button 
+                size="sm" 
+                variant="outline"
+                className="h-6 text-xs"
+                onClick={() => handleQuickAction('Check HKEX compliance')}
+              >
+                <Scale className="h-3 w-3 mr-1" />
+                Compliance
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Analysis Section */}
-        {(suggestions.length > 0 || isAnalyzing) && (
+        {(suggestions.length > 0 || isAnalyzing) && !hasSelection && (
           <div className="p-4 border-b bg-muted/30">
             <div className="flex items-center gap-2 mb-3">
               <Target className="h-4 w-4 text-primary" />
