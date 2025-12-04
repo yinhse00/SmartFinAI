@@ -6,6 +6,7 @@ import { AIProvider } from '@/types/aiProvider';
 import { analyzeFinancialResponse, detectTruncationComprehensive, getTruncationDiagnostics } from '@/utils/truncation';
 import { complianceValidationService } from './complianceValidationService';
 import { smartContentMerger } from './smartContentMerger';
+import { contentRelevanceAnalyzer, ContentFlag } from './contentRelevanceAnalyzer';
 
 export interface DraftGenerationRequest {
   currentContent: string;
@@ -21,6 +22,7 @@ export interface ProfessionalDraftResult {
   precedentCases: PrecedentCase[];
   complianceNotes: string[];
   confidence: number;
+  contentFlags?: ContentFlag[];
 }
 
 export interface AnalysisStep {
@@ -42,7 +44,15 @@ export class ProfessionalDraftGenerator {
       // FORMAT-ONLY PATH: Preserve all content, only change structure
       if (this.isFormatOnlyRequest(request.userRequest) && request.currentContent?.length > 200) {
         console.log('📐 Format-only request detected, using content-preserving handler');
-        const formattedContent = await this.generateFormatAmendment(request);
+        
+        // Run format and content analysis in parallel
+        const [formattedContent, relevanceAnalysis] = await Promise.all([
+          this.generateFormatAmendment(request),
+          contentRelevanceAnalyzer.analyzeRelevance(request.currentContent, request.sectionType)
+        ]);
+        
+        console.log(`🔍 Content analysis found ${relevanceAnalysis.flaggedContent.length} items for review`);
+        
         return {
           fullDraft: formattedContent,
           analysisSteps: [{ 
@@ -52,7 +62,8 @@ export class ProfessionalDraftGenerator {
           }],
           precedentCases: [],
           complianceNotes: ['Format enhanced - all content preserved'],
-          confidence: 0.95
+          confidence: 0.95,
+          contentFlags: relevanceAnalysis.flaggedContent
         };
       }
 

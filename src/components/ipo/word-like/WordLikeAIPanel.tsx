@@ -21,7 +21,8 @@ import {
   Minimize2,
   FileText,
   Languages,
-  Scale
+  Scale,
+  Eye
 } from 'lucide-react';
 import { useEnhancedIPOAIChat } from '@/hooks/useEnhancedIPOAIChat';
 import { useRealTimeAnalysis } from '@/hooks/useRealTimeAnalysis';
@@ -31,6 +32,8 @@ import { ImplementButton } from '@/components/chat/message/ImplementButton';
 import { complianceValidator } from '@/services/ipo/complianceValidator';
 import { Message } from '@/components/chat/ChatMessage';
 import { TextSelection } from '@/types/textSelection';
+import { ContentFlagPanel } from './ContentFlagPanel';
+import { ContentFlag } from '@/services/ipo/contentRelevanceAnalyzer';
 
 interface WordLikeAIPanelProps {
   projectId: string;
@@ -60,6 +63,8 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
     messages,
     isProcessing,
     currentAnalysis,
+    contentFlags,
+    setContentFlags,
     processMessage,
     processSelectionMessage,
     applyAutoFix,
@@ -101,6 +106,24 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
 
   const hasSelection = currentSelection && currentSelection.text.trim().length >= 10;
 
+  // Handlers for content flags
+  const handleRemoveFlag = (flagId: string, sentence: string) => {
+    // Remove the sentence from content
+    const sentenceToRemove = sentence.replace(/\.\.\.$/, ''); // Remove trailing ellipsis
+    const newContent = currentContent.replace(sentenceToRemove, '').replace(/\s{2,}/g, ' ').trim();
+    onContentUpdate(newContent);
+    setContentFlags(prev => prev.filter(f => f.id !== flagId));
+  };
+
+  const handleKeepFlag = (flagId: string) => {
+    setContentFlags(prev => prev.filter(f => f.id !== flagId));
+  };
+
+  const handleMoveFlag = (flagId: string, sentence: string, targetSection: string) => {
+    // For now, just remove the flag - actual moving requires section context
+    console.log(`📦 User wants to move content to ${targetSection}:`, sentence.substring(0, 50));
+    setContentFlags(prev => prev.filter(f => f.id !== flagId));
+  };
   const handleSendMessage = () => {
     if (inputMessage.trim() && !isProcessing) {
       if (hasSelection && onSelectionUpdate) {
@@ -284,6 +307,30 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* Content Flags Panel - shown after format revision */}
+        {contentFlags.length > 0 && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800">
+            <div className="flex items-center gap-2 mb-2">
+              <Eye className="h-4 w-4 text-amber-600" />
+              <span className="font-medium text-sm text-amber-800 dark:text-amber-200">
+                Content Review Suggestions
+              </span>
+              <Badge variant="secondary" className="text-xs">
+                {contentFlags.length} items
+              </Badge>
+            </div>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mb-3">
+              These items may need review - you can remove, keep, or move them.
+            </p>
+            <ContentFlagPanel
+              flags={contentFlags}
+              onRemove={handleRemoveFlag}
+              onKeep={handleKeepFlag}
+              onMove={handleMoveFlag}
+            />
           </div>
         )}
 
