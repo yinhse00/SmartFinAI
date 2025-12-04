@@ -162,6 +162,13 @@ CRITICAL OUTPUT FORMAT RULES:
 - Start DIRECTLY with the section title or content
 - Write content ready for Word document insertion
 
+PARAGRAPH STRUCTURE RULES:
+- Use double line breaks (blank line) between paragraphs
+- Each major point or topic should be its own paragraph
+- Group related sentences together in the same paragraph
+- Section headers should be on their own line followed by a blank line
+- Keep paragraphs focused and readable (3-6 sentences each)
+
 Generate the COMPLETE revised section:`;
 
     // Try multiple attempts with different providers if needed
@@ -456,6 +463,64 @@ Continue here:`;
   }
 
   /**
+   * Convert plain text to proper HTML for JoditEditor
+   * Handles paragraphs, headers, and lists
+   */
+  private convertToProspectusHTML(text: string): string {
+    if (!text || typeof text !== 'string') return text;
+    
+    // Already HTML? Return as-is
+    if (text.includes('<p>') || text.includes('<h2>') || text.includes('<div>')) {
+      return text;
+    }
+    
+    let html = text;
+    
+    // Normalize line breaks
+    html = html.replace(/\r\n/g, '\n');
+    
+    // Split into paragraphs (double newlines)
+    const paragraphs = html.split(/\n\n+/);
+    
+    // Convert each paragraph to HTML
+    const htmlParagraphs = paragraphs.map(para => {
+      const trimmed = para.trim();
+      if (!trimmed) return '';
+      
+      // Check if it's a section header (short line, often ends with colon or is ALL CAPS)
+      const isHeader = (
+        trimmed.length < 100 && 
+        !trimmed.includes('. ') &&
+        (trimmed.endsWith(':') || 
+         trimmed === trimmed.toUpperCase() ||
+         /^[A-Z][A-Z\s]+$/.test(trimmed) ||
+         /^\d+\.\s*[A-Z]/.test(trimmed)) // Numbered sections like "1. BUSINESS OVERVIEW"
+      );
+      
+      if (isHeader) {
+        // Use h3 for subsection headers
+        return `<h3>${trimmed.replace(/:$/, '')}</h3>`;
+      }
+      
+      // Handle bullet points
+      const lines = trimmed.split('\n');
+      if (lines.some(line => line.trim().startsWith('•') || line.trim().match(/^[-–]\s/))) {
+        const listItems = lines
+          .filter(line => line.trim())
+          .map(line => `<li>${line.replace(/^[\s•\-–]+/, '').trim()}</li>`)
+          .join('');
+        return `<ul>${listItems}</ul>`;
+      }
+      
+      // Regular paragraph - preserve single line breaks as <br> if needed
+      const formattedPara = trimmed.replace(/\n/g, '<br>');
+      return `<p>${formattedPara}</p>`;
+    });
+    
+    return htmlParagraphs.filter(p => p).join('\n');
+  }
+
+  /**
    * Format content according to IPO prospectus standards
    */
   private formatIPOSection(content: string, sectionType: string): string {
@@ -468,22 +533,8 @@ Continue here:`;
       .replace(/^This draft.*$/gm, '')
       .trim();
 
-    // Preserve legitimate content structure
-    const lines = cleanContent.split('\n');
-    const formattedLines: string[] = [];
-    
-    for (const line of lines) {
-      const trimmedLine = line.trim();
-      
-      // Keep all content, just clean up excessive whitespace
-      if (trimmedLine.length > 0) {
-        formattedLines.push(trimmedLine);
-      } else if (formattedLines.length > 0 && formattedLines[formattedLines.length - 1] !== '') {
-        formattedLines.push(''); // Preserve paragraph breaks
-      }
-    }
-
-    return formattedLines.join('\n').trim();
+    // Convert to proper HTML for the editor
+    return this.convertToProspectusHTML(cleanContent);
   }
 
   /**
