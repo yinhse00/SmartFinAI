@@ -15,6 +15,7 @@ export interface ContentRelevanceResult {
   flaggedContent: ContentFlag[];
   summary: string;
   analysisTime: number;
+  error?: boolean;
 }
 
 class ContentRelevanceAnalyzer {
@@ -27,8 +28,12 @@ class ContentRelevanceAnalyzer {
   ): Promise<ContentRelevanceResult> {
     const startTime = Date.now();
     
-    // Skip analysis for very short content
-    if (content.length < 500) {
+    console.log(`🔬 Content Relevance Analyzer: Starting analysis for ${sectionType}`);
+    console.log(`📏 Content length: ${content.length} chars`);
+    
+    // Skip analysis for very short content - lowered threshold to 300
+    if (content.length < 300) {
+      console.log('⏭️ Content too short for analysis (< 300 chars)');
       return {
         flaggedContent: [],
         summary: 'Content too short for detailed analysis',
@@ -38,6 +43,7 @@ class ContentRelevanceAnalyzer {
 
     try {
       const prompt = this.buildRelevancePrompt(content, sectionType);
+      console.log('🤖 Calling AI for content relevance analysis...');
       
       const response = await universalAiClient.generateContent({
         prompt,
@@ -50,7 +56,9 @@ class ContentRelevanceAnalyzer {
         }
       });
 
+      console.log('📥 AI response received, parsing...');
       const flaggedContent = this.parseAnalysisResponse(response.text || '');
+      console.log(`🚩 Parsed ${flaggedContent.length} content flags`);
       
       return {
         flaggedContent,
@@ -60,11 +68,12 @@ class ContentRelevanceAnalyzer {
         analysisTime: Date.now() - startTime
       };
     } catch (error) {
-      console.error('Content relevance analysis failed:', error);
+      console.error('❌ Content relevance analysis failed:', error);
       return {
         flaggedContent: [],
         summary: 'Analysis failed - please review manually',
-        analysisTime: Date.now() - startTime
+        analysisTime: Date.now() - startTime,
+        error: true
       };
     }
   }
@@ -111,9 +120,9 @@ OUTPUT FORMAT (JSON array):
 ]
 
 RULES:
-- Only flag items with confidence >= 0.75
-- Be conservative - when in doubt, don't flag
-- Maximum 5 flags per analysis
+- Only flag items with confidence >= 0.6
+- Be moderately aggressive in flagging potential issues for user review
+- Maximum 8 flags per analysis
 - Focus on clear issues, not stylistic preferences
 - Return empty array [] if no issues found
 
@@ -134,24 +143,28 @@ Return ONLY the JSON array, no other text:`;
         return [];
       }
 
-      return parsed
+      const filtered = parsed
         .filter((item: any) => 
           item.sentence && 
           item.flagType && 
           item.reason && 
           item.suggestedAction &&
-          item.confidence >= 0.75
-        )
+          item.confidence >= 0.6  // Lowered threshold from 0.75
+        );
+      
+      console.log(`🔎 Filtered ${filtered.length} flags (from ${parsed.length} raw items)`);
+      
+      return filtered
         .map((item: any, index: number) => ({
           id: `flag_${Date.now()}_${index}`,
           sentence: String(item.sentence).substring(0, 200),
           flagType: item.flagType as ContentFlag['flagType'],
           reason: String(item.reason).substring(0, 200),
-          confidence: Math.min(1, Math.max(0, Number(item.confidence) || 0.75)),
+          confidence: Math.min(1, Math.max(0, Number(item.confidence) || 0.6)),
           suggestedAction: item.suggestedAction as ContentFlag['suggestedAction'],
           targetSection: item.targetSection || undefined
         }))
-        .slice(0, 5); // Max 5 flags
+        .slice(0, 8); // Max 8 flags (increased from 5)
     } catch (error) {
       console.error('Failed to parse relevance analysis:', error);
       return [];

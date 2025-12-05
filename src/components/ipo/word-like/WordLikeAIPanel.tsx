@@ -419,7 +419,7 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
           </div>
           
           {/* Quick actions */}
-          <div className="flex gap-2 mt-2">
+          <div className="flex flex-wrap gap-2 mt-2">
             <Button 
               variant="outline" 
               size="sm" 
@@ -428,6 +428,15 @@ export const WordLikeAIPanel: React.FC<WordLikeAIPanelProps> = ({
             >
               <Sparkles className="h-3 w-3 mr-1" />
               Improve Clarity
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="h-7 text-xs"
+              onClick={() => setInputMessage('Reorganize and improve the structure of this content')}
+            >
+              <Eye className="h-3 w-3 mr-1" />
+              Analyze Structure
             </Button>
             <Button 
               variant="outline" 

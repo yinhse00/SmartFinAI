@@ -105,10 +105,15 @@ export const useEnhancedIPOAIChat = ({
 
     try {
       console.log('🔵 Enhanced IPO Chat: Processing message...');
+      console.log(`📏 Content length: ${currentContent?.length || 0} chars`);
+      console.log(`📝 User message: "${userMessage}"`);
+      console.log(`🔍 Is format request: ${isFormatOnlyRequest(userMessage)}`);
       
       // Check for format-only requests - use professionalDraftGenerator for content flags
-      if (isFormatOnlyRequest(userMessage) && currentContent?.length > 200) {
+      // Lowered threshold to 300 chars to catch more content
+      if (isFormatOnlyRequest(userMessage) && currentContent?.length > 300) {
         console.log('📐 Format-only request detected, using professionalDraftGenerator');
+        console.log(`📊 Section: ${selectedSection}`);
         
         const draftResult = await professionalDraftGenerator.generateProfessionalDraft({
           currentContent,
@@ -117,10 +122,17 @@ export const useEnhancedIPOAIChat = ({
           projectId
         });
         
+        console.log(`✅ Draft result received, confidence: ${draftResult.confidence}`);
+        console.log(`🚩 Content flags count: ${draftResult.contentFlags?.length || 0}`);
+        
         // Update content flags if present
         if (draftResult.contentFlags && draftResult.contentFlags.length > 0) {
-          console.log(`🔍 Found ${draftResult.contentFlags.length} content flags`);
+          console.log(`🔍 Found ${draftResult.contentFlags.length} content flags:`, draftResult.contentFlags);
           setContentFlags(draftResult.contentFlags);
+        } else {
+          console.log('ℹ️ No content flags returned from analysis');
+          // Clear any previous flags
+          setContentFlags([]);
         }
         
         const aiChatMessage: ChatMessage = {
